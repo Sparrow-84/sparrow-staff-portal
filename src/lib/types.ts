@@ -51,6 +51,12 @@ export const DEPARTMENTS: { value: Department; label: string }[] = [
   { value: 'exec', label: 'Executive' },
 ];
 
+export const ROLES: { value: AppRole; label: string }[] = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'staff', label: 'Staff' },
+];
+
 export const PRIORITIES: { value: Priority; label: string }[] = [
   { value: 'p1', label: 'P1 · Urgent' },
   { value: 'p2', label: 'P2 · High' },
