@@ -1,4 +1,4 @@
-import type { Priority, TaskWithPeople } from './types';
+import type { Priority, PriorityTier, TaskWithPeople } from './types';
 
 export type Bucket = 'overdue' | 'today' | 'this_week' | 'upcoming' | 'no_date';
 
@@ -51,6 +51,33 @@ export const PRIORITY_META: Record<Priority, { label: string; dot: string; text:
   p3: { label: 'P3', dot: 'bg-priority-p3', text: 'text-priority-p3' },
   p4: { label: 'P4', dot: 'bg-priority-p4', text: 'text-priority-p4' },
 };
+
+// ── Three-tier priority overlay (the brief's only priority vocabulary) ──
+// 🔴 Before you sleep · 🟡 This week · ⚪ When you get to it. Maps onto the stored
+// p1–p4 enum so we keep the existing schema/data: p1→sleep, p2/p3→week, p4→whenever.
+export const TIERS: { value: PriorityTier; label: string; emoji: string }[] = [
+  { value: 'sleep', label: 'Before you sleep', emoji: '🔴' },
+  { value: 'week', label: 'This week', emoji: '🟡' },
+  { value: 'whenever', label: 'When you get to it', emoji: '⚪' },
+];
+
+export const TIER_META: Record<PriorityTier, { label: string; emoji: string; dot: string; text: string }> = {
+  sleep: { label: 'Before you sleep', emoji: '🔴', dot: 'bg-priority-p1', text: 'text-priority-p1' },
+  week: { label: 'This week', emoji: '🟡', dot: 'bg-priority-p2', text: 'text-priority-p2' },
+  whenever: { label: 'When you get to it', emoji: '⚪', dot: 'bg-priority-p4', text: 'text-priority-p4' },
+};
+
+export function tierForPriority(p: Priority): PriorityTier {
+  if (p === 'p1') return 'sleep';
+  if (p === 'p4') return 'whenever';
+  return 'week';
+}
+
+export function priorityForTier(t: PriorityTier): Priority {
+  if (t === 'sleep') return 'p1';
+  if (t === 'whenever') return 'p4';
+  return 'p3';
+}
 
 /** Friendly relative label for a due date (for task rows). */
 export function dueLabel(dueDate: string | null, today: string): string {

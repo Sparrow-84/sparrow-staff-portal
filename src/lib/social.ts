@@ -16,6 +16,8 @@ export interface AppNotification {
   actor_id: string | null;
   type: NotificationType;
   task_id: string | null;
+  entity: string | null; // generic room pointer: 'task' | 'family' | 'work_order' | …
+  entity_id: string | null;
   body: string | null;
   read: boolean;
   created_at: string;

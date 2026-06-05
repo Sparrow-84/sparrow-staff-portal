@@ -4,9 +4,10 @@ import { fetchComments, fetchProfiles, fetchTasks } from '@/lib/data';
 import { isoDate } from '@/lib/tasks';
 import type { Profile, TaskComment, TaskWithPeople } from '@/lib/types';
 import { TaskWorkspace } from '@/components/TaskWorkspace';
-import { AnnouncementBar } from '@/components/AnnouncementBar';
 
-export function HomeView() {
+// The full "My tasks" workspace (List / Board / Calendar views). The Home dashboard
+// (WidgetHome) surfaces today's slice + the triage inbox; this is the deep view.
+export function TasksView() {
   const { profile } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [tasks, setTasks] = useState<TaskWithPeople[]>([]);
@@ -43,7 +44,6 @@ export function HomeView() {
       comments={comments}
       today={isoDate(new Date())}
       onChanged={load}
-      topSlot={<AnnouncementBar />}
     />
   );
 }

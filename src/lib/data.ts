@@ -68,3 +68,30 @@ export async function addComment(taskId: string, body: string, authorId: string)
     .insert({ task_id: taskId, author_id: authorId, body });
   if (error) throw new Error(error.message);
 }
+
+// ── Triage Inbox ─────────────────────────────────────────────────────
+// Assigned (or room-emitted) work lands triage_status='pending' for the recipient.
+// They Accept it onto their day, Defer it to a date, or Push it back to the assigner.
+export async function acceptTask(id: string): Promise<void> {
+  const { error } = await supabase.from('tasks').update({ triage_status: 'accepted' }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deferTask(id: string, dueDate: string): Promise<void> {
+  const { error } = await supabase
+    .from('tasks')
+    .update({ triage_status: 'accepted', due_date: dueDate })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/** Bounce a task back to its creator with a note (clears it from the recipient's triage). */
+export async function pushBackTask(task: TaskWithPeople, note: string, byId: string): Promise<void> {
+  if (!task.created_by) throw new Error('This task has no assigner to push back to.');
+  await addComment(task.id, `Pushed back: ${note}`, byId);
+  const { error } = await supabase
+    .from('tasks')
+    .update({ assignee_id: task.created_by })
+    .eq('id', task.id);
+  if (error) throw new Error(error.message);
+}

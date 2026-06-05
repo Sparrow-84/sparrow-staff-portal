@@ -2,6 +2,17 @@ export type AppRole = 'admin' | 'manager' | 'staff';
 export type Department = 'toc' | 'lcp' | 'partnerships' | 'ops' | 'exec';
 export type Priority = 'p1' | 'p2' | 'p3' | 'p4';
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
+export type TriageStatus = 'pending' | 'accepted';
+
+/**
+ * The brief's three-tier priority vocabulary ("the only priority levels — simple,
+ * no numbers"). It overlays the stored p1–p4 enum so the spine speaks in tiers
+ * without a destructive schema change; see tierForPriority/priorityForTier in tasks.ts.
+ */
+export type PriorityTier = 'sleep' | 'week' | 'whenever';
+
+/** LCP access tier (System 1). null = no LifeChange access. Full = participant PII + notes. */
+export type LcpRole = 'full' | 'extended' | null;
 
 export interface Profile {
   id: string;
@@ -12,6 +23,7 @@ export interface Profile {
   manager_email: string | null;
   active: boolean;
   created_at: string;
+  lcp_role: LcpRole;
 }
 
 export interface Task {
@@ -22,8 +34,11 @@ export interface Task {
   department: Department;
   priority: Priority;
   status: TaskStatus;
+  triage_status: TriageStatus;
   assignee_id: string;
-  created_by: string;
+  created_by: string | null; // null = system-generated (emitted by a room)
+  source_system: string | null; // 'lcp' | 'crm' | 'toc' | null (created in System 2)
+  source_ref: string | null; // room-stable key for dedup, e.g. 'homework:<uuid>'
   position: number;
   created_at: string;
   updated_at: string;

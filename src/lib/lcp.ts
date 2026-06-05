@@ -1,0 +1,227 @@
+import { supabase } from './supabase';
+import type {
+  Attendance,
+  AttendanceStatus,
+  CurriculumSession,
+  Family,
+  Homework,
+  HomeworkArea,
+  HomeworkStatus,
+  LcpEvent,
+  Message,
+  Redemption,
+  StaffNote,
+  Voucher,
+} from './lcp-types';
+
+// All reads/writes below are gated by RLS. Staff functions require the LCP "full"
+// tier (Shelly, Audrey, Andrew); the participant app uses its own narrower client.
+
+// ── Families ─────────────────────────────────────────────────────────
+export async function fetchFamilies(): Promise<Family[]> {
+  const { data, error } = await supabase
+    .from('families')
+    .select('id, display_name, login_email, status, current_session_number, housing_savings_cents, active')
+    .eq('active', true)
+    .order('display_name');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Family[];
+}
+
+export async function updateFamily(
+  id: string,
+  patch: Partial<Pick<Family, 'status' | 'current_session_number' | 'housing_savings_cents'>>,
+): Promise<void> {
+  const { error } = await supabase.from('families').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Curriculum (for the progress map + session picker) ───────────────
+export async function fetchSessions(): Promise<CurriculumSession[]> {
+  const { data, error } = await supabase
+    .from('lcp_sessions')
+    .select('id, session_number, title, unit:lcp_units(name, phase:lcp_phases(number, name))')
+    .order('session_number');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as CurriculumSession[];
+}
+
+// ── Homework ─────────────────────────────────────────────────────────
+export async function fetchAllHomework(): Promise<Homework[]> {
+  const { data, error } = await supabase
+    .from('lcp_homework')
+    .select('*')
+    .order('due_date', { ascending: true, nullsFirst: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Homework[];
+}
+
+export async function fetchHomeworkForFamily(familyId: string): Promise<Homework[]> {
+  const { data, error } = await supabase
+    .from('lcp_homework')
+    .select('*')
+    .eq('family_id', familyId)
+    .order('due_date', { ascending: true, nullsFirst: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Homework[];
+}
+
+export interface HomeworkInput {
+  family_id: string;
+  session_id: number | null;
+  area: HomeworkArea;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+}
+
+export async function assignHomework(input: HomeworkInput, assignedBy: string): Promise<void> {
+  const { error } = await supabase.from('lcp_homework').insert({ ...input, assigned_by: assignedBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function setHomeworkStatus(id: string, status: HomeworkStatus): Promise<void> {
+  const { error } = await supabase.from('lcp_homework').update({ status }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteHomework(id: string): Promise<void> {
+  const { error } = await supabase.from('lcp_homework').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Events / calendar ────────────────────────────────────────────────
+export async function fetchEvents(): Promise<LcpEvent[]> {
+  const { data, error } = await supabase
+    .from('lcp_events')
+    .select('id, kind, session_id, title, starts_at, ends_at, location, mandatory, rsvp_enabled')
+    .order('starts_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as LcpEvent[];
+}
+
+// ── Attendance ───────────────────────────────────────────────────────
+export async function fetchAttendanceForEvent(eventId: string): Promise<Attendance[]> {
+  const { data, error } = await supabase
+    .from('lcp_attendance')
+    .select('id, event_id, family_id, status')
+    .eq('event_id', eventId);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Attendance[];
+}
+
+/** Upsert a family's attendance for an event (unique on event_id + family_id). */
+export async function markAttendance(
+  eventId: string,
+  familyId: string,
+  status: AttendanceStatus,
+  markedBy: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_attendance')
+    .upsert(
+      { event_id: eventId, family_id: familyId, status, marked_by: markedBy },
+      { onConflict: 'event_id,family_id' },
+    );
+  if (error) throw new Error(error.message);
+}
+
+// ── Messages ─────────────────────────────────────────────────────────
+export async function fetchMessages(familyId: string): Promise<Message[]> {
+  const { data, error } = await supabase
+    .from('lcp_messages')
+    .select('*')
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Message[];
+}
+
+export async function sendStaffMessage(familyId: string, body: string, senderId: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_messages')
+    .insert({ family_id: familyId, sender_kind: 'staff', sender_id: senderId, body });
+  if (error) throw new Error(error.message);
+}
+
+// ── Staff notes (full LCP staff only) ────────────────────────────────
+export async function fetchStaffNotes(familyId: string): Promise<StaffNote[]> {
+  const { data, error } = await supabase
+    .from('lcp_staff_notes')
+    .select('*')
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as StaffNote[];
+}
+
+export async function addStaffNote(
+  familyId: string,
+  body: string,
+  authorId: string,
+  sessionId: number | null = null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_staff_notes')
+    .insert({ family_id: familyId, body, author_id: authorId, session_id: sessionId });
+  if (error) throw new Error(error.message);
+}
+
+// ── Vouchers + redemptions ───────────────────────────────────────────
+export async function fetchVouchers(familyId: string): Promise<Voucher[]> {
+  const { data, error } = await supabase
+    .from('lcp_vouchers')
+    .select('id, family_id, earned_for, earned_at, redemption_id')
+    .eq('family_id', familyId)
+    .order('earned_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Voucher[];
+}
+
+export async function awardVoucher(familyId: string, earnedFor: string, awardedBy: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_vouchers')
+    .insert({ family_id: familyId, kind: 'gift_card', earned_for: earnedFor, awarded_by: awardedBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchRedemptions(): Promise<Redemption[]> {
+  const { data, error } = await supabase
+    .from('lcp_redemptions')
+    .select('id, family_id, vouchers_spent, gift_card_value_cents, status, requested_at, fulfilled_at')
+    .order('requested_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Redemption[];
+}
+
+/** Fulfill a redemption: spend the family's oldest unspent vouchers + close it out. */
+export async function fulfillRedemption(
+  redemptionId: string,
+  familyId: string,
+  vouchersToSpend: number,
+  fulfilledBy: string,
+): Promise<void> {
+  const { data: unspent, error: vErr } = await supabase
+    .from('lcp_vouchers')
+    .select('id')
+    .eq('family_id', familyId)
+    .is('redemption_id', null)
+    .order('earned_at', { ascending: true })
+    .limit(vouchersToSpend);
+  if (vErr) throw new Error(vErr.message);
+
+  const ids = (unspent ?? []).map((v) => (v as { id: string }).id);
+  if (ids.length > 0) {
+    const { error: linkErr } = await supabase
+      .from('lcp_vouchers')
+      .update({ redemption_id: redemptionId })
+      .in('id', ids);
+    if (linkErr) throw new Error(linkErr.message);
+  }
+
+  const { error } = await supabase
+    .from('lcp_redemptions')
+    .update({ status: 'fulfilled', fulfilled_by: fulfilledBy, fulfilled_at: new Date().toISOString() })
+    .eq('id', redemptionId);
+  if (error) throw new Error(error.message);
+}

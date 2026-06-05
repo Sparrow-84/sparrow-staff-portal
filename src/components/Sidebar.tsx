@@ -1,8 +1,9 @@
-export type View = 'home' | 'twin-oaks' | 'staff';
+export type View = 'home' | 'twin-oaks' | 'lcp' | 'tasks' | 'calendar' | 'settings' | 'staff';
 
 interface Props {
   view: View;
   isAdmin: boolean;
+  lcpAccess: boolean;
   onNavigate: (v: View) => void;
   open: boolean; // mobile drawer
   onClose: () => void;
@@ -16,15 +17,17 @@ function Soon() {
   );
 }
 
-const SOON_ROOMS = ['LifeChange', 'Partnerships', 'Operations'];
+const SOON_ROOMS = ['Partnerships', 'Operations'];
 
 function NavContent({
   view,
   isAdmin,
+  lcpAccess,
   onNavigate,
 }: {
   view: View;
   isAdmin: boolean;
+  lcpAccess: boolean;
   onNavigate: (v: View) => void;
 }) {
   const itemBase = 'flex items-center gap-2 rounded-lg px-3 py-2 text-left transition';
@@ -37,12 +40,12 @@ function NavContent({
         <button onClick={() => onNavigate('home')} className={`${itemBase} ${view === 'home' ? active : idle}`}>
           Home
         </button>
-        <button onClick={() => onNavigate('home')} className={`${itemBase} ${idle}`}>
+        <button onClick={() => onNavigate('tasks')} className={`${itemBase} ${view === 'tasks' ? active : idle}`}>
           My tasks
         </button>
-        <span className={`${itemBase} text-sparrow-gray`}>
-          Calendar <Soon />
-        </span>
+        <button onClick={() => onNavigate('calendar')} className={`${itemBase} ${view === 'calendar' ? active : idle}`}>
+          Calendar
+        </button>
 
         <div className="my-3 border-t border-sparrow-rule" />
         <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Rooms</p>
@@ -52,6 +55,15 @@ function NavContent({
         >
           Twin Oaks
         </button>
+        {lcpAccess ? (
+          <button onClick={() => onNavigate('lcp')} className={`${itemBase} ${view === 'lcp' ? active : idle}`}>
+            LifeChange
+          </button>
+        ) : (
+          <span className={`${itemBase} text-sparrow-gray/70`}>
+            LifeChange <Soon />
+          </span>
+        )}
         {SOON_ROOMS.map((r) => (
           <span key={r} className={`${itemBase} text-sparrow-gray/70`}>
             {r} <Soon />
@@ -69,19 +81,19 @@ function NavContent({
         )}
       </nav>
 
-      <span className={`${itemBase} text-sparrow-gray`}>
-        Settings <Soon />
-      </span>
+      <button onClick={() => onNavigate('settings')} className={`${itemBase} ${view === 'settings' ? active : idle}`}>
+        Settings
+      </button>
     </>
   );
 }
 
-export function Sidebar({ view, isAdmin, onNavigate, open, onClose }: Props) {
+export function Sidebar({ view, isAdmin, lcpAccess, onNavigate, open, onClose }: Props) {
   return (
     <>
       {/* Desktop: static sidebar */}
       <aside className="hidden w-56 shrink-0 flex-col border-r border-sparrow-rule bg-white px-3 py-5 md:flex">
-        <NavContent view={view} isAdmin={isAdmin} onNavigate={onNavigate} />
+        <NavContent view={view} isAdmin={isAdmin} lcpAccess={lcpAccess} onNavigate={onNavigate} />
       </aside>
 
       {/* Mobile: slide-in drawer */}
@@ -100,6 +112,7 @@ export function Sidebar({ view, isAdmin, onNavigate, open, onClose }: Props) {
         <NavContent
           view={view}
           isAdmin={isAdmin}
+          lcpAccess={lcpAccess}
           onNavigate={(v) => {
             onNavigate(v);
             onClose();
