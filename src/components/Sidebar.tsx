@@ -55,14 +55,10 @@ function NavContent({
         >
           Twin Oaks
         </button>
-        {lcpAccess ? (
+        {lcpAccess && (
           <button onClick={() => onNavigate('lcp')} className={`${itemBase} ${view === 'lcp' ? active : idle}`}>
             LifeChange
           </button>
-        ) : (
-          <span className={`${itemBase} text-sparrow-gray/70`}>
-            LifeChange <Soon />
-          </span>
         )}
         {SOON_ROOMS.map((r) => (
           <span key={r} className={`${itemBase} text-sparrow-gray/70`}>
