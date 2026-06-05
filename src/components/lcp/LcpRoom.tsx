@@ -20,6 +20,7 @@ import {
 import { dayLabel, timeLabel } from '@/lib/lcp-format';
 import { FamilyDetailPanel } from './FamilyDetailPanel';
 import { SessionBriefPanel } from './SessionBriefPanel';
+import { AddFamilyPanel } from './AddFamilyPanel';
 
 export function LcpRoom() {
   const { profile } = useAuth();
@@ -36,6 +37,7 @@ export function LcpRoom() {
   const [familyOpen, setFamilyOpen] = useState(false);
   const [event, setEvent] = useState<LcpEvent | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -100,11 +102,16 @@ export function LcpRoom() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <div>
-        <h1 className="font-serif text-2xl font-semibold">LifeChange</h1>
-        <p className="mt-1 text-sm text-sparrow-gray">
-          {stats.active} families · {stats.onTrack} on track · {stats.needs} need attention · {stats.onboarding} onboarding
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-2xl font-semibold">LifeChange</h1>
+          <p className="mt-1 text-sm text-sparrow-gray">
+            {stats.active} families · {stats.onTrack} on track · {stats.needs} need attention · {stats.onboarding} onboarding
+          </p>
+        </div>
+        <button onClick={() => setAddOpen(true)} className="btn-primary shrink-0">
+          + Add family
+        </button>
       </div>
 
       {pendingRedemptions.length > 0 && (
@@ -220,6 +227,7 @@ export function LcpRoom() {
         onClose={() => setBriefOpen(false)}
         onChanged={load}
       />
+      <AddFamilyPanel open={addOpen} onClose={() => setAddOpen(false)} onCreated={load} />
     </div>
   );
 }

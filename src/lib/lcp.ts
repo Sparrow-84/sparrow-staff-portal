@@ -36,6 +36,32 @@ export async function updateFamily(
   if (error) throw new Error(error.message);
 }
 
+export interface FamilyInput {
+  display_name: string;
+  login_email: string;
+  current_session_number: number;
+}
+
+/**
+ * Add a LifeChange family. `login_email` is both the participant's sign-in identity
+ * AND their allowlist entry — handle_new_user() links a new sign-up only if it matches
+ * a families.login_email, so creating the row is all that's needed for the mother to
+ * register in the participant portal. Full LCP staff only (RLS: families_write).
+ */
+export async function createFamily(input: FamilyInput): Promise<void> {
+  const { error } = await supabase.from('families').insert({
+    display_name: input.display_name.trim(),
+    login_email: input.login_email.trim().toLowerCase(),
+    current_session_number: input.current_session_number,
+  });
+  if (error) {
+    if ((error as { code?: string }).code === '23505') {
+      throw new Error('That email is already registered to another family.');
+    }
+    throw new Error(error.message);
+  }
+}
+
 // ── Curriculum (for the progress map + session picker) ───────────────
 export async function fetchSessions(): Promise<CurriculumSession[]> {
   const { data, error } = await supabase
