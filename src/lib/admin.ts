@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { AppRole, Department, Profile } from './types';
+import type { AppRole, Department, LcpRole, Profile } from './types';
 
 export interface StaffInput {
   full_name: string;
@@ -7,6 +7,7 @@ export interface StaffInput {
   role: AppRole;
   department: Department;
   manager_email: string | null;
+  lcp_role: LcpRole;
 }
 
 /** All staff including deactivated (admin view). RLS still restricts this to admins in practice. */

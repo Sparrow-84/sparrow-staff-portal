@@ -26,6 +26,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
   const [department, setDepartment] = useState<Department>('ops');
   const [managerEmail, setManagerEmail] = useState<string>('');
   const [active, setActive] = useState(true);
+  const [lcpFull, setLcpFull] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -37,6 +38,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setDepartment(staff.department);
       setManagerEmail(staff.manager_email ?? '');
       setActive(staff.active);
+      setLcpFull(staff.lcp_role === 'full');
     } else {
       setFullName('');
       setEmail('');
@@ -44,6 +46,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setDepartment('ops');
       setManagerEmail('');
       setActive(true);
+      setLcpFull(false);
     }
   }, [open, staff]);
 
@@ -58,6 +61,9 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       role,
       department,
       manager_email: managerEmail || null,
+      // Checkbox governs the `full` tier only. When unchecked, preserve an existing
+      // `extended` grant (set via SQL / Phase-2 read views) rather than clobbering it.
+      lcp_role: lcpFull ? 'full' : staff?.lcp_role === 'extended' ? 'extended' : null,
     };
     startTransition(async () => {
       try {
@@ -176,6 +182,30 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
             <strong> Manager</strong> sees their reports' tasks, and <strong>Twin Oaks</strong> staff
             (or admins) can see resident records.
           </p>
+
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream px-3 py-3">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={lcpFull}
+                onChange={(e) => setLcpFull(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-sparrow-green"
+              />
+              <span>
+                <span className="font-medium">LifeChange Room access (full)</span>
+                <span className="mt-0.5 block text-xs text-sparrow-gray">
+                  Opens the LifeChange Room — participant records, messages, staff notes, and
+                  vouchers. Grant only to LCP staff. Separate from Role and Department.
+                </span>
+              </span>
+            </label>
+            {staff?.lcp_role === 'extended' && (
+              <p className="mt-2 text-xs text-sparrow-gray">
+                Currently has <strong>extended</strong> (read-only, Phase 2) access — leaving this
+                unchecked keeps that.
+              </p>
+            )}
+          </div>
 
           {staff && (
             <label className="mt-4 flex items-center gap-2 text-sm">
