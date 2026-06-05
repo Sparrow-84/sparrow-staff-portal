@@ -116,6 +116,26 @@ export const LOT_COLOR_CLASSES: Record<LotColor, string> = {
   gray: 'border-dashed border-sparrow-rule bg-white text-sparrow-gray',
 };
 
+/**
+ * Where a work order is, lot-first for at-a-glance wayfinding:
+ *  - lot-tied → "Lot 14" or "Lot 14: front porch" (if a spot detail is given)
+ *  - common area / infra → the location text
+ * Dedupes legacy data where `location` just restated the lot ("Lot 14").
+ */
+export function workOrderWhere(
+  wo: { space_id: string | null; location: string },
+  lotLabelById: Map<string, string>,
+): string {
+  const lot = wo.space_id ? lotLabelById.get(wo.space_id) : undefined;
+  if (!lot) return wo.location.trim() || 'Common area';
+  const detail = wo.location.trim();
+  const normalized = detail.toLowerCase().replace(/\s+/g, '');
+  if (!detail || normalized === `lot${lot}`.toLowerCase() || normalized === lot.toLowerCase()) {
+    return `Lot ${lot}`;
+  }
+  return `Lot ${lot}: ${detail}`;
+}
+
 export const LOT_LEGEND: { color: LotColor; label: string }[] = [
   { color: 'green', label: 'Occupied · current' },
   { color: 'amber', label: 'Open work order' },

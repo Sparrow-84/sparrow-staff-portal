@@ -7,6 +7,7 @@ import {
   LOT_COLOR_CLASSES,
   OPEN_WO_STATUSES,
   WO_PRIORITIES,
+  workOrderWhere,
   type Space,
   type Tenant,
   type WoPriority,
@@ -74,6 +75,12 @@ export function TwinOaksRoom() {
     }
     return map;
   }, [tenants]);
+
+  const lotLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of spaces) map.set(s.id, s.label);
+    return map;
+  }, [spaces]);
 
   const openWorkOrders = useMemo(
     () =>
@@ -155,9 +162,14 @@ export function TwinOaksRoom() {
         </div>
       ) : (
         <div className="mt-6 space-y-8">
-          <WorkOrderSection title="Open" items={openWorkOrders} onOpen={openWorkOrder} />
+          <WorkOrderSection title="Open" items={openWorkOrders} lotLabelById={lotLabelById} onOpen={openWorkOrder} />
           {doneWorkOrders.length > 0 && (
-            <WorkOrderSection title="Completed" items={doneWorkOrders} onOpen={openWorkOrder} />
+            <WorkOrderSection
+              title="Completed"
+              items={doneWorkOrders}
+              lotLabelById={lotLabelById}
+              onOpen={openWorkOrder}
+            />
           )}
           {workOrders.length === 0 && (
             <p className="rounded-xl border border-dashed border-sparrow-rule bg-white p-8 text-center text-sm text-sparrow-gray">
@@ -195,10 +207,12 @@ export function TwinOaksRoom() {
 function WorkOrderSection({
   title,
   items,
+  lotLabelById,
   onOpen,
 }: {
   title: string;
   items: WorkOrderWithAssignee[];
+  lotLabelById: Map<string, string>;
   onOpen: (w: WorkOrderWithAssignee) => void;
 }) {
   if (items.length === 0) return null;
@@ -216,13 +230,15 @@ function WorkOrderSection({
                 onClick={() => onOpen(w)}
                 className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sparrow-mist"
               >
-                <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} aria-hidden />
+                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot}`} aria-hidden />
                 <span className="flex-1">
-                  <span className="text-sm text-sparrow-ink">{w.description}</span>
-                  <span className="mt-0.5 block text-xs text-sparrow-gray">
-                    {w.location}
-                    {w.assignee && <> · {w.assignee.full_name}</>}
+                  <span className="block text-sm font-semibold text-sparrow-green">
+                    {workOrderWhere(w, lotLabelById)}
                   </span>
+                  <span className="block text-sm text-sparrow-ink">{w.description}</span>
+                  {w.assignee && (
+                    <span className="block text-xs text-sparrow-gray">{w.assignee.full_name}</span>
+                  )}
                 </span>
                 <span className="shrink-0 text-xs capitalize text-sparrow-gray">
                   {w.status.replace('_', ' ')}

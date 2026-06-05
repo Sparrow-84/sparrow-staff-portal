@@ -59,9 +59,8 @@ export function WorkOrderPanel({
       setStatus(workOrder.status);
       setAssignedTo(workOrder.assigned_to ?? '');
     } else {
-      const presetLabel = spaces.find((s) => s.id === prefillSpaceId)?.label;
       setSpaceId(prefillSpaceId ?? '');
-      setLocation(presetLabel ? `Lot ${presetLabel}` : '');
+      setLocation('');
       setCategory('tenant_request');
       setDescription('');
       setPriority('medium');
@@ -71,8 +70,12 @@ export function WorkOrderPanel({
   }, [open, workOrder, prefillSpaceId, spaces]);
 
   function save() {
-    if (!description.trim() || !location.trim()) {
-      setError('Location and description are required.');
+    if (!description.trim()) {
+      setError('A description is required.');
+      return;
+    }
+    if (!spaceId && !location.trim()) {
+      setError('Pick a lot, or enter a location for common-area work.');
       return;
     }
     const input: WorkOrderInput = {
@@ -154,14 +157,14 @@ export function WorkOrderPanel({
             </div>
             <div>
               <label className="field-label" htmlFor="w-loc">
-                Location
+                Spot / location
               </label>
               <input
                 id="w-loc"
                 className="field-input"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Lot 14"
+                placeholder="e.g. front porch — or where, if no lot"
               />
             </div>
           </div>
