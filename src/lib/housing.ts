@@ -1,5 +1,13 @@
 import { supabase } from './supabase';
-import type { Space, Tenant, WoCategory, WoPriority, WoStatus, WorkOrder } from './housing-types';
+import type {
+  Space,
+  Tenant,
+  TenantStatus,
+  WoCategory,
+  WoPriority,
+  WoStatus,
+  WorkOrder,
+} from './housing-types';
 
 export interface WorkOrderWithAssignee extends WorkOrder {
   assignee: { id: string; full_name: string } | null;
@@ -59,8 +67,36 @@ export async function deleteWorkOrder(id: string): Promise<void> {
 
 export async function updateSpace(
   id: string,
-  patch: Partial<Pick<Space, 'rent_status' | 'current_rent' | 'status' | 'notes'>>,
+  patch: Partial<Pick<Space, 'status' | 'type' | 'current_rent' | 'rent_status' | 'size' | 'notes'>>,
 ): Promise<void> {
   const { error } = await supabase.from('spaces').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Residents (RLS: can_see_residents only — TOC staff + admins) ─────
+export interface TenantInput {
+  space_id: string | null;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  household_size: number;
+  annual_income: number | null;
+  status: TenantStatus;
+  move_in_date: string | null;
+  notes: string | null;
+}
+
+export async function createTenant(input: TenantInput): Promise<void> {
+  const { error } = await supabase.from('tenants').insert(input);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateTenant(id: string, patch: Partial<TenantInput>): Promise<void> {
+  const { error } = await supabase.from('tenants').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteTenant(id: string): Promise<void> {
+  const { error } = await supabase.from('tenants').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }

@@ -49,6 +49,31 @@ export interface WorkOrder {
   updated_at: string;
 }
 
+export const SPACE_STATUSES: { value: SpaceStatus; label: string }[] = [
+  { value: 'occupied', label: 'Occupied' },
+  { value: 'vacant', label: 'Vacant' },
+  { value: 'reserved', label: 'Reserved' },
+  { value: 'maintenance', label: 'Under maintenance' },
+];
+
+export const SPACE_TYPES: { value: SpaceType; label: string }[] = [
+  { value: 'manufactured_home', label: 'Manufactured home' },
+  { value: 'rv', label: 'RV' },
+];
+
+export const RENT_STATUSES: { value: RentStatus; label: string }[] = [
+  { value: 'current', label: 'Current' },
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'na', label: 'N/A' },
+];
+
+export const TENANT_STATUSES: { value: TenantStatus; label: string }[] = [
+  { value: 'active', label: 'Active' },
+  { value: 'applicant', label: 'Applicant' },
+  { value: 'moved_out', label: 'Moved out' },
+  { value: 'evicted', label: 'Evicted' },
+];
+
 export const WO_CATEGORIES: { value: WoCategory; label: string }[] = [
   { value: 'tenant_request', label: 'Tenant request' },
   { value: 'common_area', label: 'Common area' },

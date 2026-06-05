@@ -28,7 +28,7 @@ export function TwinOaksRoom() {
   const [error, setError] = useState<string | null>(null);
 
   const [tab, setTab] = useState<'property' | 'workorders'>('property');
-  const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [lotOpen, setLotOpen] = useState(false);
   const [woOpen, setWoOpen] = useState(false);
   const [editWo, setEditWo] = useState<WorkOrderWithAssignee | null>(null);
@@ -91,7 +91,7 @@ export function TwinOaksRoom() {
   const vacant = spaces.filter((s) => s.status === 'vacant').length;
 
   function openLot(space: Space) {
-    setSelectedSpace(space);
+    setSelectedSpaceId(space.id);
     setLotOpen(true);
   }
   function newWorkOrder(spaceId: string | null) {
@@ -169,11 +169,12 @@ export function TwinOaksRoom() {
 
       <LotDetailPanel
         open={lotOpen}
-        space={selectedSpace}
-        tenant={selectedSpace ? tenantBySpace.get(selectedSpace.id) ?? null : null}
-        workOrders={selectedSpace ? workOrders.filter((w) => w.space_id === selectedSpace.id) : []}
+        space={selectedSpaceId ? spaces.find((s) => s.id === selectedSpaceId) ?? null : null}
+        tenant={selectedSpaceId ? tenantBySpace.get(selectedSpaceId) ?? null : null}
+        workOrders={selectedSpaceId ? workOrders.filter((w) => w.space_id === selectedSpaceId) : []}
         canManage={canManage}
         onClose={() => setLotOpen(false)}
+        onChanged={load}
         onNewWorkOrder={newWorkOrder}
         onSelectWorkOrder={openWorkOrder}
       />
