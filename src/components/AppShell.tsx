@@ -13,7 +13,6 @@ import { TwinOaksRoom } from './twinoaks/TwinOaksRoom';
 import { LcpRoom } from './lcp/LcpRoom';
 import { PartnershipsRoom } from './partnerships/PartnershipsRoom';
 import { OperationsRoom } from './ops/OperationsRoom';
-import { InventoryRoom } from './inventory/InventoryRoom';
 import { StaffAdmin } from './admin/StaffAdmin';
 import { OnboardingView } from './onboarding/OnboardingView';
 import { DocumentsRoom } from './documents/DocumentsRoom';
@@ -39,7 +38,7 @@ export function AppShell() {
 
   if (!profile) return null;
   const isAdmin = profile.role === 'admin';
-  const lcpAccess = profile.lcp_role === 'full';
+  const lcpAccess = isAdmin || profile.lcp_role === 'full';
   const partnershipsAccess =
     isAdmin || profile.department === 'partnerships' || profile.partnerships_access;
   const opsAccess = profile.ops_access;
@@ -83,7 +82,6 @@ export function AppShell() {
             {view === 'lcp' && <LcpRoom />}
             {view === 'partnerships' && <PartnershipsRoom />}
             {view === 'operations' && <OperationsRoom />}
-            {view === 'inventory' && <InventoryRoom />}
             {view === 'documents' && <DocumentsRoom />}
             {view === 'staff' && <StaffAdmin />}
           </main>

@@ -1,6 +1,6 @@
 import { useChat } from '@/chat/ChatContext';
 
-export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'inventory' | 'tasks' | 'calendar' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents';
+export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'tasks' | 'calendar' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents';
 
 interface Props {
   view: View;
@@ -19,6 +19,14 @@ function Soon() {
     <span className="ml-auto rounded-full bg-sparrow-rule/60 px-1.5 py-0.5 text-[10px] font-medium uppercase text-sparrow-gray">
       Soon
     </span>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg className="ml-auto h-3.5 w-3.5 shrink-0 opacity-40" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <path d="M11 7V5a3 3 0 1 0-6 0v2H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1zm-5-2a2 2 0 1 1 4 0v2H6V5z" />
+    </svg>
   );
 }
 
@@ -86,33 +94,39 @@ function NavContent({
         >
           Twin Oaks
         </button>
-        {lcpAccess && (
+        {lcpAccess ? (
           <button onClick={() => onNavigate('lcp')} className={`${itemBase} ${view === 'lcp' ? active : idle}`}>
             LifeChange
           </button>
+        ) : (
+          <span className={`${itemBase} cursor-default text-sparrow-gray/50`}>
+            LifeChange <LockIcon />
+          </span>
         )}
-        {partnershipsAccess && (
+        {partnershipsAccess ? (
           <button
             onClick={() => onNavigate('partnerships')}
             className={`${itemBase} ${view === 'partnerships' ? active : idle}`}
           >
             Partnerships
           </button>
+        ) : (
+          <span className={`${itemBase} cursor-default text-sparrow-gray/50`}>
+            Partnerships <LockIcon />
+          </span>
         )}
-        {opsAccess && (
+        {opsAccess ? (
           <button
             onClick={() => onNavigate('operations')}
             className={`${itemBase} ${view === 'operations' ? active : idle}`}
           >
             Operations
           </button>
+        ) : (
+          <span className={`${itemBase} cursor-default text-sparrow-gray/50`}>
+            Operations <LockIcon />
+          </span>
         )}
-        <button
-          onClick={() => onNavigate('inventory')}
-          className={`${itemBase} ${view === 'inventory' ? active : idle}`}
-        >
-          Inventory
-        </button>
         <button
           onClick={() => onNavigate('documents')}
           className={`${itemBase} ${view === 'documents' ? active : idle}`}

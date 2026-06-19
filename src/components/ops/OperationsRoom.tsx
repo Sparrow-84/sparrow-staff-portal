@@ -5,6 +5,7 @@ import type { Profile } from '@/lib/types';
 import { fetchActiveChecklists, fetchAllReviews, fetchAllTouchpoints, fetchOpenIssues } from '@/lib/ops';
 import { daysSince, touchpointTone, type Checklist, type Issue, type Review, type Touchpoint } from '@/lib/ops-types';
 import { StaffMemberPanel } from './StaffMemberPanel';
+import { InventoryRoom } from '@/components/inventory/InventoryRoom';
 
 export function OperationsRoom() {
   const { profile } = useAuth();
@@ -16,6 +17,7 @@ export function OperationsRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [opsTab, setOpsTab] = useState<'staff' | 'inventory'>('staff');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -83,7 +85,28 @@ export function OperationsRoom() {
         <p className="mt-1 text-sm text-sparrow-gray">Staff management · {staff.length} people</p>
       </div>
 
-      {(overdueReviews.length > 0 || overdueTouchpoints.length > 0) && (
+      {/* Tabs */}
+      <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
+        {(['staff', 'inventory'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setOpsTab(t)}
+            className={`rounded-lg px-3 py-1.5 font-medium capitalize transition ${
+              opsTab === t ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
+            }`}
+          >
+            {t === 'staff' ? 'Staff' : 'Inventory'}
+          </button>
+        ))}
+      </div>
+
+      {opsTab === 'inventory' ? (
+        <div className="mt-6">
+          <InventoryRoom />
+        </div>
+      ) : null}
+
+      {opsTab === 'staff' && (overdueReviews.length > 0 || overdueTouchpoints.length > 0) && (
         <div className="mt-4 flex flex-wrap gap-3 rounded-xl border border-sparrow-gold/40 bg-sparrow-cream px-4 py-3 text-sm">
           {overdueReviews.length > 0 && <span>📋 {overdueReviews.length} review{overdueReviews.length > 1 ? 's' : ''} overdue</span>}
           {overdueTouchpoints.length > 0 && (
@@ -92,50 +115,54 @@ export function OperationsRoom() {
         </div>
       )}
 
-      <ul className="mt-6 space-y-2">
-        {staff.map((s) => {
-          const tone = touchpointTone(daysSince(lastMet.get(s.id) ?? null));
-          const issues = openIssueCount.get(s.id) ?? 0;
-          const ck = activeChecklist.get(s.id);
-          return (
-            <li key={s.id}>
-              <button
-                onClick={() => openStaff(s.id)}
-                className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 text-left shadow-card transition hover:border-sparrow-green/40"
-              >
-                <div className="min-w-0 flex-1">
-                  <span className="font-medium text-sparrow-ink">{s.full_name}</span>
-                  <p className="text-xs capitalize text-sparrow-gray">
-                    {s.role} · {s.department}
-                  </p>
-                </div>
-                {ck && (
-                  <span className="rounded-full bg-sparrow-green/10 px-2 py-0.5 text-[10px] font-medium capitalize text-sparrow-green">
-                    {ck.kind}
-                  </span>
-                )}
-                {issues > 0 && (
-                  <span className="rounded-full bg-priority-p1/15 px-2 py-0.5 text-[10px] font-medium text-priority-p1">
-                    {issues} issue{issues > 1 ? 's' : ''}
-                  </span>
-                )}
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`} title="Last 1:1">
-                  {tone.label}
-                </span>
-                <span className="shrink-0 text-sparrow-gray">›</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      {opsTab === 'staff' && (
+        <>
+          <ul className="mt-6 space-y-2">
+            {staff.map((s) => {
+              const tone = touchpointTone(daysSince(lastMet.get(s.id) ?? null));
+              const issues = openIssueCount.get(s.id) ?? 0;
+              const ck = activeChecklist.get(s.id);
+              return (
+                <li key={s.id}>
+                  <button
+                    onClick={() => openStaff(s.id)}
+                    className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 text-left shadow-card transition hover:border-sparrow-green/40"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium text-sparrow-ink">{s.full_name}</span>
+                      <p className="text-xs capitalize text-sparrow-gray">
+                        {s.role} · {s.department}
+                      </p>
+                    </div>
+                    {ck && (
+                      <span className="rounded-full bg-sparrow-green/10 px-2 py-0.5 text-[10px] font-medium capitalize text-sparrow-green">
+                        {ck.kind}
+                      </span>
+                    )}
+                    {issues > 0 && (
+                      <span className="rounded-full bg-priority-p1/15 px-2 py-0.5 text-[10px] font-medium text-priority-p1">
+                        {issues} issue{issues > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`} title="Last 1:1">
+                      {tone.label}
+                    </span>
+                    <span className="shrink-0 text-sparrow-gray">›</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
 
-      <StaffMemberPanel
-        open={panelOpen}
-        staff={selectedId ? staff.find((s) => s.id === selectedId) ?? null : null}
-        currentUserId={profile?.id ?? ''}
-        onClose={() => setPanelOpen(false)}
-        onChanged={load}
-      />
+          <StaffMemberPanel
+            open={panelOpen}
+            staff={selectedId ? staff.find((s) => s.id === selectedId) ?? null : null}
+            currentUserId={profile?.id ?? ''}
+            onClose={() => setPanelOpen(false)}
+            onChanged={load}
+          />
+        </>
+      )}
     </div>
   );
 }

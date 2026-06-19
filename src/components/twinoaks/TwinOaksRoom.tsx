@@ -16,6 +16,7 @@ import type { Profile } from '@/lib/types';
 import { LotGrid } from './LotGrid';
 import { LotDetailPanel } from './LotDetailPanel';
 import { WorkOrderPanel } from './WorkOrderPanel';
+import { IncidentLogTab } from './IncidentLogTab';
 
 const PRIORITY_RANK: Record<WoPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
@@ -28,7 +29,7 @@ export function TwinOaksRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'property' | 'workorders'>('property');
+  const [tab, setTab] = useState<'property' | 'workorders' | 'incidents'>('property');
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [lotOpen, setLotOpen] = useState(false);
   const [woOpen, setWoOpen] = useState(false);
@@ -135,20 +136,28 @@ export function TwinOaksRoom() {
 
       {/* Tabs */}
       <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
-        {(['property', 'workorders'] as const).map((t) => (
+        {(
+          [
+            { key: 'property', label: 'Property' },
+            { key: 'workorders', label: 'Work orders' },
+            ...(canManage ? [{ key: 'incidents', label: 'Incidents' }] : []),
+          ] as { key: typeof tab; label: string }[]
+        ).map(({ key, label }) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={key}
+            onClick={() => setTab(key)}
             className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              tab === t ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
+              tab === key ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
             }`}
           >
-            {t === 'property' ? 'Property' : 'Work orders'}
+            {label}
           </button>
         ))}
       </div>
 
-      {tab === 'property' ? (
+      {tab === 'incidents' ? (
+        <IncidentLogTab spaces={spaces} />
+      ) : tab === 'property' ? (
         <div className="mt-6">
           <div className="mb-4 flex flex-wrap gap-4">
             {LOT_LEGEND.map((l) => (
