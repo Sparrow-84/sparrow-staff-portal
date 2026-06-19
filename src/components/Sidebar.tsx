@@ -85,6 +85,9 @@ function NavContent({
             </span>
           )}
         </button>
+        <button onClick={() => onNavigate('documents')} className={`${itemBase} ${view === 'documents' ? active : idle}`}>
+          Resource Library
+        </button>
 
         <div className="my-3 border-t border-sparrow-rule" />
         <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Rooms</p>
@@ -127,12 +130,6 @@ function NavContent({
             Operations <LockIcon />
           </span>
         )}
-        <button
-          onClick={() => onNavigate('documents')}
-          className={`${itemBase} ${view === 'documents' ? active : idle}`}
-        >
-          Documents
-        </button>
         {SOON_ROOMS.map((r) => (
           <span key={r} className={`${itemBase} text-sparrow-gray/70`}>
             {r} <Soon />

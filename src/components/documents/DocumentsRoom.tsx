@@ -35,7 +35,7 @@ export function DocumentsRoom() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="mb-8">
-        <h1 className="font-serif text-2xl font-semibold">Documents</h1>
+        <h1 className="font-serif text-2xl font-semibold">Resource Library</h1>
         <p className="mt-1 text-sm text-sparrow-gray">
           Reference documents for Sparrow staff. Come back here any time you need to look something up.
         </p>
