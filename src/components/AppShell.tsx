@@ -16,6 +16,7 @@ import { OperationsRoom } from './ops/OperationsRoom';
 import { InventoryRoom } from './inventory/InventoryRoom';
 import { StaffAdmin } from './admin/StaffAdmin';
 import { OnboardingView } from './onboarding/OnboardingView';
+import { DocumentsRoom } from './documents/DocumentsRoom';
 import { ValuesFooter } from './ValuesFooter';
 
 export function AppShell() {
@@ -83,6 +84,7 @@ export function AppShell() {
             {view === 'partnerships' && <PartnershipsRoom />}
             {view === 'operations' && <OperationsRoom />}
             {view === 'inventory' && <InventoryRoom />}
+            {view === 'documents' && <DocumentsRoom />}
             {view === 'staff' && <StaffAdmin />}
           </main>
         </div>

@@ -1,6 +1,6 @@
 import { useChat } from '@/chat/ChatContext';
 
-export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'inventory' | 'tasks' | 'calendar' | 'messages' | 'settings' | 'staff' | 'onboarding';
+export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'inventory' | 'tasks' | 'calendar' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents';
 
 interface Props {
   view: View;
@@ -112,6 +112,12 @@ function NavContent({
           className={`${itemBase} ${view === 'inventory' ? active : idle}`}
         >
           Inventory
+        </button>
+        <button
+          onClick={() => onNavigate('documents')}
+          className={`${itemBase} ${view === 'documents' ? active : idle}`}
+        >
+          Documents
         </button>
         {SOON_ROOMS.map((r) => (
           <span key={r} className={`${itemBase} text-sparrow-gray/70`}>

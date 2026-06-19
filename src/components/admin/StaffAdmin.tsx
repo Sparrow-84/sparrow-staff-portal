@@ -4,8 +4,9 @@ import { deleteStaff, fetchAllStaff, updateStaff } from '@/lib/admin';
 import { ROLES, departmentLabel, type Profile } from '@/lib/types';
 import { StaffPanel } from './StaffPanel';
 import { OnboardingEditor } from './OnboardingEditor';
+import { DocumentsEditor } from './DocumentsEditor';
 
-type AdminTab = 'roster' | 'onboarding';
+type AdminTab = 'roster' | 'onboarding' | 'documents';
 
 const roleLabel = (r: string) => ROLES.find((x) => x.value === r)?.label ?? r;
 
@@ -73,7 +74,7 @@ export function StaffAdmin() {
 
       {/* Tab bar */}
       <div className="mt-4 flex gap-1 rounded-xl border border-sparrow-rule bg-sparrow-mist p-1 text-sm">
-        {(['roster', 'onboarding'] as AdminTab[]).map((t) => (
+        {(['roster', 'onboarding', 'documents'] as AdminTab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -81,7 +82,7 @@ export function StaffAdmin() {
               tab === t ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
             }`}
           >
-            {t === 'onboarding' ? 'Onboarding Checklist' : 'Roster'}
+            {t === 'onboarding' ? 'Onboarding Checklist' : t === 'documents' ? 'Documents' : 'Roster'}
           </button>
         ))}
       </div>
@@ -89,6 +90,10 @@ export function StaffAdmin() {
       {tab === 'onboarding' ? (
         <div className="mt-6">
           <OnboardingEditor />
+        </div>
+      ) : tab === 'documents' ? (
+        <div className="mt-6">
+          <DocumentsEditor />
         </div>
       ) : (
         <div className="mt-6 space-y-3">
