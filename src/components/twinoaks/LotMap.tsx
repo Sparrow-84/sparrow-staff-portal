@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { designationGridLabel, type NoticeType, type Space } from '@/lib/housing-types';
 
-// Notice badge colors (matching infraction level palette)
 const NOTICE_SVG: Record<NoticeType, { fill: string; text: string }> = {
   '1': { fill: '#facc15', text: '#1a1a1a' },
   '2': { fill: '#f97316', text: '#ffffff' },
@@ -9,7 +8,6 @@ const NOTICE_SVG: Record<NoticeType, { fill: string; text: string }> = {
   E:   { fill: '#111827', text: '#ffffff' },
 };
 
-// Lot tile fill/stroke colors — mirrors lotClasses() in housing-types
 const TILE = {
   sparrow_occ: { fill: '#1E4D30', stroke: '#1E4D30', text: '#ffffff' },
   sparrow_vac: { fill: '#ffffff', stroke: '#1E4D30', text: '#1E4D30' },
@@ -25,7 +23,6 @@ function tileFill(space?: Space) {
   return occ ? TILE.blue_occ : TILE.blue_vac;
 }
 
-// Designation sub-label hex: [occupied, vacant]
 const DESIG_HEX: Partial<Record<string, [string, string]>> = {
   lcp:   ['#e9d5ff', '#7c3aed'],
   sv:    ['#fde68a', '#d97706'],
@@ -33,82 +30,83 @@ const DESIG_HEX: Partial<Record<string, [string, string]>> = {
   other: ['rgba(255,255,255,0.6)', '#64748b'],
 };
 
-type LotPos = { x: number; y: number; w: number; h: number; angle?: number };
+type LotPos = { x: number; y: number; w: number; h: number };
 
-// Geographic layout in SVG viewBox="0 0 1160 715"
-// Row 1 uses angle=-7 (rotate around rect center) to follow the river slope.
+// viewBox="0 0 1120 630"
+// Row 1 (lots 1-11) is straight and parallel to Row 2, with SW Mobile Place road between them.
+// Lots 9-11 are geographically adjacent to the river; the river path renders on top to clip their corners.
 const LOTS: Record<string, LotPos> = {
-  // ── Row 1: SW Mobile Place, angled (right=1, left=11) ──────────────────
-  '1':  { x: 1056, y: 80,  w: 55, h: 90, angle: -7 },
-  '1B': { x: 1000, y: 87,  w: 50, h: 90, angle: -7 },
-  '2':  { x: 944,  y: 94,  w: 55, h: 90, angle: -7 },
-  '3':  { x: 888,  y: 101, w: 55, h: 90, angle: -7 },
-  '4':  { x: 832,  y: 108, w: 55, h: 90, angle: -7 },
-  '5':  { x: 776,  y: 115, w: 55, h: 90, angle: -7 },
-  '6':  { x: 720,  y: 122, w: 55, h: 90, angle: -7 },
-  '7':  { x: 664,  y: 129, w: 55, h: 90, angle: -7 },
-  '8':  { x: 608,  y: 136, w: 55, h: 90, angle: -7 },
-  '9':  { x: 552,  y: 143, w: 55, h: 90, angle: -7 },
-  '10': { x: 496,  y: 150, w: 55, h: 90, angle: -7 },
-  '11': { x: 440,  y: 157, w: 55, h: 90, angle: -7 },
-  // ── Row 2: upper SW Twin Oaks Circle (right=12, left=22) ───────────────
-  '12': { x: 1056, y: 220, w: 55, h: 95 },
-  '13': { x: 1000, y: 220, w: 55, h: 95 },
-  '14': { x: 944,  y: 220, w: 55, h: 95 },
-  '15': { x: 888,  y: 220, w: 55, h: 95 },
-  '16': { x: 832,  y: 220, w: 55, h: 95 },
-  '17': { x: 776,  y: 220, w: 55, h: 95 },
-  '18': { x: 720,  y: 220, w: 55, h: 95 },
-  '19': { x: 664,  y: 220, w: 55, h: 95 },
-  '20': { x: 608,  y: 220, w: 55, h: 95 },
-  '21': { x: 552,  y: 220, w: 55, h: 95 },
-  '22': { x: 496,  y: 220, w: 55, h: 95 },
-  // ── Corner wrap: lots 23-27 ─────────────────────────────────────────────
-  '23': { x: 430,  y: 222, w: 60, h: 98  },
-  '24': { x: 362,  y: 224, w: 62, h: 102 },
-  '25': { x: 292,  y: 227, w: 65, h: 105 },
-  '26': { x: 218,  y: 230, w: 70, h: 110 },
-  '27': { x: 130,  y: 235, w: 82, h: 118 },
-  // ── Far-left column ─────────────────────────────────────────────────────
-  '28': { x: 58,   y: 370, w: 78, h: 88  },
-  '29': { x: 58,   y: 463, w: 78, h: 105 },
-  // ── Interior block – top row (left=30, right=39) ────────────────────────
-  '30': { x: 496,  y: 332, w: 50, h: 78 },
-  '31': { x: 548,  y: 332, w: 50, h: 78 },
-  '32': { x: 600,  y: 332, w: 50, h: 78 },
-  '33': { x: 652,  y: 332, w: 50, h: 78 },
-  '34': { x: 704,  y: 332, w: 50, h: 78 },
-  '35': { x: 756,  y: 332, w: 50, h: 78 },
-  '36': { x: 808,  y: 332, w: 50, h: 78 },
-  '37': { x: 860,  y: 332, w: 50, h: 78 },
-  '38': { x: 912,  y: 332, w: 50, h: 78 },
-  '39': { x: 964,  y: 332, w: 50, h: 78 },
-  // ── Interior block – bottom row (49=under 30, 40=under 39) ─────────────
-  '49': { x: 496,  y: 413, w: 50, h: 78 },
-  '48': { x: 548,  y: 413, w: 50, h: 78 },
-  '47': { x: 600,  y: 413, w: 50, h: 78 },
-  '46': { x: 652,  y: 413, w: 50, h: 78 },
-  '45': { x: 704,  y: 413, w: 50, h: 78 },
-  '44': { x: 756,  y: 413, w: 50, h: 78 },
-  '43': { x: 808,  y: 413, w: 50, h: 78 },
-  '42': { x: 860,  y: 413, w: 50, h: 78 },
-  '41': { x: 912,  y: 413, w: 50, h: 78 },
-  '40': { x: 964,  y: 413, w: 50, h: 78 },
-  // ── Park section lots (green gap between 50 and 49) ─────────────────────
-  '50': { x: 428,  y: 413, w: 56, h: 78 },
-  '51': { x: 366,  y: 413, w: 56, h: 78 },
-  '52': { x: 304,  y: 413, w: 56, h: 78 },
-  '53': { x: 242,  y: 413, w: 56, h: 78 },
-  // ── SW Pleasant Place (54=left, 57=right) ───────────────────────────────
-  '54': { x: 496,  y: 538, w: 58, h: 78 },
-  '55': { x: 556,  y: 538, w: 58, h: 78 },
-  '56': { x: 616,  y: 538, w: 58, h: 78 },
-  '57': { x: 676,  y: 538, w: 58, h: 78 },
-  // ── SW Twin Oaks Circle lower (61=left, 58=right) ───────────────────────
-  '61': { x: 496,  y: 622, w: 58, h: 78 },
-  '60': { x: 556,  y: 622, w: 58, h: 78 },
-  '59': { x: 616,  y: 622, w: 58, h: 78 },
-  '58': { x: 676,  y: 622, w: 58, h: 78 },
+  // ── Row 1: SW Mobile Place (north row) ───────────────────────────────────
+  '1':  { x: 1056, y: 55, w: 55, h: 80 },
+  '1B': { x: 1000, y: 55, w: 50, h: 80 },
+  '2':  { x: 944,  y: 55, w: 55, h: 80 },
+  '3':  { x: 888,  y: 55, w: 55, h: 80 },
+  '4':  { x: 832,  y: 55, w: 55, h: 80 },
+  '5':  { x: 776,  y: 55, w: 55, h: 80 },
+  '6':  { x: 720,  y: 55, w: 55, h: 80 },
+  '7':  { x: 664,  y: 55, w: 55, h: 80 },
+  '8':  { x: 608,  y: 55, w: 55, h: 80 },
+  '9':  { x: 552,  y: 55, w: 55, h: 80 },
+  '10': { x: 496,  y: 55, w: 55, h: 80 },
+  '11': { x: 440,  y: 55, w: 55, h: 80 },
+  // ── Row 2: SW Twin Oaks Circle upper ─────────────────────────────────────
+  '12': { x: 1056, y: 159, w: 55, h: 88 },
+  '13': { x: 1000, y: 159, w: 55, h: 88 },
+  '14': { x: 944,  y: 159, w: 55, h: 88 },
+  '15': { x: 888,  y: 159, w: 55, h: 88 },
+  '16': { x: 832,  y: 159, w: 55, h: 88 },
+  '17': { x: 776,  y: 159, w: 55, h: 88 },
+  '18': { x: 720,  y: 159, w: 55, h: 88 },
+  '19': { x: 664,  y: 159, w: 55, h: 88 },
+  '20': { x: 608,  y: 159, w: 55, h: 88 },
+  '21': { x: 552,  y: 159, w: 55, h: 88 },
+  '22': { x: 496,  y: 159, w: 55, h: 88 },
+  // ── Corner wrap: lots 23–27 ───────────────────────────────────────────────
+  '23': { x: 430,  y: 159, w: 60, h: 88 },
+  '24': { x: 362,  y: 159, w: 62, h: 88 },
+  '25': { x: 292,  y: 159, w: 65, h: 88 },
+  '26': { x: 218,  y: 159, w: 70, h: 88 },
+  '27': { x: 130,  y: 159, w: 82, h: 88 },
+  // ── Far-left column (caretaker) ───────────────────────────────────────────
+  '28': { x: 60,   y: 349, w: 65, h: 72 },
+  '29': { x: 60,   y: 445, w: 65, h: 72 },
+  // ── Interior block – top row (lot 30 = left, lot 39 = right) ─────────────
+  '30': { x: 496,  y: 271, w: 52, h: 72 },
+  '31': { x: 550,  y: 271, w: 52, h: 72 },
+  '32': { x: 604,  y: 271, w: 52, h: 72 },
+  '33': { x: 658,  y: 271, w: 52, h: 72 },
+  '34': { x: 712,  y: 271, w: 52, h: 72 },
+  '35': { x: 766,  y: 271, w: 52, h: 72 },
+  '36': { x: 820,  y: 271, w: 52, h: 72 },
+  '37': { x: 874,  y: 271, w: 52, h: 72 },
+  '38': { x: 928,  y: 271, w: 52, h: 72 },
+  '39': { x: 982,  y: 271, w: 52, h: 72 },
+  // ── Interior block – bottom row (lot 49 = left, lot 40 = right) ──────────
+  '49': { x: 496,  y: 349, w: 52, h: 72 },
+  '48': { x: 550,  y: 349, w: 52, h: 72 },
+  '47': { x: 604,  y: 349, w: 52, h: 72 },
+  '46': { x: 658,  y: 349, w: 52, h: 72 },
+  '45': { x: 712,  y: 349, w: 52, h: 72 },
+  '44': { x: 766,  y: 349, w: 52, h: 72 },
+  '43': { x: 820,  y: 349, w: 52, h: 72 },
+  '42': { x: 874,  y: 349, w: 52, h: 72 },
+  '41': { x: 928,  y: 349, w: 52, h: 72 },
+  '40': { x: 982,  y: 349, w: 52, h: 72 },
+  // ── Park section – same row as interior bottom, extends left ──────────────
+  '50': { x: 432,  y: 349, w: 52, h: 72 },
+  '51': { x: 376,  y: 349, w: 52, h: 72 },
+  '52': { x: 320,  y: 349, w: 52, h: 72 },
+  '53': { x: 264,  y: 349, w: 52, h: 72 },
+  // ── SW Pleasant Place (lot 54 = left, lot 57 = right) ────────────────────
+  '54': { x: 496,  y: 445, w: 58, h: 72 },
+  '55': { x: 556,  y: 445, w: 58, h: 72 },
+  '56': { x: 616,  y: 445, w: 58, h: 72 },
+  '57': { x: 676,  y: 445, w: 58, h: 72 },
+  // ── SW Twin Oaks Circle lower (lot 61 = left, lot 58 = right) ────────────
+  '61': { x: 496,  y: 541, w: 58, h: 72 },
+  '60': { x: 556,  y: 541, w: 58, h: 72 },
+  '59': { x: 616,  y: 541, w: 58, h: 72 },
+  '58': { x: 676,  y: 541, w: 58, h: 72 },
 };
 
 const HOUSE_NUM: Record<string, string> = {
@@ -139,7 +137,7 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
 
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-sparrow-rule bg-white p-3">
-      <svg viewBox="0 0 1160 715" className="w-full h-auto" style={{ minWidth: 560 }}>
+      <svg viewBox="0 0 1120 630" className="w-full h-auto" style={{ minWidth: 520 }}>
         <defs>
           <pattern id="lm-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
             <line x1="0" y1="0" x2="0" y2="6" stroke="#e2e8f0" strokeWidth="1.5" />
@@ -150,49 +148,64 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
         </defs>
 
         {/* ── Background ── */}
-        <rect width="1160" height="715" fill="#f8fafc" rx="8" />
+        <rect width="1120" height="630" fill="#f8fafc" rx="8" />
 
-        {/* ── Mary's River ── */}
-        <path
-          d="M0,0 L0,78 Q80,88 200,82 Q320,76 430,85 Q430,18 560,0 Z"
-          fill="#bfdbfe" opacity="0.85"
-        />
-        <text x="145" y="58" fill="#3b82f6" fontSize="11" fontWeight="700"
-          fontFamily="sans-serif" letterSpacing="2" opacity="0.8">MARYS RIVER</text>
+        {/* ── Roads ── */}
+        {/* SW Mobile Place — between Row 1 and Row 2 */}
+        <rect x="440" y="135" width="671" height="24" fill="#cbd5e1" />
+        <line x1="440" y1="147" x2="1111" y2="147"
+          stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
+        <text x="780" y="151" fontSize="7" fontWeight="700" textAnchor="middle"
+          fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW MOBILE PLACE</text>
 
-        {/* ── Park open space (interior block, upper-left) ── */}
-        <rect x="180" y="332" width="314" height="78" fill="#dcfce7" stroke="#86efac" strokeWidth="1" rx="4" />
-        <text x="242" y="358" fill="#15803d" fontSize="10" fontWeight="600" fontFamily="sans-serif">Park</text>
+        {/* SW Twin Oaks Circle upper — between Row 2 and interior block */}
+        <rect x="130" y="247" width="981" height="24" fill="#cbd5e1" />
+        <line x1="130" y1="259" x2="1111" y2="259"
+          stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
+        <text x="640" y="263" fontSize="7" fontWeight="700" textAnchor="middle"
+          fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW TWIN OAKS CIRCLE</text>
+
+        {/* SW Pleasant Place — between interior block and pleasant place row */}
+        <rect x="496" y="421" width="238" height="24" fill="#cbd5e1" />
+        <line x1="496" y1="433" x2="734" y2="433"
+          stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
+        <text x="615" y="437" fontSize="7" fontWeight="700" textAnchor="middle"
+          fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW PLEASANT PLACE</text>
+
+        {/* SW Twin Oaks Circle lower */}
+        <rect x="496" y="517" width="238" height="24" fill="#cbd5e1" />
+        <line x1="496" y1="529" x2="734" y2="529"
+          stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
+        <text x="615" y="533" fontSize="7" fontWeight="700" textAnchor="middle"
+          fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW TWIN OAKS CIRCLE</text>
+
+        {/* ── Park open space (interior top level) ── */}
+        <rect x="180" y="271" width="314" height="72" fill="#dcfce7" stroke="#86efac" strokeWidth="1" rx="4" />
+        <text x="247" y="288" fill="#15803d" fontSize="10" fontWeight="600" fontFamily="sans-serif">Park</text>
         {/* Laundry */}
-        <rect x="358" y="340" width="62" height="34" fill="#e0f2fe" stroke="#F0A500" strokeWidth="1.5" rx="3" />
-        <text x="389" y="362" fill="#0369a1" fontSize="8.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">Laundry</text>
+        <rect x="356" y="281" width="64" height="34" fill="#e0f2fe" stroke="#F0A500" strokeWidth="1.5" rx="3" />
+        <text x="388" y="303" fill="#0369a1" fontSize="8.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">Laundry</text>
         {/* Proposed Community Building */}
-        <rect x="195" y="345" width="58" height="30" fill="#fef9c3" stroke="#fde047" strokeWidth="1.5" strokeDasharray="3,2" rx="3" />
-        <text x="224" y="364" fill="#92400e" fontSize="7.5" textAnchor="middle" fontFamily="sans-serif">Comm. Bldg</text>
+        <rect x="193" y="285" width="60" height="30" fill="#fef9c3" stroke="#fde047" strokeWidth="1.5" strokeDasharray="3,2" rx="3" />
+        <text x="223" y="304" fill="#92400e" fontSize="7.5" textAnchor="middle" fontFamily="sans-serif">Comm. Bldg</text>
 
-        {/* ── Green space below interior block park ── */}
-        <rect x="180" y="413" width="60" height="78" fill="#dcfce7" stroke="#86efac" strokeWidth="1" rx="4" />
+        {/* ── Green space left of park lots 50–53 ── */}
+        <rect x="180" y="349" width="82" height="72" fill="#dcfce7" stroke="#86efac" strokeWidth="1" rx="4" />
 
-        {/* ── Not-park-owned zones ── */}
-        <rect x="1114" y="220" width="42" height="95" fill="url(#lm-hatch)" rx="3" />
-        <rect x="1017" y="332" width="139" height="159" fill="url(#lm-hatch)" rx="3" />
-        <rect x="0"    y="578" width="172" height="137" fill="url(#lm-hatch)" rx="3" />
-        <rect x="172"  y="578" width="320" height="137" fill="url(#lm-hatch)" rx="3" />
-        <rect x="737"  y="538" width="423" height="177" fill="url(#lm-hatch)" rx="3" />
-        <text x="1080" y="430" fill="#94a3b8" fontSize="8.5" textAnchor="middle" fontFamily="sans-serif">Not park</text>
-        <text x="487"  y="650" fill="#94a3b8" fontSize="8.5" textAnchor="middle" fontFamily="sans-serif">Not park owned</text>
-        <text x="940"  y="630" fill="#94a3b8" fontSize="8.5" textAnchor="middle" fontFamily="sans-serif">Not park owned</text>
+        {/* ── Interior alley (shared drive between facing rows) ── */}
+        <rect x="264" y="343" width="772" height="6" fill="#e2e8f0" rx="1" />
 
-        {/* ── Street labels ── */}
-        <text x="780"  y="215" fill="#94a3b8" fontSize="8" textAnchor="middle" fontFamily="sans-serif" letterSpacing="1">SW MOBILE PLACE</text>
-        <text x="780"  y="325" fill="#94a3b8" fontSize="8" textAnchor="middle" fontFamily="sans-serif" letterSpacing="1">SW TWIN OAKS CIRCLE</text>
-        <text x="597"  y="532" fill="#94a3b8" fontSize="8" textAnchor="middle" fontFamily="sans-serif" letterSpacing="1">SW PLEASANT PLACE</text>
-        <text x="597"  y="710" fill="#94a3b8" fontSize="8" textAnchor="middle" fontFamily="sans-serif" letterSpacing="1">SW TWIN OAKS CIRCLE</text>
-        {/* Caretaker label */}
-        <text x="132"  y="362" fill="#94a3b8" fontSize="7.5" fontStyle="italic" textAnchor="middle" fontFamily="sans-serif">Caretaker</text>
+        {/* ── Not-park hatched areas ── */}
+        <rect x="1036" y="271" width="82" height="150" fill="url(#lm-hatch)" rx="3" />
+        <rect x="736"  y="445" width="382" height="183" fill="url(#lm-hatch)" rx="3" />
+        <text x="1077" y="350" fill="#94a3b8" fontSize="8" textAnchor="middle" fontFamily="sans-serif">Not park</text>
+        <text x="918"  y="540" fill="#94a3b8" fontSize="8.5" textAnchor="middle" fontFamily="sans-serif">Not park owned</text>
+
+        {/* ── Caretaker label ── */}
+        <text x="92" y="344" fill="#94a3b8" fontSize="7.5" fontStyle="italic" textAnchor="middle" fontFamily="sans-serif">Caretaker</text>
 
         {/* ── Lot tiles ── */}
-        {Object.entries(LOTS).map(([label, { x, y, w, h, angle }]) => {
+        {Object.entries(LOTS).map(([label, { x, y, w, h }]) => {
           const space = spaceByLabel.get(label);
           const isSelected = !!space && space.id === selectedId;
           const isHovered = label === hoverLabel;
@@ -207,14 +220,13 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
           const notice = space && noticeMap ? noticeMap[space.id] : undefined;
           const nStyle = notice ? NOTICE_SVG[notice] : undefined;
 
-          const fill  = isSelected ? '#fef08a' : style.fill;
+          const fill   = isSelected ? '#fef08a' : style.fill;
           const stroke = isSelected ? '#eab308' : isHovered ? '#F0A500' : style.stroke;
           const sw     = isSelected || isHovered ? 2.5 : 1.5;
 
           return (
             <g
               key={label}
-              transform={angle ? `rotate(${angle},${cx},${cy})` : undefined}
               onClick={() => space && onSelect(space)}
               onMouseEnter={() => setHoverLabel(label)}
               onMouseLeave={() => setHoverLabel(null)}
@@ -227,7 +239,6 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
                 strokeDasharray={'dash' in style && style.dash ? '4,2' : undefined}
                 rx="5"
               />
-              {/* Lot number */}
               <text
                 x={cx} y={cy - (desLabel ? 7 : 0)}
                 fontSize="12" fontWeight="700" textAnchor="middle" dominantBaseline="middle"
@@ -237,7 +248,6 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
               >
                 {label}
               </text>
-              {/* Designation sub-label */}
               {desLabel && (
                 <text
                   x={cx} y={cy + 9}
@@ -249,12 +259,10 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
                   {desLabel}
                 </text>
               )}
-              {/* Unknown marker */}
               {!space && (
                 <text x={cx} y={cy + 10} fontSize="9" textAnchor="middle" fill="#d1d5db"
                   fontFamily="sans-serif" style={{ pointerEvents: 'none', userSelect: 'none' }}>?</text>
               )}
-              {/* Notice badge */}
               {nStyle && (
                 <g style={{ pointerEvents: 'none' }}>
                   <circle cx={x + w - 9} cy={y + 9} r="8" fill={nStyle.fill} />
@@ -268,6 +276,16 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
             </g>
           );
         })}
+
+        {/* ── Mary's River (on top so it clips the corners of lots 9–11) ── */}
+        <path
+          d="M0,0 L0,92 Q100,102 240,98 Q360,94 440,100 Q462,91 496,83 Q526,75 556,66 Q586,58 610,52 Q626,38 616,0 Z"
+          fill="#bfdbfe" opacity="0.78"
+          style={{ pointerEvents: 'none' }}
+        />
+        <text x="195" y="42" fill="#3b82f6" fontSize="11" fontWeight="700"
+          fontFamily="sans-serif" letterSpacing="2" opacity="0.9"
+          style={{ pointerEvents: 'none' }}>MARYS RIVER</text>
 
         {/* ── Hover tooltip ── */}
         {hoverLabel && (() => {
@@ -283,7 +301,7 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
           let tipX = cx - tipW / 2;
           let tipY = y - tipH - 6;
           if (tipX < 4) tipX = 4;
-          if (tipX + tipW > 1156) tipX = 1156 - tipW;
+          if (tipX + tipW > 1116) tipX = 1116 - tipW;
           if (tipY < 4) tipY = y + h + 6;
 
           return (
