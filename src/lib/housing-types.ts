@@ -30,6 +30,7 @@ export interface Space {
   street_number: string | null;            // house number, e.g. "241"
   street_name: string | null;             // street name, e.g. "SW Twin Oaks Circle"
   notes: string | null;
+  photo_url: string | null;
   created_at: string;
   updated_at: string;
 }

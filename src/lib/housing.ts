@@ -45,10 +45,20 @@ export async function updateSpace(
     | 'status' | 'type' | 'ownership' | 'designation_type' | 'designation_label'
     | 'affordable_housing_discount' | 'vin' | 'hud_label' | 'title_holder'
     | 'current_rent' | 'size' | 'street_number' | 'street_name' | 'notes'
+    | 'photo_url'
   >>,
 ): Promise<void> {
   const { error } = await supabase.from('spaces').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+export async function uploadLotPhoto(spaceId: string, file: File): Promise<string> {
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const path = `${spaceId}.${ext}`;
+  const { error } = await supabase.storage.from('lot-photos').upload(path, file, { upsert: true });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('lot-photos').getPublicUrl(path);
+  return data.publicUrl;
 }
 
 // ── Tenants ───────────────────────────────────────────────────────────

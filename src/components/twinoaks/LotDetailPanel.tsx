@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useTransition, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import {
   HOME_OWNERSHIPS,
@@ -36,6 +36,7 @@ import {
   updateMemberTenantLinks,
   updateSpace,
   updateTenant,
+  uploadLotPhoto,
   type LotNoticeWithCreator,
   type MemberDraft,
   type PetDraft,
@@ -155,6 +156,9 @@ export function LotDetailPanel({
   const [lotError, setLotError] = useState<string | null>(null);
   const [showMoveOut, setShowMoveOut] = useState(false);
   const [showNoticeForm, setShowNoticeForm] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // ── Related data ─────────────────────────────────────────────────
   const [members, setMembers] = useState<HouseholdMember[]>([]);
@@ -315,6 +319,22 @@ export function LotDetailPanel({
   const removePet = (i: number) => setPetDrafts((p) => p.filter((_, idx) => idx !== i));
   const updatePet = (i: number, patch: Partial<PetDraft>) =>
     setPetDrafts((p) => p.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
+
+  // ── Photo upload ─────────────────────────────────────────────────
+  async function handlePhotoUpload(file: File) {
+    if (!space) return;
+    setPhotoUploading(true);
+    setPhotoError(null);
+    try {
+      const url = await uploadLotPhoto(space.id, file);
+      await updateSpace(space.id, { photo_url: url });
+      onChanged();
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : 'Upload failed.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
 
   // ── Save resident + home ─────────────────────────────────────────
   function save() {
@@ -484,36 +504,49 @@ export function LotDetailPanel({
 
             {/* ── View mode ── */}
             {mode === 'view' && (
-              <ViewBody
-                space={space}
-                tenant={tenant}
-                members={members}
-                pets={pets}
-                notices={notices}
-                workOrders={workOrders}
-                canManage={canManage}
-                residentLabel={residentLabel}
-                isProgramHome={isProgramHome}
-                showNoticeForm={showNoticeForm}
-                noticeType={noticeType}
-                noticeDate={noticeDate}
-                noticeDesc={noticeDesc}
-                noticeDelivery={noticeDelivery}
-                noticeDeliveryNotes={noticeDeliveryNotes}
-                noticeError={noticeError}
-                noticePending={noticePending}
-                onSetNoticeType={setNoticeType}
-                onSetNoticeDate={setNoticeDate}
-                onSetNoticeDesc={setNoticeDesc}
-                onSetNoticeDelivery={setNoticeDelivery}
-                onSetNoticeDeliveryNotes={setNoticeDeliveryNotes}
-                onToggleNoticeForm={() => setShowNoticeForm((p) => !p)}
-                onSubmitNotice={submitNotice}
-                onDeleteNotice={async (id) => { await deleteNotice(id); await loadRelated(space.id); onNoticeChange?.(); }}
-                onNewWorkOrder={onNewWorkOrder}
-                onSelectWorkOrder={onSelectWorkOrder}
-                onEditLot={enterLotEdit}
-              />
+              <>
+                <ViewBody
+                  space={space}
+                  tenant={tenant}
+                  members={members}
+                  pets={pets}
+                  notices={notices}
+                  workOrders={workOrders}
+                  canManage={canManage}
+                  residentLabel={residentLabel}
+                  isProgramHome={isProgramHome}
+                  showNoticeForm={showNoticeForm}
+                  noticeType={noticeType}
+                  noticeDate={noticeDate}
+                  noticeDesc={noticeDesc}
+                  noticeDelivery={noticeDelivery}
+                  noticeDeliveryNotes={noticeDeliveryNotes}
+                  noticeError={noticeError}
+                  noticePending={noticePending}
+                  photoUploading={photoUploading}
+                  photoError={photoError}
+                  onPhotoUpload={handlePhotoUpload}
+                  onPhotoInputClick={() => photoInputRef.current?.click()}
+                  onSetNoticeType={setNoticeType}
+                  onSetNoticeDate={setNoticeDate}
+                  onSetNoticeDesc={setNoticeDesc}
+                  onSetNoticeDelivery={setNoticeDelivery}
+                  onSetNoticeDeliveryNotes={setNoticeDeliveryNotes}
+                  onToggleNoticeForm={() => setShowNoticeForm((p) => !p)}
+                  onSubmitNotice={submitNotice}
+                  onDeleteNotice={async (id) => { await deleteNotice(id); await loadRelated(space.id); onNoticeChange?.(); }}
+                  onNewWorkOrder={onNewWorkOrder}
+                  onSelectWorkOrder={onSelectWorkOrder}
+                  onEditLot={enterLotEdit}
+                />
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) void handlePhotoUpload(f); e.target.value = ''; }}
+                />
+              </>
             )}
 
             {/* ── Edit mode ── */}
@@ -831,6 +864,7 @@ function ViewBody({
   residentLabel, isProgramHome,
   showNoticeForm, noticeType, noticeDate, noticeDesc, noticeDelivery,
   noticeDeliveryNotes, noticeError, noticePending,
+  photoUploading, photoError, onPhotoUpload: _onPhotoUpload, onPhotoInputClick,
   onSetNoticeType, onSetNoticeDate, onSetNoticeDesc, onSetNoticeDelivery,
   onSetNoticeDeliveryNotes, onToggleNoticeForm, onSubmitNotice, onDeleteNotice,
   onNewWorkOrder, onSelectWorkOrder, onEditLot,
@@ -841,6 +875,8 @@ function ViewBody({
   showNoticeForm: boolean; noticeType: NoticeType; noticeDate: string;
   noticeDesc: string; noticeDelivery: NoticeDelivery; noticeDeliveryNotes: string;
   noticeError: string | null; noticePending: boolean;
+  photoUploading: boolean; photoError: string | null;
+  onPhotoUpload: (file: File) => void; onPhotoInputClick: () => void;
   onSetNoticeType: (v: NoticeType) => void; onSetNoticeDate: (v: string) => void;
   onSetNoticeDesc: (v: string) => void; onSetNoticeDelivery: (v: NoticeDelivery) => void;
   onSetNoticeDeliveryNotes: (v: string) => void; onToggleNoticeForm: () => void;
@@ -858,6 +894,31 @@ function ViewBody({
 
   return (
     <div className="flex-1 overflow-y-auto px-5 py-4 text-sm">
+      {/* Lot photo */}
+      {space.photo_url ? (
+        <div className="relative mb-4">
+          <img src={space.photo_url} alt={`Lot ${space.label}`} className="h-48 w-full rounded-lg object-cover" />
+          {canManage && (
+            <button
+              onClick={onPhotoInputClick}
+              disabled={photoUploading}
+              className="absolute bottom-2 right-2 rounded-md bg-white/80 px-2 py-1 text-xs font-medium text-sparrow-ink hover:bg-white disabled:opacity-50"
+            >
+              {photoUploading ? 'Uploading…' : 'Replace photo'}
+            </button>
+          )}
+        </div>
+      ) : canManage ? (
+        <button
+          onClick={onPhotoInputClick}
+          disabled={photoUploading}
+          className="mb-4 flex w-full items-center justify-center rounded-lg border-2 border-dashed border-sparrow-rule py-5 text-sm text-sparrow-gray hover:border-sparrow-green hover:text-sparrow-green disabled:opacity-50"
+        >
+          {photoUploading ? 'Uploading…' : '+ Add lot photo'}
+        </button>
+      ) : null}
+      {photoError && <p className="mb-3 text-xs text-priority-p1">{photoError}</p>}
+
       {/* Chips */}
       <div className="mb-4 flex flex-wrap gap-2">
         <span className="rounded-full bg-sparrow-mist px-2 py-0.5 text-xs capitalize text-sparrow-gray">{statusLabel}</span>
