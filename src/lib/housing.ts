@@ -44,7 +44,7 @@ export async function updateSpace(
   patch: Partial<Pick<Space,
     | 'status' | 'type' | 'ownership' | 'designation_type' | 'designation_label'
     | 'affordable_housing_discount' | 'vin' | 'hud_label' | 'title_holder'
-    | 'current_rent' | 'size' | 'notes'
+    | 'current_rent' | 'size' | 'street_number' | 'street_name' | 'notes'
   >>,
 ): Promise<void> {
   const { error } = await supabase.from('spaces').update(patch).eq('id', id);

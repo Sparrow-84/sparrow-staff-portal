@@ -2,6 +2,44 @@ import { useEffect, useMemo, useState } from 'react';
 import { fetchMembersForTenant, fetchNoticesForTenant, type LotNoticeWithCreator } from '@/lib/housing';
 import type { HouseholdMember, Space, Tenant } from '@/lib/housing-types';
 
+function csvCell(val: string | number | null | undefined): string {
+  const s = String(val ?? '');
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function buildArchiveCSV(pastTenants: Tenant[], spaceById: Map<string, Space>): string {
+  const headers = ['Lot', 'Address', 'Household Name', 'Status', 'Move-in Date', 'Children', 'Children Names', 'Notes'];
+  const lines = [headers.map(csvCell).join(',')];
+
+  const sorted = [...pastTenants].sort((a, b) => {
+    const lotA = Number(spaceById.get(a.space_id ?? '')?.label ?? 999);
+    const lotB = Number(spaceById.get(b.space_id ?? '')?.label ?? 999);
+    return lotA - lotB;
+  });
+
+  for (const t of sorted) {
+    const space = spaceById.get(t.space_id ?? '');
+    const address = space
+      ? [space.street_number, space.street_name].filter(Boolean).join(' ')
+      : '';
+    lines.push([
+      space?.label ?? '',
+      address,
+      t.name ?? '',
+      t.status === 'evicted' ? 'Evicted' : 'Moved out',
+      t.move_in_date ?? '',
+      t.children ?? '',
+      t.children_names ?? '',
+      t.notes ?? '',
+    ].map(csvCell).join(','));
+  }
+
+  return lines.join('\r\n');
+}
+
 interface Props {
   spaces: Space[];
   tenants: Tenant[];
@@ -173,6 +211,18 @@ export function ArchiveTab({ spaces, tenants }: Props) {
     return map;
   }, [spaces]);
 
+  function exportCSV() {
+    const csv = buildArchiveCSV(pastTenants, spaceById);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const today = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `toc-archive-${today}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const byLot = useMemo(() => {
     const map = new Map<string, Tenant[]>();
     for (const t of pastTenants) {
@@ -222,12 +272,21 @@ export function ArchiveTab({ spaces, tenants }: Props) {
   return (
     <>
       <div className="mt-6">
-        <input
-          className="field-input mb-6 w-full max-w-xs"
-          placeholder="Search by name or lot number…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <div className="mb-6 flex items-center gap-3">
+          <input
+            className="field-input max-w-xs w-full"
+            placeholder="Search by name or lot number…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <button
+            onClick={exportCSV}
+            disabled={pastTenants.length === 0}
+            className="shrink-0 rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist disabled:opacity-40"
+          >
+            Export CSV
+          </button>
+        </div>
 
         {q ? (
           searchResults.length === 0 ? (

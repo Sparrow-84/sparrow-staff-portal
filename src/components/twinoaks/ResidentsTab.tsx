@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { householdSortKey, type HouseholdMember, type Space, type Tenant } from '@/lib/housing-types';
 import { fetchHouseholdMembers } from '@/lib/housing';
-import { useEffect, useRef } from 'react';
 
 interface Props {
   spaces: Space[];
@@ -36,6 +35,53 @@ function useMembersBySpace(spaces: Space[]) {
   return membersBySpace;
 }
 
+function csvCell(val: string | number | null | undefined): string {
+  const s = String(val ?? '');
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function buildCSV(rows: HouseholdRow[]): string {
+  const headers = [
+    'Lot', 'Address', 'Household Name', 'Status', 'Designation', 'Move-in Date',
+    'Children', 'Children Names', 'Adults', 'Phones', 'Emails', 'Emergency Contact Notes',
+  ];
+  const lines = [headers.map(csvCell).join(',')];
+
+  for (const { space, tenant, members } of rows) {
+    const designation = space.designation_type === 'lcp'
+      ? (space.designation_label || 'LCP')
+      : space.designation_type === 'sv' ? 'SV'
+      : space.designation_type === 'pm' ? 'PM'
+      : (space.designation_label || space.designation_type || '');
+
+    const address = [space.street_number, space.street_name].filter(Boolean).join(' ');
+    const primaryName = tenant?.name?.trim() || members[0]?.name || '';
+    const adults = members.map((m) => m.name).join('; ');
+    const phones = members.map((m) => m.phone ?? '').filter(Boolean).join('; ');
+    const emails = members.map((m) => m.email ?? '').filter(Boolean).join('; ');
+
+    lines.push([
+      space.label,
+      address,
+      primaryName,
+      tenant?.status ?? '',
+      designation,
+      tenant?.move_in_date ?? '',
+      tenant?.children ?? '',
+      tenant?.children_names ?? '',
+      adults,
+      phones,
+      emails,
+      tenant?.emergency_contact_notes ?? '',
+    ].map(csvCell).join(','));
+  }
+
+  return lines.join('\r\n');
+}
+
 export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
   const [query, setQuery] = useState('');
 
@@ -67,6 +113,18 @@ export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
     return result.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   }, [spaces, membersBySpace, tenantBySpace]);
 
+  const exportCSV = useCallback(() => {
+    const csv = buildCSV(rows);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const today = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `toc-residents-${today}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [rows]);
+
   const q = query.toLowerCase().trim();
   const filtered = q
     ? rows.filter((r) => {
@@ -85,13 +143,20 @@ export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
 
   return (
     <div className="mt-6">
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-3">
         <input
           className="field-input max-w-xs w-full"
           placeholder="Search by name, lot, phone, or detail…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        <button
+          onClick={exportCSV}
+          disabled={rows.length === 0}
+          className="shrink-0 rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist disabled:opacity-40"
+        >
+          Export CSV
+        </button>
       </div>
 
       {filtered.length === 0 && (

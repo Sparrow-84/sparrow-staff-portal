@@ -208,6 +208,8 @@ export function LotDetailPanel({
   const [rent, setRent] = useState('');
   const [ahd, setAhd] = useState(false);
   const [dimensions, setDimensions] = useState('');
+  const [streetNumber, setStreetNumber] = useState('');
+  const [streetName, setStreetName] = useState('');
   const [lotNotes, setLotNotes] = useState('');
 
   // ── Notice form fields ───────────────────────────────────────────
@@ -237,6 +239,8 @@ export function LotDetailPanel({
       setRent(String(space.current_rent ?? ''));
       setAhd(space.affordable_housing_discount ?? false);
       setDimensions(space.size ?? '');
+      setStreetNumber(space.street_number ?? '');
+      setStreetName(space.street_name ?? '');
       setLotNotes(space.notes ?? '');
     }
     setHouseholdLabel(tenant?.name ?? '');
@@ -268,6 +272,8 @@ export function LotDetailPanel({
       setRent(String(space.current_rent ?? ''));
       setAhd(space.affordable_housing_discount ?? false);
       setDimensions(space.size ?? '');
+      setStreetNumber(space.street_number ?? '');
+      setStreetName(space.street_name ?? '');
       setLotNotes(space.notes ?? '');
     }
     setLotError(null);
@@ -374,6 +380,8 @@ export function LotDetailPanel({
           current_rent: Number(rent) || 0,
           affordable_housing_discount: ahd,
           size: dimensions.trim() || null,
+          street_number: streetNumber.trim() || null,
+          street_name: streetName.trim() || null,
           notes: lotNotes.trim() || null,
         });
         onChanged();
@@ -721,6 +729,9 @@ export function LotDetailPanel({
                     </div>
                     <div className="space-y-0.5 text-xs text-sparrow-gray">
                       <p>Lot {space.label} · {status}</p>
+                      {(space.street_number || space.street_name) && (
+                        <p>{[space.street_number, space.street_name].filter(Boolean).join(' ')}</p>
+                      )}
                       {space.size && <p>Dimensions: {space.size}</p>}
                       {space.current_rent > 0 && <p>Rent: ${space.current_rent}/mo</p>}
                     </div>
@@ -766,6 +777,18 @@ export function LotDetailPanel({
                   <Field label="Lot dimensions" tip="Physical size, e.g. 40×80 ft.">
                     <input className="field-input" value={dimensions} onChange={(e) => setDimensions(e.target.value)} placeholder="e.g. 40×80 ft" />
                   </Field>
+                  <div>
+                    <p className="field-label">Street address</p>
+                    <div className="mt-1 grid grid-cols-[5rem_1fr] gap-2">
+                      <input className="field-input" value={streetNumber} onChange={(e) => setStreetNumber(e.target.value)} placeholder="241" />
+                      <select className="field-input" value={streetName} onChange={(e) => setStreetName(e.target.value)}>
+                        <option value="">— Select street —</option>
+                        <option value="SW Mobile Place">SW Mobile Place</option>
+                        <option value="SW Twin Oaks Circle">SW Twin Oaks Circle</option>
+                        <option value="SW Pleasant Place">SW Pleasant Place</option>
+                      </select>
+                    </div>
+                  </div>
                   <Field label="Lot notes">
                     <textarea className="field-input" rows={3} value={lotNotes} onChange={(e) => setLotNotes(e.target.value)} placeholder="Anything staff should know about this space" />
                   </Field>
@@ -912,6 +935,9 @@ function ViewBody({
         </div>
         <div className="space-y-0.5 text-xs text-sparrow-gray">
           <p>Lot {space.label} · {statusLabel}</p>
+          {(space.street_number || space.street_name) && (
+            <p>{[space.street_number, space.street_name].filter(Boolean).join(' ')}</p>
+          )}
           {space.size && <p>Dimensions: {space.size}</p>}
           {space.current_rent > 0 && <p>Rent: ${space.current_rent}/mo</p>}
           {space.notes && <p>{space.notes}</p>}
