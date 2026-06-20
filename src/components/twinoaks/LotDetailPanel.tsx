@@ -21,6 +21,7 @@ import {
   type TitleHolder,
 } from '@/lib/housing-types';
 import {
+  archiveMember,
   createNotice,
   createTenant,
   deleteNotice,
@@ -30,6 +31,7 @@ import {
   moveOutTenant,
   syncHouseholdMembers,
   syncPets,
+  updateMemberTenantLinks,
   updateSpace,
   updateTenant,
   type LotNoticeWithCreator,
@@ -165,7 +167,7 @@ export function LotDetailPanel({
         fetchNoticesForSpace(spaceId).catch(() => [] as LotNoticeWithCreator[]),
       ]);
       setMembers(m);
-      setMemberDrafts(m.map((hm) => ({ id: hm.id, name: hm.name, phone: hm.phone ?? '', email: hm.email ?? '', park_chat_opt_in: hm.park_chat_opt_in })));
+      setMemberDrafts(m.map((hm) => ({ id: hm.id, tenant_id: hm.tenant_id, name: hm.name, phone: hm.phone ?? '', email: hm.email ?? '', park_chat_opt_in: hm.park_chat_opt_in })));
       setPets(p);
       setPetDrafts(p.map((pt) => ({ id: pt.id, pet_type: pt.pet_type, name: pt.name ?? '', notes: pt.notes ?? '' })));
       setNotices(n);
@@ -287,6 +289,17 @@ export function LotDetailPanel({
   const updateMember = (i: number, patch: Partial<MemberDraft>) =>
     setMemberDrafts((p) => p.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
 
+  async function archiveMemberById(memberId: string, name: string) {
+    if (!window.confirm(`Mark ${name || 'this person'} as moved out? They will be removed from this household. Their record will be preserved in the archive.`)) return;
+    try {
+      await archiveMember(memberId);
+      if (space) await loadRelated(space.id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Could not archive member.';
+      setError(msg.includes('schema cache') ? 'Migration 0026 needed — ask Byron to run it first.' : msg);
+    }
+  }
+
   // ── Pet helpers ──────────────────────────────────────────────────
   const addPet = () => setPetDrafts((p) => [...p, { pet_type: 'dog', name: '', notes: '' }]);
   const removePet = (i: number) => setPetDrafts((p) => p.filter((_, idx) => idx !== i));
@@ -333,6 +346,11 @@ export function LotDetailPanel({
         }
 
         await syncHouseholdMembers(space.id, memberDrafts, members);
+        // Link members to their tenant record for archiving (requires migration 0026 — silently skipped if not yet run)
+        const activeTenantId = tenant?.id;
+        if (activeTenantId) {
+          await updateMemberTenantLinks(space.id, activeTenantId).catch(() => { /* pre-migration */ });
+        }
         await syncPets(space.id, petDrafts, pets);
         await loadRelated(space.id);
         onChanged();
@@ -340,7 +358,7 @@ export function LotDetailPanel({
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Could not save.';
         setError(msg.includes('schema cache')
-          ? 'Database migration pending — ask Byron to run migrations 0019–0025. Saves will work once the new columns exist.'
+          ? 'Database migration pending — ask Byron to run migrations 0019–0026. Saves will work once the new columns exist.'
           : msg);
       }
     });
@@ -570,7 +588,7 @@ export function LotDetailPanel({
                       <SectionHead label={residentLabel} />
                       {tenant && (
                         <button onClick={() => setShowMoveOut(true)} className="text-xs text-priority-p1 hover:underline">
-                          Mark moved out / evicted
+                          Moved out
                         </button>
                       )}
                     </div>
@@ -593,7 +611,11 @@ export function LotDetailPanel({
                             <div key={i} className="space-y-2 rounded-lg border border-sparrow-rule p-3">
                               <div className="flex items-center justify-between">
                                 <p className="text-xs font-semibold text-sparrow-gray">Adult {i + 1}</p>
-                                <button type="button" onClick={() => removeMember(i)} className="text-xs text-priority-p1 hover:underline">Remove</button>
+                                {m.id ? (
+                                  <button type="button" onClick={() => void archiveMemberById(m.id!, m.name)} className="text-xs text-sparrow-gray hover:text-priority-p1 hover:underline">Member moved out</button>
+                                ) : (
+                                  <button type="button" onClick={() => removeMember(i)} className="text-xs text-priority-p1 hover:underline">Remove</button>
+                                )}
                               </div>
                               <input className="field-input" value={m.name} onChange={(e) => updateMember(i, { name: e.target.value })} placeholder="Full name" />
                               <div className="grid grid-cols-2 gap-2">
@@ -759,9 +781,9 @@ export function LotDetailPanel({
             {/* ── Move out confirmation ── */}
             {showMoveOut && tenant && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/95 px-8 text-center">
-                <h3 className="mb-2 font-serif text-lg font-semibold">Mark as moved out?</h3>
+                <h3 className="mb-2 font-serif text-lg font-semibold">How did they leave?</h3>
                 <p className="mb-6 text-sm text-sparrow-gray">
-                  The resident record stays in the database for your records. The lot will show as vacant and be ready for a new resident. This cannot be undone.
+                  The household record and all members will be archived. The lot will show as vacant. This cannot be undone.
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
                   <button onClick={() => doMoveOut('moved_out')} disabled={moveOutPending} className="btn-primary">Moved out</button>

@@ -14,11 +14,13 @@ import {
 } from '@/lib/housing-types';
 import type { Profile } from '@/lib/types';
 import { LotGrid } from './LotGrid';
+import { LotMap } from './LotMap';
 import { LotDetailPanel } from './LotDetailPanel';
 import { WorkOrderPanel } from './WorkOrderPanel';
 import { IncidentLogTab } from './IncidentLogTab';
 import { ResidentsTab } from './ResidentsTab';
 import { NoticesTab } from './NoticesTab';
+import { ArchiveTab } from './ArchiveTab';
 
 const PRIORITY_RANK: Record<WoPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
@@ -31,7 +33,8 @@ export function TwinOaksRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'property' | 'residents' | 'workorders' | 'notices' | 'incidents'>('property');
+  const [tab, setTab] = useState<'property' | 'residents' | 'workorders' | 'notices' | 'incidents' | 'archive'>('property');
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [lotOpen, setLotOpen] = useState(false);
   const [woOpen, setWoOpen] = useState(false);
@@ -180,7 +183,7 @@ export function TwinOaksRoom() {
             { key: 'residents',  label: 'Residents' },
             { key: 'workorders', label: 'Work orders' },
             { key: 'notices',    label: 'Notices' },
-            ...(canManage ? [{ key: 'incidents', label: 'Incidents' }] : []),
+            ...(canManage ? [{ key: 'incidents', label: 'Incidents' }, { key: 'archive', label: 'Archive' }] : []),
           ] as { key: typeof tab; label: string }[]
         ).map(({ key, label }) => (
           <button
@@ -195,7 +198,9 @@ export function TwinOaksRoom() {
         ))}
       </div>
 
-      {tab === 'incidents' ? (
+      {tab === 'archive' ? (
+        <ArchiveTab spaces={spaces} tenants={tenants} />
+      ) : tab === 'incidents' ? (
         <IncidentLogTab spaces={spaces} />
       ) : tab === 'residents' ? (
         <ResidentsTab
@@ -212,15 +217,35 @@ export function TwinOaksRoom() {
         />
       ) : tab === 'property' ? (
         <div className="mt-6">
-          <div className="mb-4 flex flex-wrap gap-4">
-            {LOT_LEGEND.map((l) => (
-              <span key={l.key} className="flex items-center gap-1.5 text-xs text-sparrow-gray">
-                <span className={`h-3 w-3 rounded border ${l.classes}`} aria-hidden />
-                {l.label}
-              </span>
-            ))}
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div className="flex flex-wrap gap-4">
+              {LOT_LEGEND.map((l) => (
+                <span key={l.key} className="flex items-center gap-1.5 text-xs text-sparrow-gray">
+                  <span className={`h-3 w-3 rounded border ${l.classes}`} aria-hidden />
+                  {l.label}
+                </span>
+              ))}
+            </div>
+            <div className="flex shrink-0 overflow-hidden rounded-lg border border-sparrow-rule">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-1.5 text-xs font-medium transition ${viewMode === 'grid' ? 'bg-gray-800 text-white' : 'bg-white text-sparrow-gray hover:bg-gray-50'}`}
+              >
+                Grid
+              </button>
+              <button
+                onClick={() => setViewMode('map')}
+                className={`border-l border-sparrow-rule px-3 py-1.5 text-xs font-medium transition ${viewMode === 'map' ? 'bg-gray-800 text-white' : 'bg-white text-sparrow-gray hover:bg-gray-50'}`}
+              >
+                Map
+              </button>
+            </div>
           </div>
-          <LotGrid spaces={spaces} onSelect={openLot} />
+          {viewMode === 'grid' ? (
+            <LotGrid spaces={spaces} onSelect={openLot} />
+          ) : (
+            <LotMap spaces={spaces} onSelect={openLot} selectedId={selectedSpaceId} />
+          )}
         </div>
       ) : (
         <div className="mt-6 space-y-8">

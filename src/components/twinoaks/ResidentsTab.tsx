@@ -38,14 +38,15 @@ function useMembersBySpace(spaces: Space[]) {
 
 export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
   const [query, setQuery] = useState('');
-  const [showPast, setShowPast] = useState(false);
 
   const membersBySpace = useMembersBySpace(spaces);
 
   const tenantBySpace = useMemo(() => {
     const map = new Map<string, Tenant>();
     for (const t of tenants) {
-      if (t.space_id) map.set(t.space_id, t);
+      if (t.space_id && (t.status === 'active' || t.status === 'applicant')) {
+        map.set(t.space_id, t);
+      }
     }
     return map;
   }, [tenants]);
@@ -56,10 +57,6 @@ export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
       const tenant = tenantBySpace.get(space.id) ?? null;
       const members = membersBySpace.get(space.id) ?? [];
       if (!tenant && members.length === 0) continue;
-
-      const isActive = !tenant || tenant.status === 'active' || tenant.status === 'applicant';
-      if (showPast ? isActive : !isActive) continue;
-
       result.push({
         space,
         tenant,
@@ -68,7 +65,7 @@ export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
       });
     }
     return result.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-  }, [spaces, tenants, membersBySpace, tenantBySpace, showPast]);
+  }, [spaces, membersBySpace, tenantBySpace]);
 
   const q = query.toLowerCase().trim();
   const filtered = q
@@ -88,29 +85,18 @@ export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
 
   return (
     <div className="mt-6">
-      {/* Search + archive toggle */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4">
         <input
-          className="field-input max-w-xs flex-1"
+          className="field-input max-w-xs w-full"
           placeholder="Search by name, lot, phone, or detail…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <button
-          onClick={() => setShowPast((p) => !p)}
-          className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
-            showPast
-              ? 'border-sparrow-green bg-sparrow-green text-white'
-              : 'border-sparrow-rule text-sparrow-gray hover:text-sparrow-ink'
-          }`}
-        >
-          {showPast ? 'Viewing past residents' : 'Past residents'}
-        </button>
       </div>
 
       {filtered.length === 0 && (
         <p className="rounded-xl border border-dashed border-sparrow-rule p-8 text-center text-sm text-sparrow-gray">
-          {q ? 'No matches.' : showPast ? 'No past residents on record.' : 'No current residents on file.'}
+          {q ? 'No matches.' : 'No current residents on file.'}
         </p>
       )}
 

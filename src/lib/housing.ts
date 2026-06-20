@@ -97,7 +97,7 @@ export async function moveOutTenant(
 ): Promise<void> {
   const { error: tenantErr } = await supabase
     .from('tenants')
-    .update({ status: reason, space_id: null })   // detach from space; record stays
+    .update({ status: reason })   // keep space_id so archive can show which lot they were at
     .eq('id', tenantId);
   if (tenantErr) throw new Error(tenantErr.message);
 
@@ -107,12 +107,15 @@ export async function moveOutTenant(
     .eq('id', spaceId);
   if (spaceErr) throw new Error(spaceErr.message);
 
-  // Detach household members from this space (they stay in DB for reference)
-  const { error: hmErr } = await supabase
+  // Archive household members (migration 0026). Falls back to delete if column not yet created.
+  const { error: archiveErr } = await supabase
     .from('household_members')
-    .delete()
+    .update({ is_archived: true, space_id: null })
     .eq('space_id', spaceId);
-  if (hmErr) throw new Error(hmErr.message);
+  if (archiveErr) {
+    const { error: delErr } = await supabase.from('household_members').delete().eq('space_id', spaceId);
+    if (delErr) throw new Error(delErr.message);
+  }
 }
 
 // ── Household members ─────────────────────────────────────────────────
@@ -123,7 +126,35 @@ export async function fetchHouseholdMembers(spaceId: string): Promise<HouseholdM
     .eq('space_id', spaceId)
     .order('sort_order');
   if (error) throw new Error(error.message);
+  const all = (data ?? []) as HouseholdMember[];
+  return all.filter((m) => !m.is_archived);
+}
+
+export async function fetchMembersForTenant(tenantId: string): Promise<HouseholdMember[]> {
+  const { data, error } = await supabase
+    .from('household_members')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
   return (data ?? []) as HouseholdMember[];
+}
+
+export async function archiveMember(memberId: string): Promise<void> {
+  const { error } = await supabase
+    .from('household_members')
+    .update({ is_archived: true, space_id: null })
+    .eq('id', memberId);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateMemberTenantLinks(spaceId: string, tenantId: string): Promise<void> {
+  const { error } = await supabase
+    .from('household_members')
+    .update({ tenant_id: tenantId })
+    .eq('space_id', spaceId)
+    .is('tenant_id', null);
+  if (error) throw new Error(error.message);
 }
 
 export async function fetchOptedInCount(): Promise<number> {
@@ -138,6 +169,7 @@ export async function fetchOptedInCount(): Promise<number> {
 
 export interface MemberDraft {
   id?: string;
+  tenant_id?: string | null;
   name: string;
   phone: string;
   email: string;
@@ -225,6 +257,16 @@ export async function syncPets(
 // ── Lot notices ───────────────────────────────────────────────────────
 export interface LotNoticeWithCreator extends LotNotice {
   creator: { id: string; full_name: string } | null;
+}
+
+export async function fetchNoticesForTenant(tenantId: string): Promise<LotNoticeWithCreator[]> {
+  const { data, error } = await supabase
+    .from('lot_notices')
+    .select('*, creator:profiles!lot_notices_created_by_fkey(id,full_name)')
+    .eq('tenant_id', tenantId)
+    .order('notice_date', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as LotNoticeWithCreator[];
 }
 
 export async function fetchNoticesForSpace(spaceId: string): Promise<LotNoticeWithCreator[]> {

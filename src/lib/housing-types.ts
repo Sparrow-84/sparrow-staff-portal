@@ -50,11 +50,13 @@ export interface Tenant {
 
 export interface HouseholdMember {
   id: string;
-  space_id: string;
+  space_id: string | null;
+  tenant_id: string | null;
   name: string;
   phone: string | null;
   email: string | null;
   park_chat_opt_in: boolean;
+  is_archived: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
