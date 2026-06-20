@@ -1006,7 +1006,7 @@ function ViewBody({
                     </span>
                     <span className="text-xs text-sparrow-gray">{n.notice_date}</span>
                     <p className="mt-1 text-xs text-sparrow-ink">{n.description}</p>
-                    <p className="text-xs text-sparrow-gray capitalize">{n.delivery_method.replace('_', ' ')}{n.delivery_notes ? ` — ${n.delivery_notes}` : ''}</p>
+                    <p className="text-xs text-sparrow-gray capitalize">{n.delivery_method.replace(/_/g, ' ')}{n.delivery_notes ? ` — ${n.delivery_notes}` : ''}</p>
                   </div>
                   {canManage && (
                     <button onClick={() => onDeleteNotice(n.id)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">✕</button>
