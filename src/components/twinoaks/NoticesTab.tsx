@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Space, Tenant } from '@/lib/housing-types';
+import { NOTICE_COLOR, type Space, type Tenant } from '@/lib/housing-types';
 import { fetchAllNotices, deleteNotice, type LotNoticeWithCreator } from '@/lib/housing';
 
 interface Props {
@@ -8,13 +8,6 @@ interface Props {
   canManage: boolean;
   onSelectSpace: (spaceId: string) => void;
 }
-
-const NOTICE_COLOR: Record<string, string> = {
-  E: 'bg-priority-p1 text-white',
-  '3': 'bg-priority-p2 text-white',
-  '2': 'bg-priority-p2/70 text-white',
-  '1': 'bg-sparrow-gray/40 text-sparrow-ink',
-};
 
 export function NoticesTab({ spaces, tenants, canManage, onSelectSpace }: Props) {
   const [notices, setNotices] = useState<LotNoticeWithCreator[]>([]);

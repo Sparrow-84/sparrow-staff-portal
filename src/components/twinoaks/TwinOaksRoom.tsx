@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchProfiles } from '@/lib/data';
-import { fetchOptedInCount, fetchSpaces, fetchTenants, fetchWorkOrders, type WorkOrderWithAssignee } from '@/lib/housing';
+import { fetchAllNotices, fetchOptedInCount, fetchSpaces, fetchTenants, fetchWorkOrders, type WorkOrderWithAssignee } from '@/lib/housing';
 import { supabase } from '@/lib/supabase';
 import {
   LOT_LEGEND,
   OPEN_WO_STATUSES,
   WO_PRIORITIES,
   workOrderWhere,
+  type NoticeType,
   type Space,
   type Tenant,
   type WoPriority,
@@ -41,6 +42,23 @@ export function TwinOaksRoom() {
   const [editWo, setEditWo] = useState<WorkOrderWithAssignee | null>(null);
   const [prefillSpaceId, setPrefillSpaceId] = useState<string | null>(null);
 
+  const [noticeMap, setNoticeMap] = useState<Record<string, NoticeType>>({});
+
+  const refreshNoticeMap = useCallback(async () => {
+    try {
+      const all = await fetchAllNotices();
+      const order: NoticeType[] = ['E', '3', '2', '1'];
+      const map: Record<string, NoticeType> = {};
+      for (const n of all) {
+        const current = map[n.space_id];
+        if (!current || order.indexOf(n.notice_type) < order.indexOf(current)) {
+          map[n.space_id] = n.notice_type;
+        }
+      }
+      setNoticeMap(map);
+    } catch { /* non-fatal */ }
+  }, []);
+
   // Emergency alert modal
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -70,7 +88,8 @@ export function TwinOaksRoom() {
 
   useEffect(() => {
     void load();
-  }, [load]);
+    void refreshNoticeMap();
+  }, [load, refreshNoticeMap]);
 
   const canManage = profile?.role === 'admin' || profile?.department === 'toc';
 
@@ -242,9 +261,9 @@ export function TwinOaksRoom() {
             </div>
           </div>
           {viewMode === 'grid' ? (
-            <LotGrid spaces={spaces} onSelect={openLot} />
+            <LotGrid spaces={spaces} onSelect={openLot} noticeMap={noticeMap} />
           ) : (
-            <LotMap spaces={spaces} onSelect={openLot} selectedId={selectedSpaceId} />
+            <LotMap spaces={spaces} onSelect={openLot} selectedId={selectedSpaceId} noticeMap={noticeMap} />
           )}
         </div>
       ) : (
@@ -274,6 +293,7 @@ export function TwinOaksRoom() {
         canManage={canManage}
         onClose={() => setLotOpen(false)}
         onChanged={load}
+        onNoticeChange={refreshNoticeMap}
         onNewWorkOrder={newWorkOrder}
         onSelectWorkOrder={openWorkOrder}
       />

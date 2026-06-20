@@ -89,6 +89,20 @@ export interface LotNotice {
   updated_at: string;
 }
 
+export const NOTICE_COLOR: Record<NoticeType, string> = {
+  '1': 'bg-yellow-400 text-gray-900',
+  '2': 'bg-orange-500 text-white',
+  '3': 'bg-red-600 text-white',
+  E:   'bg-gray-900 text-white',
+};
+
+export function highestNoticeType(notices: LotNotice[]): NoticeType | null {
+  if (!notices.length) return null;
+  return (['E', '3', '2', '1'] as NoticeType[]).find(
+    (t) => notices.some((n) => n.notice_type === t),
+  ) ?? null;
+}
+
 export interface WorkOrder {
   id: string;
   space_id: string | null;

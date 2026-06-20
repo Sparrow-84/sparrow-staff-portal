@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState, useTransition, type ReactNode } from 
 import { useAuth } from '@/auth/AuthContext';
 import {
   HOME_OWNERSHIPS,
+  NOTICE_COLOR,
   NOTICE_DELIVERIES,
   NOTICE_TYPES,
   PET_TYPES,
   SPACE_TYPES,
   TITLE_HOLDERS,
   availabilityOptions,
+  highestNoticeType,
   type HomeDesignation,
   type HomeOwnership,
   type NoticeDelivery,
@@ -49,6 +51,7 @@ interface Props {
   canManage: boolean;
   onClose: () => void;
   onChanged: () => void;
+  onNoticeChange?: () => void;
   onNewWorkOrder: (spaceId: string) => void;
   onSelectWorkOrder: (wo: WorkOrderWithAssignee) => void;
 }
@@ -137,6 +140,7 @@ export function LotDetailPanel({
   canManage,
   onClose,
   onChanged,
+  onNoticeChange,
   onNewWorkOrder,
   onSelectWorkOrder,
 }: Props) {
@@ -430,6 +434,7 @@ export function LotDetailPanel({
         setNoticeDeliveryNotes('');
         setShowNoticeForm(false);
         await loadRelated(space.id);
+        onNoticeChange?.();
       } catch (e) {
         setNoticeError(e instanceof Error ? e.message : 'Could not save notice.');
       }
@@ -441,9 +446,7 @@ export function LotDetailPanel({
   const effectiveOwnership = isLcp && ownership === 'resident_owned' ? 'sparrow_owned' : ownership;
   if (isLcp && ownership === 'resident_owned') setOwnership('sparrow_owned');
 
-  const highestNotice = notices.length > 0
-    ? (['E', '3', '2', '1'] as NoticeType[]).find((t) => notices.some((n) => n.notice_type === t)) ?? null
-    : null;
+  const highestNotice = highestNoticeType(notices);
 
   return (
     <>
@@ -466,7 +469,7 @@ export function LotDetailPanel({
                   {mode === 'lot-edit' ? 'Edit lot details — ' : ''}Lot {space.label}
                 </h2>
                 {highestNotice && (
-                  <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${highestNotice === 'E' ? 'bg-priority-p1 text-white' : 'bg-priority-p2 text-white'}`}>
+                  <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${NOTICE_COLOR[highestNotice]}`}>
                     {highestNotice === 'E' ? 'EVICT' : `Notice ${highestNotice}`}
                   </span>
                 )}
@@ -506,7 +509,7 @@ export function LotDetailPanel({
                 onSetNoticeDeliveryNotes={setNoticeDeliveryNotes}
                 onToggleNoticeForm={() => setShowNoticeForm((p) => !p)}
                 onSubmitNotice={submitNotice}
-                onDeleteNotice={async (id) => { await deleteNotice(id); await loadRelated(space.id); }}
+                onDeleteNotice={async (id) => { await deleteNotice(id); await loadRelated(space.id); onNoticeChange?.(); }}
                 onNewWorkOrder={onNewWorkOrder}
                 onSelectWorkOrder={onSelectWorkOrder}
                 onEditLot={enterLotEdit}
@@ -998,7 +1001,7 @@ function ViewBody({
               <li key={n.id} className="px-3 py-2">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <span className={`mr-2 rounded px-1.5 py-0.5 text-xs font-bold ${n.notice_type === 'E' ? 'bg-priority-p1 text-white' : 'bg-priority-p2 text-white'}`}>
+                    <span className={`mr-2 rounded px-1.5 py-0.5 text-xs font-bold ${NOTICE_COLOR[n.notice_type]}`}>
                       {n.notice_type === 'E' ? 'Eviction' : `Notice ${n.notice_type}`}
                     </span>
                     <span className="text-xs text-sparrow-gray">{n.notice_date}</span>
