@@ -50,23 +50,23 @@ const LOTS: Record<string, LotPos> = {
   '10': { x: 496,  y: 55, w: 55, h: 80 },
   '11': { x: 440,  y: 55, w: 55, h: 80 },
   // ── Row 2: SW Twin Oaks Circle upper ─────────────────────────────────────
-  '12': { x: 1056, y: 159, w: 55, h: 88 },
-  '13': { x: 1000, y: 159, w: 55, h: 88 },
-  '14': { x: 944,  y: 159, w: 55, h: 88 },
-  '15': { x: 888,  y: 159, w: 55, h: 88 },
-  '16': { x: 832,  y: 159, w: 55, h: 88 },
-  '17': { x: 776,  y: 159, w: 55, h: 88 },
-  '18': { x: 720,  y: 159, w: 55, h: 88 },
-  '19': { x: 664,  y: 159, w: 55, h: 88 },
-  '20': { x: 608,  y: 159, w: 55, h: 88 },
-  '21': { x: 552,  y: 159, w: 55, h: 88 },
-  '22': { x: 496,  y: 159, w: 55, h: 88 },
+  '12': { x: 1017, y: 159, w: 94, h: 88 },
+  '13': { x: 961,  y: 159, w: 55, h: 88 },
+  '14': { x: 905,  y: 159, w: 55, h: 88 },
+  '15': { x: 849,  y: 159, w: 55, h: 88 },
+  '16': { x: 793,  y: 159, w: 55, h: 88 },
+  '17': { x: 737,  y: 159, w: 55, h: 88 },
+  '18': { x: 681,  y: 159, w: 55, h: 88 },
+  '19': { x: 625,  y: 159, w: 55, h: 88 },
+  '20': { x: 569,  y: 159, w: 55, h: 88 },
+  '21': { x: 513,  y: 159, w: 55, h: 88 },
+  '22': { x: 464,  y: 159, w: 49, h: 88 },
   // ── Corner wrap: lots 23–27 ───────────────────────────────────────────────
-  '23': { x: 430,  y: 159, w: 60, h: 88 },
-  '24': { x: 362,  y: 159, w: 62, h: 88 },
-  '25': { x: 292,  y: 159, w: 65, h: 88 },
-  '26': { x: 218,  y: 159, w: 70, h: 88 },
-  '27': { x: 130,  y: 159, w: 82, h: 88 },
+  '23': { x: 391,  y: 159, w: 49, h: 88 },
+  '24': { x: 323,  y: 159, w: 62, h: 88 },
+  '25': { x: 253,  y: 159, w: 65, h: 88 },
+  '26': { x: 179,  y: 159, w: 70, h: 88 },
+  '27': { x: 91,   y: 159, w: 82, h: 88 },
   // ── Far-left column (caretaker) ───────────────────────────────────────────
   '28': { x: 60,   y: 349, w: 65, h: 72 },
   '29': { x: 60,   y: 445, w: 65, h: 72 },
@@ -158,12 +158,22 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
         <text x="780" y="151" fontSize="7" fontWeight="700" textAnchor="middle"
           fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW MOBILE PLACE</text>
 
+        {/* Connecting road between lots 22 and 23 — links SW Mobile Place to SW Twin Oaks Circle */}
+        <rect x="440" y="135" width="24" height="112" fill="#cbd5e1" />
+        <line x1="452" y1="159" x2="452" y2="247"
+          stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
+
         {/* SW Twin Oaks Circle upper — between Row 2 and interior block */}
-        <rect x="130" y="247" width="981" height="24" fill="#cbd5e1" />
-        <line x1="130" y1="259" x2="1111" y2="259"
+        <rect x="91" y="247" width="1020" height="24" fill="#cbd5e1" />
+        <line x1="91" y1="259" x2="1111" y2="259"
           stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
         <text x="640" y="263" fontSize="7" fontWeight="700" textAnchor="middle"
           fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW TWIN OAKS CIRCLE</text>
+
+        {/* SW Twin Oaks Circle west curve — connects upper to lower along the left side */}
+        <rect x="91" y="271" width="24" height="246" fill="#cbd5e1" />
+        <line x1="103" y1="271" x2="103" y2="517"
+          stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
 
         {/* SW Pleasant Place — between interior block and pleasant place row */}
         <rect x="496" y="421" width="238" height="24" fill="#cbd5e1" />
@@ -173,10 +183,10 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
           fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW PLEASANT PLACE</text>
 
         {/* SW Twin Oaks Circle lower */}
-        <rect x="496" y="517" width="238" height="24" fill="#cbd5e1" />
-        <line x1="496" y1="529" x2="734" y2="529"
+        <rect x="91" y="517" width="1020" height="24" fill="#cbd5e1" />
+        <line x1="91" y1="529" x2="1111" y2="529"
           stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
-        <text x="615" y="533" fontSize="7" fontWeight="700" textAnchor="middle"
+        <text x="640" y="533" fontSize="7" fontWeight="700" textAnchor="middle"
           fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW TWIN OAKS CIRCLE</text>
 
         {/* ── Park open space (interior top level) ── */}
