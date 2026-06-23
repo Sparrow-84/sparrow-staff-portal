@@ -39,6 +39,20 @@ ALTER TABLE lcp_staff_notes
   ADD COLUMN IF NOT EXISTS session_log_id uuid REFERENCES lcp_session_logs(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz;
 
+-- Auto-stamp updated_at whenever a staff note is edited.
+CREATE OR REPLACE FUNCTION set_staff_note_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS staff_notes_updated_at ON lcp_staff_notes;
+CREATE TRIGGER staff_notes_updated_at
+  BEFORE UPDATE ON lcp_staff_notes
+  FOR EACH ROW EXECUTE FUNCTION set_staff_note_updated_at();
+
 -- ── RLS ───────────────────────────────────────────────────────────────
 
 ALTER TABLE lcp_session_logs ENABLE ROW LEVEL SECURITY;
