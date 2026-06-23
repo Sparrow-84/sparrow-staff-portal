@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { designationGridLabel, type NoticeType, type Space } from '@/lib/housing-types';
+import { designationGridLabel, HOUSE_NUM, type NoticeType, type Space } from '@/lib/housing-types';
 
 const NOTICE_SVG: Record<NoticeType, { fill: string; text: string }> = {
   '1': { fill: '#facc15', text: '#1a1a1a' },
@@ -109,20 +109,6 @@ const LOTS: Record<string, LotPos> = {
   '58': { x: 676,  y: 517, w: 58, h: 72 },
 };
 
-const HOUSE_NUM: Record<string, string> = {
-  '1':'241','2':'243','3':'245','4':'247','5':'249','6':'251','7':'253',
-  '8':'255','9':'257','10':'259','11':'261',
-  '12':'241','13':'243','14':'245','15':'247','16':'249','17':'251',
-  '18':'255','19':'259','20':'263','21':'265','22':'267','23':'271',
-  '24':'273','25':'275','26':'277','27':'279','28':'281','29':'315',
-  '30':'264','31':'262','32':'260','33':'258','34':'256','35':'254',
-  '36':'252','37':'250','38':'248','39':'246',
-  '40':'245','41':'247','42':'249','43':'251','44':'253','45':'255',
-  '46':'257','47':'259','48':'261','49':'263',
-  '50':'287','51':'269','52':'271','53':'273',
-  '54':'264','55':'262','56':'260','57':'258',
-  '58':'441','59':'435','60':'431','61':'425',
-};
 
 interface Props {
   spaces: Space[];
@@ -247,8 +233,8 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
           const notice = space && noticeMap ? noticeMap[space.id] : undefined;
           const nStyle = notice ? NOTICE_SVG[notice] : undefined;
 
-          const fill   = isSelected ? '#fef08a' : style.fill;
-          const stroke = isSelected ? '#eab308' : isHovered ? '#F0A500' : style.stroke;
+          const fill   = style.fill;
+          const stroke = isSelected || isHovered ? '#F0A500' : style.stroke;
           const sw     = isSelected || isHovered ? 2.5 : 1.5;
 
           return (

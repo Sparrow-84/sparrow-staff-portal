@@ -1,4 +1,4 @@
-import { NOTICE_COLOR, designationGridLabel, designationTextClass, lotClasses, type NoticeType, type Space } from '@/lib/housing-types';
+import { HOUSE_NUM, NOTICE_COLOR, designationGridLabel, designationTextClass, lotClasses, type NoticeType, type Space } from '@/lib/housing-types';
 
 interface Props {
   spaces: Space[];
@@ -18,7 +18,7 @@ export function LotGrid({ spaces, onSelect, noticeMap }: Props) {
           <button
             key={s.id}
             onClick={() => onSelect(s)}
-            title={`Lot ${s.label}${desLabel ? ` · ${desLabel}` : ''}${notice ? ` · Notice ${notice}` : ''}`}
+            title={`Lot ${s.label}${HOUSE_NUM[s.label] ? ` · # ${HOUSE_NUM[s.label]}` : ''}${desLabel ? ` · ${desLabel}` : ''}${notice ? ` · Notice ${notice}` : ''}`}
             className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border text-sm font-semibold transition hover:ring-2 hover:ring-sparrow-gold ${lotClasses(s)}`}
           >
             <span>{s.label}</span>
