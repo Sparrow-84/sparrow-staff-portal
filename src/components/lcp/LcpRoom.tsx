@@ -20,6 +20,7 @@ import {
 import { dayLabel, timeLabel } from '@/lib/lcp-format';
 import { FamilyDetailPanel } from './FamilyDetailPanel';
 import { SessionBriefPanel } from './SessionBriefPanel';
+import { SessionLog } from './SessionLog';
 import { AddFamilyPanel } from './AddFamilyPanel';
 
 export function LcpRoom() {
@@ -32,7 +33,7 @@ export function LcpRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'families' | 'calendar'>('families');
+  const [tab, setTab] = useState<'families' | 'calendar' | 'session-log'>('families');
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [event, setEvent] = useState<LcpEvent | null>(null);
@@ -128,20 +129,30 @@ export function LcpRoom() {
 
       {/* Tabs */}
       <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
-        {(['families', 'calendar'] as const).map((t) => (
+        {(['families', 'session-log', 'calendar'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`rounded-lg px-3 py-1.5 font-medium capitalize transition ${
+            className={`rounded-lg px-3 py-1.5 font-medium transition ${
               tab === t ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
             }`}
           >
-            {t}
+            {t === 'session-log' ? 'Session Log' : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
 
-      {tab === 'families' ? (
+      {tab === 'session-log' ? (
+        <div className="mt-6">
+          <SessionLog
+            families={families}
+            homeworkByFamily={homeworkByFamily}
+            currentUserId={profile?.id ?? ''}
+            currentUserName={profile?.full_name ?? 'Staff'}
+            onChanged={load}
+          />
+        </div>
+      ) : tab === 'families' ? (
         <div className="mt-6 space-y-3">
           {families.map((f) => {
             const fhw = homeworkByFamily.get(f.id) ?? [];

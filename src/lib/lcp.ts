@@ -10,6 +10,9 @@ import type {
   LcpEvent,
   Message,
   Redemption,
+  SessionAttendance,
+  SessionLog,
+  SessionLogType,
   StaffNote,
   Voucher,
 } from './lcp-types';
@@ -190,11 +193,17 @@ export async function sendStaffMessage(familyId: string, body: string, senderId:
 export async function fetchStaffNotes(familyId: string): Promise<StaffNote[]> {
   const { data, error } = await supabase
     .from('lcp_staff_notes')
-    .select('*')
+    .select('id, family_id, author_id, session_id, session_log_id, body, created_at, updated_at, author:profiles(full_name)')
     .eq('family_id', familyId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []) as StaffNote[];
+  return ((data ?? []) as unknown[]).map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      ...row,
+      author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
+    } as StaffNote;
+  });
 }
 
 export async function addStaffNote(
@@ -202,11 +211,97 @@ export async function addStaffNote(
   body: string,
   authorId: string,
   sessionId: number | null = null,
+  sessionLogId: string | null = null,
 ): Promise<void> {
   const { error } = await supabase
     .from('lcp_staff_notes')
-    .insert({ family_id: familyId, body, author_id: authorId, session_id: sessionId });
+    .insert({ family_id: familyId, body, author_id: authorId, session_id: sessionId, session_log_id: sessionLogId });
   if (error) throw new Error(error.message);
+}
+
+export async function updateStaffNote(id: string, body: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_staff_notes')
+    .update({ body: body.trim(), updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Session logs ──────────────────────────────────────────────────────
+export async function fetchRecentSessionLogs(weeksBack = 8): Promise<SessionLog[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - weeksBack * 7);
+  const { data, error } = await supabase
+    .from('lcp_session_logs')
+    .select(`
+      id, session_date, session_type, event_id, group_note, created_by, created_at,
+      created_by_profile:profiles!lcp_session_logs_created_by_fkey(full_name),
+      attendance:lcp_session_attendance(id, session_log_id, family_id, status, voucher_awarded, marked_by, marked_at)
+    `)
+    .gte('session_date', since.toISOString().slice(0, 10))
+    .order('session_date', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown[]).map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      ...row,
+      created_by_name: (row.created_by_profile as { full_name: string } | null)?.full_name ?? null,
+    } as SessionLog;
+  });
+}
+
+export async function fetchTodayEvents(): Promise<LcpEvent[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('lcp_events')
+    .select('id, kind, session_id, title, starts_at, ends_at, location, mandatory, rsvp_enabled')
+    .gte('starts_at', `${today}T00:00:00`)
+    .lt('starts_at', `${today}T23:59:59`)
+    .order('starts_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as LcpEvent[];
+}
+
+export async function createSessionLog(input: {
+  session_date: string;
+  session_type: SessionLogType;
+  event_id: string | null;
+  group_note: string | null;
+  created_by: string;
+}): Promise<string> {
+  const { data, error } = await supabase
+    .from('lcp_session_logs')
+    .insert(input)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (data as { id: string }).id;
+}
+
+export async function upsertSessionAttendance(
+  sessionLogId: string,
+  familyId: string,
+  status: AttendanceStatus,
+  voucherAwarded: boolean,
+  markedBy: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_session_attendance')
+    .upsert(
+      { session_log_id: sessionLogId, family_id: familyId, status, voucher_awarded: voucherAwarded, marked_by: markedBy },
+      { onConflict: 'session_log_id,family_id' },
+    );
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchAttendanceForSessionLog(sessionLogId: string): Promise<SessionAttendance[]> {
+  const { data, error } = await supabase
+    .from('lcp_session_attendance')
+    .select('id, session_log_id, family_id, status, voucher_awarded, marked_by, marked_at')
+    .eq('session_log_id', sessionLogId);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SessionAttendance[];
 }
 
 // ── Vouchers + redemptions ───────────────────────────────────────────

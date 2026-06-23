@@ -11,6 +11,7 @@ export type HomeworkArea = 'relational' | 'physical_financial' | 'spiritual' | '
 export type HomeworkStatus = 'assigned' | 'submitted' | 'complete';
 export type MessageSender = 'staff' | 'family';
 export type RedemptionStatus = 'requested' | 'fulfilled' | 'cancelled';
+export type SessionLogType = 'monday_mentoring' | 'thursday_group' | 'ad_hoc';
 
 export interface Family {
   id: string;
@@ -69,9 +70,34 @@ export interface StaffNote {
   id: string;
   family_id: string;
   author_id: string | null;
+  author_name: string | null;
   session_id: number | null;
+  session_log_id: string | null;
   body: string;
   created_at: string;
+  updated_at: string | null;
+}
+
+export interface SessionLog {
+  id: string;
+  session_date: string;
+  session_type: SessionLogType;
+  event_id: string | null;
+  group_note: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  created_at: string;
+  attendance: SessionAttendance[];
+}
+
+export interface SessionAttendance {
+  id: string;
+  session_log_id: string;
+  family_id: string;
+  status: AttendanceStatus;
+  voucher_awarded: boolean;
+  marked_by: string | null;
+  marked_at: string;
 }
 
 export interface Voucher {
@@ -135,3 +161,9 @@ export const HOMEWORK_AREAS: HomeworkArea[] = [
   'emotional',
   'general',
 ];
+
+export const SESSION_LOG_LABEL: Record<SessionLogType, string> = {
+  monday_mentoring: 'Monday Mentoring',
+  thursday_group:   'Thursday Group',
+  ad_hoc:           'Ad-hoc Session',
+};
