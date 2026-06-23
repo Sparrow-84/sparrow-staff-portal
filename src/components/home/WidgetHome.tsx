@@ -8,6 +8,7 @@ import { fetchSettings, saveSettings } from '@/lib/settings';
 import { isoDate } from '@/lib/tasks';
 import type { Profile, TaskComment, TaskWithPeople } from '@/lib/types';
 import { AnnouncementBar } from '../AnnouncementBar';
+import { DailyReflection } from './DailyReflection';
 import { TaskPanel } from '../TaskPanel';
 import type { View } from '../Sidebar';
 import {
@@ -188,8 +189,10 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
         )}
       </div>
 
+      <DailyReflection today={ctx.today} />
+
       {editing && (
-        <p className="mt-3 text-xs text-sparrow-gray">
+        <p className=”mt-3 text-xs text-sparrow-gray”>
           Drag a card by its handle to reorder. Remove with ×. Add more with “+ Add widget.”
         </p>
       )}
