@@ -168,3 +168,60 @@ export const SESSION_LOG_LABEL: Record<SessionLogType, string> = {
   thursday_group:   'Thursday Group',
   ad_hoc:           'Ad-hoc Session',
 };
+
+// ── Curriculum admin ──────────────────────────────────────────────────────────
+
+export type ResourceKind = 'handout' | 'teacher_guide' | 'devotional' | 'ppt' | 'art' | 'other';
+export type ResourceAudience = 'participant' | 'staff';
+
+export interface Resource {
+  id: string;
+  session_id: number | null;
+  kind: ResourceKind;
+  audience: ResourceAudience;
+  title: string;
+  drive_url: string;
+  created_at: string;
+}
+
+export interface CurriculumPhase {
+  id: number;
+  number: number;
+  name: string;
+  units: CurriculumUnit[];
+}
+
+export interface CurriculumUnit {
+  id: number;
+  name: string;
+  month_label: string | null;
+  artifact: string | null;
+  supplement: string | null;
+  sessions: CurriculumSessionDetail[];
+}
+
+export interface CurriculumSessionDetail {
+  id: number;
+  session_number: number;
+  title: string;
+  focus: string | null;
+  scripture: string | null;
+}
+
+export const RESOURCE_KIND_LABEL: Record<ResourceKind, string> = {
+  handout:       'Handout',
+  teacher_guide: 'Teacher guide',
+  devotional:    'Devotional',
+  ppt:           'Presentation',
+  art:           'Art / activity',
+  other:         'Other',
+};
+
+export const RESOURCE_AUDIENCE_LABEL: Record<ResourceAudience, string> = {
+  participant: 'Participants',
+  staff:       'Staff only',
+};
+
+export const RESOURCE_KINDS: ResourceKind[] = [
+  'handout', 'teacher_guide', 'devotional', 'ppt', 'art', 'other',
+];

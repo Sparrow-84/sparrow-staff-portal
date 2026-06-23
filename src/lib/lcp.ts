@@ -2,7 +2,11 @@ import { supabase } from './supabase';
 import type {
   Attendance,
   AttendanceStatus,
+  CurriculumPhase,
   CurriculumSession,
+  CurriculumSessionDetail,
+  CurriculumUnit,
+  EventKind,
   Family,
   Homework,
   HomeworkArea,
@@ -10,6 +14,9 @@ import type {
   LcpEvent,
   Message,
   Redemption,
+  Resource,
+  ResourceAudience,
+  ResourceKind,
   SessionAttendance,
   SessionLog,
   SessionLogType,
@@ -416,5 +423,74 @@ export async function fulfillRedemption(
     .from('lcp_redemptions')
     .update({ status: 'fulfilled', fulfilled_by: fulfilledBy, fulfilled_at: new Date().toISOString() })
     .eq('id', redemptionId);
+  if (error) throw new Error(error.message);
+}
+
+// ── Curriculum admin (Shelly's editing workflow) ──────────────────────────────
+
+/** Full phase → unit → session tree with all editable fields. */
+export async function fetchCurriculum(): Promise<CurriculumPhase[]> {
+  const { data, error } = await supabase
+    .from('lcp_phases')
+    .select(`
+      id, number, name,
+      units:lcp_units(
+        id, name, month_label, artifact, supplement,
+        sessions:lcp_sessions(id, session_number, title, focus, scripture)
+      )
+    `)
+    .order('number');
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as CurriculumPhase[]).map((phase) => ({
+    ...phase,
+    units: (phase.units ?? []).map((unit) => ({
+      ...unit,
+      sessions: [...(unit.sessions ?? [])].sort((a, b) => a.session_number - b.session_number),
+    })),
+  }));
+}
+
+export async function updateCurriculumSession(
+  id: number,
+  patch: Partial<Pick<CurriculumSessionDetail, 'title' | 'focus' | 'scripture'>>,
+): Promise<void> {
+  const { error } = await supabase.from('lcp_sessions').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateCurriculumUnit(
+  id: number,
+  patch: Partial<Pick<CurriculumUnit, 'artifact' | 'supplement' | 'month_label'>>,
+): Promise<void> {
+  const { error } = await supabase.from('lcp_units').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchSessionResources(sessionId: number): Promise<Resource[]> {
+  const { data, error } = await supabase
+    .from('lcp_resources')
+    .select('id, session_id, kind, audience, title, drive_url, created_at')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Resource[];
+}
+
+export interface ResourceInput {
+  session_id: number | null;
+  kind: ResourceKind;
+  audience: ResourceAudience;
+  title: string;
+  drive_url: string;
+  created_by: string;
+}
+
+export async function addResource(input: ResourceInput): Promise<void> {
+  const { error } = await supabase.from('lcp_resources').insert(input);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteResource(id: string): Promise<void> {
+  const { error } = await supabase.from('lcp_resources').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }

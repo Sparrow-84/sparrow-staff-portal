@@ -24,6 +24,7 @@ import { AddFamilyPanel } from './AddFamilyPanel';
 import { AddEventPanel } from './AddEventPanel';
 import { EventDetailPanel } from './EventDetailPanel';
 import { LcpCalendar } from './LcpCalendar';
+import { CurriculumAdmin } from './CurriculumAdmin';
 
 export function LcpRoom() {
   const { profile } = useAuth();
@@ -35,7 +36,7 @@ export function LcpRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'families' | 'calendar' | 'session-log'>('families');
+  const [tab, setTab] = useState<'families' | 'calendar' | 'session-log' | 'curriculum'>('families');
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [event, setEvent] = useState<LcpEvent | null>(null);
@@ -130,7 +131,7 @@ export function LcpRoom() {
 
       {/* Tabs */}
       <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
-        {(['families', 'session-log', 'calendar'] as const).map((t) => (
+        {(['families', 'session-log', 'calendar', 'curriculum'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -216,6 +217,8 @@ export function LcpRoom() {
             </div>
           </section>
         </div>
+      ) : tab === 'curriculum' ? (
+        <CurriculumAdmin />
       ) : (
         <div className="mt-6">
           <LcpCalendar events={events} onEventClick={(ev) => setDetailEvent(ev)} onAdd={() => setAddEventOpen(true)} />
