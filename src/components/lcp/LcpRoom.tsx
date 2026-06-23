@@ -8,7 +8,6 @@ import {
   fetchSessions,
 } from '@/lib/lcp';
 import {
-  EVENT_LABEL,
   FAMILY_STATUS,
   TOTAL_SESSIONS,
   type CurriculumSession,
@@ -17,11 +16,13 @@ import {
   type LcpEvent,
   type Redemption,
 } from '@/lib/lcp-types';
-import { dayLabel, timeLabel } from '@/lib/lcp-format';
 import { FamilyDetailPanel } from './FamilyDetailPanel';
 import { SessionBriefPanel } from './SessionBriefPanel';
 import { SessionLog } from './SessionLog';
 import { AddFamilyPanel } from './AddFamilyPanel';
+import { AddEventPanel } from './AddEventPanel';
+import { EventDetailPanel } from './EventDetailPanel';
+import { LcpCalendar } from './LcpCalendar';
 
 export function LcpRoom() {
   const { profile } = useAuth();
@@ -38,7 +39,9 @@ export function LcpRoom() {
   const [familyOpen, setFamilyOpen] = useState(false);
   const [event, setEvent] = useState<LcpEvent | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
+  const [detailEvent, setDetailEvent] = useState<LcpEvent | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [addEventOpen, setAddEventOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -97,9 +100,6 @@ export function LcpRoom() {
   if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading LifeChange…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
-  const now = Date.now();
-  const upcoming = events.filter((e) => new Date(e.starts_at).getTime() >= now);
-  const past = events.filter((e) => new Date(e.starts_at).getTime() < now).reverse();
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -212,12 +212,8 @@ export function LcpRoom() {
           </section>
         </div>
       ) : (
-        <div className="mt-6 space-y-6">
-          <EventList title="Upcoming" events={upcoming} onOpen={openBrief} emptyText="No upcoming sessions." />
-          <EventList title="Past" events={past} onOpen={openBrief} emptyText="" />
-          <p className="text-xs text-sparrow-gray">
-            Click a session to take attendance, assign homework, and file a session note.
-          </p>
+        <div className="mt-6">
+          <LcpCalendar events={events} onEventClick={(ev) => setDetailEvent(ev)} onAdd={() => setAddEventOpen(true)} />
         </div>
       )}
 
@@ -239,42 +235,19 @@ export function LcpRoom() {
         onChanged={load}
       />
       <AddFamilyPanel open={addOpen} onClose={() => setAddOpen(false)} onCreated={load} />
+      <EventDetailPanel
+        event={detailEvent}
+        onClose={() => setDetailEvent(null)}
+        onLogSession={(ev) => { setDetailEvent(null); openBrief(ev); }}
+        onDeleted={() => { setDetailEvent(null); void load(); }}
+      />
+      <AddEventPanel
+        open={addEventOpen}
+        currentUserId={profile?.id ?? ''}
+        onClose={() => setAddEventOpen(false)}
+        onCreated={() => { setAddEventOpen(false); void load(); }}
+      />
     </div>
   );
 }
 
-function EventList({
-  title,
-  events,
-  onOpen,
-  emptyText,
-}: {
-  title: string;
-  events: LcpEvent[];
-  onOpen: (e: LcpEvent) => void;
-  emptyText: string;
-}) {
-  if (events.length === 0 && !emptyText) return null;
-  return (
-    <section>
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">{title}</h2>
-      {events.length === 0 ? (
-        <p className="text-sm text-sparrow-gray">{emptyText}</p>
-      ) : (
-        <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
-          {events.map((ev) => (
-            <li key={ev.id}>
-              <button onClick={() => onOpen(ev)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sparrow-mist">
-                <div className="w-28 shrink-0 text-xs text-sparrow-gray">
-                  {dayLabel(ev.starts_at)} · {timeLabel(ev.starts_at)}
-                </div>
-                <span className="flex-1 text-sm font-medium text-sparrow-ink">{ev.title}</span>
-                <span className="shrink-0 text-xs text-sparrow-gray">{EVENT_LABEL[ev.kind]}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}

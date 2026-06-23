@@ -145,6 +145,38 @@ export async function fetchEvents(): Promise<LcpEvent[]> {
   return (data ?? []) as LcpEvent[];
 }
 
+export async function createEvents(
+  inputs: Array<{
+    title: string;
+    kind: EventKind;
+    starts_at: string;
+    ends_at: string | null;
+    location: string | null;
+    mandatory: boolean;
+    recurrence_id: string | null;
+    created_by: string;
+  }>,
+): Promise<void> {
+  // recurrence_id omitted until migration 0032 is applied by Byron
+  const rows = inputs.map(({ recurrence_id: _r, ...rest }) => rest);
+  const { error } = await supabase.from('lcp_events').insert(rows);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteEvent(id: string): Promise<void> {
+  const { error } = await supabase.from('lcp_events').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteEventAndFuture(recurrenceId: string, fromStartsAt: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_events')
+    .delete()
+    .eq('recurrence_id', recurrenceId)
+    .gte('starts_at', fromStartsAt);
+  if (error) throw new Error(error.message);
+}
+
 // ── Attendance ───────────────────────────────────────────────────────
 export async function fetchAttendanceForEvent(eventId: string): Promise<Attendance[]> {
   const { data, error } = await supabase
@@ -302,6 +334,30 @@ export async function fetchAttendanceForSessionLog(sessionLogId: string): Promis
     .eq('session_log_id', sessionLogId);
   if (error) throw new Error(error.message);
   return (data ?? []) as SessionAttendance[];
+}
+
+export async function fetchNotesForSessionLog(sessionLogId: string): Promise<StaffNote[]> {
+  const { data, error } = await supabase
+    .from('lcp_staff_notes')
+    .select('id, family_id, author_id, session_id, session_log_id, body, created_at, updated_at, author:profiles(full_name)')
+    .eq('session_log_id', sessionLogId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown[]).map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      ...row,
+      author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
+    } as StaffNote;
+  });
+}
+
+export async function updateSessionLog(id: string, groupNote: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_session_logs')
+    .update({ group_note: groupNote })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 // ── Vouchers + redemptions ───────────────────────────────────────────

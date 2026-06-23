@@ -10,6 +10,7 @@ import {
 import { fetchRecentSessionLogs, fetchTodayEvents } from '@/lib/lcp';
 import { timeLabel } from '@/lib/lcp-format';
 import { SessionLogEntry } from './SessionLogEntry';
+import { SessionLogViewer } from './SessionLogViewer';
 
 interface Props {
   families: Family[];
@@ -44,6 +45,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
   const [todayEvents, setTodayEvents] = useState<LcpEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [entry, setEntry] = useState<EntryConfig | null>(null);
+  const [viewing, setViewing] = useState<SessionLog | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [manualDate, setManualDate] = useState(todayISO());
   const [manualType, setManualType] = useState<SessionLogType>('monday_mentoring');
@@ -76,6 +78,18 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         currentUserName={currentUserName}
         onBack={() => setEntry(null)}
         onFiled={handleFiled}
+      />
+    );
+  }
+
+  if (viewing) {
+    return (
+      <SessionLogViewer
+        log={viewing}
+        families={families}
+        currentUserId={currentUserId}
+        onBack={() => setViewing(null)}
+        onChanged={() => { void load(); onChanged(); }}
       />
     );
   }
@@ -209,7 +223,11 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
                   <span className="text-xs font-semibold text-sparrow-gray">{formatDate(date)}</span>
                 </div>
                 {dateLogs.map((log) => (
-                  <div key={log.id} className="flex items-center gap-3 border-t border-sparrow-rule px-4 py-3">
+                  <button
+                    key={log.id}
+                    onClick={() => setViewing(log)}
+                    className="flex w-full items-center gap-3 border-t border-sparrow-rule px-4 py-3 text-left hover:bg-sparrow-mist"
+                  >
                     <span className="flex-1 text-sm font-medium text-sparrow-ink">
                       {SESSION_LOG_LABEL[log.session_type]}
                     </span>
@@ -220,7 +238,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
                       Filed by {log.created_by_name ?? 'staff'}
                     </span>
                     <span className="h-2 w-2 shrink-0 rounded-full bg-sparrow-green" title="Filed" />
-                  </div>
+                  </button>
                 ))}
               </li>
             ))}

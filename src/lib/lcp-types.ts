@@ -47,6 +47,7 @@ export interface LcpEvent {
   location: string | null;
   mandatory: boolean;
   rsvp_enabled: boolean;
+  recurrence_id: string | null;
 }
 
 export interface Attendance {

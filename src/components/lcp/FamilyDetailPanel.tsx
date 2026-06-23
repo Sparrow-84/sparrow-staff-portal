@@ -16,6 +16,7 @@ import {
 } from '@/lib/lcp-types';
 import {
   addStaffNote,
+  updateStaffNote,
   assignHomework,
   awardVoucher,
   deleteFamily,
@@ -480,6 +481,9 @@ function NotesTab({
 }) {
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState('');
+  const [saving, setSaving] = useState(false);
 
   async function add() {
     if (!body.trim()) return;
@@ -487,6 +491,15 @@ function NotesTab({
     await addStaffNote(family.id, body.trim(), currentUserId);
     setBody('');
     setBusy(false);
+    onChanged();
+  }
+
+  async function saveEdit(id: string) {
+    if (!editBody.trim()) return;
+    setSaving(true);
+    await updateStaffNote(id, editBody.trim());
+    setEditingId(null);
+    setSaving(false);
     onChanged();
   }
 
@@ -511,8 +524,52 @@ function NotesTab({
         {notes.length === 0 && <li className="text-sm text-sparrow-gray">No notes yet.</li>}
         {notes.map((n) => (
           <li key={n.id} className="rounded-xl border border-sparrow-rule/70 p-3">
-            <p className="text-sm text-sparrow-ink">{n.body}</p>
-            <p className="mt-1 text-xs text-sparrow-gray">{dayLabel(n.created_at)}</p>
+            {editingId === n.id ? (
+              <div className="space-y-2">
+                <textarea
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  rows={3}
+                  className="field-input"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => saveEdit(n.id)}
+                    disabled={saving || !editBody.trim()}
+                    className="btn-primary text-xs"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    disabled={saving}
+                    className="btn-ghost text-xs"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-sparrow-ink">{n.body}</p>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <p className="text-xs text-sparrow-gray">
+                    {n.updated_at && n.updated_at !== n.created_at
+                      ? `Edited ${dayLabel(n.updated_at)}`
+                      : dayLabel(n.created_at)}
+                    {n.author_name && ` · ${n.author_name}`}
+                  </p>
+                  {n.author_id === currentUserId && (
+                    <button
+                      onClick={() => { setEditingId(n.id); setEditBody(n.body); }}
+                      className="text-xs text-sparrow-gray hover:text-sparrow-green"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </li>
         ))}
       </ul>
