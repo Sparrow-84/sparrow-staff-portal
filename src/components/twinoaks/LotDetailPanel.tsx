@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/auth/AuthContext';
 import {
   HOME_OWNERSHIPS,
@@ -155,6 +156,7 @@ export function LotDetailPanel({
   const [error, setError] = useState<string | null>(null);
   const [lotError, setLotError] = useState<string | null>(null);
   const [showMoveOut, setShowMoveOut] = useState(false);
+  const [moveOutDate, setMoveOutDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [showNoticeForm, setShowNoticeForm] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -424,7 +426,7 @@ export function LotDetailPanel({
     if (!tenant || !space) return;
     startMoveOutTransition(async () => {
       try {
-        await moveOutTenant(tenant.id, space.id, reason);
+        await moveOutTenant(tenant.id, space.id, reason, moveOutDate);
         onChanged();
         setShowMoveOut(false);
         setMode('view');
@@ -631,7 +633,7 @@ export function LotDetailPanel({
                     <div className="mb-3 flex items-center justify-between">
                       <SectionHead label={residentLabel} />
                       {tenant && (
-                        <button onClick={() => setShowMoveOut(true)} className="text-xs text-priority-p1 hover:underline">
+                        <button onClick={() => { setShowMoveOut(true); setMoveOutDate(new Date().toISOString().slice(0, 10)); }} className="text-xs text-priority-p1 hover:underline">
                           Moved out
                         </button>
                       )}
@@ -841,9 +843,18 @@ export function LotDetailPanel({
             {showMoveOut && tenant && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/95 px-8 text-center">
                 <h3 className="mb-2 font-serif text-lg font-semibold">How did they leave?</h3>
-                <p className="mb-6 text-sm text-sparrow-gray">
+                <p className="mb-4 text-sm text-sparrow-gray">
                   The household record and all members will be archived. The lot will show as vacant. This cannot be undone.
                 </p>
+                <div className="mb-6 w-full max-w-xs text-left">
+                  <label className="mb-1 block text-xs font-medium text-sparrow-gray">Move-out date</label>
+                  <input
+                    type="date"
+                    value={moveOutDate}
+                    onChange={(e) => setMoveOutDate(e.target.value)}
+                    className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sparrow-green"
+                  />
+                </div>
                 <div className="flex flex-wrap justify-center gap-2">
                   <button onClick={() => doMoveOut('moved_out')} disabled={moveOutPending} className="btn-primary">Moved out</button>
                   <button onClick={() => doMoveOut('evicted')} disabled={moveOutPending} className="rounded-xl border border-priority-p1 px-4 py-2 text-sm font-semibold text-priority-p1 hover:bg-priority-p1 hover:text-white">Evicted</button>
@@ -891,13 +902,16 @@ function ViewBody({
     : null;
 
   const statusLabel = (space.status === 'occupied' && isProgramHome) ? 'Filled' : space.status;
+  const [showFullPhoto, setShowFullPhoto] = useState(false);
 
   return (
     <div className="flex-1 overflow-y-auto px-5 py-4 text-sm">
       {/* Lot photo */}
       {space.photo_url ? (
         <div className="relative mb-4">
-          <img src={space.photo_url} alt={`Lot ${space.label}`} className="h-48 w-full rounded-lg object-cover" />
+          <button type="button" onClick={() => setShowFullPhoto(true)} className="w-full cursor-zoom-in">
+            <img src={space.photo_url} alt={`Lot ${space.label}`} className="h-48 w-full rounded-lg object-cover" />
+          </button>
           {canManage && (
             <button
               onClick={onPhotoInputClick}
@@ -1100,6 +1114,19 @@ function ViewBody({
           </ul>
         )}
       </div>
+      {showFullPhoto && space.photo_url && createPortal(
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-sparrow-ink/90 p-4 cursor-zoom-out"
+          onClick={() => setShowFullPhoto(false)}
+        >
+          <img
+            src={space.photo_url}
+            alt={`Lot ${space.label}`}
+            className="max-h-full max-w-full rounded-lg object-contain shadow-xl"
+          />
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

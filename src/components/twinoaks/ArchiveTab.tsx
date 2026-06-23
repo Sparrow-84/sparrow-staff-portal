@@ -110,6 +110,12 @@ function ArchiveDetailPanel({ open, tenant, space, onClose }: PanelProps) {
                 {statusLabel(tenant.status)}
               </span>
 
+              {tenant.move_out_date && (
+                <div>
+                  <p className="field-label">Move-out date</p>
+                  <p className="text-sparrow-ink">{tenant.move_out_date}</p>
+                </div>
+              )}
               {tenant.move_in_date && (
                 <div>
                   <p className="field-label">Move-in date (as reported)</p>
@@ -307,7 +313,7 @@ export function ArchiveTab({ spaces, tenants }: Props) {
                         <p className="font-semibold text-sparrow-ink">{t.name || '—'}</p>
                         <p className="text-xs text-sparrow-gray">
                           {lot ? `Lot ${lot.label}` : 'Lot unknown'}
-                          {t.move_in_date ? ` · Moved in ${t.move_in_date}` : ''}
+                          {(t.move_in_date || t.move_out_date) ? ` · ${t.move_in_date ?? '?'}${t.move_out_date ? ` – ${t.move_out_date}` : ''}` : ''}
                         </p>
                       </div>
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${statusBadgeClass(t.status)}`}>
@@ -347,8 +353,10 @@ export function ArchiveTab({ spaces, tenants }: Props) {
                         >
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-sparrow-ink">{t.name || '—'}</p>
-                            {t.move_in_date && (
-                              <p className="text-xs text-sparrow-gray">Moved in {t.move_in_date}</p>
+                            {(t.move_in_date || t.move_out_date) && (
+                              <p className="text-xs text-sparrow-gray">
+                                {t.move_in_date ?? '?'}{t.move_out_date ? ` – ${t.move_out_date}` : ''}
+                              </p>
                             )}
                           </div>
                           <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${statusBadgeClass(t.status)}`}>

@@ -43,6 +43,7 @@ export interface Tenant {
   annual_income: number | null;            // in DB; not shown in UI
   status: TenantStatus;
   move_in_date: string | null;
+  move_out_date: string | null;
   children: number;
   children_names: string | null;
   emergency_contact_notes: string | null;

@@ -104,10 +104,11 @@ export async function moveOutTenant(
   tenantId: string,
   spaceId: string,
   reason: 'moved_out' | 'evicted',
+  moveOutDate: string,
 ): Promise<void> {
   const { error: tenantErr } = await supabase
     .from('tenants')
-    .update({ status: reason })   // keep space_id so archive can show which lot they were at
+    .update({ status: reason, move_out_date: moveOutDate })   // keep space_id so archive can show which lot they were at
     .eq('id', tenantId);
   if (tenantErr) throw new Error(tenantErr.message);
 
