@@ -8,6 +8,53 @@ import type {
 } from '@/lib/lcp-types';
 import { SessionEditPanel } from './SessionEditPanel';
 
+const PHASE_COLORS = [
+  // Phase 1 — Groundwork: Sparrow brand green
+  {
+    badge: 'bg-sparrow-green text-white',
+    cardAccent: 'border-l-4 border-l-sparrow-green',
+    sessionHover: 'hover:bg-sparrow-sage/20',
+    sessionSelected: 'bg-sparrow-sage/30',
+  },
+  // Phase 2 — Heart of the Home: warm, nurturing, hearth-like
+  {
+    badge: 'bg-rose-700 text-white',
+    cardAccent: 'border-l-4 border-l-rose-300',
+    sessionHover: 'hover:bg-rose-50',
+    sessionSelected: 'bg-rose-100',
+  },
+  // Phase 3 — Rest & Restoration: royal blue
+  {
+    badge: 'bg-blue-600 text-white',
+    cardAccent: 'border-l-4 border-l-blue-400',
+    sessionHover: 'hover:bg-blue-50',
+    sessionSelected: 'bg-blue-100',
+  },
+  // Phase 4 — Purpose & Vision: deep violet
+  {
+    badge: 'bg-violet-700 text-white',
+    cardAccent: 'border-l-4 border-l-violet-400',
+    sessionHover: 'hover:bg-violet-50',
+    sessionSelected: 'bg-violet-100',
+  },
+  // Phase 5 — Outer Life: natural, outward, community-facing emerald
+  {
+    badge: 'bg-emerald-700 text-white',
+    cardAccent: 'border-l-4 border-l-emerald-400',
+    sessionHover: 'hover:bg-emerald-50',
+    sessionSelected: 'bg-emerald-100',
+  },
+  // Phase 6 — Whole House & Graduation: warm achievement gold
+  {
+    badge: 'bg-amber-700 text-white',
+    cardAccent: 'border-l-4 border-l-amber-400',
+    sessionHover: 'hover:bg-amber-50',
+    sessionSelected: 'bg-amber-100',
+  },
+] as const;
+
+type PhaseColor = (typeof PHASE_COLORS)[number];
+
 export function CurriculumAdmin() {
   const { profile } = useAuth();
   const [phases, setPhases] = useState<CurriculumPhase[]>([]);
@@ -74,10 +121,12 @@ export function CurriculumAdmin() {
   return (
     <>
       <div className="mt-6 space-y-8">
-        {phases.map((phase) => (
+        {phases.map((phase) => {
+          const color = PHASE_COLORS[(phase.number - 1) % PHASE_COLORS.length];
+          return (
           <section key={phase.id}>
             <div className="mb-3 flex items-center gap-2">
-              <span className="rounded-full bg-sparrow-green px-2.5 py-0.5 text-xs font-semibold text-white">
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${color.badge}`}>
                 Phase {phase.number}
               </span>
               <h2 className="font-serif text-lg font-semibold text-sparrow-ink">{phase.name}</h2>
@@ -88,6 +137,7 @@ export function CurriculumAdmin() {
                 <UnitSection
                   key={unit.id}
                   unit={unit}
+                  phaseColor={color}
                   isEditing={editingUnitId === unit.id}
                   selectedSessionId={editSession?.id ?? null}
                   onToggleEdit={() =>
@@ -103,7 +153,8 @@ export function CurriculumAdmin() {
               ))}
             </div>
           </section>
-        ))}
+          );
+        })}
       </div>
 
       <SessionEditPanel
@@ -121,6 +172,7 @@ export function CurriculumAdmin() {
 
 function UnitSection({
   unit,
+  phaseColor,
   isEditing,
   selectedSessionId,
   onToggleEdit,
@@ -128,6 +180,7 @@ function UnitSection({
   onSelectSession,
 }: {
   unit: CurriculumUnit;
+  phaseColor: PhaseColor;
   isEditing: boolean;
   selectedSessionId: number | null;
   onToggleEdit: () => void;
@@ -165,7 +218,7 @@ function UnitSection({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+    <div className={`overflow-hidden rounded-xl border border-sparrow-rule bg-white ${phaseColor.cardAccent}`}>
       {/* Unit header */}
       <div className="flex items-start justify-between px-4 py-3">
         <div className="min-w-0">
@@ -242,8 +295,8 @@ function UnitSection({
           <li key={s.id}>
             <button
               onClick={() => onSelectSession(s)}
-              className={`flex w-full items-start gap-3 px-4 py-2.5 text-left transition hover:bg-sparrow-sage/20 ${
-                selectedSessionId === s.id ? 'bg-sparrow-sage/30' : ''
+              className={`flex w-full items-start gap-3 px-4 py-2.5 text-left transition ${phaseColor.sessionHover} ${
+                selectedSessionId === s.id ? phaseColor.sessionSelected : ''
               }`}
             >
               <span className="mt-px w-7 shrink-0 text-right text-xs font-semibold tabular-nums text-sparrow-gray">
