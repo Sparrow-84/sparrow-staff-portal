@@ -310,7 +310,7 @@ export function LotDetailPanel({
       if (space) await loadRelated(space.id);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Could not archive member.';
-      setError(msg.includes('schema cache') ? 'Migration 0026 needed — ask Byron to run it first.' : msg);
+      setError(msg.includes('schema cache') ? 'Database error — try refreshing the page. If this persists, ask Byron to reload the schema cache in the Supabase dashboard.' : msg);
     }
   }
 
@@ -388,7 +388,7 @@ export function LotDetailPanel({
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Could not save.';
         setError(msg.includes('schema cache')
-          ? 'Database migration pending — ask Byron to run migrations 0019–0026. Saves will work once the new columns exist.'
+          ? 'Database error — try refreshing the page. If this persists, ask Byron to reload the schema cache in the Supabase dashboard.'
           : msg);
       }
     });
@@ -413,7 +413,7 @@ export function LotDetailPanel({
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Could not save lot details.';
         setLotError(msg.includes('schema cache')
-          ? 'Database migration pending — ask Byron to run migrations 0019–0025.'
+          ? 'Database error — try refreshing the page. If this persists, ask Byron to reload the schema cache in the Supabase dashboard.'
           : msg);
       }
     });
