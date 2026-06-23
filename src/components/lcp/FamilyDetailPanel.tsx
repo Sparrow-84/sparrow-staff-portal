@@ -32,7 +32,7 @@ import {
   setHomeworkStatus,
   updateFamily,
 } from '@/lib/lcp';
-import { money, dayLabel, dueLabel } from '@/lib/lcp-format';
+import { money, dayLabel, dueLabel, isOverdue } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
 import { StaffThread } from './StaffThread';
 
@@ -244,10 +244,10 @@ function ProgressTab({
       <div className="flex items-center gap-2">
         <span className="field-label flex-1">Advance / rewind</span>
         <button disabled={busy} onClick={() => setSession(family.current_session_number - 1)} className="btn-ghost border border-sparrow-rule">
-          − Session
+          − Unit
         </button>
         <button disabled={busy} onClick={() => setSession(family.current_session_number + 1)} className="btn-primary">
-          + Session
+          + Unit
         </button>
       </div>
 
@@ -438,7 +438,11 @@ function HomeworkTab({
       <ul className="space-y-2">
         {homework.length === 0 && <li className="text-sm text-sparrow-gray">No homework assigned.</li>}
         {homework.map((hw) => (
-          <li key={hw.id} className="flex items-start gap-2 rounded-xl border border-sparrow-rule/70 p-3">
+          <li key={hw.id} className={`flex items-start gap-2 rounded-xl border p-3 ${
+            hw.status !== 'complete' && isOverdue(hw.due_date)
+              ? 'border-priority-p1/30 bg-priority-p1/5'
+              : 'border-sparrow-rule/70'
+          }`}>
             <button
               onClick={() => toggle(hw)}
               className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 text-white ${
@@ -452,7 +456,7 @@ function HomeworkTab({
               <p className={`text-sm ${hw.status === 'complete' ? 'text-sparrow-gray line-through' : 'text-sparrow-ink'}`}>
                 {hw.title}
               </p>
-              <p className="text-xs text-sparrow-gray">
+              <p className={`text-xs ${hw.status !== 'complete' && isOverdue(hw.due_date) ? 'text-priority-p1' : 'text-sparrow-gray'}`}>
                 {AREA_LABEL[hw.area]} · {dueLabel(hw.due_date)}
                 {hw.status === 'submitted' && ' · submitted online'}
               </p>

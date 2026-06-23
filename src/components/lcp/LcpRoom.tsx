@@ -16,6 +16,7 @@ import {
   type LcpEvent,
   type Redemption,
 } from '@/lib/lcp-types';
+import { isOverdue } from '@/lib/lcp-format';
 import { FamilyDetailPanel } from './FamilyDetailPanel';
 import { SessionBriefPanel } from './SessionBriefPanel';
 import { SessionLog } from './SessionLog';
@@ -198,10 +199,14 @@ export function LcpRoom() {
                         <li key={h.id} className="flex items-center gap-2 text-xs text-sparrow-ink">
                           <span
                             className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                              h.status === 'submitted' ? 'bg-sparrow-gold' : 'bg-sparrow-rule'
+                              h.status === 'submitted' ? 'bg-sparrow-gold'
+                              : isOverdue(h.due_date) ? 'bg-priority-p1'
+                              : 'bg-sparrow-rule'
                             }`}
                           />
-                          <span className="truncate">{h.title}</span>
+                          <span className={`truncate ${isOverdue(h.due_date) ? 'text-priority-p1' : ''}`}>
+                            {h.title}
+                          </span>
                         </li>
                       ))}
                     </ul>

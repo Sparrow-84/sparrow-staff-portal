@@ -9,6 +9,7 @@ import {
   type HomeworkArea,
   type SessionLogType,
 } from '@/lib/lcp-types';
+import { dueLabel, isOverdue } from '@/lib/lcp-format';
 import {
   addStaffNote,
   assignHomework,
@@ -426,8 +427,8 @@ function FamilySection({
                   {hw.title}
                 </span>
                 {hw.due_date && (
-                  <span className="ml-auto shrink-0 text-xs text-sparrow-gray">
-                    due {hw.due_date}
+                  <span className={`ml-auto shrink-0 text-xs ${isOverdue(hw.due_date) && !completedIds.has(hw.id) ? 'font-medium text-priority-p1' : 'text-sparrow-gray'}`}>
+                    {dueLabel(hw.due_date)}
                   </span>
                 )}
               </li>
