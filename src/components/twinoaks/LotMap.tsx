@@ -68,8 +68,8 @@ const LOTS: Record<string, LotPos> = {
   '26': { x: 179,  y: 159, w: 70, h: 88 },
   '27': { x: 91,   y: 159, w: 82, h: 88 },
   // ── Far-left column (caretaker) ───────────────────────────────────────────
-  '28': { x: 60,   y: 349, w: 65, h: 72 },
-  '29': { x: 60,   y: 445, w: 65, h: 72 },
+  '28': { x: 91,   y: 247, w: 65, h: 100 },
+  '29': { x: 91,   y: 347, w: 65, h: 100 },
   // ── Interior block – top row (lot 30 = left, lot 39 = right) ─────────────
   '30': { x: 496,  y: 271, w: 52, h: 72 },
   '31': { x: 550,  y: 271, w: 52, h: 72 },
@@ -103,10 +103,10 @@ const LOTS: Record<string, LotPos> = {
   '56': { x: 616,  y: 445, w: 58, h: 72 },
   '57': { x: 676,  y: 445, w: 58, h: 72 },
   // ── SW Twin Oaks Circle lower (lot 61 = left, lot 58 = right) ────────────
-  '61': { x: 496,  y: 541, w: 58, h: 72 },
-  '60': { x: 556,  y: 541, w: 58, h: 72 },
-  '59': { x: 616,  y: 541, w: 58, h: 72 },
-  '58': { x: 676,  y: 541, w: 58, h: 72 },
+  '61': { x: 496,  y: 517, w: 58, h: 72 },
+  '60': { x: 556,  y: 517, w: 58, h: 72 },
+  '59': { x: 616,  y: 517, w: 58, h: 72 },
+  '58': { x: 676,  y: 517, w: 58, h: 72 },
 };
 
 const HOUSE_NUM: Record<string, string> = {
@@ -137,7 +137,7 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
 
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-sparrow-rule bg-white p-3">
-      <svg viewBox="0 0 1120 630" className="w-full h-auto" style={{ minWidth: 520 }}>
+      <svg viewBox="80 0 1120 630" className="w-full h-auto" style={{ minWidth: 520 }}>
         <defs>
           <pattern id="lm-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
             <line x1="0" y1="0" x2="0" y2="6" stroke="#e2e8f0" strokeWidth="1.5" />
@@ -148,12 +148,12 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
         </defs>
 
         {/* ── Background ── */}
-        <rect width="1120" height="630" fill="#f8fafc" rx="8" />
+        <rect width="1220" height="630" fill="#f8fafc" rx="8" />
 
         {/* ── Roads ── */}
         {/* SW Mobile Place — between Row 1 and Row 2 */}
-        <rect x="440" y="135" width="671" height="24" fill="#cbd5e1" />
-        <line x1="440" y1="147" x2="1111" y2="147"
+        <rect x="440" y="135" width="695" height="24" fill="#cbd5e1" />
+        <line x1="440" y1="147" x2="1135" y2="147"
           stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
         <text x="780" y="151" fontSize="7" fontWeight="700" textAnchor="middle"
           fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW MOBILE PLACE</text>
@@ -164,55 +164,72 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
           stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
 
         {/* SW Twin Oaks Circle upper — between Row 2 and interior block */}
-        <rect x="91" y="247" width="1020" height="24" fill="#cbd5e1" />
-        <line x1="91" y1="259" x2="1111" y2="259"
+        <rect x="156" y="247" width="1044" height="24" fill="#cbd5e1" />
+        <line x1="156" y1="259" x2="1200" y2="259"
           stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
         <text x="640" y="263" fontSize="7" fontWeight="700" textAnchor="middle"
           fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW TWIN OAKS CIRCLE</text>
 
+        {/* Connector beside lot 12 — links SW Twin Oaks Circle to SW Mobile Place */}
+        <rect x="1111" y="159" width="24" height="88" fill="#cbd5e1" />
+        <line x1="1123" y1="159" x2="1123" y2="247"
+          stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
+
         {/* SW Twin Oaks Circle west curve — connects upper to lower along the left side */}
-        <rect x="91" y="271" width="24" height="246" fill="#cbd5e1" />
-        <line x1="103" y1="271" x2="103" y2="517"
+        <rect x="156" y="271" width="24" height="318" fill="#cbd5e1" />
+        <line x1="168" y1="271" x2="168" y2="589"
           stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
 
         {/* SW Pleasant Place — between interior block and pleasant place row */}
-        <rect x="496" y="421" width="238" height="24" fill="#cbd5e1" />
-        <line x1="496" y1="433" x2="734" y2="433"
+        <rect x="180" y="421" width="931" height="24" fill="#cbd5e1" />
+        <line x1="180" y1="433" x2="1111" y2="433"
           stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
         <text x="615" y="437" fontSize="7" fontWeight="700" textAnchor="middle"
           fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW PLEASANT PLACE</text>
 
-        {/* SW Twin Oaks Circle lower */}
-        <rect x="91" y="517" width="1020" height="24" fill="#cbd5e1" />
-        <line x1="91" y1="529" x2="1111" y2="529"
+        {/* Short connector beside lots 57 & 58 — links SW Pleasant Place to SW Twin Oaks Circle lower */}
+        <rect x="734" y="445" width="24" height="144" fill="#cbd5e1" />
+        <line x1="746" y1="445" x2="746" y2="589"
           stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
-        <text x="640" y="533" fontSize="7" fontWeight="700" textAnchor="middle"
+
+        {/* SW Twin Oaks Circle lower */}
+        <rect x="156" y="589" width="1044" height="24" fill="#cbd5e1" />
+        <line x1="156" y1="601" x2="1200" y2="601"
+          stroke="white" strokeWidth="1.5" strokeDasharray="8,5" />
+        <text x="640" y="605" fontSize="7" fontWeight="700" textAnchor="middle"
           fill="#475569" fontFamily="sans-serif" letterSpacing="2">SW TWIN OAKS CIRCLE</text>
 
         {/* ── Park open space (interior top level) ── */}
-        <rect x="180" y="271" width="314" height="72" fill="#dcfce7" stroke="#86efac" strokeWidth="1" rx="4" />
-        <text x="247" y="288" fill="#15803d" fontSize="10" fontWeight="600" fontFamily="sans-serif">Park</text>
+        <rect x="180" y="271" width="82"  height="150" fill="#dcfce7" stroke="#86efac" strokeWidth="1" rx="4" />
+        <rect x="262" y="271" width="232" height="72"  fill="#dcfce7" stroke="#86efac" strokeWidth="1" rx="4" />
+        <rect x="484" y="343" width="12"  height="78"  fill="#dcfce7" stroke="#86efac" strokeWidth="1" />
+        <text x="378" y="288" fill="#15803d" fontSize="10" fontWeight="600" fontFamily="sans-serif">Park</text>
         {/* Laundry */}
         <rect x="356" y="281" width="64" height="34" fill="#e0f2fe" stroke="#F0A500" strokeWidth="1.5" rx="3" />
         <text x="388" y="303" fill="#0369a1" fontSize="8.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">Laundry</text>
         {/* Proposed Community Building */}
-        <rect x="193" y="285" width="60" height="30" fill="#fef9c3" stroke="#fde047" strokeWidth="1.5" strokeDasharray="3,2" rx="3" />
-        <text x="223" y="304" fill="#92400e" fontSize="7.5" textAnchor="middle" fontFamily="sans-serif">Comm. Bldg</text>
+        <rect x="192" y="277" width="46" height="136" fill="#fef9c3" stroke="#fde047" strokeWidth="1.5" strokeDasharray="3,2" rx="3" />
+        <text x="215" y="337" fill="#92400e" fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">Community</text>
+        <text x="215" y="349" fill="#92400e" fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">Building</text>
 
-        {/* ── Green space left of park lots 50–53 ── */}
-        <rect x="180" y="349" width="82" height="72" fill="#dcfce7" stroke="#86efac" strokeWidth="1" rx="4" />
 
         {/* ── Interior alley (shared drive between facing rows) ── */}
         <rect x="264" y="343" width="772" height="6" fill="#e2e8f0" rx="1" />
 
-        {/* ── Not-park hatched areas ── */}
-        <rect x="1036" y="271" width="82" height="150" fill="url(#lm-hatch)" rx="3" />
-        <rect x="736"  y="445" width="382" height="183" fill="url(#lm-hatch)" rx="3" />
-        <text x="1077" y="350" fill="#94a3b8" fontSize="8" textAnchor="middle" fontFamily="sans-serif">Not park</text>
-        <text x="918"  y="540" fill="#94a3b8" fontSize="8.5" textAnchor="middle" fontFamily="sans-serif">Not park owned</text>
+        {/* ── Not-park areas ── */}
+        <rect x="1036" y="271" width="82"  height="150" fill="#edf2f7" stroke="#d0dae6" strokeWidth="1" rx="3" />
+        <rect x="758"  y="445" width="360" height="144" fill="#edf2f7" stroke="#d0dae6" strokeWidth="1" rx="3" />
+        <rect x="91"   y="447" width="65"  height="142" fill="#edf2f7" stroke="#d0dae6" strokeWidth="1" rx="3" />
+        <rect x="180"  y="445" width="316" height="144" fill="#edf2f7" stroke="#d0dae6" strokeWidth="1" rx="3" />
+        <text x="1077" y="344" fill="#94a3b8" fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">Not park</text>
+        <text x="1077" y="355" fill="#94a3b8" fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">owned</text>
+        <text x="938"  y="510" fill="#94a3b8" fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">Not park</text>
+        <text x="938"  y="521" fill="#94a3b8" fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">owned</text>
+        <text x="123"  y="511" fill="#94a3b8" fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">Not park</text>
+        <text x="123"  y="522" fill="#94a3b8" fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">owned</text>
+        <text x="338"  y="510" fill="#94a3b8" fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">Not park</text>
+        <text x="338"  y="521" fill="#94a3b8" fontSize="7.5" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">owned</text>
 
-        {/* ── Caretaker label ── */}
-        <text x="92" y="344" fill="#94a3b8" fontSize="7.5" fontStyle="italic" textAnchor="middle" fontFamily="sans-serif">Caretaker</text>
 
         {/* ── Lot tiles ── */}
         {Object.entries(LOTS).map(([label, { x, y, w, h }]) => {
@@ -289,11 +306,11 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
 
         {/* ── Mary's River (on top so it clips the corners of lots 9–11) ── */}
         <path
-          d="M0,0 L0,92 Q100,102 240,98 Q360,94 440,100 Q462,91 496,83 Q526,75 556,66 Q586,58 610,52 Q626,38 616,0 Z"
+          d="M0,-30 L0,130 Q45,158 91,159 Q130,163 179,162 Q215,163 253,161 Q286,162 323,160 Q354,158 391,148 Q416,100 440,75 Q462,68 496,72 Q526,62 556,54 Q586,46 620,34 Q655,8 820,-30 Z"
           fill="#bfdbfe" opacity="0.78"
           style={{ pointerEvents: 'none' }}
         />
-        <text x="195" y="42" fill="#3b82f6" fontSize="11" fontWeight="700"
+        <text x="195" y="52" fill="#3b82f6" fontSize="11" fontWeight="700"
           fontFamily="sans-serif" letterSpacing="2" opacity="0.9"
           style={{ pointerEvents: 'none' }}>MARYS RIVER</text>
 
@@ -310,8 +327,8 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
           const tipH = houseNum ? 58 : 44;
           let tipX = cx - tipW / 2;
           let tipY = y - tipH - 6;
-          if (tipX < 4) tipX = 4;
-          if (tipX + tipW > 1116) tipX = 1116 - tipW;
+          if (tipX < 84) tipX = 84;
+          if (tipX + tipW > 1196) tipX = 1196 - tipW;
           if (tipY < 4) tipY = y + h + 6;
 
           return (
