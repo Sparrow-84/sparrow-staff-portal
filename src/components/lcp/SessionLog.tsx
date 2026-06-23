@@ -11,6 +11,7 @@ import { fetchRecentSessionLogs, fetchTodayEvents } from '@/lib/lcp';
 import { timeLabel } from '@/lib/lcp-format';
 import { SessionLogEntry } from './SessionLogEntry';
 import { SessionLogViewer } from './SessionLogViewer';
+import { SessionSplitLayout } from './SessionSplitLayout';
 
 interface Props {
   families: Family[];
@@ -70,15 +71,17 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
   if (entry) {
     return (
-      <SessionLogEntry
-        {...entry}
-        families={families}
-        homeworkByFamily={homeworkByFamily}
-        currentUserId={currentUserId}
-        currentUserName={currentUserName}
-        onBack={() => setEntry(null)}
-        onFiled={handleFiled}
-      />
+      <SessionSplitLayout sessionLabel={entry.label} sessionDate={entry.sessionDate}>
+        <SessionLogEntry
+          {...entry}
+          families={families}
+          homeworkByFamily={homeworkByFamily}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+          onBack={() => setEntry(null)}
+          onFiled={handleFiled}
+        />
+      </SessionSplitLayout>
     );
   }
 
