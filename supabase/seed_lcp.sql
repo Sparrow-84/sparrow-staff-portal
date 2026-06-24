@@ -116,10 +116,14 @@ insert into lcp_sessions (unit_id, session_number, title, sort_order, focus, scr
 --      'https://drive.google.com/file/d/REPLACE_ME/view', '00000000-0000-0000-0000-000000000003');
 
 -- ─── Families (synthetic) ────────────────────────────────────────────
-insert into families (id, display_name, login_email, status, current_session_number, housing_savings_cents) values
-  ('11111111-1111-1111-1111-111111111101', 'Maria R.',    'family.maria@example.com',    'on_track',        12, 30000),
-  ('11111111-1111-1111-1111-111111111102', 'Jasmine T.',  'family.jasmine@example.com',  'needs_attention',  7, 10000),
-  ('11111111-1111-1111-1111-111111111103', 'Brittany K.', 'family.brittany@example.com', 'onboarding',       2,     0);
+insert into families (id, display_name, login_email, status, current_session_number, joined_unit_id, housing_savings_cents) values
+  ('11111111-1111-1111-1111-111111111101', 'Maria R.',    'family.maria@example.com',    'on_track',        12, (select id from lcp_units where name='Foundation'),  30000),
+  ('11111111-1111-1111-1111-111111111102', 'Jasmine T.',  'family.jasmine@example.com',  'needs_attention',  7, (select id from lcp_units where name='Basement'),     10000),
+  ('11111111-1111-1111-1111-111111111103', 'Brittany K.', 'family.brittany@example.com', 'onboarding',       2, (select id from lcp_units where name='Front Door'),       0);
+
+-- ─── Program position (group is currently in Living Room — matches seed events) ──
+insert into lcp_program_position (unit_id)
+  select id from lcp_units where name = 'Living Room';
 
 -- ─── This-week homework (gamified completion on the participant dashboard) ──
 insert into lcp_homework (family_id, session_id, area, title, description, due_date, status, assigned_by) values

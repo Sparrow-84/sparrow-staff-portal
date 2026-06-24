@@ -12,7 +12,10 @@ import type {
   HomeworkArea,
   HomeworkStatus,
   LcpEvent,
+  LcpPhaseWithUnits,
+  LcpUnitSlim,
   Message,
+  ProgramPosition,
   Redemption,
   Resource,
   ResourceAudience,
@@ -31,16 +34,25 @@ import type {
 export async function fetchFamilies(): Promise<Family[]> {
   const { data, error } = await supabase
     .from('families')
-    .select('id, display_name, login_email, status, current_session_number, housing_savings_cents, active')
+    .select('id, display_name, login_email, status, current_session_number, joined_unit_id, housing_savings_cents, active')
     .eq('active', true)
     .order('display_name');
-  if (error) throw new Error(error.message);
+  if (error) {
+    // joined_unit_id column missing (migration 0034 not yet applied) — fall back
+    const { data: d2, error: e2 } = await supabase
+      .from('families')
+      .select('id, display_name, login_email, status, current_session_number, housing_savings_cents, active')
+      .eq('active', true)
+      .order('display_name');
+    if (e2) throw new Error(e2.message);
+    return ((d2 ?? []) as Omit<Family, 'joined_unit_id'>[]).map((f) => ({ ...f, joined_unit_id: null }));
+  }
   return (data ?? []) as Family[];
 }
 
 export async function updateFamily(
   id: string,
-  patch: Partial<Pick<Family, 'status' | 'current_session_number' | 'housing_savings_cents'>>,
+  patch: Partial<Pick<Family, 'status' | 'current_session_number' | 'joined_unit_id' | 'housing_savings_cents'>>,
 ): Promise<void> {
   const { error } = await supabase.from('families').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
@@ -96,6 +108,51 @@ export async function fetchSessions(): Promise<CurriculumSession[]> {
     .order('session_number');
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as CurriculumSession[];
+}
+
+export async function fetchPhasesWithUnits(): Promise<LcpPhaseWithUnits[]> {
+  const { data, error } = await supabase
+    .from('lcp_phases')
+    .select('id, number, name, sort_order, units:lcp_units(id, name, sort_order)')
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as LcpPhaseWithUnits[]).map((p) => ({
+    ...p,
+    units: [...p.units].sort((a: LcpUnitSlim, b: LcpUnitSlim) => a.sort_order - b.sort_order),
+  }));
+}
+
+export async function fetchProgramPosition(): Promise<ProgramPosition | null> {
+  const { data, error } = await supabase
+    .from('lcp_program_position')
+    .select('unit_id, unit:lcp_units(id, name, sort_order, phase:lcp_phases(id, number, name))')
+    .eq('id', 1)
+    .maybeSingle();
+  // Table doesn't exist yet (migration 0034 not applied) — degrade gracefully
+  if (error) return null;
+  if (!data) return null;
+  const unit = data.unit as unknown as { id: number; name: string; sort_order: number; phase: { id: number; number: number; name: string } };
+  if (!unit) return null;
+  return {
+    unit_id: data.unit_id,
+    unit_sort_order: unit.sort_order,
+    unit_name: unit.name,
+    phase_id: unit.phase.id,
+    phase_number: unit.phase.number,
+    phase_name: unit.phase.name,
+  };
+}
+
+export async function updateProgramPosition(unitId: number, updatedBy?: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_program_position')
+    .upsert({ id: 1, unit_id: unitId, updated_at: new Date().toISOString(), updated_by: updatedBy ?? null });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteProgramPosition(): Promise<void> {
+  const { error } = await supabase.from('lcp_program_position').delete().eq('id', 1);
+  if (error) throw new Error(error.message);
 }
 
 // ── Homework ─────────────────────────────────────────────────────────

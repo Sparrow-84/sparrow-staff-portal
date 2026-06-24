@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AREA_LABEL,
   ATTENDANCE_LABEL,
@@ -7,6 +7,7 @@ import {
   type Family,
   type Homework,
   type HomeworkArea,
+  type LcpPhaseWithUnits,
   type SessionLogType,
 } from '@/lib/lcp-types';
 import { dueLabel, isOverdue } from '@/lib/lcp-format';
@@ -18,6 +19,7 @@ import {
   fetchHomeworkForFamily,
   setHomeworkStatus,
   upsertSessionAttendance,
+  updateProgramPosition,
 } from '@/lib/lcp';
 
 const STATUSES: AttendanceStatus[] = ['on_time', 'late', 'no_show'];
@@ -37,6 +39,8 @@ interface Props {
   homeworkByFamily: Map<string, Homework[]>;
   currentUserId: string;
   currentUserName: string;
+  phases: LcpPhaseWithUnits[];
+  programUnitId: number | null;
   onBack: () => void;
   onFiled: () => void;
 }
@@ -57,9 +61,23 @@ export function SessionLogEntry({
   homeworkByFamily,
   currentUserId,
   currentUserName,
+  phases,
+  programUnitId,
   onBack,
   onFiled,
 }: Props) {
+  // ── curriculum advance (thursday only) ───────────────────────────
+  const allUnits = useMemo(
+    () => phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order),
+    [phases],
+  );
+  const currentUnitIndex = programUnitId != null ? allUnits.findIndex((u) => u.id === programUnitId) : -1;
+  const nextUnit = currentUnitIndex === -1 ? allUnits[0] : allUnits[currentUnitIndex + 1];
+
+  const [filed, setFiled] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
+  const [advanceErr, setAdvanceErr] = useState<string | null>(null);
+
   // ── ad-hoc: family picker ──────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -165,11 +183,28 @@ export function SessionLogEntry({
         }
       }
 
-      onFiled();
+      if (sessionType === 'thursday_group' && nextUnit) {
+        setFiled(true);
+      } else {
+        onFiled();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not file session.');
     } finally {
       setFiling(false);
+    }
+  }
+
+  async function advanceCurriculum() {
+    if (!nextUnit) return;
+    setAdvancing(true);
+    setAdvanceErr(null);
+    try {
+      await updateProgramPosition(nextUnit.id, currentUserId);
+      onFiled();
+    } catch (e) {
+      setAdvanceErr(e instanceof Error ? e.message : 'Could not advance curriculum.');
+      setAdvancing(false);
     }
   }
 
@@ -200,6 +235,37 @@ export function SessionLogEntry({
   const isThursday = sessionType === 'thursday_group';
   const isAdHoc = sessionType === 'ad_hoc';
   const showVouchers = !isAdHoc;
+
+  if (filed && nextUnit) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-sparrow-rule bg-white p-5 shadow-card">
+          <p className="text-sm font-medium text-sparrow-green">Session filed ✓</p>
+          <p className="mt-3 text-sm text-sparrow-ink">
+            Complete unit and advance curriculum to{' '}
+            <span className="font-semibold">{nextUnit.name}</span>?
+          </p>
+          {advanceErr && <p className="mt-2 text-sm text-priority-p1">{advanceErr}</p>}
+          <div className="mt-4 flex gap-3">
+            <button
+              disabled={advancing}
+              onClick={advanceCurriculum}
+              className="btn-primary"
+            >
+              {advancing ? 'Saving…' : 'Complete unit'}
+            </button>
+            <button
+              disabled={advancing}
+              onClick={onFiled}
+              className="btn-ghost"
+            >
+              Not yet
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

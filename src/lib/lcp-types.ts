@@ -19,8 +19,32 @@ export interface Family {
   login_email: string;
   status: FamilyStatus;
   current_session_number: number;
+  joined_unit_id: number | null;
   housing_savings_cents: number;
   active: boolean;
+}
+
+export interface LcpPhaseWithUnits {
+  id: number;
+  number: number;
+  name: string;
+  sort_order: number;
+  units: LcpUnitSlim[];
+}
+
+export interface LcpUnitSlim {
+  id: number;
+  name: string;
+  sort_order: number;
+}
+
+export interface ProgramPosition {
+  unit_id: number;
+  unit_sort_order: number;
+  unit_name: string;
+  phase_id: number;
+  phase_number: number;
+  phase_name: string;
 }
 
 export interface Homework {

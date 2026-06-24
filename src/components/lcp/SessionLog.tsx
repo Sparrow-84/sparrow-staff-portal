@@ -4,6 +4,7 @@ import {
   type Family,
   type Homework,
   type LcpEvent,
+  type LcpPhaseWithUnits,
   type SessionLog,
   type SessionLogType,
 } from '@/lib/lcp-types';
@@ -18,6 +19,8 @@ interface Props {
   homeworkByFamily: Map<string, Homework[]>;
   currentUserId: string;
   currentUserName: string;
+  phases: LcpPhaseWithUnits[];
+  programUnitId: number | null;
   onChanged: () => void;
 }
 
@@ -41,7 +44,7 @@ function formatDate(iso: string) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-export function SessionLog({ families, homeworkByFamily, currentUserId, currentUserName, onChanged }: Props) {
+export function SessionLog({ families, homeworkByFamily, currentUserId, currentUserName, phases, programUnitId, onChanged }: Props) {
   const [logs, setLogs] = useState<SessionLog[]>([]);
   const [todayEvents, setTodayEvents] = useState<LcpEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +81,8 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
           homeworkByFamily={homeworkByFamily}
           currentUserId={currentUserId}
           currentUserName={currentUserName}
+          phases={phases}
+          programUnitId={programUnitId}
           onBack={() => setEntry(null)}
           onFiled={handleFiled}
         />

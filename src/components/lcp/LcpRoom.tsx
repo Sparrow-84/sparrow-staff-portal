@@ -4,16 +4,19 @@ import {
   fetchEvents,
   fetchAllHomework,
   fetchFamilies,
+  fetchPhasesWithUnits,
+  fetchProgramPosition,
   fetchRedemptions,
   fetchSessions,
 } from '@/lib/lcp';
 import {
   FAMILY_STATUS,
-  TOTAL_SESSIONS,
   type CurriculumSession,
   type Family,
   type Homework,
   type LcpEvent,
+  type LcpPhaseWithUnits,
+  type ProgramPosition,
   type Redemption,
 } from '@/lib/lcp-types';
 import { isOverdue } from '@/lib/lcp-format';
@@ -25,6 +28,8 @@ import { AddEventPanel } from './AddEventPanel';
 import { EventDetailPanel } from './EventDetailPanel';
 import { LcpCalendar } from './LcpCalendar';
 import { CurriculumAdmin } from './CurriculumAdmin';
+import { LcpProgress } from './LcpProgress';
+import { PhaseProgressBar } from './PhaseProgressBar';
 
 export function LcpRoom() {
   const { profile } = useAuth();
@@ -33,10 +38,12 @@ export function LcpRoom() {
   const [events, setEvents] = useState<LcpEvent[]>([]);
   const [sessions, setSessions] = useState<CurriculumSession[]>([]);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
+  const [phases, setPhases] = useState<LcpPhaseWithUnits[]>([]);
+  const [programPosition, setProgramPosition] = useState<ProgramPosition | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'families' | 'calendar' | 'session-log' | 'curriculum'>('families');
+  const [tab, setTab] = useState<'families' | 'progress' | 'calendar' | 'session-log' | 'curriculum'>('families');
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [event, setEvent] = useState<LcpEvent | null>(null);
@@ -47,18 +54,22 @@ export function LcpRoom() {
 
   const load = useCallback(async () => {
     try {
-      const [fam, hw, ev, se, red] = await Promise.all([
+      const [fam, hw, ev, se, red, ph, pos] = await Promise.all([
         fetchFamilies(),
         fetchAllHomework(),
         fetchEvents(),
         fetchSessions(),
         fetchRedemptions(),
+        fetchPhasesWithUnits(),
+        fetchProgramPosition(),
       ]);
       setFamilies(fam);
       setHomework(hw);
       setEvents(ev);
       setSessions(se);
       setRedemptions(red);
+      setPhases(ph);
+      setProgramPosition(pos);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load LifeChange data.');
     } finally {
@@ -131,7 +142,7 @@ export function LcpRoom() {
 
       {/* Tabs */}
       <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
-        {(['families', 'session-log', 'calendar', 'curriculum'] as const).map((t) => (
+        {(['families', 'progress', 'session-log', 'calendar', 'curriculum'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -151,6 +162,8 @@ export function LcpRoom() {
             homeworkByFamily={homeworkByFamily}
             currentUserId={profile?.id ?? ''}
             currentUserName={profile?.full_name ?? 'Staff'}
+            phases={phases}
+            programUnitId={programPosition?.unit_id ?? null}
             onChanged={load}
           />
         </div>
@@ -159,7 +172,6 @@ export function LcpRoom() {
           {families.map((f) => {
             const fhw = homeworkByFamily.get(f.id) ?? [];
             const open = fhw.filter((h) => h.status !== 'complete').length;
-            const pct = Math.round((f.current_session_number / TOTAL_SESSIONS) * 100);
             return (
               <button
                 key={f.id}
@@ -174,10 +186,14 @@ export function LcpRoom() {
                     </span>
                   </div>
                   <p className="mt-0.5 text-xs text-sparrow-gray">
-                    Session {f.current_session_number} of {TOTAL_SESSIONS} · {open} open homework
+                    {open} open homework
                   </p>
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-sparrow-sage">
-                    <div className="h-full rounded-full bg-sparrow-green" style={{ width: `${pct}%` }} />
+                  <div className="mt-2">
+                    <PhaseProgressBar
+                      phases={phases}
+                      programUnitId={programPosition?.unit_id ?? null}
+                      joinedUnitId={f.joined_unit_id}
+                    />
                   </div>
                 </div>
                 <span className="shrink-0 text-sparrow-gray">›</span>
@@ -217,6 +233,14 @@ export function LcpRoom() {
             </div>
           </section>
         </div>
+      ) : tab === 'progress' ? (
+        <LcpProgress
+          phases={phases}
+          position={programPosition}
+          families={families}
+          currentUserId={profile?.id ?? ''}
+          onChanged={load}
+        />
       ) : tab === 'curriculum' ? (
         <CurriculumAdmin />
       ) : (
@@ -229,6 +253,8 @@ export function LcpRoom() {
         open={familyOpen}
         family={familyId ? families.find((f) => f.id === familyId) ?? null : null}
         sessions={sessions}
+        phases={phases}
+        programUnitId={programPosition?.unit_id ?? null}
         currentUserId={profile?.id ?? ''}
         onClose={() => setFamilyOpen(false)}
         onChanged={load}

@@ -3,17 +3,18 @@ import {
   AREA_LABEL,
   FAMILY_STATUS,
   HOMEWORK_AREAS,
-  TOTAL_SESSIONS,
   type CurriculumSession,
   type Family,
   type FamilyStatus,
   type Homework,
   type HomeworkArea,
+  type LcpPhaseWithUnits,
   type Message,
   type Redemption,
   type StaffNote,
   type Voucher,
 } from '@/lib/lcp-types';
+import { PhaseProgressBar } from './PhaseProgressBar';
 import {
   addStaffNote,
   updateStaffNote,
@@ -49,6 +50,8 @@ export function FamilyDetailPanel({
   open,
   family,
   sessions,
+  phases,
+  programUnitId,
   currentUserId,
   onClose,
   onChanged,
@@ -56,6 +59,8 @@ export function FamilyDetailPanel({
   open: boolean;
   family: Family | null;
   sessions: CurriculumSession[];
+  phases: LcpPhaseWithUnits[];
+  programUnitId: number | null;
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
@@ -113,7 +118,8 @@ export function FamilyDetailPanel({
       {tab === 'progress' && (
         <ProgressTab
           family={family}
-          sessions={sessions}
+          phases={phases}
+          programUnitId={programUnitId}
           onChanged={onChanged}
           onRemoved={() => {
             onChanged();
@@ -166,12 +172,14 @@ export function FamilyDetailPanel({
 // ── Progress ─────────────────────────────────────────────────────────
 function ProgressTab({
   family,
-  sessions,
+  phases,
+  programUnitId,
   onChanged,
   onRemoved,
 }: {
   family: Family;
-  sessions: CurriculumSession[];
+  phases: LcpPhaseWithUnits[];
+  programUnitId: number | null;
   onChanged: () => void;
   onRemoved: () => void;
 }) {
@@ -179,13 +187,16 @@ function ProgressTab({
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const current = sessions.find((s) => s.session_number === family.current_session_number);
-  const pct = Math.round((family.current_session_number / TOTAL_SESSIONS) * 100);
 
-  async function setSession(n: number) {
-    const clamped = Math.max(1, Math.min(TOTAL_SESSIONS, n));
+  const allUnits = phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order);
+  const currentProgramUnit = programUnitId ? allUnits.find((u) => u.id === programUnitId) : null;
+  const currentPhase = programUnitId
+    ? phases.find((p) => p.units.some((u) => u.id === programUnitId))
+    : null;
+
+  async function setJoinedUnit(unitId: number | null) {
     setBusy(true);
-    await updateFamily(family.id, { current_session_number: clamped });
+    await updateFamily(family.id, { joined_unit_id: unitId });
     setBusy(false);
     onChanged();
   }
@@ -230,25 +241,62 @@ function ProgressTab({
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-sparrow-gold">Building Your House</p>
         <p className="font-serif text-lg font-semibold text-sparrow-green">
-          {current?.unit?.phase?.name ?? '—'}
+          {currentPhase?.name ?? '—'}
         </p>
         <p className="text-sm text-sparrow-gray">
-          {current?.unit?.name ? `${current.unit.name} · ` : ''}Session {family.current_session_number} of{' '}
-          {TOTAL_SESSIONS}
+          {currentProgramUnit?.name ?? 'Program position not set'}
         </p>
-        <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-sparrow-sage">
-          <div className="h-full rounded-full bg-sparrow-green" style={{ width: `${pct}%` }} />
+        <div className="mt-3">
+          <PhaseProgressBar
+            phases={phases}
+            programUnitId={programUnitId}
+            joinedUnitId={family.joined_unit_id}
+            height="md"
+          />
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="field-label flex-1">Advance / rewind</span>
-        <button disabled={busy} onClick={() => setSession(family.current_session_number - 1)} className="btn-ghost border border-sparrow-rule">
-          − Unit
-        </button>
-        <button disabled={busy} onClick={() => setSession(family.current_session_number + 1)} className="btn-primary">
-          + Unit
-        </button>
+      <div>
+        <span className="field-label">Curriculum entry</span>
+        {family.joined_unit_id == null ? (
+          <div className="mt-1.5 flex items-center justify-between rounded-xl border border-sparrow-rule bg-sparrow-cream px-4 py-3">
+            <p className="text-sm text-sparrow-gray">
+              {family.display_name} hasn&apos;t joined the curriculum yet.
+            </p>
+            <button
+              disabled={busy || programUnitId == null}
+              onClick={() => programUnitId && setJoinedUnit(programUnitId)}
+              className="btn-primary shrink-0"
+            >
+              Join curriculum
+            </button>
+          </div>
+        ) : (
+          <div className="mt-1.5 flex items-center justify-between">
+            <p className="text-sm text-sparrow-ink">
+              Joined at:{' '}
+              <span className="font-medium">
+                {phases.flatMap((p) => p.units).find((u) => u.id === family.joined_unit_id)?.name ?? '—'}
+              </span>
+            </p>
+            <select
+              disabled={busy}
+              value={family.joined_unit_id}
+              onChange={(e) => setJoinedUnit(Number(e.target.value))}
+              className="rounded-lg border border-sparrow-rule bg-white px-2 py-1 text-xs text-sparrow-gray"
+            >
+              {phases.map((phase) => (
+                <optgroup key={phase.id} label={phase.name}>
+                  {phase.units.map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div>

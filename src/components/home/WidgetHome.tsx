@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchComments, fetchProfiles, fetchTasks } from '@/lib/data';
 import { fetchNotifications, type AppNotification } from '@/lib/social';
@@ -192,8 +192,8 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       <DailyReflection today={ctx.today} />
 
       {editing && (
-        <p className=”mt-3 text-xs text-sparrow-gray”>
-          Drag a card by its handle to reorder. Remove with ×. Add more with “+ Add widget.”
+        <p className="mt-3 text-xs text-sparrow-gray">
+          Drag a card by its handle to reorder. Remove with &times;. Add more with &ldquo;+ Add widget.&rdquo;
         </p>
       )}
 
@@ -237,7 +237,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
 
       {shown.length === 0 && (
         <p className="mt-10 text-center text-sm text-sparrow-gray">
-          Your home is empty. {editing ? 'Add a widget to get started.' : 'Click “Edit home” to add widgets.'}
+          Your home is empty. {editing ? 'Add a widget to get started.' : 'Click "Edit home" to add widgets.'}
         </p>
       )}
 
