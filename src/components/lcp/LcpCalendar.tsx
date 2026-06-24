@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { EVENT_LABEL, type LcpEvent } from '@/lib/lcp-types';
+import { EVENT_LABEL, SESSION_LOG_LABEL, type LcpEvent, type SessionLog } from '@/lib/lcp-types';
 import { timeLabel } from '@/lib/lcp-format';
 
 const KIND_COLOR: Record<string, string> = {
@@ -35,11 +35,13 @@ function buildGrid(year: number, month: number): Date[] {
 
 interface Props {
   events: LcpEvent[];
+  logs: SessionLog[];
   onEventClick: (event: LcpEvent) => void;
+  onLogClick: (log: SessionLog) => void;
   onAdd: () => void;
 }
 
-export function LcpCalendar({ events, onEventClick, onAdd }: Props) {
+export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: Props) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -52,6 +54,12 @@ export function LcpCalendar({ events, onEventClick, onAdd }: Props) {
     const list = eventsByDate.get(d) ?? [];
     list.push(ev);
     eventsByDate.set(d, list);
+  }
+
+  // First log per date (logs arrive sorted newest-first)
+  const logsByDate = new Map<string, SessionLog>();
+  for (const log of logs) {
+    if (!logsByDate.has(log.session_date)) logsByDate.set(log.session_date, log);
   }
 
   const days = buildGrid(year, month);
@@ -121,6 +129,7 @@ export function LcpCalendar({ events, onEventClick, onAdd }: Props) {
             const isToday = iso === todayISO;
             const isPast = iso < todayISO;
             const dayEvents = eventsByDate.get(iso) ?? [];
+            const dayLog = logsByDate.get(iso);
             const shown = dayEvents.slice(0, 2);
             const overflow = dayEvents.length - 2;
 
@@ -143,15 +152,25 @@ export function LcpCalendar({ events, onEventClick, onAdd }: Props) {
                   {shown.map((ev) => (
                     <button
                       key={ev.id}
-                      onClick={() => onEventClick(ev)}
+                      onClick={() => isPast && dayLog ? onLogClick(dayLog) : onEventClick(ev)}
                       title={`${timeLabel(ev.starts_at)} · ${ev.title}`}
-                      className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight ${
-                        KIND_COLOR[ev.kind] ?? 'bg-slate-400 text-white'
+                      className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${
+                        isPast ? 'bg-sparrow-rule text-sparrow-gray' : (KIND_COLOR[ev.kind] ?? 'bg-slate-400 text-white')
                       }`}
                     >
                       {timeLabel(ev.starts_at)} {ev.title}
                     </button>
                   ))}
+                  {/* Past day with a logged session but no scheduled event */}
+                  {isPast && dayLog && dayEvents.length === 0 && (
+                    <button
+                      onClick={() => onLogClick(dayLog)}
+                      title={SESSION_LOG_LABEL[dayLog.session_type]}
+                      className="w-full truncate rounded bg-sparrow-rule px-1 py-0.5 text-left text-[10px] font-medium leading-tight text-sparrow-gray transition hover:opacity-75"
+                    >
+                      {SESSION_LOG_LABEL[dayLog.session_type]}
+                    </button>
+                  )}
                   {overflow > 0 && (
                     <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>
                   )}

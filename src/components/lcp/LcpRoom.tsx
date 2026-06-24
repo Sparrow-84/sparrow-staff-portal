@@ -7,6 +7,7 @@ import {
   fetchPhasesWithUnits,
   fetchProgramPosition,
   fetchRedemptions,
+  fetchRecentSessionLogs,
   fetchSessions,
 } from '@/lib/lcp';
 import {
@@ -18,11 +19,13 @@ import {
   type LcpPhaseWithUnits,
   type ProgramPosition,
   type Redemption,
+  type SessionLog as SessionLogRecord,
 } from '@/lib/lcp-types';
 import { isOverdue } from '@/lib/lcp-format';
 import { FamilyDetailPanel } from './FamilyDetailPanel';
 import { SessionBriefPanel } from './SessionBriefPanel';
 import { SessionLog } from './SessionLog';
+import { SessionLogViewer } from './SessionLogViewer';
 import { AddFamilyPanel } from './AddFamilyPanel';
 import { AddEventPanel } from './AddEventPanel';
 import { EventDetailPanel } from './EventDetailPanel';
@@ -36,6 +39,7 @@ export function LcpRoom() {
   const [families, setFamilies] = useState<Family[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
   const [events, setEvents] = useState<LcpEvent[]>([]);
+  const [sessionLogs, setSessionLogs] = useState<SessionLogRecord[]>([]);
   const [sessions, setSessions] = useState<CurriculumSession[]>([]);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [phases, setPhases] = useState<LcpPhaseWithUnits[]>([]);
@@ -49,15 +53,17 @@ export function LcpRoom() {
   const [event, setEvent] = useState<LcpEvent | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<LcpEvent | null>(null);
+  const [calendarLog, setCalendarLog] = useState<SessionLogRecord | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addEventOpen, setAddEventOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [fam, hw, ev, se, red, ph, pos] = await Promise.all([
+      const [fam, hw, ev, logs, se, red, ph, pos] = await Promise.all([
         fetchFamilies(),
         fetchAllHomework(),
         fetchEvents(),
+        fetchRecentSessionLogs(52),
         fetchSessions(),
         fetchRedemptions(),
         fetchPhasesWithUnits(),
@@ -66,6 +72,7 @@ export function LcpRoom() {
       setFamilies(fam);
       setHomework(hw);
       setEvents(ev);
+      setSessionLogs(logs);
       setSessions(se);
       setRedemptions(red);
       setPhases(ph);
@@ -245,7 +252,23 @@ export function LcpRoom() {
         <CurriculumAdmin />
       ) : (
         <div className="mt-6">
-          <LcpCalendar events={events} onEventClick={(ev) => setDetailEvent(ev)} onAdd={() => setAddEventOpen(true)} />
+          {calendarLog ? (
+            <SessionLogViewer
+              log={calendarLog}
+              families={families}
+              currentUserId={profile?.id ?? ''}
+              onBack={() => setCalendarLog(null)}
+              onChanged={() => { setCalendarLog(null); void load(); }}
+            />
+          ) : (
+            <LcpCalendar
+              events={events}
+              logs={sessionLogs}
+              onEventClick={(ev) => setDetailEvent(ev)}
+              onLogClick={(log) => setCalendarLog(log)}
+              onAdd={() => setAddEventOpen(true)}
+            />
+          )}
         </div>
       )}
 
