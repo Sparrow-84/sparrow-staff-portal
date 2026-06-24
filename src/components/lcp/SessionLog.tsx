@@ -183,7 +183,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
       {!showDatePicker ? (
         <button
           onClick={() => setShowDatePicker(true)}
-          className="text-sm font-medium text-sparrow-green hover:underline"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-sparrow-green px-4 py-2 text-sm font-medium text-sparrow-green transition hover:bg-sparrow-sage"
         >
           + Log a different session
         </button>
