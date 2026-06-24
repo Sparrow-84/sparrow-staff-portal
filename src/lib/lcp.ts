@@ -203,7 +203,7 @@ export async function deleteHomework(id: string): Promise<void> {
 export async function fetchEvents(): Promise<LcpEvent[]> {
   const { data, error } = await supabase
     .from('lcp_events')
-    .select('id, kind, session_id, title, starts_at, ends_at, location, mandatory, rsvp_enabled')
+    .select('id, kind, session_id, title, starts_at, ends_at, location, mandatory, rsvp_enabled, recurrence_id')
     .order('starts_at', { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as LcpEvent[];
@@ -221,9 +221,7 @@ export async function createEvents(
     created_by: string;
   }>,
 ): Promise<void> {
-  // recurrence_id omitted until migration 0032 is applied by Byron
-  const rows = inputs.map(({ recurrence_id: _r, ...rest }) => rest);
-  const { error } = await supabase.from('lcp_events').insert(rows);
+  const { error } = await supabase.from('lcp_events').insert(inputs);
   if (error) throw new Error(error.message);
 }
 

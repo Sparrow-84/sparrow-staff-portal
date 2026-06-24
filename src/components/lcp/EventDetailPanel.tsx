@@ -21,7 +21,7 @@ interface Props {
 
 export function EventDetailPanel({ event, onClose, onLogSession, onDeleted }: Props) {
   const [confirmStep, setConfirmStep] = useState<'idle' | 'confirm'>('idle');
-  const [deleting, setDeleting] = useState(false);
+  const [deletingMode, setDeletingMode] = useState<null | 'single' | 'future'>(null);
   const [error, setError] = useState<string | null>(null);
 
   function handleClose() {
@@ -32,7 +32,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted }: Pr
 
   async function handleDelete(mode: 'single' | 'future') {
     if (!event) return;
-    setDeleting(true);
+    setDeletingMode(mode);
     setError(null);
     try {
       if (mode === 'future' && event.recurrence_id) {
@@ -40,11 +40,12 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted }: Pr
       } else {
         await deleteEvent(event.id);
       }
+      setDeletingMode(null);
       setConfirmStep('idle');
       onDeleted();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not delete.');
-      setDeleting(false);
+      setDeletingMode(null);
     }
   }
 
@@ -83,31 +84,31 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted }: Pr
                 <>
                   <button
                     onClick={() => handleDelete('single')}
-                    disabled={deleting}
+                    disabled={deletingMode !== null}
                     className="w-full rounded-xl border border-priority-p1/40 py-2 text-sm font-medium text-priority-p1 hover:bg-priority-p1/5"
                   >
-                    {deleting ? 'Deleting…' : 'This event only'}
+                    {deletingMode === 'single' ? 'Deleting…' : 'This event only'}
                   </button>
                   <button
                     onClick={() => handleDelete('future')}
-                    disabled={deleting}
+                    disabled={deletingMode !== null}
                     className="w-full rounded-xl bg-priority-p1 py-2 text-sm font-medium text-white hover:bg-priority-p1/90"
                   >
-                    {deleting ? 'Deleting…' : 'This and all future events'}
+                    {deletingMode === 'future' ? 'Deleting…' : 'This and all future events'}
                   </button>
                 </>
               ) : (
                 <button
                   onClick={() => handleDelete('single')}
-                  disabled={deleting}
+                  disabled={deletingMode !== null}
                   className="w-full rounded-xl bg-priority-p1 py-2 text-sm font-medium text-white hover:bg-priority-p1/90"
                 >
-                  {deleting ? 'Deleting…' : 'Confirm delete'}
+                  {deletingMode === 'single' ? 'Deleting…' : 'Confirm delete'}
                 </button>
               )}
               <button
                 onClick={() => setConfirmStep('idle')}
-                disabled={deleting}
+                disabled={deletingMode !== null}
                 className="btn-ghost w-full text-sm"
               >
                 Cancel
