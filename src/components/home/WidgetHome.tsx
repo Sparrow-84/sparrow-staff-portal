@@ -19,12 +19,10 @@ import {
   type WidgetKey,
 } from './widgets';
 
-function reorder(keys: WidgetKey[], drag: WidgetKey, target: WidgetKey): WidgetKey[] {
-  if (drag === target) return keys;
-  const next = keys.filter((k) => k !== drag);
-  const at = next.indexOf(target);
-  next.splice(at, 0, drag);
-  return next;
+function reorderByIndex(keys: WidgetKey[], drag: WidgetKey, insertAt: number): WidgetKey[] {
+  const without = keys.filter((k) => k !== drag);
+  without.splice(Math.min(insertAt, without.length), 0, drag);
+  return without;
 }
 
 export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
@@ -42,6 +40,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<WidgetKey[]>([]);
   const [dragKey, setDragKey] = useState<WidgetKey | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const [panelTask, setPanelTask] = useState<TaskWithPeople | null>(null);
@@ -121,6 +120,22 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
 
   const shown = editing ? draft : layout;
   const notPlaced = availableWidgets(showTeam).filter((d) => !shown.includes(d.key));
+
+  const isDragging = editing && dragKey !== null;
+  const without = isDragging ? shown.filter((k) => k !== dragKey) : shown;
+  type DisplayItem = WidgetKey | '__placeholder__';
+  let displayItems: DisplayItem[];
+  if (!isDragging) {
+    displayItems = shown;
+  } else if (dropIndex !== null) {
+    displayItems = [
+      ...without.slice(0, dropIndex),
+      '__placeholder__',
+      ...without.slice(dropIndex),
+    ] as DisplayItem[];
+  } else {
+    displayItems = shown; // dragging but not over anything yet — keep original layout, card will fade
+  }
   const firstName = me.full_name.split(' ')[0];
   const dateLabel = new Date(ctx.today + 'T00:00:00').toLocaleDateString(undefined, {
     weekday: 'long',
@@ -193,12 +208,32 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
 
       {editing && (
         <p className="mt-3 text-xs text-sparrow-gray">
-          Drag a card by its handle to reorder. Remove with &times;. Add more with &ldquo;+ Add widget.&rdquo;
+          Drag the top bar of any card to reorder. Remove with &times;. Add more with &ldquo;+ Add widget.&rdquo;
         </p>
       )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {shown.map((key) => {
+        {displayItems.map((item, _i) => {
+          if (item === '__placeholder__') {
+            return (
+              <div
+                key="__placeholder__"
+                className="min-h-[8rem] rounded-2xl border-2 border-dashed border-sparrow-green bg-sparrow-sage/40 flex items-center justify-center"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => {
+                  if (dragKey !== null && dropIndex !== null) {
+                    setDraft((cur) => reorderByIndex(cur, dragKey, dropIndex));
+                  }
+                  setDragKey(null);
+                  setDropIndex(null);
+                }}
+              >
+                <span className="text-xs font-medium text-sparrow-green">Drop here</span>
+              </div>
+            );
+          }
+
+          const key = item as WidgetKey;
           const def = widgetDef(key);
           if (!def) return null;
           const body = (
@@ -207,23 +242,55 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
             </WidgetCard>
           );
           if (!editing) return <div key={key}>{body}</div>;
+
+          const isBeingDragged = dragKey === key;
+          const indexInWithout = without.indexOf(key);
+
           return (
             <div
               key={key}
               draggable
-              onDragStart={() => setDragKey(key)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => {
-                if (dragKey) setDraft((cur) => reorder(cur, dragKey, key));
-                setDragKey(null);
+              onDragStart={(e) => {
+                const ghost = document.createElement('div');
+                ghost.textContent = def.label;
+                ghost.style.cssText =
+                  'position:absolute;top:-9999px;background:#1E4D30;color:white;padding:6px 14px;border-radius:6px;font-size:12px;font-family:sans-serif;white-space:nowrap;';
+                document.body.appendChild(ghost);
+                e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, 18);
+                requestAnimationFrame(() => document.body.removeChild(ghost));
+                setDragKey(key);
+                setDropIndex(null);
               }}
-              className={`rounded-2xl ring-2 ring-dashed ring-sparrow-rule ${dragKey === key ? 'opacity-40' : ''}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (!dragKey || dragKey === key) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const insertBefore = e.clientY < rect.top + rect.height / 2;
+                const next = insertBefore ? indexInWithout : indexInWithout + 1;
+                if (next !== dropIndex) setDropIndex(next);
+              }}
+              onDrop={() => {
+                if (dragKey !== null && dropIndex !== null) {
+                  setDraft((cur) => reorderByIndex(cur, dragKey, dropIndex));
+                }
+                setDragKey(null);
+                setDropIndex(null);
+              }}
+              onDragEnd={() => {
+                setDragKey(null);
+                setDropIndex(null);
+              }}
+              className={[
+                'rounded-2xl ring-2 ring-dashed ring-sparrow-rule transition-opacity',
+                isBeingDragged && dropIndex !== null ? 'opacity-0 pointer-events-none' : '',
+                isBeingDragged && dropIndex === null ? 'opacity-30' : '',
+              ].join(' ')}
             >
-              <div className="flex items-center justify-between rounded-t-2xl bg-sparrow-mist px-3 py-1.5 text-xs text-sparrow-gray">
-                <span className="cursor-grab select-none" aria-hidden>⠿ drag</span>
+              <div className="flex cursor-grab select-none items-center justify-between rounded-t-2xl bg-sparrow-mist px-3 py-2 text-xs text-sparrow-gray active:cursor-grabbing">
+                <span aria-hidden>⠿ Drag to reorder</span>
                 <button
                   onClick={() => setDraft((cur) => cur.filter((k) => k !== key))}
-                  className="rounded px-1.5 font-semibold hover:bg-sparrow-rule/60 hover:text-sparrow-ink"
+                  className="cursor-default rounded px-1.5 font-semibold hover:bg-sparrow-rule/60 hover:text-sparrow-ink"
                   aria-label={`Remove ${def.label}`}
                 >
                   ×
