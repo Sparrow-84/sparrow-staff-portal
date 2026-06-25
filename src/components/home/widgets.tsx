@@ -412,57 +412,67 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
   );
 
   const monday = new Date(weekStart + 'T12:00:00');
-  const days = Array.from({ length: 7 }, (_, i) => {
+  const days = Array.from({ length: 5 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     const dStr = isoDate(d);
     return {
       date: dStr,
-      label: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+      weekday: d.toLocaleDateString(undefined, { weekday: 'short' }),
+      dayNum: d.getDate(),
       isToday: dStr === ctx.today,
     };
   });
 
-  const hasAnything = weekEvents.length > 0 || myTasks.length > 0;
-  if (!hasAnything) return <Empty>Nothing on the calendar this week.</Empty>;
-
   return (
-    <div className="space-y-4">
-      {days.map(({ date, label, isToday }) => {
+    <div className="grid grid-cols-5 gap-1">
+      {days.map(({ date, weekday, dayNum, isToday }) => {
         const dayEvents = weekEvents.filter((o) => isoDate(o.occursAt) === date);
         const dayTasks = myTasks.filter((t) => t.due_date === date);
-        if (dayEvents.length === 0 && dayTasks.length === 0) return null;
 
         return (
-          <div key={date}>
-            <p className={`mb-1.5 text-xs font-semibold ${isToday ? 'text-sparrow-green' : 'text-sparrow-gray'}`}>
-              {label}{isToday ? ' · Today' : ''}
-            </p>
-            <div className="space-y-1">
-              {dayEvents.map((o, idx) => (
-                <div key={`${o.event.id}-${idx}`} className="flex items-center gap-2 text-xs text-sparrow-ink">
-                  <span className="shrink-0 text-sparrow-gray">
-                    {o.event.all_day
-                      ? 'All day'
-                      : o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                  </span>
-                  <span className="truncate">{o.event.title}</span>
-                </div>
-              ))}
-              {dayTasks.map((t) => {
-                const tier = TIER_META[tierForPriority(t.priority)];
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => ctx.onOpenTask(t)}
-                    className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-xs hover:bg-sparrow-mist"
-                  >
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${tier.dot}`} aria-hidden />
-                    <span className="truncate text-sparrow-ink">{t.title}</span>
-                  </button>
-                );
-              })}
+          <div
+            key={date}
+            className={`min-h-[100px] rounded-lg p-1.5 ${
+              isToday
+                ? 'bg-sparrow-green/10 ring-1 ring-sparrow-green/30'
+                : 'bg-sparrow-mist/40'
+            }`}
+          >
+            <div className="mb-1.5 text-center">
+              <p className={`text-[10px] font-medium uppercase tracking-wide ${isToday ? 'text-sparrow-green' : 'text-sparrow-gray'}`}>
+                {weekday}
+              </p>
+              <p className={`text-sm font-semibold leading-none ${isToday ? 'text-sparrow-green' : 'text-sparrow-ink'}`}>
+                {dayNum}
+              </p>
             </div>
+            {dayEvents.map((o, idx) => (
+              <div
+                key={`${o.event.id}-${idx}`}
+                className="mb-0.5 truncate rounded bg-sparrow-green/15 px-1 py-0.5 text-[10px] text-sparrow-green"
+              >
+                {!o.event.all_day && (
+                  <span className="mr-0.5 opacity-70">
+                    {o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                )}
+                {o.event.title}
+              </div>
+            ))}
+            {dayTasks.map((t) => {
+              const tier = TIER_META[tierForPriority(t.priority)];
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => ctx.onOpenTask(t)}
+                  className="mb-0.5 flex w-full items-center gap-1 rounded bg-white/60 px-1 py-0.5 text-left text-[10px] hover:bg-white"
+                >
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${tier.dot}`} aria-hidden />
+                  <span className="truncate text-sparrow-ink">{t.title}</span>
+                </button>
+              );
+            })}
           </div>
         );
       })}
