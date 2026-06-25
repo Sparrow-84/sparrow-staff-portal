@@ -11,7 +11,8 @@ export interface CalendarEvent {
   ends_at: string | null;
   all_day: boolean;
   location: string | null;
-  recurrence: string | null; // null | 'weekly' | 'biweekly'
+  recurrence: string | null; // null | 'weekly' | 'biweekly' (legacy field)
+  recurrence_id: string | null; // groups recurring series created with the new UI
   department: Department | null;
   created_by: string | null;
   created_at: string;
@@ -23,14 +24,67 @@ export interface EventOccurrence {
 }
 
 export const KIND_PILL: Record<CalendarKind, string> = {
-  meeting: 'bg-slate-500 text-white',
-  closure: 'bg-priority-p1 text-white',
-  holiday: 'bg-sparrow-gold text-sparrow-ink',
-  ooo: 'bg-sparrow-gray text-white',
+  meeting:     'bg-slate-500 text-white',
+  closure:     'bg-priority-p1 text-white',
+  holiday:     'bg-sparrow-green text-white',
+  ooo:         'bg-sparrow-gray text-white',
   lcp_session: 'bg-blue-600 text-white',
-  toc: 'bg-sparrow-green text-white',
-  other: 'bg-sparrow-rule text-sparrow-ink',
+  toc:         'bg-teal-600 text-white',
+  other:       'bg-sparrow-gold text-sparrow-ink',
 };
+
+export const KIND_LABEL: Record<CalendarKind, string> = {
+  meeting:     'Meeting',
+  closure:     'Office closed',
+  holiday:     'Holiday',
+  ooo:         'Out of office',
+  lcp_session: 'LCP',
+  toc:         'TOC',
+  other:       'Org event',
+};
+
+/** Kinds available when creating an org-wide event. */
+export const ADD_KINDS: { value: CalendarKind; label: string }[] = [
+  { value: 'other',   label: 'Org event' },
+  { value: 'meeting', label: 'Meeting' },
+  { value: 'holiday', label: 'Holiday' },
+  { value: 'closure', label: 'Office closed' },
+];
+
+export interface CalendarEventInput {
+  kind: CalendarKind;
+  title: string;
+  starts_at: string;
+  ends_at: string | null;
+  all_day: boolean;
+  location: string | null;
+  recurrence_id: string | null;
+  created_by: string;
+}
+
+export async function createCalendarEvents(inputs: CalendarEventInput[]): Promise<void> {
+  // recurrence_id is omitted from non-recurring rows until migration 0035 is applied;
+  // once the column exists, recurring events include it so series deletes work.
+  const rows = inputs.map(({ recurrence_id, ...rest }) =>
+    recurrence_id ? { ...rest, recurrence_id } : rest,
+  );
+  const { error } = await supabase.from('calendar_events').insert(rows);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteCalendarEvent(id: string): Promise<void> {
+  const { error } = await supabase.from('calendar_events').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteCalendarEventAndFuture(recurrenceId: string, fromStartsAt: string): Promise<void> {
+  const { error } = await supabase
+    .from('calendar_events')
+    .delete()
+    .eq('recurrence_id', recurrenceId)
+    .gte('starts_at', fromStartsAt);
+  if (error) throw new Error(error.message);
+}
 
 export async function fetchCalendar(): Promise<CalendarEvent[]> {
   const { data, error } = await supabase.from('calendar_events').select('*').order('starts_at');

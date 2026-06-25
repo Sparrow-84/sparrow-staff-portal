@@ -32,7 +32,8 @@ export type WidgetKey =
   | 'upcoming_meetings'
   | 'notifications'
   | 'quick_wins'
-  | 'mini_calendar';
+  | 'mini_calendar'
+  | 'my_week';
 
 interface WidgetDef {
   key: WidgetKey;
@@ -380,15 +381,105 @@ function TeamPulseWidget({ ctx }: { ctx: WidgetContext }) {
   );
 }
 
+// ── My week (tasks + events, Mon–Sun) ────────────────────────────────
+function getWeekBounds(today: string): { weekStart: string; weekEnd: string } {
+  const d = new Date(today + 'T00:00:00');
+  const dow = d.getDay(); // 0=Sun
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return { weekStart: isoDate(monday), weekEnd: isoDate(sunday) };
+}
+
+function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
+  const { weekStart, weekEnd } = getWeekBounds(ctx.today);
+
+  const weekEvents = expandEvents(
+    ctx.events,
+    new Date(weekStart + 'T00:00:00'),
+    new Date(weekEnd + 'T23:59:59'),
+  );
+
+  const myTasks = ctx.tasks.filter(
+    (t) =>
+      t.assignee_id === ctx.me.id &&
+      t.triage_status === 'accepted' &&
+      t.status !== 'done' &&
+      t.due_date &&
+      t.due_date >= weekStart &&
+      t.due_date <= weekEnd,
+  );
+
+  const monday = new Date(weekStart + 'T12:00:00');
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dStr = isoDate(d);
+    return {
+      date: dStr,
+      label: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+      isToday: dStr === ctx.today,
+    };
+  });
+
+  const hasAnything = weekEvents.length > 0 || myTasks.length > 0;
+  if (!hasAnything) return <Empty>Nothing on the calendar this week.</Empty>;
+
+  return (
+    <div className="space-y-4">
+      {days.map(({ date, label, isToday }) => {
+        const dayEvents = weekEvents.filter((o) => isoDate(o.occursAt) === date);
+        const dayTasks = myTasks.filter((t) => t.due_date === date);
+        if (dayEvents.length === 0 && dayTasks.length === 0) return null;
+
+        return (
+          <div key={date}>
+            <p className={`mb-1.5 text-xs font-semibold ${isToday ? 'text-sparrow-green' : 'text-sparrow-gray'}`}>
+              {label}{isToday ? ' · Today' : ''}
+            </p>
+            <div className="space-y-1">
+              {dayEvents.map((o, idx) => (
+                <div key={`${o.event.id}-${idx}`} className="flex items-center gap-2 text-xs text-sparrow-ink">
+                  <span className="shrink-0 text-sparrow-gray">
+                    {o.event.all_day
+                      ? 'All day'
+                      : o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                  <span className="truncate">{o.event.title}</span>
+                </div>
+              ))}
+              {dayTasks.map((t) => {
+                const tier = TIER_META[tierForPriority(t.priority)];
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => ctx.onOpenTask(t)}
+                    className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-xs hover:bg-sparrow-mist"
+                  >
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${tier.dot}`} aria-hidden />
+                    <span className="truncate text-sparrow-ink">{t.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Catalog (ordered = the default layout, filtered by availability) ──
 export const WIDGET_CATALOG: WidgetDef[] = [
-  { key: 'today_tasks', label: 'My tasks — today', Comp: TodayTasksWidget },
-  { key: 'triage', label: 'Incoming tasks', Comp: TriageWidget },
-  { key: 'team_pulse', label: 'Team pulse', Comp: TeamPulseWidget, managerOnly: true },
-  { key: 'upcoming_meetings', label: 'Upcoming meetings', Comp: UpcomingMeetingsWidget },
-  { key: 'notifications', label: 'Notifications', Comp: NotificationsWidget },
-  { key: 'quick_wins', label: 'Quick wins', Comp: QuickWinsWidget },
-  { key: 'mini_calendar', label: 'Calendar', Comp: MiniCalendarWidget },
+  { key: 'today_tasks',       label: 'My tasks — today',    Comp: TodayTasksWidget },
+  { key: 'my_week',           label: 'My week',             Comp: MyWeekWidget, wide: true },
+  { key: 'triage',            label: 'Incoming tasks',      Comp: TriageWidget },
+  { key: 'team_pulse',        label: 'Team pulse',          Comp: TeamPulseWidget, managerOnly: true },
+  { key: 'upcoming_meetings', label: 'Upcoming meetings',   Comp: UpcomingMeetingsWidget },
+  { key: 'notifications',     label: 'Notifications',       Comp: NotificationsWidget },
+  { key: 'quick_wins',        label: 'Quick wins',          Comp: QuickWinsWidget },
+  { key: 'mini_calendar',     label: 'Calendar',            Comp: MiniCalendarWidget },
 ];
 
 /** Widgets this user is allowed to place, in default order. */
