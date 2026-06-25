@@ -8,7 +8,6 @@ import { fetchSettings, saveSettings } from '@/lib/settings';
 import { isoDate } from '@/lib/tasks';
 import type { Profile, TaskComment, TaskWithPeople } from '@/lib/types';
 import { AnnouncementBar } from '../AnnouncementBar';
-import { DailyReflection } from './DailyReflection';
 import { TaskPanel } from '../TaskPanel';
 import type { View } from '../Sidebar';
 import {
@@ -203,8 +202,6 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
           <button onClick={startEdit} className="btn-ghost border border-sparrow-rule">Edit home</button>
         )}
       </div>
-
-      <DailyReflection today={ctx.today} />
 
       {editing && (
         <p className="mt-3 text-xs text-sparrow-gray">
