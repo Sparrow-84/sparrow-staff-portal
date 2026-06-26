@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchCalendar, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
 import { AddOrgEventPanel } from '@/components/calendar/AddOrgEventPanel';
 import { OrgEventDetailPanel } from '@/components/calendar/OrgEventDetailPanel';
+import { supabase } from '@/lib/supabase';
+import type { Department, Priority, Task } from '@/lib/types';
+import { DEPARTMENTS } from '@/lib/types';
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = [
@@ -18,36 +21,110 @@ function shortTime(isoString: string): string {
   return new Date(isoString).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
+const DEADLINE_DOT: Record<Priority, string> = {
+  p1: 'bg-red-500',
+  p2: 'bg-amber-400',
+  p3: 'bg-slate-400',
+  p4: 'bg-slate-300',
+};
+
+// Filter chip styles — each chip is independent, not a radio group
+const CHIP_ON  = 'rounded-md border border-sparrow-green bg-sparrow-green px-3 py-1 text-xs font-medium text-white transition';
+const CHIP_OFF = 'rounded-md border border-sparrow-rule px-3 py-1 text-xs font-medium text-sparrow-gray transition hover:border-sparrow-gray hover:text-sparrow-ink';
+const CHIP_DIM = 'cursor-not-allowed rounded-md border border-sparrow-rule px-3 py-1 text-xs font-medium text-sparrow-gray opacity-40';
+
+// Dept sub-chip styles (slightly smaller)
+const SUB_ON  = 'rounded border border-sparrow-green bg-sparrow-green px-2.5 py-0.5 text-[11px] font-medium text-white transition';
+const SUB_OFF = 'rounded border border-sparrow-rule px-2.5 py-0.5 text-[11px] font-medium text-sparrow-gray transition hover:text-sparrow-ink';
+
+type DeadlineTask = Pick<Task, 'id' | 'title' | 'due_date' | 'priority' | 'status' | 'source_system' | 'source_ref'>;
+
 export function CalendarView() {
   const { profile } = useAuth();
   const today = new Date();
   const todayStr = localISO(today);
 
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [year, setYear]       = useState(today.getFullYear());
+  const [month, setMonth]     = useState(today.getMonth());
+  const [events, setEvents]   = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [addDate, setAddDate] = useState(todayStr);
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
 
-  const load = useCallback(async () => {
+  // Main layer toggles — each independently on/off, all persisted
+  const [showAllStaff, setShowAllStaff] = useState(
+    () => localStorage.getItem('calendar_show_all_staff') !== 'false', // default on
+  );
+  const [showMyDepts, setShowMyDepts] = useState(
+    () => localStorage.getItem('calendar_show_my_depts') === 'true',
+  );
+  const [showDeadlines, setShowDeadlines] = useState(
+    () => localStorage.getItem('calendar_show_deadlines') === 'true',
+  );
+
+  // Which dept sub-chips the user has explicitly turned OFF (absent = active)
+  const [disabledDepts, setDisabledDepts] = useState<Set<Department>>(() => {
     try {
-      setEvents(await fetchCalendar());
-    } finally {
-      setLoading(false);
-    }
+      const saved = localStorage.getItem('calendar_disabled_depts');
+      return saved ? new Set(JSON.parse(saved) as Department[]) : new Set();
+    } catch { return new Set(); }
+  });
+
+  // Dept chips this profile has access to
+  const myDepts = useMemo((): Department[] => {
+    if (!profile) return [];
+    if (profile.role === 'admin') return ['toc', 'lcp', 'partnerships', 'ops'];
+    const set = new Set<Department>([profile.department]);
+    if (profile.partnerships_access) set.add('partnerships');
+    if (profile.ops_access) set.add('ops');
+    if (profile.lcp_role !== null) set.add('lcp');
+    return [...set];
+  }, [profile]);
+
+  const [deadlineTasks, setDeadlineTasks] = useState<DeadlineTask[]>([]);
+
+  const load = useCallback(async () => {
+    try { setEvents(await fetchCalendar()); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
 
+  useEffect(() => {
+    if (!showDeadlines || !profile?.id) { setDeadlineTasks([]); return; }
+    void supabase
+      .from('tasks')
+      .select('id, title, due_date, priority, status, source_system, source_ref')
+      .eq('assignee_id', profile.id)
+      .neq('status', 'done')
+      .not('due_date', 'is', null)
+      .then(({ data }) => setDeadlineTasks((data ?? []) as DeadlineTask[]));
+  }, [showDeadlines, profile?.id]);
+
+  function toggleAllStaff() {
+    setShowAllStaff(v => { const n = !v; localStorage.setItem('calendar_show_all_staff', String(n)); return n; });
+  }
+  function toggleMyDepts() {
+    setShowMyDepts(v => { const n = !v; localStorage.setItem('calendar_show_my_depts', String(n)); return n; });
+  }
+  function toggleDeadlines() {
+    setShowDeadlines(v => { const n = !v; localStorage.setItem('calendar_show_deadlines', String(n)); return n; });
+  }
+  function toggleDept(dept: Department) {
+    setDisabledDepts(prev => {
+      const next = new Set(prev);
+      if (next.has(dept)) next.delete(dept); else next.add(dept);
+      localStorage.setItem('calendar_disabled_depts', JSON.stringify([...next]));
+      return next;
+    });
+  }
+
   function prevMonth() {
-    if (month === 0) { setYear((y) => y - 1); setMonth(11); }
-    else setMonth((m) => m - 1);
+    if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1);
   }
   function nextMonth() {
-    if (month === 11) { setYear((y) => y + 1); setMonth(0); }
-    else setMonth((m) => m + 1);
+    if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1);
   }
 
   // Build grid cells
@@ -59,87 +136,110 @@ export function CalendarView() {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  // Group events by day string
+  // Group org events by day (only when All Staff layer is on)
   const eventsByDay = new Map<string, CalendarEvent[]>();
-  for (const ev of events) {
-    const d = localISO(new Date(ev.starts_at));
-    const dDate = new Date(d + 'T12:00:00');
-    if (dDate.getFullYear() === year && dDate.getMonth() === month) {
-      if (!eventsByDay.has(d)) eventsByDay.set(d, []);
-      eventsByDay.get(d)!.push(ev);
+  if (showAllStaff) {
+    for (const ev of events) {
+      const d = localISO(new Date(ev.starts_at));
+      const dDate = new Date(d + 'T12:00:00');
+      if (dDate.getFullYear() === year && dDate.getMonth() === month) {
+        if (!eventsByDay.has(d)) eventsByDay.set(d, []);
+        eventsByDay.get(d)!.push(ev);
+      }
+    }
+    for (const arr of eventsByDay.values()) arr.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  }
+
+  // Group deadlines by day
+  const deadlinesByDay = new Map<string, DeadlineTask[]>();
+  if (showDeadlines) {
+    for (const t of deadlineTasks) {
+      if (!t.due_date) continue;
+      const d = t.due_date.slice(0, 10);
+      if (!deadlinesByDay.has(d)) deadlinesByDay.set(d, []);
+      deadlinesByDay.get(d)!.push(t);
     }
   }
-  for (const arr of eventsByDay.values()) {
-    arr.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
-  }
+
+  // Active dept chips (My Depts on + not individually disabled)
+  const activeDeptLabels = myDepts
+    .filter(d => showMyDepts && !disabledDepts.has(d))
+    .map(d => DEPARTMENTS.find(x => x.value === d)?.label ?? d);
 
   function cellDate(d: number): string {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   }
-
-  function openAdd(dStr: string) {
-    setAddDate(dStr);
-    setAddOpen(true);
-  }
+  function openAdd(dStr: string) { setAddDate(dStr); setAddOpen(true); }
 
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sparrow-rule px-6 py-3">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Layer toggles */}
-          <div className="flex gap-0.5 rounded-lg border border-sparrow-rule bg-sparrow-mist p-0.5">
-            <button className="rounded-md bg-white px-3 py-1 text-xs font-medium text-sparrow-ink shadow-sm">
-              All Staff
-            </button>
-            <button
-              disabled
-              title="My Depts layer — added as each dept room gets its calendar"
-              className="cursor-not-allowed rounded-md px-3 py-1 text-xs font-medium text-sparrow-gray opacity-40"
-            >
-              My Depts
-            </button>
-            <button
-              disabled
-              title="Personal layer — coming with staff assignment feature"
-              className="cursor-not-allowed rounded-md px-3 py-1 text-xs font-medium text-sparrow-gray opacity-40"
-            >
-              Personal
-            </button>
+        <div className="flex flex-col gap-2">
+
+          {/* Row 1: layer chips + month nav */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap gap-1.5">
+              <button onClick={toggleAllStaff} className={showAllStaff ? CHIP_ON : CHIP_OFF}>
+                All Staff
+              </button>
+              <button onClick={toggleMyDepts} className={showMyDepts ? CHIP_ON : CHIP_OFF}>
+                My Depts
+              </button>
+              <button
+                disabled
+                title="Personal layer — coming with staff scheduling"
+                className={CHIP_DIM}
+              >
+                Personal
+              </button>
+              <button onClick={toggleDeadlines} className={showDeadlines ? CHIP_ON : CHIP_OFF}>
+                Deadlines
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={prevMonth}
+                className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+                aria-label="Previous month"
+              >←</button>
+              <span className="min-w-[11rem] text-center text-sm font-semibold text-sparrow-ink">
+                {MONTHS[month]} {year}
+              </span>
+              <button
+                onClick={nextMonth}
+                className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+                aria-label="Next month"
+              >→</button>
+              <button
+                onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); }}
+                className="rounded-md border border-sparrow-rule px-2 py-0.5 text-xs text-sparrow-gray hover:text-sparrow-ink"
+              >
+                Today
+              </button>
+            </div>
           </div>
 
-          {/* Month nav */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={prevMonth}
-              className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
-              aria-label="Previous month"
-            >
-              ←
-            </button>
-            <span className="min-w-[11rem] text-center text-sm font-semibold text-sparrow-ink">
-              {MONTHS[month]} {year}
-            </span>
-            <button
-              onClick={nextMonth}
-              className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
-              aria-label="Next month"
-            >
-              →
-            </button>
-            <button
-              onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); }}
-              className="rounded-md border border-sparrow-rule px-2 py-0.5 text-xs text-sparrow-gray hover:text-sparrow-ink"
-            >
-              Today
-            </button>
-          </div>
+          {/* Row 2: dept sub-chips — only shown when My Depts is on */}
+          {showMyDepts && myDepts.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-sparrow-gray">My depts:</span>
+              {myDepts.map(dept => (
+                <button
+                  key={dept}
+                  onClick={() => toggleDept(dept)}
+                  className={disabledDepts.has(dept) ? SUB_OFF : SUB_ON}
+                >
+                  {DEPARTMENTS.find(d => d.value === dept)?.label ?? dept}
+                </button>
+              ))}
+            </div>
+          )}
+
         </div>
 
-        <button
-          onClick={() => openAdd(todayStr)}
-          className="btn-primary text-sm"
-        >
+        <button onClick={() => openAdd(todayStr)} className="btn-primary text-sm">
           + Add event
         </button>
       </div>
@@ -149,70 +249,78 @@ export function CalendarView() {
         {loading ? (
           <p className="p-8 text-sm text-sparrow-gray">Loading…</p>
         ) : (
-          <div className="grid grid-cols-7 border-l border-t border-sparrow-rule">
-            {/* Day-of-week headers */}
-            {DOW.map((d) => (
-              <div
-                key={d}
-                className="border-b border-r border-sparrow-rule bg-sparrow-mist px-2 py-1.5 text-center text-xs font-semibold text-sparrow-gray"
-              >
-                {d}
-              </div>
-            ))}
+          <>
+            <div className="grid grid-cols-7 border-l border-t border-sparrow-rule">
+              {/* Day-of-week headers */}
+              {DOW.map(d => (
+                <div key={d} className="border-b border-r border-sparrow-rule bg-sparrow-mist px-2 py-1.5 text-center text-xs font-semibold text-sparrow-gray">
+                  {d}
+                </div>
+              ))}
 
-            {/* Day cells */}
-            {cells.map((d, i) => {
-              if (d === null) {
+              {/* Day cells */}
+              {cells.map((d, i) => {
+                if (d === null) {
+                  return <div key={`pad-${i}`} className="min-h-[6rem] border-b border-r border-sparrow-rule bg-sparrow-mist/30" />;
+                }
+                const dStr = cellDate(d);
+                const dayEvents   = eventsByDay.get(dStr) ?? [];
+                const dayDeadlines = deadlinesByDay.get(dStr) ?? [];
+                const isToday = dStr === todayStr;
+                const shown = dayEvents.slice(0, 3);
+                const overflow = dayEvents.length - shown.length;
+
                 return (
-                  <div
-                    key={`pad-${i}`}
-                    className="min-h-[6rem] border-b border-r border-sparrow-rule bg-sparrow-mist/30"
-                  />
-                );
-              }
-              const dStr = cellDate(d);
-              const dayEvents = eventsByDay.get(dStr) ?? [];
-              const isToday = dStr === todayStr;
-              const shown = dayEvents.slice(0, 3);
-              const overflow = dayEvents.length - shown.length;
-
-              return (
-                <div key={dStr} className="group min-h-[6rem] border-b border-r border-sparrow-rule p-1">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${
-                        isToday ? 'bg-sparrow-green text-white' : 'text-sparrow-ink'
-                      }`}
-                    >
-                      {d}
-                    </span>
-                    <button
-                      onClick={() => openAdd(dStr)}
-                      className="hidden rounded px-1 text-sm leading-none text-sparrow-gray hover:text-sparrow-green group-hover:block"
-                      aria-label={`Add event on ${dStr}`}
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <div className="mt-1 space-y-0.5">
-                    {shown.map((ev) => (
+                  <div key={dStr} className="group min-h-[6rem] border-b border-r border-sparrow-rule p-1">
+                    <div className="flex items-center justify-between">
+                      <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : 'text-sparrow-ink'}`}>
+                        {d}
+                      </span>
                       <button
-                        key={ev.id}
-                        onClick={() => setDetailEvent(ev)}
-                        className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${KIND_PILL[ev.kind]}`}
-                      >
-                        {ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
-                      </button>
-                    ))}
-                    {overflow > 0 && (
-                      <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>
+                        onClick={() => openAdd(dStr)}
+                        className="hidden rounded px-1 text-sm leading-none text-sparrow-gray hover:text-sparrow-green group-hover:block"
+                        aria-label={`Add event on ${dStr}`}
+                      >+</button>
+                    </div>
+
+                    <div className="mt-1 space-y-0.5">
+                      {shown.map(ev => (
+                        <button
+                          key={ev.id}
+                          onClick={() => setDetailEvent(ev)}
+                          className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${KIND_PILL[ev.kind]}`}
+                        >
+                          {ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
+                        </button>
+                      ))}
+                      {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
+                    </div>
+
+                    {/* Deadline markers — small diamonds, one per task due this day */}
+                    {dayDeadlines.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-0.5 px-0.5">
+                        {dayDeadlines.map(task => (
+                          <span
+                            key={task.id}
+                            title={task.title}
+                            className={`inline-block h-2 w-2 rotate-45 rounded-[1px] opacity-80 ${DEADLINE_DOT[task.priority]}`}
+                          />
+                        ))}
+                      </div>
                     )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+
+            {/* Dept calendar placeholder — shown for each active dept chip */}
+            {activeDeptLabels.length > 0 && (
+              <div className="m-4 rounded-lg border border-sparrow-rule bg-sparrow-mist px-4 py-2.5 text-sm text-sparrow-gray">
+                {activeDeptLabels.join(', ')} calendar events will appear here as each dept room's calendar is set up.
+                {/* TODO: fetch dept calendar events per active dept once each dept room calendar is built */}
+              </div>
+            )}
+          </>
         )}
       </div>
 
