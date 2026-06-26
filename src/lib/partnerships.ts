@@ -13,10 +13,8 @@ import type {
 // All reads/writes are gated by RLS (0008_partnerships.sql): partnerships staff + admins
 // manage everything; a partner's named owner sees/stewards their own.
 
-// NOTE: giving_method, newsletter_subscribed, first_gift_date, sparrow_provides,
-// partner_provides, mou_status are added here after running migration 0037.
 const PARTNER_COLS =
-  'id, name, type, stage, owner_id, organization, contact_name, email, phone, address, donor_tier, cadence_days, last_touchpoint_at, source, notes, active, created_at';
+  'id, name, type, stage, owner_id, organization, contact_name, email, phone, address, donor_tier, cadence_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status';
 
 // ── Partners ─────────────────────────────────────────────────────────
 export async function fetchPartners(): Promise<Partner[]> {
