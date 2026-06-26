@@ -3,6 +3,9 @@ import { useAuth } from '@/auth/AuthContext';
 import { fetchCalendar, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
 import { AddOrgEventPanel } from '@/components/calendar/AddOrgEventPanel';
 import { OrgEventDetailPanel } from '@/components/calendar/OrgEventDetailPanel';
+import { fetchOrgCalLcpEvents } from '@/lib/lcp';
+import type { LcpEvent } from '@/lib/lcp-types';
+import { EVENT_LABEL } from '@/lib/lcp-types';
 import { supabase } from '@/lib/supabase';
 import type { Department, Priority, Task } from '@/lib/types';
 import { DEPARTMENTS } from '@/lib/types';
@@ -83,6 +86,7 @@ export function CalendarView() {
   }, [profile]);
 
   const [deadlineTasks, setDeadlineTasks] = useState<DeadlineTask[]>([]);
+  const [lcpOrgEvents, setLcpOrgEvents] = useState<LcpEvent[]>([]);
 
   const load = useCallback(async () => {
     try { setEvents(await fetchCalendar()); }
@@ -101,6 +105,15 @@ export function CalendarView() {
       .not('due_date', 'is', null)
       .then(({ data }) => setDeadlineTasks((data ?? []) as DeadlineTask[]));
   }, [showDeadlines, profile?.id]);
+
+  // Load LCP events flagged for the org calendar when the LCP dept chip is active
+  const lcpChipActive = showMyDepts && myDepts.includes('lcp') && !disabledDepts.has('lcp');
+  useEffect(() => {
+    if (!lcpChipActive) { setLcpOrgEvents([]); return; }
+    void fetchOrgCalLcpEvents()
+      .then(setLcpOrgEvents)
+      .catch(() => setLcpOrgEvents([])); // graceful: column may not exist until 0039 runs
+  }, [lcpChipActive]);
 
   function toggleAllStaff() {
     setShowAllStaff(v => { const n = !v; localStorage.setItem('calendar_show_all_staff', String(n)); return n; });
@@ -150,6 +163,17 @@ export function CalendarView() {
     for (const arr of eventsByDay.values()) arr.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
   }
 
+  // Group LCP org-cal events by day
+  const lcpEventsByDay = new Map<string, LcpEvent[]>();
+  for (const ev of lcpOrgEvents) {
+    const d = localISO(new Date(ev.starts_at));
+    const dDate = new Date(d + 'T12:00:00');
+    if (dDate.getFullYear() === year && dDate.getMonth() === month) {
+      if (!lcpEventsByDay.has(d)) lcpEventsByDay.set(d, []);
+      lcpEventsByDay.get(d)!.push(ev);
+    }
+  }
+
   // Group deadlines by day
   const deadlinesByDay = new Map<string, DeadlineTask[]>();
   if (showDeadlines) {
@@ -161,9 +185,10 @@ export function CalendarView() {
     }
   }
 
-  // Active dept chips (My Depts on + not individually disabled)
+  // Depts that are active but don't yet have a calendar built (show placeholder banner)
+  const DEPTS_WITH_CALENDARS: Department[] = ['lcp'];
   const activeDeptLabels = myDepts
-    .filter(d => showMyDepts && !disabledDepts.has(d))
+    .filter(d => showMyDepts && !disabledDepts.has(d) && !DEPTS_WITH_CALENDARS.includes(d))
     .map(d => DEPARTMENTS.find(x => x.value === d)?.label ?? d);
 
   function cellDate(d: number): string {
@@ -264,7 +289,8 @@ export function CalendarView() {
                   return <div key={`pad-${i}`} className="min-h-[6rem] border-b border-r border-sparrow-rule bg-sparrow-mist/30" />;
                 }
                 const dStr = cellDate(d);
-                const dayEvents   = eventsByDay.get(dStr) ?? [];
+                const dayEvents    = eventsByDay.get(dStr) ?? [];
+                const dayLcpEvents = lcpEventsByDay.get(dStr) ?? [];
                 const dayDeadlines = deadlinesByDay.get(dStr) ?? [];
                 const isToday = dStr === todayStr;
                 const shown = dayEvents.slice(0, 3);
@@ -295,6 +321,17 @@ export function CalendarView() {
                       ))}
                       {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
                     </div>
+
+                    {/* LCP dept events (show_on_org_calendar = true) */}
+                    {dayLcpEvents.map(ev => (
+                      <div
+                        key={ev.id}
+                        title={`LCP · ${EVENT_LABEL[ev.kind]}`}
+                        className="mt-0.5 w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight bg-emerald-100 text-emerald-800"
+                      >
+                        LCP · {ev.title}
+                      </div>
+                    ))}
 
                     {/* Deadline markers — small diamonds, one per task due this day */}
                     {dayDeadlines.length > 0 && (

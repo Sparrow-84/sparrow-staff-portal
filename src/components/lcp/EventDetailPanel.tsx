@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { EVENT_LABEL, type LcpEvent } from '@/lib/lcp-types';
 import { deleteEvent, deleteEventAndFuture } from '@/lib/lcp';
+// NOTE: restore updateEvent import after Byron runs migration 0039
 import { dayLabel, timeLabel } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
 
@@ -17,11 +18,15 @@ interface Props {
   onClose: () => void;
   onLogSession: (event: LcpEvent) => void;
   onDeleted: () => void;
+  onChanged?: () => void;
 }
 
-export function EventDetailPanel({ event, onClose, onLogSession, onDeleted }: Props) {
+// NOTE: onChanged wired but unused until migration 0039 — restore toggle UI after Byron runs it
+export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onChanged: _onChanged }: Props) {
   const [confirmStep, setConfirmStep] = useState<'idle' | 'confirm'>('idle');
   const [deletingMode, setDeletingMode] = useState<null | 'single' | 'future'>(null);
+  // NOTE: restore toggling state after Byron runs migration 0039
+  // const [toggling, setToggling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleClose() {
@@ -29,6 +34,19 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted }: Pr
     setError(null);
     onClose();
   }
+
+  /* NOTE: restore after Byron runs migration 0039
+  async function toggleOrgCal() {
+    if (!event) return;
+    setToggling(true);
+    try {
+      await updateEvent(event.id, { show_on_org_calendar: !event.show_on_org_calendar });
+      onChanged?.();
+    } finally {
+      setToggling(false);
+    }
+  }
+  */
 
   async function handleDelete(mode: 'single' | 'future') {
     if (!event) return;
@@ -153,6 +171,25 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted }: Pr
             </span>
           )}
         </div>
+
+        {/* NOTE: restore this toggle after Byron runs migration 0039
+        <div className="border-t border-sparrow-rule pt-4">
+          <label className="flex cursor-pointer items-center justify-between gap-3">
+            <span className="text-sm text-sparrow-ink">Show on all-staff calendar</span>
+            <button
+              onClick={toggleOrgCal}
+              disabled={toggling}
+              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                event.show_on_org_calendar ? 'bg-sparrow-green' : 'bg-slate-200'
+              } ${toggling ? 'opacity-50' : ''}`}
+              role="switch"
+              aria-checked={event.show_on_org_calendar}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${event.show_on_org_calendar ? 'translate-x-4' : 'translate-x-0'}`} />
+            </button>
+          </label>
+        </div>
+        */}
 
         {/* Log session */}
         <div className="border-t border-sparrow-rule pt-4">

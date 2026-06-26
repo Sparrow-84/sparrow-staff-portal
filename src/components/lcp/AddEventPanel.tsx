@@ -76,6 +76,8 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
   const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
   const [mandatory, setMandatory] = useState(true);
+  // NOTE: restore showOnOrgCal state after Byron runs migration 0039
+  // const [showOnOrgCal, setShowOnOrgCal] = useState(false);
 
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState<'weekly' | 'biweekly'>('weekly');
@@ -121,6 +123,7 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
         location: location.trim() || null,
         mandatory,
         recurrence_id: recurrenceId,
+        // NOTE: restore show_on_org_calendar: showOnOrgCal after Byron runs migration 0039
         created_by: currentUserId,
       }));
 
@@ -256,6 +259,18 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
           />
           Mandatory attendance
         </label>
+
+        {/* NOTE: restore this checkbox after Byron runs migration 0039
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+          <input
+            type="checkbox"
+            checked={showOnOrgCal}
+            onChange={(e) => setShowOnOrgCal(e.target.checked)}
+            className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+          />
+          Also show on all-staff calendar
+        </label>
+        */}
 
         {/* Recurrence toggle */}
         <div className="border-t border-sparrow-rule pt-4">

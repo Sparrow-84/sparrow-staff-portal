@@ -203,10 +203,29 @@ export async function deleteHomework(id: string): Promise<void> {
 export async function fetchEvents(): Promise<LcpEvent[]> {
   const { data, error } = await supabase
     .from('lcp_events')
+    // NOTE: add show_on_org_calendar here after Byron runs migration 0039
     .select('id, kind, session_id, title, starts_at, ends_at, location, mandatory, rsvp_enabled, recurrence_id')
     .order('starts_at', { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as LcpEvent[];
+}
+
+export async function fetchOrgCalLcpEvents(): Promise<LcpEvent[]> {
+  const { data, error } = await supabase
+    .from('lcp_events')
+    .select('id, kind, session_id, title, starts_at, ends_at, location, mandatory, rsvp_enabled, recurrence_id, show_on_org_calendar')
+    .eq('show_on_org_calendar', true)
+    .order('starts_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as LcpEvent[];
+}
+
+export async function updateEvent(
+  id: string,
+  patch: Partial<Pick<LcpEvent, 'show_on_org_calendar' | 'mandatory' | 'location' | 'title'>>,
+): Promise<void> {
+  const { error } = await supabase.from('lcp_events').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export async function createEvents(
@@ -218,6 +237,7 @@ export async function createEvents(
     location: string | null;
     mandatory: boolean;
     recurrence_id: string | null;
+    // NOTE: add show_on_org_calendar here after Byron runs migration 0039
     created_by: string;
   }>,
 ): Promise<void> {

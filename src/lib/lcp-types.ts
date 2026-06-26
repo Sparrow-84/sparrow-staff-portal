@@ -72,6 +72,7 @@ export interface LcpEvent {
   mandatory: boolean;
   rsvp_enabled: boolean;
   recurrence_id: string | null;
+  show_on_org_calendar: boolean; // added by migration 0039
 }
 
 export interface Attendance {

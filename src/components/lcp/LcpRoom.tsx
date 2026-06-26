@@ -297,6 +297,7 @@ export function LcpRoom() {
         onClose={() => setDetailEvent(null)}
         onLogSession={(ev) => { setDetailEvent(null); openBrief(ev); }}
         onDeleted={() => { setDetailEvent(null); void load(); }}
+        onChanged={load}
       />
       <AddEventPanel
         open={addEventOpen}
