@@ -205,7 +205,12 @@ export interface Resource {
   kind: ResourceKind;
   audience: ResourceAudience;
   title: string;
-  drive_url: string;
+  drive_url: string | null;
+  content: string | null;
+  response_prompt: string | null;
+  due_date: string | null;
+  locked: boolean;
+  sort_order: number;
   created_at: string;
 }
 

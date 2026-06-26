@@ -13,6 +13,7 @@ import {
   deleteResource,
   fetchSessionResources,
   updateCurriculumSession,
+  updateResource,
 } from '@/lib/lcp';
 import { Drawer } from './Drawer';
 
@@ -25,6 +26,8 @@ interface Props {
   onClose: () => void;
   onSaved: (updated: CurriculumSessionDetail) => void;
 }
+
+type EditMode = { kind: 'none' } | { kind: 'add' } | { kind: 'edit'; resource: Resource };
 
 export function SessionEditPanel({
   open,
@@ -44,15 +47,21 @@ export function SessionEditPanel({
   const [resources, setResources] = useState<Resource[]>([]);
   const [resLoading, setResLoading] = useState(false);
 
-  const [addingResource, setAddingResource] = useState(false);
+  const [editMode, setEditMode] = useState<EditMode>({ kind: 'none' });
+
+  // Unified resource form state (shared between add and edit)
   const [resTitle, setResTitle] = useState('');
   const [resKind, setResKind] = useState<ResourceKind>('handout');
   const [resAudience, setResAudience] = useState<ResourceAudience>('participant');
   const [resUrl, setResUrl] = useState('');
+  const [resContent, setResContent] = useState('');
+  const [resPrompt, setResPrompt] = useState('');
+  const [resLocked, setResLocked] = useState(false);
+  const [resSortOrder, setResSortOrder] = useState(0);
+  const [resDueDate, setResDueDate] = useState('');
   const [resSaving, setResSaving] = useState(false);
   const [resError, setResError] = useState<string | null>(null);
 
-  // Reset form when a different session is selected
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!session) return;
@@ -60,10 +69,10 @@ export function SessionEditPanel({
     setFocus(session.focus ?? '');
     setScripture(session.scripture ?? '');
     setSaveError(null);
-    setAddingResource(false);
+    setEditMode({ kind: 'none' });
     setResError(null);
     loadResources(session.id);
-  }, [session?.id]); // intentional: sync only when selected session changes
+  }, [session?.id]);
 
   async function loadResources(sessionId: number) {
     setResLoading(true);
@@ -98,27 +107,59 @@ export function SessionEditPanel({
     setResources((prev) => prev.filter((r) => r.id !== id));
   }
 
-  async function handleAddResource() {
-    if (!session || !resTitle.trim() || !resUrl.trim()) return;
+  function openAdd() {
+    setResTitle('');
+    setResKind('handout');
+    setResAudience('participant');
+    setResUrl('');
+    setResContent('');
+    setResPrompt('');
+    setResLocked(false);
+    setResSortOrder(resources.length);
+    setResDueDate('');
+    setResError(null);
+    setEditMode({ kind: 'add' });
+  }
+
+  function openEdit(r: Resource) {
+    setResTitle(r.title);
+    setResKind(r.kind);
+    setResAudience(r.audience);
+    setResUrl(r.drive_url ?? '');
+    setResContent(r.content ?? '');
+    setResPrompt(r.response_prompt ?? '');
+    setResLocked(r.locked);
+    setResSortOrder(r.sort_order);
+    setResDueDate(r.due_date ?? '');
+    setResError(null);
+    setEditMode({ kind: 'edit', resource: r });
+  }
+
+  async function handleSaveResource() {
+    if (!session || !resTitle.trim()) return;
     setResSaving(true);
     setResError(null);
     try {
-      await addResource({
-        session_id: session.id,
+      const patch = {
+        title: resTitle.trim(),
         kind: resKind,
         audience: resAudience,
-        title: resTitle.trim(),
-        drive_url: resUrl.trim(),
-        created_by: currentUserId,
-      });
-      setResTitle('');
-      setResKind('handout');
-      setResAudience('participant');
-      setResUrl('');
-      setAddingResource(false);
+        drive_url: resUrl.trim() || null,
+        content: resContent.trim() || null,
+        response_prompt: resPrompt.trim() || null,
+        locked: resLocked,
+        sort_order: resSortOrder,
+        due_date: resDueDate || null,
+      };
+      if (editMode.kind === 'add') {
+        await addResource({ ...patch, session_id: session.id, created_by: currentUserId });
+      } else if (editMode.kind === 'edit') {
+        await updateResource(editMode.resource.id, patch);
+      }
+      setEditMode({ kind: 'none' });
       await loadResources(session.id);
     } catch (e) {
-      setResError(e instanceof Error ? e.message : 'Could not add material.');
+      setResError(e instanceof Error ? e.message : 'Could not save material.');
     } finally {
       setResSaving(false);
     }
@@ -129,6 +170,8 @@ export function SessionEditPanel({
     (title !== session.title ||
       focus !== (session.focus ?? '') ||
       scripture !== (session.scripture ?? ''));
+
+  const isEditing = editMode.kind !== 'none';
 
   return (
     <Drawer
@@ -151,7 +194,7 @@ export function SessionEditPanel({
     >
       {session && (
         <div className="space-y-5">
-          {/* Session content fields */}
+          {/* Session fields */}
           <div>
             <label className="field-label">Title</label>
             <input
@@ -194,9 +237,9 @@ export function SessionEditPanel({
           <div className="border-t border-sparrow-rule pt-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-sparrow-ink">Materials</h3>
-              {!addingResource && (
+              {!isEditing && (
                 <button
-                  onClick={() => setAddingResource(true)}
+                  onClick={openAdd}
                   className="text-sm text-sparrow-green hover:underline"
                 >
                   + Add material
@@ -204,19 +247,24 @@ export function SessionEditPanel({
               )}
             </div>
 
-            {/* Add resource form */}
-            {addingResource && (
+            {/* Resource form — shown for both add and edit */}
+            {isEditing && (
               <div className="mb-4 space-y-3 rounded-xl border border-sparrow-green/30 bg-sparrow-sage/20 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+                  {editMode.kind === 'add' ? 'New material' : 'Edit material'}
+                </p>
+
                 <div>
                   <label className="field-label">Title</label>
                   <input
                     type="text"
                     value={resTitle}
                     onChange={(e) => setResTitle(e.target.value)}
-                    placeholder="e.g. Week 1 Handout"
+                    placeholder="e.g. Week 1 Devotional"
                     className="field-input"
                   />
                 </div>
+
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="field-label">Type</label>
@@ -244,8 +292,40 @@ export function SessionEditPanel({
                     </select>
                   </div>
                 </div>
+
                 <div>
-                  <label className="field-label">Google Drive URL</label>
+                  <label className="field-label">
+                    Content{' '}
+                    <span className="font-normal text-sparrow-gray">(paste or write the devotional / reading here)</span>
+                  </label>
+                  <textarea
+                    value={resContent}
+                    onChange={(e) => setResContent(e.target.value)}
+                    rows={6}
+                    className="field-input resize-y"
+                    placeholder="Participants will read this directly in the app. Use line breaks to separate paragraphs."
+                  />
+                </div>
+
+                <div>
+                  <label className="field-label">
+                    Reflection question{' '}
+                    <span className="font-normal text-sparrow-gray">(optional)</span>
+                  </label>
+                  <textarea
+                    value={resPrompt}
+                    onChange={(e) => setResPrompt(e.target.value)}
+                    rows={2}
+                    className="field-input resize-none"
+                    placeholder="e.g. What is one thing you want to change this week?"
+                  />
+                </div>
+
+                <div>
+                  <label className="field-label">
+                    Google Drive URL{' '}
+                    <span className="font-normal text-sparrow-gray">(optional — use if you prefer a Drive link instead)</span>
+                  </label>
                   <input
                     type="url"
                     value={resUrl}
@@ -254,20 +334,57 @@ export function SessionEditPanel({
                     className="field-input"
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="field-label">
+                      Due date{' '}
+                      <span className="font-normal text-sparrow-gray">(optional)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={resDueDate}
+                      onChange={(e) => setResDueDate(e.target.value)}
+                      className="field-input"
+                    />
+                    <p className="mt-1 text-xs text-sparrow-gray">Defaults to Sunday midnight if blank.</p>
+                  </div>
+                  <div>
+                    <label className="field-label">Order</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={resSortOrder}
+                      onChange={(e) => setResSortOrder(Number(e.target.value))}
+                      className="field-input"
+                    />
+                    <p className="mt-1 text-xs text-sparrow-gray">Lower number = shows first.</p>
+                  </div>
+                </div>
+
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={resLocked}
+                    onChange={(e) => setResLocked(e.target.checked)}
+                    className="h-4 w-4 rounded accent-sparrow-green"
+                  />
+                  <span className="text-sm text-sparrow-ink">
+                    Locked — participants see the title but not the content yet
+                  </span>
+                </label>
+
                 {resError && <p className="text-sm text-priority-p1">{resError}</p>}
                 <div className="flex gap-2">
                   <button
-                    onClick={handleAddResource}
-                    disabled={resSaving || !resTitle.trim() || !resUrl.trim()}
+                    onClick={handleSaveResource}
+                    disabled={resSaving || !resTitle.trim()}
                     className="btn-primary flex-1"
                   >
-                    {resSaving ? 'Adding…' : 'Add'}
+                    {resSaving ? 'Saving…' : editMode.kind === 'add' ? 'Add' : 'Save changes'}
                   </button>
                   <button
-                    onClick={() => {
-                      setAddingResource(false);
-                      setResError(null);
-                    }}
+                    onClick={() => { setEditMode({ kind: 'none' }); setResError(null); }}
                     className="btn-ghost"
                   >
                     Cancel
@@ -276,41 +393,49 @@ export function SessionEditPanel({
               </div>
             )}
 
-            {/* Resources list */}
-            {resLoading ? (
-              <p className="text-sm text-sparrow-gray">Loading…</p>
-            ) : resources.length === 0 ? (
-              <p className="text-sm text-sparrow-gray">No materials attached yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {resources.map((r) => (
-                  <li
-                    key={r.id}
-                    className="flex items-start gap-2 rounded-lg border border-sparrow-rule p-2.5 text-sm"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <a
-                        href={r.drive_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-sparrow-green hover:underline"
-                      >
-                        {r.title}
-                      </a>
-                      <p className="mt-0.5 text-xs text-sparrow-gray">
-                        {RESOURCE_KIND_LABEL[r.kind]} ·{' '}
-                        {RESOURCE_AUDIENCE_LABEL[r.audience]}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteResource(r.id)}
-                      className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1"
+            {/* Resource list */}
+            {!isEditing && (
+              resLoading ? (
+                <p className="text-sm text-sparrow-gray">Loading…</p>
+              ) : resources.length === 0 ? (
+                <p className="text-sm text-sparrow-gray">No materials attached yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {resources.map((r) => (
+                    <li
+                      key={r.id}
+                      className="flex items-start gap-2 rounded-lg border border-sparrow-rule p-2.5 text-sm"
                     >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sparrow-ink">{r.title}</p>
+                        <p className="mt-0.5 text-xs text-sparrow-gray">
+                          {RESOURCE_KIND_LABEL[r.kind]} · {RESOURCE_AUDIENCE_LABEL[r.audience]}
+                          {r.locked ? ' · 🔒 Locked' : ''}
+                          {r.content
+                            ? ' · Has content'
+                            : r.drive_url
+                              ? ' · Drive link'
+                              : ' · No content yet'}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <button
+                          onClick={() => openEdit(r)}
+                          className="text-xs text-sparrow-green hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteResource(r.id)}
+                          className="text-xs text-sparrow-gray hover:text-priority-p1"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )
             )}
           </div>
         </div>

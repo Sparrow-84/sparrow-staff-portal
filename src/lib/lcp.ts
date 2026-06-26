@@ -542,12 +542,24 @@ export async function updateCurriculumUnit(
 }
 
 export async function fetchSessionResources(sessionId: number): Promise<Resource[]> {
+  // Include 0040 columns; fall back to pre-0040 select if migration not yet applied.
   const { data, error } = await supabase
     .from('lcp_resources')
-    .select('id, session_id, kind, audience, title, drive_url, created_at')
+    .select('id, session_id, kind, audience, title, drive_url, content, response_prompt, due_date, locked, sort_order, created_at')
     .eq('session_id', sessionId)
+    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
-  if (error) throw new Error(error.message);
+  if (error) {
+    const { data: d2, error: e2 } = await supabase
+      .from('lcp_resources')
+      .select('id, session_id, kind, audience, title, drive_url, created_at')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true });
+    if (e2) throw new Error(e2.message);
+    return ((d2 ?? []) as Omit<Resource, 'content' | 'response_prompt' | 'due_date' | 'locked' | 'sort_order'>[]).map(
+      (r) => ({ ...r, content: null, response_prompt: null, due_date: null, locked: false, sort_order: 0 }),
+    );
+  }
   return (data ?? []) as Resource[];
 }
 
@@ -556,12 +568,25 @@ export interface ResourceInput {
   kind: ResourceKind;
   audience: ResourceAudience;
   title: string;
-  drive_url: string;
+  drive_url: string | null;
+  content?: string | null;
+  response_prompt?: string | null;
+  due_date?: string | null;
+  locked?: boolean;
+  sort_order?: number;
   created_by: string;
 }
 
 export async function addResource(input: ResourceInput): Promise<void> {
   const { error } = await supabase.from('lcp_resources').insert(input);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateResource(
+  id: string,
+  patch: Partial<Pick<Resource, 'content' | 'response_prompt' | 'due_date' | 'locked' | 'sort_order' | 'title' | 'kind' | 'audience' | 'drive_url'>>,
+): Promise<void> {
+  const { error } = await supabase.from('lcp_resources').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 }
 
