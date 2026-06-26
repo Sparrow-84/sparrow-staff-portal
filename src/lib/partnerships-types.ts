@@ -1,7 +1,9 @@
 // Partnerships Room ("CRM") — types + the stewardship-status derivation.
-// Mirrors the schema in supabase/migrations/0008_partnerships.sql. The room's organizing
-// idea (from the Partnership System Architecture): every relationship needs a named OWNER
-// and a CADENCE — a record without a rhythm is the defect the room exists to surface.
+// Mirrors the schema in supabase/migrations/0008_partnerships.sql and
+// 0037_partnerships_schema_v2.sql. The room's organizing idea (from the
+// Partnership System Architecture): every relationship needs a named OWNER
+// and a CADENCE — a record without a rhythm is the defect the room exists
+// to surface.
 
 export type PartnerType =
   | 'donor'
@@ -11,10 +13,13 @@ export type PartnerType =
   | 'prayer'
   | 'fst'
   | 'business'
-  | 'foundation';
-export type PartnerStage = 'prospect' | 'active' | 'lapsed' | 'inactive';
+  | 'foundation'
+  | 'advisory';
+export type PartnerStage = 'prospect' | 'active' | 'lapsed' | 'reengaging' | 'inactive';
 export type DonorTier = 'first_time' | 'recurring' | 'major' | 'lapsed';
 export type TouchpointMethod = 'email' | 'phone' | 'in_person' | 'text' | 'letter' | 'event' | 'other';
+export type GivingMethod = 'Givebutter' | 'Check' | 'Cash' | 'Stock' | 'Other';
+export type MouStatus = 'not_needed' | 'needed' | 'on_file';
 
 export interface Partner {
   id: string;
@@ -34,6 +39,14 @@ export interface Partner {
   notes: string | null;
   active: boolean;
   created_at: string;
+  // donor-only (0037)
+  giving_method: string | null;
+  newsletter_subscribed: boolean;
+  first_gift_date: string | null;
+  // community/church-only (0037)
+  sparrow_provides: string | null;
+  partner_provides: string | null;
+  mou_status: MouStatus | null;
 }
 
 export interface Touchpoint {
@@ -55,13 +68,15 @@ export const PARTNER_TYPE: Record<PartnerType, { label: string; icon: string }> 
   fst:        { label: 'FST member',       icon: '👪' },
   business:   { label: 'Business partner', icon: '🏢' },
   foundation: { label: 'Foundation',       icon: '🏛️' },
+  advisory:   { label: 'Advisory',         icon: '🧭' },
 };
 
 export const PARTNER_STAGE: Record<PartnerStage, { label: string; chip: string }> = {
-  prospect: { label: 'Prospect', chip: 'bg-priority-p3/15 text-priority-p3' },
-  active:   { label: 'Active',   chip: 'bg-sparrow-green/10 text-sparrow-green' },
-  lapsed:   { label: 'Lapsed',   chip: 'bg-priority-p1/15 text-priority-p1' },
-  inactive: { label: 'Inactive', chip: 'bg-sparrow-mist text-sparrow-gray' },
+  prospect:   { label: 'Prospect',     chip: 'bg-priority-p3/15 text-priority-p3' },
+  active:     { label: 'Active',       chip: 'bg-sparrow-green/10 text-sparrow-green' },
+  reengaging: { label: 'Re-engaging',  chip: 'bg-sparrow-gold/20 text-sparrow-ink' },
+  lapsed:     { label: 'Lapsed',       chip: 'bg-priority-p1/15 text-priority-p1' },
+  inactive:   { label: 'Inactive',     chip: 'bg-sparrow-mist text-sparrow-gray' },
 };
 
 export const DONOR_TIER: Record<DonorTier, string> = {
@@ -81,6 +96,14 @@ export const TOUCHPOINT_METHOD: Record<TouchpointMethod, string> = {
   other: 'Other',
 };
 
+export const MOU_STATUS: Record<MouStatus, string> = {
+  not_needed: 'Not needed',
+  needed: 'Needed (not on file)',
+  on_file: 'On file',
+};
+
+export const GIVING_METHODS: GivingMethod[] = ['Givebutter', 'Check', 'Cash', 'Stock', 'Other'];
+
 export const PARTNER_TYPES: PartnerType[] = [
   'donor',
   'church',
@@ -90,8 +113,9 @@ export const PARTNER_TYPES: PartnerType[] = [
   'fst',
   'business',
   'foundation',
+  'advisory',
 ];
-export const PARTNER_STAGES: PartnerStage[] = ['prospect', 'active', 'lapsed', 'inactive'];
+export const PARTNER_STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'lapsed', 'inactive'];
 export const TOUCHPOINT_METHODS: TouchpointMethod[] = [
   'email',
   'phone',

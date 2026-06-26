@@ -20,6 +20,7 @@ const DEFAULT_CADENCE: Record<PartnerType, number> = {
   fst: 30,
   business: 180,
   foundation: 120,
+  advisory: 365,
 };
 
 export function AddPartnerPanel({
@@ -137,7 +138,7 @@ export function AddPartnerPanel({
           <div>
             <label className="field-label" htmlFor="pa-stage">Stage</label>
             <select id="pa-stage" className="field-input" value={stage} onChange={(e) => setStage(e.target.value as PartnerStage)}>
-              {(['prospect', 'active', 'lapsed', 'inactive'] as PartnerStage[]).map((s) => (
+              {(['prospect', 'active', 'reengaging', 'lapsed', 'inactive'] as PartnerStage[]).map((s) => (
                 <option key={s} value={s}>{PARTNER_STAGE[s].label}</option>
               ))}
             </select>
@@ -148,9 +149,11 @@ export function AddPartnerPanel({
           <label className="field-label" htmlFor="pa-owner">Owner</label>
           <select id="pa-owner" className="field-input" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
             <option value="">Unassigned</option>
-            {profiles.map((p) => (
-              <option key={p.id} value={p.id}>{p.full_name}</option>
-            ))}
+            {profiles
+              .filter((p) => p.role === 'admin' || p.department === 'partnerships' || p.partnerships_access)
+              .map((p) => (
+                <option key={p.id} value={p.id}>{p.full_name}</option>
+              ))}
           </select>
           <p className="mt-1 text-xs text-sparrow-gray">
             Every relationship needs a named owner — it's the precondition for stewardship.

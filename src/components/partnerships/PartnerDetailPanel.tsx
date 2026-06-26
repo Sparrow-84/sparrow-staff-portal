@@ -3,6 +3,8 @@ import type { Profile } from '@/lib/types';
 import { fetchTouchpoints, logTouchpoint, updatePartner } from '@/lib/partnerships';
 import {
   DONOR_TIER,
+  GIVING_METHODS,
+  MOU_STATUS,
   PARTNER_STAGE,
   PARTNER_TYPE,
   STEWARDSHIP,
@@ -12,6 +14,7 @@ import {
   shortDate,
   stewardshipStatus,
   type DonorTier,
+  type MouStatus,
   type Partner,
   type PartnerStage,
   type Touchpoint,
@@ -19,8 +22,9 @@ import {
 } from '@/lib/partnerships-types';
 import { Drawer } from '../lcp/Drawer';
 
-const STAGES: PartnerStage[] = ['prospect', 'active', 'lapsed', 'inactive'];
+const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'lapsed', 'inactive'];
 const TIERS: DonorTier[] = ['first_time', 'recurring', 'major', 'lapsed'];
+const MOU_STATUSES: MouStatus[] = ['not_needed', 'needed', 'on_file'];
 
 export function PartnerDetailPanel({
   open,
@@ -68,6 +72,10 @@ export function PartnerDetailPanel({
   const type = PARTNER_TYPE[partner.type];
   const status = stewardshipStatus(partner);
   const loggerName = (id: string | null) => (id ? profiles.find((p) => p.id === id)?.full_name ?? '—' : '—');
+  const ownerProfiles = profiles.filter((p) => p.role === 'admin' || p.department === 'partnerships' || p.partnerships_access);
+
+  const isDonor = partner.type === 'donor';
+  const isCommunityOrChurch = partner.type === 'community' || partner.type === 'church';
 
   async function patch(p: Parameters<typeof updatePartner>[1]) {
     if (!partner) return;
@@ -164,7 +172,7 @@ export function PartnerDetailPanel({
               className="field-input mt-0"
             >
               <option value="">Unassigned</option>
-              {profiles.map((p) => (
+              {ownerProfiles.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.full_name}
                 </option>
@@ -199,7 +207,7 @@ export function PartnerDetailPanel({
               className="field-input mt-0"
             />
           </Field>
-          {partner.type === 'donor' && (
+          {isDonor && (
             <Field label="Donor tier">
               <select
                 value={partner.donor_tier ?? ''}
@@ -217,6 +225,114 @@ export function PartnerDetailPanel({
             </Field>
           )}
         </section>
+
+        {/* Donor-only section */}
+        {isDonor && (
+          <section className="space-y-3 rounded-xl border border-sparrow-rule/70 p-3">
+            <span className="field-label block">Donor details</span>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Giving method">
+                <select
+                  value={partner.giving_method ?? ''}
+                  onChange={(e) => void patch({ giving_method: e.target.value || null })}
+                  disabled={busy}
+                  className="field-input mt-0"
+                >
+                  <option value="">—</option>
+                  {GIVING_METHODS.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="First gift date">
+                <input
+                  type="date"
+                  defaultValue={partner.first_gift_date ?? ''}
+                  onBlur={(e) => {
+                    const v = e.target.value || null;
+                    if (v !== (partner.first_gift_date ?? null)) void patch({ first_gift_date: v });
+                  }}
+                  disabled={busy}
+                  className="field-input mt-0"
+                />
+              </Field>
+            </div>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={partner.newsletter_subscribed}
+                onChange={(e) => void patch({ newsletter_subscribed: e.target.checked })}
+                disabled={busy}
+                className="h-4 w-4 rounded border-sparrow-rule accent-sparrow-green"
+              />
+              <span className="text-sm text-sparrow-ink">Newsletter subscribed</span>
+            </label>
+          </section>
+        )}
+
+        {/* Community/Church-only section */}
+        {isCommunityOrChurch && (
+          <section className="space-y-3 rounded-xl border border-sparrow-rule/70 p-3">
+            <span className="field-label block">Partnership terms</span>
+            <div>
+              <span className="field-label">What Sparrow provides</span>
+              <textarea
+                defaultValue={partner.sparrow_provides ?? ''}
+                onBlur={(e) => {
+                  const v = e.target.value.trim() || null;
+                  if (v !== (partner.sparrow_provides ?? null)) void patch({ sparrow_provides: v });
+                }}
+                rows={2}
+                placeholder="Services, support, or access Sparrow offers…"
+                disabled={busy}
+                className="field-input"
+              />
+            </div>
+            <div>
+              <span className="field-label">What they provide</span>
+              <textarea
+                defaultValue={partner.partner_provides ?? ''}
+                onBlur={(e) => {
+                  const v = e.target.value.trim() || null;
+                  if (v !== (partner.partner_provides ?? null)) void patch({ partner_provides: v });
+                }}
+                rows={2}
+                placeholder="Services, referrals, or resources they offer Sparrow…"
+                disabled={busy}
+                className="field-input"
+              />
+            </div>
+            <div>
+              <span className="field-label">MOU status</span>
+              <select
+                value={partner.mou_status ?? ''}
+                onChange={(e) => void patch({ mou_status: (e.target.value || null) as MouStatus | null })}
+                disabled={busy}
+                className="field-input mt-0"
+              >
+                <option value="">—</option>
+                {MOU_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {MOU_STATUS[s]}
+                  </option>
+                ))}
+              </select>
+              {partner.mou_status === 'needed' && (
+                <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  No MOU on file — needed for this relationship. Coordinate with Susanna to create one.
+                </div>
+              )}
+              {partner.mou_status === 'on_file' && (
+                <p className="mt-1 text-xs font-medium text-sparrow-green">On file ✓</p>
+              )}
+              <p className="mt-2 text-xs text-sparrow-gray">
+                An MOU is needed when both organizations are formally doing something for each other — services, client referrals, or access to participants. If you're not sure, ask Susanna.
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Details — editable; each field saves on blur */}
         <section className="space-y-3">

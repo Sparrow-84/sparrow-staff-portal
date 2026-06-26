@@ -1,6 +1,8 @@
 import { supabase } from './supabase';
 import type {
   DonorTier,
+  GivingMethod,
+  MouStatus,
   Partner,
   PartnerStage,
   PartnerType,
@@ -11,6 +13,8 @@ import type {
 // All reads/writes are gated by RLS (0008_partnerships.sql): partnerships staff + admins
 // manage everything; a partner's named owner sees/stewards their own.
 
+// NOTE: giving_method, newsletter_subscribed, first_gift_date, sparrow_provides,
+// partner_provides, mou_status are added here after running migration 0037.
 const PARTNER_COLS =
   'id, name, type, stage, owner_id, organization, contact_name, email, phone, address, donor_tier, cadence_days, last_touchpoint_at, source, notes, active, created_at';
 
@@ -65,6 +69,12 @@ export async function updatePartner(
       | 'source'
       | 'notes'
       | 'active'
+      | 'giving_method'
+      | 'newsletter_subscribed'
+      | 'first_gift_date'
+      | 'sparrow_provides'
+      | 'partner_provides'
+      | 'mou_status'
     >
   >,
 ): Promise<void> {
@@ -114,3 +124,17 @@ export async function syncDueTouchpointTasks(): Promise<number> {
   if (error) throw new Error(error.message);
   return (data as number | null) ?? 0;
 }
+
+/**
+ * Push a "Re-engage" task for every lapsed partner with an owner (dedup-safe).
+ * Requires migration 0036. The task resolves automatically when the partner's stage
+ * is changed off 'lapsed' via the on_partner_stage_changed DB trigger.
+ */
+export async function syncLapsedPartnerTasks(): Promise<number> {
+  const { data, error } = await supabase.rpc('emit_lapsed_partner_tasks');
+  if (error) throw new Error(error.message);
+  return (data as number | null) ?? 0;
+}
+
+// Re-export types for convenience
+export type { GivingMethod, MouStatus };
