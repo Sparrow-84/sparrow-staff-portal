@@ -4,23 +4,33 @@ import type {
   InvMonthlySubmission, InvAddition, InvRemoval, InvComment,
   InvItemCondition, InvCostBasis, InvCostSource, InvExitMethod,
   InvBentonSchedule, InvConsumablesSnapshot, InvBatchTally,
+  InvFlipStatus, InvHouseFlip, InvFlipItemCheck,
+  InvFlipLeaveBehind, InvFlipNewItem,
 } from './inventory-types';
 
 // ── Column sets ───────────────────────────────────────────────────────────
 
+const LOC_COLS = 'id, name, sort_order, is_remote, is_lcp_house';
+
 const SUB_COLS = `
   *,
-  location:inv_locations(id, name, sort_order),
+  location:inv_locations(${LOC_COLS}),
   submitter:profiles!submitted_by(id, full_name)
 `;
 
 const SUB_DETAIL_COLS = `
   *,
-  location:inv_locations(id, name, sort_order),
+  location:inv_locations(${LOC_COLS}),
   submitter:profiles!submitted_by(id, full_name),
   additions:inv_additions(*, sub_location:inv_sub_locations(*)),
   removals:inv_removals(*, item:inv_items(id, description, quantity, unit_cost, serial_number)),
   comments:inv_comments(*, author:profiles!author_id(id, full_name))
+`;
+
+const FLIP_COLS = `
+  *,
+  location:inv_locations(${LOC_COLS}),
+  initiator:profiles!initiated_by(id, full_name)
 `;
 
 // ── Locations ─────────────────────────────────────────────────────────────
@@ -28,7 +38,7 @@ const SUB_DETAIL_COLS = `
 export async function fetchAllLocations(): Promise<InvLocation[]> {
   const { data, error } = await supabase
     .from('inv_locations')
-    .select('id, name, sort_order')
+    .select(LOC_COLS)
     .order('sort_order');
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -37,7 +47,7 @@ export async function fetchAllLocations(): Promise<InvLocation[]> {
 export async function fetchMyLocations(): Promise<InvLocation[]> {
   const { data, error } = await supabase
     .from('inv_location_assignments')
-    .select('location:inv_locations(id, name, sort_order)');
+    .select(`location:inv_locations(${LOC_COLS})`);
   if (error) throw new Error(error.message);
   const locs = (data ?? []).map((d: any) => d.location).filter(Boolean) as InvLocation[];
   return locs.sort((a, b) => a.sort_order - b.sort_order);
@@ -98,10 +108,10 @@ export async function fetchAllCurrentPeriodSubmissions(
     .from('inv_monthly_submissions')
     .select(SUB_COLS)
     .eq('period_month', month)
-    .eq('period_year', year)
-    .order('inv_locations(sort_order)');
+    .eq('period_year', year);
   if (error) throw new Error(error.message);
-  return (data ?? []) as InvMonthlySubmission[];
+  const rows = (data ?? []) as InvMonthlySubmission[];
+  return rows.sort((a, b) => (a.location?.sort_order ?? 0) - (b.location?.sort_order ?? 0));
 }
 
 export async function fetchSubmission(id: string): Promise<InvMonthlySubmission> {
@@ -381,5 +391,210 @@ export async function ensureBatchTalliesExist(year: number, categories: readonly
   const { error } = await supabase.from('inv_batch_tallies').insert(
     missing.map((category) => ({ category, year })),
   );
+  if (error) throw new Error(error.message);
+}
+
+// ── House Flip ────────────────────────────────────────────────────────────
+
+export async function fetchActiveFlipForLocation(locationId: string): Promise<InvHouseFlip | null> {
+  const { data, error } = await supabase
+    .from('inv_house_flips')
+    .select(FLIP_COLS)
+    .eq('location_id', locationId)
+    .neq('status', 'submitted')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as InvHouseFlip | null;
+}
+
+export async function fetchAllActiveFlips(): Promise<InvHouseFlip[]> {
+  const { data, error } = await supabase
+    .from('inv_house_flips')
+    .select(FLIP_COLS)
+    .neq('status', 'submitted')
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as InvHouseFlip[];
+}
+
+export async function fetchRecentFlips(limit = 10): Promise<InvHouseFlip[]> {
+  const { data, error } = await supabase
+    .from('inv_house_flips')
+    .select(FLIP_COLS)
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as InvHouseFlip[];
+}
+
+export async function startHouseFlip(locationId: string): Promise<InvHouseFlip> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: flip, error: flipErr } = await supabase
+    .from('inv_house_flips')
+    .insert({ location_id: locationId, initiated_by: user.id })
+    .select(FLIP_COLS)
+    .single();
+  if (flipErr) throw new Error(flipErr.message);
+
+  // Populate item checks from active register items for this house
+  const { data: items, error: itemErr } = await supabase
+    .from('inv_items')
+    .select('id')
+    .eq('location_id', locationId)
+    .eq('status', 'active');
+  if (itemErr) throw new Error(itemErr.message);
+
+  if (items && items.length > 0) {
+    const checks = items.map((item) => ({ flip_id: flip.id, item_id: item.id }));
+    const { error: checkErr } = await supabase.from('inv_flip_item_checks').insert(checks);
+    if (checkErr) throw new Error(checkErr.message);
+  }
+
+  return flip as InvHouseFlip;
+}
+
+export async function fetchFlipItemChecks(flipId: string): Promise<InvFlipItemCheck[]> {
+  const { data, error } = await supabase
+    .from('inv_flip_item_checks')
+    .select('*, item:inv_items(*, sub_location:inv_sub_locations(*))')
+    .eq('flip_id', flipId)
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as InvFlipItemCheck[];
+}
+
+export async function setItemChecked(checkId: string, checked: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('inv_flip_item_checks')
+    .update({ checked_present: checked })
+    .eq('id', checkId);
+  if (error) throw new Error(error.message);
+}
+
+export async function confirmMissingAndAdvance(
+  flipId: string,
+  confirmedMissingCheckIds: string[],
+): Promise<void> {
+  // Set confirmed_missing for the confirmed ones
+  if (confirmedMissingCheckIds.length > 0) {
+    const { error } = await supabase
+      .from('inv_flip_item_checks')
+      .update({ confirmed_missing: true })
+      .in('id', confirmedMissingCheckIds);
+    if (error) throw new Error(error.message);
+  }
+  // Advance flip to leave_behinds
+  const { error } = await supabase
+    .from('inv_house_flips')
+    .update({ status: 'leave_behinds' })
+    .eq('id', flipId);
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchFlipLeaveBehinds(flipId: string): Promise<InvFlipLeaveBehind[]> {
+  const { data, error } = await supabase
+    .from('inv_flip_leave_behinds')
+    .select('*, sub_location:inv_sub_locations(*)')
+    .eq('flip_id', flipId)
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as InvFlipLeaveBehind[];
+}
+
+export async function addLeaveBehind(
+  flipId: string,
+  entry: {
+    description: string;
+    condition: string;
+    estimated_value: number | null;
+    sub_location_id: string | null;
+    keeping: boolean;
+    notes: string | null;
+  },
+): Promise<InvFlipLeaveBehind> {
+  const { data, error } = await supabase
+    .from('inv_flip_leave_behinds')
+    .insert({ flip_id: flipId, ...entry })
+    .select('*, sub_location:inv_sub_locations(*)')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as InvFlipLeaveBehind;
+}
+
+export async function deleteLeaveBehind(id: string): Promise<void> {
+  const { error } = await supabase.from('inv_flip_leave_behinds').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function advanceFlipStatus(flipId: string, newStatus: InvFlipStatus): Promise<void> {
+  const { error } = await supabase
+    .from('inv_house_flips')
+    .update({ status: newStatus })
+    .eq('id', flipId);
+  if (error) throw new Error(error.message);
+}
+
+export async function approveFlipForPurchasing(flipId: string, notes: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  const { error } = await supabase
+    .from('inv_house_flips')
+    .update({
+      status:             'purchasing',
+      shelly_approved_by: user.id,
+      shelly_approved_at: new Date().toISOString(),
+      shelly_notes:       notes || null,
+    })
+    .eq('id', flipId);
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchFlipNewItems(flipId: string): Promise<InvFlipNewItem[]> {
+  const { data, error } = await supabase
+    .from('inv_flip_new_items')
+    .select('*, sub_location:inv_sub_locations(*)')
+    .eq('flip_id', flipId)
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as InvFlipNewItem[];
+}
+
+export async function addFlipNewItem(
+  flipId: string,
+  entry: {
+    description: string;
+    serial_number: string | null;
+    is_batch: boolean;
+    batch_category: string | null;
+    condition: string;
+    is_donated: boolean;
+    quantity: number;
+    cost: number;
+    cost_basis: string;
+    cost_source: string;
+    sub_location_id: string | null;
+    notes: string | null;
+  },
+): Promise<InvFlipNewItem> {
+  const { data, error } = await supabase
+    .from('inv_flip_new_items')
+    .insert({ flip_id: flipId, ...entry })
+    .select('*, sub_location:inv_sub_locations(*)')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as InvFlipNewItem;
+}
+
+export async function deleteFlipNewItem(id: string): Promise<void> {
+  const { error } = await supabase.from('inv_flip_new_items').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function submitHouseFlip(flipId: string): Promise<void> {
+  const { error } = await supabase.rpc('inv_submit_house_flip', { p_flip_id: flipId });
   if (error) throw new Error(error.message);
 }

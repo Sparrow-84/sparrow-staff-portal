@@ -120,6 +120,8 @@ export interface InvLocation {
   id: string;
   name: string;
   sort_order: number;
+  is_remote: boolean;
+  is_lcp_house: boolean;
 }
 
 export interface InvSubLocation {
@@ -270,4 +272,83 @@ export function canSubmitForReview(
   sub: Pick<InvMonthlySubmission, 'nothing_came_in' | 'nothing_left' | 'additions' | 'removals'>,
 ): boolean {
   return isSectionAResolved(sub) && isSectionBResolved(sub);
+}
+
+// ── House Flip types ──────────────────────────────────────────────────────
+
+export type InvFlipStatus =
+  | 'walkthrough'
+  | 'leave_behinds'
+  | 'pending_shelly'
+  | 'purchasing'
+  | 'new_items'
+  | 'submitted';
+
+export const FLIP_STATUS_LABELS: Record<InvFlipStatus, string> = {
+  walkthrough:    'Walkthrough in progress',
+  leave_behinds:  'Logging leave-behinds',
+  pending_shelly: 'Awaiting supervisor approval',
+  purchasing:     'Purchasing',
+  new_items:      'Logging new items',
+  submitted:      'Complete',
+};
+
+export interface InvHouseFlip {
+  id: string;
+  location_id: string;
+  initiated_by: string;
+  status: InvFlipStatus;
+  shelly_approved_by: string | null;
+  shelly_approved_at: string | null;
+  shelly_notes: string | null;
+  submitted_by: string | null;
+  submitted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  location?: InvLocation;
+  initiator?: { id: string; full_name: string };
+}
+
+export interface InvFlipItemCheck {
+  id: string;
+  flip_id: string;
+  item_id: string;
+  checked_present: boolean;
+  confirmed_missing: boolean;
+  notes: string | null;
+  created_at: string;
+  item?: InvItem;
+}
+
+export interface InvFlipLeaveBehind {
+  id: string;
+  flip_id: string;
+  description: string;
+  condition: string;
+  estimated_value: number | null;
+  sub_location_id: string | null;
+  keeping: boolean;
+  notes: string | null;
+  created_at: string;
+  sub_location?: InvSubLocation;
+}
+
+export interface InvFlipNewItem {
+  id: string;
+  flip_id: string;
+  description: string;
+  serial_number: string | null;
+  is_batch: boolean;
+  batch_category: string | null;
+  condition: string;
+  is_donated: boolean;
+  quantity: number;
+  cost: number;
+  cost_basis: InvCostBasis;
+  cost_source: InvCostSource;
+  sub_location_id: string | null;
+  notes: string | null;
+  inv_item_id: string | null;
+  created_at: string;
+  sub_location?: InvSubLocation;
 }
