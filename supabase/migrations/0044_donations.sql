@@ -69,6 +69,15 @@ END $$;
 --   );
 -- Then this constraint will apply cleanly.
 
-ALTER TABLE partnership_comms
-  ADD CONSTRAINT IF NOT EXISTS partnership_comms_year_type_title_key
-  UNIQUE (year, comm_type, title);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name = 'partnership_comms'
+      AND constraint_name = 'partnership_comms_year_type_title_key'
+  ) THEN
+    ALTER TABLE partnership_comms
+      ADD CONSTRAINT partnership_comms_year_type_title_key
+      UNIQUE (year, comm_type, title);
+  END IF;
+END $$;
