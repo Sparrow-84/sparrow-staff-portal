@@ -5,6 +5,7 @@ export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' 
 interface Props {
   view: View;
   isAdmin: boolean;
+  isSusanna: boolean;
   lcpAccess: boolean;
   partnershipsAccess: boolean;
   opsAccess: boolean;
@@ -35,6 +36,7 @@ const SOON_ROOMS: string[] = [];
 function NavContent({
   view,
   isAdmin,
+  isSusanna,
   lcpAccess,
   partnershipsAccess,
   opsAccess,
@@ -43,6 +45,7 @@ function NavContent({
 }: {
   view: View;
   isAdmin: boolean;
+  isSusanna: boolean;
   lcpAccess: boolean;
   partnershipsAccess: boolean;
   opsAccess: boolean;
@@ -91,13 +94,19 @@ function NavContent({
 
         <div className="my-3 border-t border-sparrow-rule" />
         <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Rooms</p>
-        <button
-          onClick={() => onNavigate('twin-oaks')}
-          className={`${itemBase} ${view === 'twin-oaks' ? active : idle}`}
-        >
-          Twin Oaks
-        </button>
-        {lcpAccess ? (
+        {isSusanna ? (
+          <button
+            onClick={() => onNavigate('twin-oaks')}
+            className={`${itemBase} ${view === 'twin-oaks' ? active : idle}`}
+          >
+            Twin Oaks
+          </button>
+        ) : (
+          <span className={`${itemBase} cursor-default text-sparrow-gray/50`}>
+            Twin Oaks <LockIcon />
+          </span>
+        )}
+        {isSusanna || lcpAccess ? (
           <button onClick={() => onNavigate('lcp')} className={`${itemBase} ${view === 'lcp' ? active : idle}`}>
             LifeChange
           </button>
@@ -106,7 +115,7 @@ function NavContent({
             LifeChange <LockIcon />
           </span>
         )}
-        {partnershipsAccess ? (
+        {isSusanna || partnershipsAccess ? (
           <button
             onClick={() => onNavigate('partnerships')}
             className={`${itemBase} ${view === 'partnerships' ? active : idle}`}
@@ -154,7 +163,7 @@ function NavContent({
   );
 }
 
-export function Sidebar({ view, isAdmin, lcpAccess, partnershipsAccess, opsAccess, hasOnboarding, onNavigate, open, onClose }: Props) {
+export function Sidebar({ view, isAdmin, isSusanna, lcpAccess, partnershipsAccess, opsAccess, hasOnboarding, onNavigate, open, onClose }: Props) {
   return (
     <>
       {/* Desktop: static sidebar */}
@@ -162,6 +171,7 @@ export function Sidebar({ view, isAdmin, lcpAccess, partnershipsAccess, opsAcces
         <NavContent
           view={view}
           isAdmin={isAdmin}
+          isSusanna={isSusanna}
           lcpAccess={lcpAccess}
           partnershipsAccess={partnershipsAccess}
           opsAccess={opsAccess}
@@ -186,6 +196,7 @@ export function Sidebar({ view, isAdmin, lcpAccess, partnershipsAccess, opsAcces
         <NavContent
           view={view}
           isAdmin={isAdmin}
+          isSusanna={isSusanna}
           lcpAccess={lcpAccess}
           partnershipsAccess={partnershipsAccess}
           opsAccess={opsAccess}
