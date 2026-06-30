@@ -1,8 +1,8 @@
 const ROOMS = [
-  { icon: '🏡', name: 'Twin Oaks', desc: 'Resident records, lot management, work orders, pets, notices, and the Benton County filing system.' },
+  { icon: '🏡', name: 'Twin Oaks', desc: 'Resident records, lot management, work orders, pets, and notices — all organized by lot.' },
   { icon: '🌱', name: 'LCP', desc: 'Participant families, session tracking, goals, finance milestones, homework, messaging, and curriculum admin.' },
   { icon: '🤝', name: 'Partnerships', desc: 'Donor and partner relationships, stewardship cadences, collateral tracker, and communications.' },
-  { icon: '⚙️', name: 'Operations', desc: 'Inventory tracking, onboarding checklists, and shared documents.' },
+  { icon: '⚙️', name: 'Operations', desc: 'Inventory tracking, Benton County filing, onboarding checklists, and shared documents.' },
   { icon: '📄', name: 'Documents', desc: 'Staff handbook, policies, job descriptions, emergency procedures, and other org docs.' },
 ];
 

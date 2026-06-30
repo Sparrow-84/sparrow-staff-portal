@@ -28,7 +28,7 @@ const STEPS = [
   {
     icon: '🏡',
     title: 'Twin Oaks',
-    body: "Manage the property here. Resident records, lot details, work orders, pets, notices — it's all organized by lot. The Benton County filing system lives here too.",
+    body: "Manage the property here. Resident records, lot details, work orders, pets, and notices — all organized by lot.",
     tag: { icon: '🏡', label: 'Twin Oaks' },
   },
   {
@@ -46,7 +46,7 @@ const STEPS = [
   {
     icon: '⚙️',
     title: 'Operations',
-    body: "Inventory tracking, onboarding checklists, and shared documents are all here. If something needs to be counted, filed, or handed to a new team member — this is where it lives.",
+    body: "Inventory tracking, the Benton County filing system, onboarding checklists, and shared documents are all here. If something needs to be counted, filed, or handed to a new team member — this is where it lives.",
     tag: { icon: '⚙️', label: 'Operations' },
   },
   {
