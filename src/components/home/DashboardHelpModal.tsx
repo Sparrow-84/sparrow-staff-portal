@@ -89,12 +89,30 @@ export function DashboardHelpModal({
 
           {/* Footer */}
           <div className="flex items-center justify-between px-6 py-4">
-            <button
-              onClick={() => { onClose(); onReplayTour(); }}
-              className="text-sm font-medium text-sparrow-green hover:underline"
-            >
-              Replay welcome tour
-            </button>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => { onClose(); onReplayTour(); }}
+                className="text-left text-sm font-medium text-sparrow-green hover:underline"
+              >
+                Replay welcome tour
+              </button>
+              <button
+                onClick={() => {
+                  [
+                    'sparrow_staff_welcomed_v1',
+                    'sparrow_toc_toured_v1',
+                    'sparrow_lcp_toured_v1',
+                    'sparrow_partnerships_toured_v1',
+                    'sparrow_ops_toured_v1',
+                  ].forEach((k) => localStorage.removeItem(k));
+                  onClose();
+                  onReplayTour();
+                }}
+                className="text-left text-xs text-sparrow-gray hover:text-sparrow-ink hover:underline"
+              >
+                Reset all tours (show again from scratch)
+              </button>
+            </div>
             <button onClick={onClose} className="btn-secondary text-sm">
               Done
             </button>
