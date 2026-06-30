@@ -159,7 +159,7 @@ export async function fetchDonorStats(): Promise<DonorStat[]> {
     .select('partner_id, received_on, amount_above_10k')
     .not('partner_id', 'is', null);
   if (error) {
-    if (error.message.includes('relation') && error.message.includes('does not exist')) return [];
+    if (error.message.includes('does not exist') || error.message.includes('schema cache')) return [];
     throw new Error(error.message);
   }
   const map = new Map<string, DonorStat>();
@@ -192,7 +192,7 @@ export async function fetchDonations(partnerId: string): Promise<Donation[]> {
     .eq('partner_id', partnerId)
     .order('received_on', { ascending: false });
   if (error) {
-    if (error.message.includes('relation') && error.message.includes('does not exist')) return [];
+    if (error.message.includes('does not exist') || error.message.includes('schema cache')) return [];
     throw new Error(error.message);
   }
   return (data ?? []) as Donation[];
