@@ -22,6 +22,7 @@ import {
   type SessionLog as SessionLogRecord,
 } from '@/lib/lcp-types';
 import { isOverdue } from '@/lib/lcp-format';
+import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { FamilyDetailPanel } from './FamilyDetailPanel';
 import { SessionBriefPanel } from './SessionBriefPanel';
 import { SessionLog } from './SessionLog';
@@ -34,7 +35,47 @@ import { CurriculumAdmin } from './CurriculumAdmin';
 import { LcpProgress } from './LcpProgress';
 import { PhaseProgressBar } from './PhaseProgressBar';
 
+const LCP_TOUR_STEPS: TourStep[] = [
+  {
+    icon: '🌱',
+    title: 'LifeChange Program',
+    body: "This room is where you work with LCP families — tracking their progress, logging sessions, setting goals, assigning homework, and staying in touch throughout the program.",
+    tag: null,
+  },
+  {
+    icon: '👨‍👩‍👧',
+    title: 'Families',
+    body: "The Families tab lists all your active participants. You can see current session, overdue homework, and program status at a glance. Click any family to open their full detail panel.",
+    tag: { icon: '👨‍👩‍👧', label: 'Families' },
+  },
+  {
+    icon: '📁',
+    title: 'Family detail panel',
+    body: "Inside each family's panel: session progress, goals you've set together, finance milestones, homework assignments, direct messages, and your private staff notes — all in one place.",
+    tag: { icon: '📁', label: 'Family Detail' },
+  },
+  {
+    icon: '📓',
+    title: 'Session log',
+    body: "After each group session, log it here. Notes, attendance, what was covered. This builds a running record of the program that the whole team can reference.",
+    tag: { icon: '📓', label: 'Session Log' },
+  },
+  {
+    icon: '📚',
+    title: 'Curriculum admin',
+    body: "This is where program content is managed — session materials, devotionals, homework, and pre-session encouragement notes. Content is written once by the program director and reused every time that session runs.",
+    tag: { icon: '📚', label: 'Curriculum' },
+  },
+  {
+    icon: '✨',
+    title: "You're all set",
+    body: "Start by opening a family's panel to see their full picture. If you're leading group, the Session Log is your spot right after each meeting.",
+    tag: null,
+  },
+];
+
 export function LcpRoom() {
+  const { tourOpen, dismissTour } = useRoomTour('sparrow_lcp_toured_v1');
   const { profile } = useAuth();
   const [families, setFamilies] = useState<Family[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
@@ -123,6 +164,7 @@ export function LcpRoom() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <RoomTour steps={LCP_TOUR_STEPS} open={tourOpen} onDismiss={dismissTour} />
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold">LifeChange</h1>

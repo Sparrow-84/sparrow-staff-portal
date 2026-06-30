@@ -1,4 +1,32 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { TabHelpModal } from '@/components/TabHelpModal';
+
+const CALENDAR_HELP_SECTIONS = [
+  {
+    heading: 'Filter layers',
+    items: [
+      { label: 'All Staff', desc: 'Org-wide events added by admins — team meetings, site visits, program milestones. On by default.' },
+      { label: 'My Depts', desc: 'Events from your department rooms. Enable sub-department chips to filter further. LCP sessions appear here when toggled on.' },
+      { label: 'Deadlines', desc: 'Your task due dates plotted as small colored dots — red for P1, gold for P2, gray for P3/P4. Hover any dot to see the task title.' },
+    ],
+    note: 'Each layer is independent — toggle any combination. Your settings are remembered.',
+  },
+  {
+    heading: 'Adding events',
+    items: [
+      { label: '+ Add event button', desc: 'Opens a form to create an org-wide event. Appears on the All Staff layer for every staff member.' },
+      { label: 'Click any day', desc: 'Hover a day cell and click the + that appears to add an event pre-filled with that date.' },
+    ],
+  },
+  {
+    heading: 'Navigation',
+    items: [
+      { label: 'Arrows', desc: 'Step forward or back one month.' },
+      { label: 'Today button', desc: 'Jump back to the current month instantly.' },
+      { label: 'Event detail', desc: 'Click any event to see its details, edit it, or delete it (admin only).' },
+    ],
+  },
+];
 import { useAuth } from '@/auth/AuthContext';
 import { fetchCalendar, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
 import { AddOrgEventPanel } from '@/components/calendar/AddOrgEventPanel';
@@ -54,6 +82,7 @@ export function CalendarView() {
   const [addOpen, setAddOpen] = useState(false);
   const [addDate, setAddDate] = useState(todayStr);
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Main layer toggles — each independently on/off, all persisted
   const [showAllStaff, setShowAllStaff] = useState(
@@ -264,10 +293,27 @@ export function CalendarView() {
 
         </div>
 
-        <button onClick={() => openAdd(todayStr)} className="btn-primary text-sm">
-          + Add event
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setHelpOpen(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule text-sm font-semibold text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            aria-label="Calendar help"
+            title="How the calendar works"
+          >
+            ?
+          </button>
+          <button onClick={() => openAdd(todayStr)} className="btn-primary text-sm">
+            + Add event
+          </button>
+        </div>
       </div>
+      <TabHelpModal
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="Calendar"
+        intro="A month-view calendar with three independent filter layers. Toggle each one to control what you see."
+        sections={CALENDAR_HELP_SECTIONS}
+      />
 
       {/* Calendar grid */}
       <div className="flex-1 overflow-auto">

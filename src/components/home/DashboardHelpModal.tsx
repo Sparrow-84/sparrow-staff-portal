@@ -3,7 +3,6 @@ const ROOMS = [
   { icon: '🌱', name: 'LCP', desc: 'Participant families, session tracking, goals, finance milestones, homework, messaging, and curriculum admin.' },
   { icon: '🤝', name: 'Partnerships', desc: 'Donor and partner relationships, stewardship cadences, collateral tracker, and communications.' },
   { icon: '⚙️', name: 'Operations', desc: 'Inventory tracking, Benton County filing, onboarding checklists, and shared documents.' },
-  { icon: '📄', name: 'Documents', desc: 'Staff handbook, policies, job descriptions, emergency procedures, and other org docs.' },
 ];
 
 const WIDGETS = [
@@ -55,7 +54,7 @@ export function DashboardHelpModal({
               Rooms
             </p>
             <p className="mb-4 text-sm text-sparrow-gray">
-              Use the sidebar to navigate between rooms. Each room is its own area of Sparrow's work.
+              Rooms are in the sidebar below your personal tabs. Access is role-specific — not every staff member sees every room. The first time you open a room, a short walkthrough explains what's inside.
             </p>
             <div className="space-y-3">
               {ROOMS.map((r) => (

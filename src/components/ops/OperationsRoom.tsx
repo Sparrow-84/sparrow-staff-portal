@@ -4,10 +4,39 @@ import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
 import { fetchActiveChecklists, fetchAllReviews, fetchAllTouchpoints, fetchOpenIssues } from '@/lib/ops';
 import { daysSince, touchpointTone, type Checklist, type Issue, type Review, type Touchpoint } from '@/lib/ops-types';
+import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { StaffMemberPanel } from './StaffMemberPanel';
 import { InventoryRoom } from '@/components/inventory/InventoryRoom';
 
+const OPS_TOUR_STEPS: TourStep[] = [
+  {
+    icon: '⚙️',
+    title: 'Operations',
+    body: "This room handles the internal side of Sparrow — managing staff, tracking inventory, and handling the Benton County filing system. It runs quietly in the background so everything else can run well.",
+    tag: null,
+  },
+  {
+    icon: '👥',
+    title: 'Staff tab',
+    body: "See all staff, when you last met with each person, any open performance issues, scheduled reviews, and active onboarding checklists for new team members. Click any person to open their full record.",
+    tag: { icon: '👥', label: 'Staff' },
+  },
+  {
+    icon: '📦',
+    title: 'Inventory tab',
+    body: "Track all supplies and assets across Sparrow locations. Log what comes in and goes out. The Benton County filing batches — monthly consumables, December reporting, house flips — are managed here too.",
+    tag: { icon: '📦', label: 'Inventory' },
+  },
+  {
+    icon: '✨',
+    title: "You're all set",
+    body: "Check the Staff tab when you have a new team member, a review to schedule, or a check-in overdue. Inventory is your source of truth for supplies and county filing.",
+    tag: null,
+  },
+];
+
 export function OperationsRoom() {
+  const { tourOpen, dismissTour } = useRoomTour('sparrow_ops_toured_v1');
   const { profile } = useAuth();
   const [staff, setStaff] = useState<Profile[]>([]);
   const [touchpoints, setTouchpoints] = useState<Touchpoint[]>([]);
@@ -80,6 +109,7 @@ export function OperationsRoom() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <RoomTour steps={OPS_TOUR_STEPS} open={tourOpen} onDismiss={dismissTour} />
       <div>
         <h1 className="font-serif text-2xl font-semibold">Operations</h1>
         <p className="mt-1 text-sm text-sparrow-gray">Staff management · {staff.length} people</p>

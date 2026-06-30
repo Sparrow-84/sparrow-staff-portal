@@ -12,6 +12,7 @@ import {
 import { PartnerDetailPanel } from './PartnerDetailPanel';
 import { AddPartnerPanel } from './AddPartnerPanel';
 import { PartnershipsHelpModal } from './PartnershipsHelpModal';
+import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { PartnerTableView } from './PartnerTableView';
 import { PartnerTileView } from './PartnerTileView';
 
@@ -22,6 +23,45 @@ import { PartnershipSocialTab } from './PartnershipSocialTab';
 import { PartnershipEventsTab } from './PartnershipEventsTab';
 import { PrayerMeetingTab } from './PrayerMeetingTab';
 import { fetchComms } from '@/lib/partnerships-tabs';
+
+const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
+  {
+    icon: '🤝',
+    title: 'Partnerships',
+    body: "This room is where Sparrow manages its donor and partner relationships. The goal isn't just data — it's staying genuinely connected to the people who support this work.",
+    tag: null,
+  },
+  {
+    icon: '📋',
+    title: 'Directory',
+    body: "Every donor, church, community partner, volunteer, and foundation lives in the Directory. The list sorts by relationship health — overdue contacts rise to the top so nothing slips through. Switch between table and tile views.",
+    tag: { icon: '📋', label: 'Directory' },
+  },
+  {
+    icon: '👤',
+    title: 'Contact detail panel',
+    body: "Click any contact to open their panel: giving history, stewardship cadence, when you last connected, notes, and linked collateral. This is where relationship work actually happens.",
+    tag: { icon: '👤', label: 'Contact Detail' },
+  },
+  {
+    icon: '💬',
+    title: 'Comms & stewardship',
+    body: "The Comms tab tracks every touchpoint — calls, emails, meetings, notes. The system flags when someone is overdue for contact based on their cadence, so you always know who needs attention.",
+    tag: { icon: '💬', label: 'Comms' },
+  },
+  {
+    icon: '📊',
+    title: 'Other tabs',
+    body: "Collateral tracks what materials have been sent to whom. Social keeps social media plans organized. Events ties partners to specific Sparrow gatherings. Prayer keeps your prayer list current.",
+    tag: null,
+  },
+  {
+    icon: '✨',
+    title: "You're all set",
+    body: "Start in the Directory. If someone is flagged overdue, open their panel and log a touchpoint. Small, consistent contact is what this room is built to support.",
+    tag: null,
+  },
+];
 
 type Tab = 'directory' | 'comms' | 'collateral' | 'social' | 'events' | 'prayer';
 type View = 'table' | 'tile';
@@ -52,6 +92,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 const STATUS_RANK = { overdue: 0, lapsed: 1, due_soon: 2, no_cadence: 3, on_cadence: 4, inactive: 5 } as const;
 
 export function PartnershipsRoom() {
+  const { tourOpen, dismissTour } = useRoomTour('sparrow_partnerships_toured_v1');
   const { profile } = useAuth();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [archivedPartners, setArchivedPartners] = useState<Partner[]>([]);
@@ -184,6 +225,7 @@ export function PartnershipsRoom() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <RoomTour steps={PARTNERSHIPS_TOUR_STEPS} open={tourOpen} onDismiss={dismissTour} />
       {/* Room header */}
       <div className="flex items-start justify-between gap-4">
         <div>

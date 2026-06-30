@@ -13,6 +13,7 @@ import {
   type WoPriority,
 } from '@/lib/housing-types';
 import type { Profile } from '@/lib/types';
+import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { LotGrid } from './LotGrid';
 import { LotMap } from './LotMap';
 import { LotDetailPanel } from './LotDetailPanel';
@@ -24,7 +25,47 @@ import { ArchiveTab } from './ArchiveTab';
 
 const PRIORITY_RANK: Record<WoPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
+const TOC_TOUR_STEPS: TourStep[] = [
+  {
+    icon: '🏡',
+    title: 'Twin Oaks',
+    body: "This room is the hub for everything Twin Oaks — the property, the residents, and the day-to-day work of keeping it running well. Let's walk through what's here.",
+    tag: null,
+  },
+  {
+    icon: '🗺️',
+    title: 'Property view',
+    body: "The Property tab shows every lot as a card. Green means occupied, gray means vacant. Toggle to Map view for a visual layout. Click any lot to open its full detail panel — tenant info, household members, pets, parking, and notes.",
+    tag: { icon: '🏘️', label: 'Property' },
+  },
+  {
+    icon: '🔧',
+    title: 'Work orders',
+    body: "Log maintenance requests here. Each work order tracks the issue, the lot, priority, and who's assigned. Mark it done when resolved — it stays in the history so nothing is lost.",
+    tag: { icon: '🔧', label: 'Work Orders' },
+  },
+  {
+    icon: '👥',
+    title: 'Residents & notices',
+    body: "The Residents tab gives you a searchable list of everyone across all lots. Notices tracks formal rent notices by type. Incidents is your documentation log for anything that needs a record.",
+    tag: { icon: '👥', label: 'Residents' },
+  },
+  {
+    icon: '📂',
+    title: 'Archive',
+    body: "Past tenants and closed lot records live in Archive. Nothing in Twin Oaks gets permanently deleted — it moves here instead, so the history is always available.",
+    tag: { icon: '📂', label: 'Archive' },
+  },
+  {
+    icon: '✨',
+    title: "You're all set",
+    body: "That's Twin Oaks. Click any lot to get started, or open Work Orders to see what's on the board.",
+    tag: null,
+  },
+];
+
 export function TwinOaksRoom() {
+  const { tourOpen, dismissTour } = useRoomTour('sparrow_toc_toured_v1');
   const { profile } = useAuth();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -136,6 +177,7 @@ export function TwinOaksRoom() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <RoomTour steps={TOC_TOUR_STEPS} open={tourOpen} onDismiss={dismissTour} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold">Twin Oaks</h1>

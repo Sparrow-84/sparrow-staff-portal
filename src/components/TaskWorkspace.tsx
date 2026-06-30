@@ -21,9 +21,10 @@ interface Props {
   today: string;
   onChanged: () => void;
   topSlot?: ReactNode;
+  onHelp?: () => void;
 }
 
-export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, onChanged, topSlot }: Props) {
+export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, onChanged, topSlot, onHelp }: Props) {
   const [, startTransition] = useTransition();
   const [scope, setScope] = useState<'mine' | 'team'>('mine');
   const [teamFilter, setTeamFilter] = useState<string>('all');
@@ -115,9 +116,21 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
           <h1 className="font-serif text-2xl font-semibold">Good to see you, {firstName}.</h1>
           <p className="mt-1 text-sm text-sparrow-gray">{dateLabel}</p>
         </div>
-        <button onClick={openNew} className="btn-primary">
-          + New task
-        </button>
+        <div className="flex items-center gap-2">
+          {onHelp && (
+            <button
+              onClick={onHelp}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule text-sm font-semibold text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+              aria-label="My Tasks help"
+              title="How My Tasks works"
+            >
+              ?
+            </button>
+          )}
+          <button onClick={openNew} className="btn-primary">
+            + New task
+          </button>
+        </div>
       </div>
 
       {/* Controls: view switcher (left) + scope toggle (right) */}

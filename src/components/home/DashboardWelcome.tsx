@@ -22,43 +22,49 @@ const STEPS = [
   {
     icon: '🕊',
     title: 'Welcome to Sparrow',
-    body: "This is your staff system — the place where Twin Oaks operations, LifeChange Program coordination, partnerships, and team work all live together. Everything is organized into rooms, accessible from the sidebar. Let's take a quick look.",
+    body: "This is your staff system — the place where Twin Oaks operations, LifeChange Program coordination, partnerships, and team work all live together. Let's take a quick look at what's here.",
     tag: null,
   },
   {
-    icon: '🏡',
-    title: 'Twin Oaks',
-    body: "Manage the property here. Resident records, lot details, work orders, pets, and notices — all organized by lot.",
-    tag: { icon: '🏡', label: 'Twin Oaks' },
-  },
-  {
-    icon: '🌱',
-    title: 'LifeChange Program',
-    body: "Your LCP families are here. Track sessions, add goals, log finance milestones, send messages, and assign homework — all from each family's detail panel. Curriculum is managed here too.",
-    tag: { icon: '🌱', label: 'LCP' },
-  },
-  {
-    icon: '🤝',
-    title: 'Partnerships',
-    body: "Donors and partners live in this room. You can track relationships, log stewardship touchpoints, and manage collateral. Think of it as Sparrow's relational contact list.",
-    tag: { icon: '🤝', label: 'Partnerships' },
-  },
-  {
-    icon: '⚙️',
-    title: 'Operations',
-    body: "Inventory tracking, the Benton County filing system, onboarding checklists, and shared documents are all here. If something needs to be counted, filed, or handed to a new team member — this is where it lives.",
-    tag: { icon: '⚙️', label: 'Operations' },
-  },
-  {
     icon: '🏠',
-    title: 'Your dashboard',
-    body: "This home screen shows widgets — cards that surface your most important work automatically. Use \"Edit home\" to show, hide, and rearrange them. The ? button brings back this tour anytime.",
-    tag: { icon: '🏠', label: 'Dashboard' },
+    title: 'Your home screen',
+    body: "This dashboard shows widgets that surface your most important work automatically — tasks due today, upcoming meetings, team updates, and more. Use \"Edit home\" to show, hide, and rearrange them. The ? button beside it brings back this overview anytime.",
+    tag: { icon: '🏠', label: 'Home' },
+  },
+  {
+    icon: '✅',
+    title: 'My Tasks',
+    body: "Your personal task workspace. Switch between List, Board, and Calendar views — the system remembers which you used last. Managers and admins also see a \"My team\" toggle to check in on direct reports.",
+    tag: { icon: '✅', label: 'My Tasks' },
+  },
+  {
+    icon: '📅',
+    title: 'Calendar',
+    body: "A month-view calendar with filter layers you can toggle: All Staff events, your department calendars, and your task deadlines plotted as colored dots. Click any day to add an event.",
+    tag: { icon: '📅', label: 'Calendar' },
+  },
+  {
+    icon: '💬',
+    title: 'Messages',
+    body: "Click Messages in the sidebar and a chat panel slides in from the right. This is where team-wide and one-on-one conversations happen. The badge in the sidebar shows unread messages.",
+    tag: { icon: '💬', label: 'Messages' },
+  },
+  {
+    icon: '📄',
+    title: 'Resource Library',
+    body: "Staff documents organized by category — handbook, policies, job descriptions, emergency procedures, and more. Read-only reference that lives here so everyone is working from the same version.",
+    tag: { icon: '📄', label: 'Resource Library' },
+  },
+  {
+    icon: '🚪',
+    title: 'Your rooms',
+    body: "The bottom of your sidebar has Rooms — areas of Sparrow's work you're assigned to. Not everyone sees every room; access is set by role. The first time you open a room, you'll get a short walkthrough of what's inside.",
+    tag: null,
   },
   {
     icon: '✨',
     title: "You're all set",
-    body: "Your rooms are ready and your team is here. If you ever get turned around, hit ? on the dashboard for a quick overview. Welcome to the team.",
+    body: "Your system is ready. Start on the home screen, check your tasks, or open a room. Every tab has a ? button at the top if you need a quick reference. Welcome to the team.",
     tag: null,
   },
 ];
@@ -82,7 +88,6 @@ export function DashboardWelcome({ open, onDismiss }: { open: boolean; onDismiss
       onClick={(e) => { if (e.target === e.currentTarget) finish(); }}
     >
       <div className="relative w-full max-w-sm rounded-2xl bg-white px-6 pb-6 pt-5 shadow-xl">
-        {/* Skip */}
         <button
           onClick={finish}
           className="absolute right-4 top-4 text-xs text-sparrow-gray hover:text-sparrow-ink"
@@ -90,18 +95,12 @@ export function DashboardWelcome({ open, onDismiss }: { open: boolean; onDismiss
           Skip tour
         </button>
 
-        {/* Icon */}
         <div className="mb-3 text-4xl">{current.icon}</div>
 
-        {/* Title */}
-        <h2 className="font-serif text-xl font-semibold text-sparrow-green">
-          {current.title}
-        </h2>
+        <h2 className="font-serif text-xl font-semibold text-sparrow-green">{current.title}</h2>
 
-        {/* Body */}
         <p className="mt-2 text-sm leading-relaxed text-sparrow-gray">{current.body}</p>
 
-        {/* Section tag */}
         {current.tag && (
           <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-sparrow-sage px-3 py-1 text-xs font-medium text-sparrow-green">
             <span>{current.tag.icon}</span>
@@ -109,22 +108,18 @@ export function DashboardWelcome({ open, onDismiss }: { open: boolean; onDismiss
           </div>
         )}
 
-        {/* Dot indicators */}
         <div className="mt-5 flex justify-center gap-1.5">
           {STEPS.map((_, i) => (
             <button
               key={i}
               onClick={() => setStep(i)}
               className={`h-1.5 rounded-full transition-all ${
-                i === step
-                  ? 'w-5 bg-sparrow-green'
-                  : 'w-1.5 bg-sparrow-rule hover:bg-sparrow-gray'
+                i === step ? 'w-5 bg-sparrow-green' : 'w-1.5 bg-sparrow-rule hover:bg-sparrow-gray'
               }`}
             />
           ))}
         </div>
 
-        {/* Navigation */}
         <div className="mt-4 flex gap-2">
           {!isFirst && (
             <button onClick={() => setStep((s) => s - 1)} className="btn-ghost flex-1">
