@@ -144,5 +144,31 @@ export async function syncLapsedPartnerTasks(): Promise<number> {
   return (data as number | null) ?? 0;
 }
 
+/**
+ * Emit a 72-hour follow-up task when a donor gives for the first time.
+ * Andrew's rule: the owner calls or writes within 72 hours (3 days).
+ * Dedup-safe via source_ref = 'first_time_donor:<partner_id>' — re-running
+ * updates the due date in place rather than creating duplicates.
+ * Only called when owner_id is set; silent no-op if owner is unassigned.
+ */
+export async function emitFirstTimeDonorTask(
+  partnerId: string,
+  partnerName: string,
+  ownerId: string,
+): Promise<void> {
+  const due = new Date();
+  due.setDate(due.getDate() + 3);
+  const { error } = await supabase.rpc('emit_system_task', {
+    p_system: 'crm',
+    p_ref: `first_time_donor:${partnerId}`,
+    p_assignee: ownerId,
+    p_title: `First-time donor follow-up — ${partnerName} (72-hr window)`,
+    p_department: 'partnerships',
+    p_priority: 'p2',
+    p_due: due.toLocaleDateString('en-CA'),
+  });
+  if (error) throw new Error(error.message);
+}
+
 // Re-export types for convenience
 export type { GivingMethod, MouStatus };

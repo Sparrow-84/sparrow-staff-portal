@@ -19,9 +19,10 @@ import { PartnershipCommsTab } from './PartnershipCommsTab';
 import { PartnershipCollateralTab } from './PartnershipCollateralTab';
 import { PartnershipSocialTab } from './PartnershipSocialTab';
 import { PartnershipEventsTab } from './PartnershipEventsTab';
+import { PrayerMeetingTab } from './PrayerMeetingTab';
 import { fetchComms } from '@/lib/partnerships-tabs';
 
-type Tab = 'directory' | 'comms' | 'collateral' | 'social' | 'events';
+type Tab = 'directory' | 'comms' | 'collateral' | 'social' | 'events' | 'prayer';
 type View = 'table' | 'tile';
 type Filter = 'all' | 'archived' | PartnerType;
 
@@ -31,6 +32,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'collateral', label: 'Collateral' },
   { key: 'social', label: 'Social' },
   { key: 'events', label: 'Events' },
+  { key: 'prayer', label: 'Prayer' },
 ];
 
 const FILTERS: { key: Filter; label: string }[] = [
@@ -224,6 +226,7 @@ export function PartnershipsRoom() {
           {activeTab === 'collateral' && <PartnershipCollateralTab />}
           {activeTab === 'social' && <PartnershipSocialTab />}
           {activeTab === 'events' && <PartnershipEventsTab />}
+          {activeTab === 'prayer' && <PrayerMeetingTab />}
         </div>
       )}
 

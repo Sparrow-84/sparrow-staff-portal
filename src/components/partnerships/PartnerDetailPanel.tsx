@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Profile } from '@/lib/types';
-import { fetchTouchpoints, logTouchpoint, updatePartner } from '@/lib/partnerships';
+import { emitFirstTimeDonorTask, fetchTouchpoints, logTouchpoint, updatePartner } from '@/lib/partnerships';
 import {
   DONOR_TIER,
   DONOR_TIER_DESC,
@@ -406,7 +406,13 @@ export function PartnerDetailPanel({
               <span className="field-label">Donor tier</span>
               <select
                 value={partner.donor_tier ?? ''}
-                onChange={(e) => void patch({ donor_tier: (e.target.value || null) as DonorTier | null })}
+                onChange={async (e) => {
+                  const newTier = (e.target.value || null) as DonorTier | null;
+                  await patch({ donor_tier: newTier });
+                  if (newTier === 'first_time' && partner.owner_id) {
+                    void emitFirstTimeDonorTask(partner.id, partner.name, partner.owner_id).catch(() => undefined);
+                  }
+                }}
                 disabled={busy}
                 className="field-input mt-0"
               >

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Profile } from '@/lib/types';
-import { createPartner } from '@/lib/partnerships';
+import { createPartner, emitFirstTimeDonorTask } from '@/lib/partnerships';
 import {
   PARTNER_STAGE,
   PARTNER_TYPE,
@@ -80,8 +80,9 @@ export function AddPartnerPanel({
     setBusy(true);
     setError(null);
     try {
+      const trimmedName = name.trim();
       await createPartner({
-        name: name.trim(),
+        name: trimmedName,
         type,
         stage,
         owner_id: ownerId || null,
@@ -95,6 +96,16 @@ export function AddPartnerPanel({
         source: source.trim() || null,
         notes: null,
       });
+      // 72-hr follow-up task for new donors — best-effort, don't block the save
+      if (type === 'donor' && ownerId) {
+        // Fetch the new partner's id to emit the dedup-safe task
+        const { data } = await import('@/lib/supabase').then((m) =>
+          m.supabase.from('partners').select('id').eq('name', trimmedName).order('created_at', { ascending: false }).limit(1).single()
+        );
+        if (data?.id) {
+          void emitFirstTimeDonorTask(data.id, trimmedName, ownerId).catch(() => undefined);
+        }
+      }
       onCreated();
       onClose();
     } catch (e) {
