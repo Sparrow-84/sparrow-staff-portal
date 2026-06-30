@@ -17,6 +17,8 @@ import {
   type WidgetContext,
   type WidgetKey,
 } from './widgets';
+import { DashboardWelcome, useDashboardWelcome } from './DashboardWelcome';
+import { DashboardHelpModal } from './DashboardHelpModal';
 
 function reorderByIndex(keys: WidgetKey[], drag: WidgetKey, insertAt: number): WidgetKey[] {
   const without = keys.filter((k) => k !== drag);
@@ -44,6 +46,8 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
 
   const [panelTask, setPanelTask] = useState<TaskWithPeople | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const { welcomeOpen, dismissWelcome, reopenWelcome } = useDashboardWelcome();
 
   const me = profile;
   const isAdmin = me?.role === 'admin';
@@ -163,6 +167,13 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <DashboardWelcome open={welcomeOpen} onDismiss={dismissWelcome} />
+      <DashboardHelpModal
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        onReplayTour={() => { setHelpOpen(false); reopenWelcome(); }}
+      />
+
       <AnnouncementBar />
 
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -199,7 +210,17 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
             <button onClick={() => void saveEdit()} className="btn-primary">Done</button>
           </div>
         ) : (
-          <button onClick={startEdit} className="btn-ghost border border-sparrow-rule">Edit home</button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setHelpOpen(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule text-sm font-semibold text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+              aria-label="Dashboard help"
+              title="Dashboard overview"
+            >
+              ?
+            </button>
+            <button onClick={startEdit} className="btn-ghost border border-sparrow-rule">Edit home</button>
+          </div>
         )}
       </div>
 
