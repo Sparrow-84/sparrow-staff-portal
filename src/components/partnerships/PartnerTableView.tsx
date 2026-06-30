@@ -3,7 +3,6 @@ import type { Profile } from '@/lib/types';
 import { updatePartner } from '@/lib/partnerships';
 import {
   PARTNER_STAGE,
-  PARTNER_STAGES,
   PARTNER_TYPE,
   STEWARDSHIP,
   daysUntilDue,
@@ -22,18 +21,20 @@ export function PartnerTableView({
   profiles,
   onOpenPartner,
   onChanged,
+  nextCommLabel,
 }: {
   partners: Partner[];
   profiles: Profile[];
   onOpenPartner: (id: string) => void;
   onChanged: () => void;
+  nextCommLabel?: string;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [busy, setBusy] = useState<string | null>(null);
 
   const ownerProfiles = profiles.filter(
-    (p) => p.role === 'admin' || p.department === 'partnerships' || p.partnerships_access,
+    (p) => p.department === 'partnerships' || p.partnerships_access,
   );
 
   function toggleSort(key: SortKey) {
@@ -169,7 +170,7 @@ export function PartnerTableView({
                     disabled={isBusy}
                     className="field-input mt-0 py-1 text-xs"
                   >
-                    {PARTNER_STAGES.map((s) => (
+                    {(['prospect', 'active', 'reengaging', 'inactive'] as PartnerStage[]).map((s) => (
                       <option key={s} value={s}>
                         {PARTNER_STAGE[s].label}
                       </option>
@@ -202,7 +203,7 @@ export function PartnerTableView({
                 {/* Due chip */}
                 <td className="whitespace-nowrap px-3 py-2.5">
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${st.chip}`}>
-                    {dueLabel(p)}
+                    {dueLabel(p, today, p.cadence_days == null ? nextCommLabel : undefined)}
                   </span>
                 </td>
 

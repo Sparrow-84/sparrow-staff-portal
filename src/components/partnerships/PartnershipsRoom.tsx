@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
-import { fetchPartners, syncDueTouchpointTasks, syncLapsedPartnerTasks } from '@/lib/partnerships';
+import { fetchArchivedPartners, fetchPartners, syncDueTouchpointTasks, syncLapsedPartnerTasks } from '@/lib/partnerships';
 import {
   stewardshipStatus,
   type Partner,
@@ -10,6 +10,7 @@ import {
 } from '@/lib/partnerships-types';
 import { PartnerDetailPanel } from './PartnerDetailPanel';
 import { AddPartnerPanel } from './AddPartnerPanel';
+import { PartnershipsHelpModal } from './PartnershipsHelpModal';
 import { PartnerTableView } from './PartnerTableView';
 import { PartnerTileView } from './PartnerTileView';
 
@@ -18,10 +19,11 @@ import { PartnershipCommsTab } from './PartnershipCommsTab';
 import { PartnershipCollateralTab } from './PartnershipCollateralTab';
 import { PartnershipSocialTab } from './PartnershipSocialTab';
 import { PartnershipEventsTab } from './PartnershipEventsTab';
+import { fetchComms } from '@/lib/partnerships-tabs';
 
 type Tab = 'directory' | 'comms' | 'collateral' | 'social' | 'events';
 type View = 'table' | 'tile';
-type Filter = 'all' | PartnerType;
+type Filter = 'all' | 'archived' | PartnerType;
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'directory', label: 'Directory' },
@@ -49,6 +51,7 @@ const STATUS_RANK = { overdue: 0, lapsed: 1, due_soon: 2, no_cadence: 3, on_cade
 export function PartnershipsRoom() {
   const { profile } = useAuth();
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [archivedPartners, setArchivedPartners] = useState<Partner[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,9 +66,11 @@ export function PartnershipsRoom() {
     },
   );
 
+  const [nextCommLabel, setNextCommLabel] = useState<string | undefined>(undefined);
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Deep-link: open a partner panel on load via ?partner=<id>
   const deepId = useMemo(() => new URLSearchParams(window.location.search).get('partner'), []);
@@ -73,10 +78,26 @@ export function PartnershipsRoom() {
 
   const load = useCallback(async () => {
     try {
-      const [pp, pr] = await Promise.all([fetchPartners(), fetchProfiles()]);
+      const year = new Date().getFullYear();
+      const [pp, pr, archived, comms] = await Promise.all([
+        fetchPartners(),
+        fetchProfiles(),
+        fetchArchivedPartners(),
+        fetchComms(year),
+      ]);
       setPartners(pp);
       setProfiles(pr);
-      // Best-effort: fan overdue touchpoints + lapsed partners to owners' triage inboxes.
+      setArchivedPartners(archived);
+      // Find the next upcoming comm that hasn't been sent — shown for donors/prayer in place of "No cadence"
+      const today = new Date().toISOString().slice(0, 10);
+      const next = comms
+        .filter((c) => c.status !== 'sent' && c.publish_date >= today)
+        .sort((a, b) => a.publish_date.localeCompare(b.publish_date))[0];
+      if (next) {
+        const d = new Date(`${next.publish_date}T12:00:00`);
+        setNextCommLabel(`${next.title} — ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`);
+      }
+      // Best-effort: fan overdue touchpoints + lapsed partners to owners' Incoming Tasks.
       void syncDueTouchpointTasks().catch(() => undefined);
       void syncLapsedPartnerTasks().catch(() => undefined);
     } catch (e) {
@@ -113,6 +134,12 @@ export function PartnershipsRoom() {
   }, [partners]);
 
   const visible = useMemo(() => {
+    if (filter === 'archived') {
+      const list = search.trim()
+        ? archivedPartners.filter((p) => p.name.toLowerCase().includes(search.trim().toLowerCase()))
+        : archivedPartners;
+      return [...list].sort((a, b) => a.name.localeCompare(b.name));
+    }
     let list = filter === 'all' ? partners : partners.filter((p) => p.type === filter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -124,7 +151,7 @@ export function PartnershipsRoom() {
       if (ra !== rb) return ra - rb;
       return a.name.localeCompare(b.name);
     });
-  }, [partners, filter, search]);
+  }, [partners, archivedPartners, filter, search]);
 
   function openPartner(id: string) {
     setPartnerId(id);
@@ -144,7 +171,9 @@ export function PartnershipsRoom() {
   if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading partnerships…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
-  const selected = partnerId ? partners.find((p) => p.id === partnerId) ?? null : null;
+  const selected = partnerId
+    ? (partners.find((p) => p.id === partnerId) ?? archivedPartners.find((p) => p.id === partnerId) ?? null)
+    : null;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -157,9 +186,18 @@ export function PartnershipsRoom() {
             {stats.noCadence > 0 && ` · ${stats.noCadence} without a cadence`}
           </p>
         </div>
-        <button onClick={() => setAddOpen(true)} className="btn-primary shrink-0">
-          + Add partner
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={() => setHelpOpen(true)}
+            title="How this room works"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule text-sm font-medium text-sparrow-gray transition hover:border-sparrow-green hover:text-sparrow-green"
+          >
+            ?
+          </button>
+          <button onClick={() => setAddOpen(true)} className="btn-primary">
+            + Add partner
+          </button>
+        </div>
       </div>
 
       {/* Tab bar */}
@@ -196,7 +234,7 @@ export function PartnershipsRoom() {
             <div className="mt-4 flex items-center justify-between rounded-xl border border-priority-p1/30 bg-priority-p1/5 px-4 py-3 text-sm">
               <span>
                 🔴 {stats.overdue} relationship{stats.overdue > 1 ? 's are' : ' is'} overdue for a touchpoint.
-                They've been pushed to each owner's triage inbox.
+                They've been added to each owner's Incoming Tasks.
               </span>
               <button onClick={() => openPartner(firstOverdue.id)} className="shrink-0 font-medium text-sparrow-green">
                 Open {firstOverdue.name} →
@@ -251,6 +289,18 @@ export function PartnershipsRoom() {
                   </button>
                 );
               })}
+              {archivedPartners.length > 0 && (
+                <button
+                  onClick={() => setFilter(filter === 'archived' ? 'all' : 'archived')}
+                  className={`rounded-lg border px-3 py-1.5 font-medium transition ${
+                    filter === 'archived'
+                      ? 'border-sparrow-gray bg-sparrow-gray text-white'
+                      : 'border-sparrow-rule bg-white text-sparrow-gray hover:text-sparrow-ink'
+                  }`}
+                >
+                  Archived <span className="opacity-70">{archivedPartners.length}</span>
+                </button>
+              )}
             </div>
 
             {/* View toggle */}
@@ -279,6 +329,7 @@ export function PartnershipsRoom() {
                 profiles={profiles}
                 onOpenPartner={openPartner}
                 onChanged={load}
+                nextCommLabel={nextCommLabel}
               />
             )}
             {view === 'tile' && (
@@ -286,6 +337,7 @@ export function PartnershipsRoom() {
                 partners={visible}
                 profiles={profiles}
                 onOpenPartner={openPartner}
+                nextCommLabel={nextCommLabel}
               />
             )}
           </div>
@@ -307,6 +359,7 @@ export function PartnershipsRoom() {
         onClose={() => setAddOpen(false)}
         onCreated={load}
       />
+      <PartnershipsHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

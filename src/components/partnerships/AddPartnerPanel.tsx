@@ -10,17 +10,19 @@ import {
 } from '@/lib/partnerships-types';
 import { Drawer } from '../lcp/Drawer';
 
-// Sensible default stewardship rhythm by partner type (days). Editable after creation.
-const DEFAULT_CADENCE: Record<PartnerType, number> = {
-  donor: 180,
-  church: 90,
-  community: 180,
-  volunteer: 180,
-  prayer: 30,
-  fst: 30,
-  business: 180,
-  foundation: 120,
-  advisory: 365,
+// Default stewardship cadence by type (days between touchpoints). null = no day-based cadence.
+// Donors: calendar-driven (comms tab handles it). Prayer: attendance tracking handles it.
+// Church: quarterly per role doc. Community/business: 1-2x/year. Advisory: annual.
+const DEFAULT_CADENCE: Record<PartnerType, number | null> = {
+  donor:      null,
+  church:     90,
+  community:  180,
+  volunteer:  180,
+  prayer:     null,
+  fst:        null,
+  business:   180,
+  foundation: null,
+  advisory:   365,
 };
 
 export function AddPartnerPanel({
@@ -45,7 +47,7 @@ export function AddPartnerPanel({
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [source, setSource] = useState('');
-  const [cadence, setCadence] = useState<number>(DEFAULT_CADENCE.donor);
+  const [cadence, setCadence] = useState<number | null>(DEFAULT_CADENCE.donor);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,7 +91,7 @@ export function AddPartnerPanel({
         phone: phone.trim() || null,
         address: address.trim() || null,
         donor_tier: type === 'donor' ? 'first_time' : null,
-        cadence_days: cadence > 0 ? cadence : null,
+        cadence_days: cadence && cadence > 0 ? cadence : null,
         source: source.trim() || null,
         notes: null,
       });
@@ -138,7 +140,7 @@ export function AddPartnerPanel({
           <div>
             <label className="field-label" htmlFor="pa-stage">Stage</label>
             <select id="pa-stage" className="field-input" value={stage} onChange={(e) => setStage(e.target.value as PartnerStage)}>
-              {(['prospect', 'active', 'reengaging', 'lapsed', 'inactive'] as PartnerStage[]).map((s) => (
+              {(['prospect', 'active', 'reengaging'] as PartnerStage[]).map((s) => (
                 <option key={s} value={s}>{PARTNER_STAGE[s].label}</option>
               ))}
             </select>
@@ -150,7 +152,7 @@ export function AddPartnerPanel({
           <select id="pa-owner" className="field-input" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
             <option value="">Unassigned</option>
             {profiles
-              .filter((p) => p.role === 'admin' || p.department === 'partnerships' || p.partnerships_access)
+              .filter((p) => p.department === 'partnerships' || p.partnerships_access)
               .map((p) => (
                 <option key={p.id} value={p.id}>{p.full_name}</option>
               ))}
@@ -167,8 +169,8 @@ export function AddPartnerPanel({
             type="number"
             min={1}
             className="field-input"
-            value={cadence}
-            onChange={(e) => setCadence(Number(e.target.value) || 0)}
+            value={cadence ?? ''}
+            onChange={(e) => setCadence(e.target.value === '' ? null : Math.max(1, Number(e.target.value)))}
           />
           <p className="mt-1 text-xs text-sparrow-gray">
             Defaulted from the type ({PARTNER_TYPE[type].label}). Adjust to the rhythm this relationship needs.

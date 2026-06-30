@@ -27,6 +27,16 @@ export async function fetchPartners(): Promise<Partner[]> {
   return (data ?? []) as Partner[];
 }
 
+export async function fetchArchivedPartners(): Promise<Partner[]> {
+  const { data, error } = await supabase
+    .from('partners')
+    .select(PARTNER_COLS)
+    .eq('active', false)
+    .order('name');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Partner[];
+}
+
 export interface PartnerInput {
   name: string;
   type: PartnerType;
@@ -112,7 +122,7 @@ export async function logTouchpoint(input: TouchpointInput, loggedBy: string): P
 
 // ── Spine integration ────────────────────────────────────────────────
 /**
- * Push every overdue touchpoint onto its owner's Triage Inbox (dedup-safe; re-running just
+ * Push every overdue touchpoint onto its owner's Incoming Tasks (dedup-safe; re-running just
  * updates in place). Best-effort — called on room load so an overdue relationship becomes a
  * real task on a real person's day, not just a red dot someone has to remember to look at.
  * Returns the number of due tasks emitted, or 0 if the caller isn't CRM-facing.

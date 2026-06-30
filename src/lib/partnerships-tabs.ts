@@ -110,11 +110,15 @@ function buildCommsForYear(year: number): Omit<PartnershipComm, 'id' | 'created_
       publish_date: `${year}-01-15`, status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
-      year, comm_type: 'tsm', title: 'Sparrow Monthly — February',
+      year, comm_type: 'tsm', title: 'TSM — January',
+      publish_date: toISO(secondThursday(year, 0)), status: 'not_started', is_financial_ask: false, notes: null,
+    },
+    {
+      year, comm_type: 'tsm', title: 'TSM — February',
       publish_date: toISO(secondThursday(year, 1)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
-      year, comm_type: 'tsm', title: 'Sparrow Monthly — March',
+      year, comm_type: 'tsm', title: 'TSM — March',
       publish_date: toISO(secondThursday(year, 2)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
@@ -122,7 +126,7 @@ function buildCommsForYear(year: number): Omit<PartnershipComm, 'id' | 'created_
       publish_date: toISO(secondThursday(year, 3)), status: 'not_started', is_financial_ask: true, notes: null,
     },
     {
-      year, comm_type: 'tsm', title: 'Sparrow Monthly — May',
+      year, comm_type: 'tsm', title: 'TSM — May',
       publish_date: toISO(secondThursday(year, 4)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
@@ -130,23 +134,23 @@ function buildCommsForYear(year: number): Omit<PartnershipComm, 'id' | 'created_
       publish_date: toISO(secondThursday(year, 5)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
-      year, comm_type: 'tsm', title: 'Sparrow Monthly — July',
+      year, comm_type: 'tsm', title: 'TSM — July',
       publish_date: toISO(secondThursday(year, 6)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
-      year, comm_type: 'tsm', title: 'Sparrow Monthly — August',
+      year, comm_type: 'tsm', title: 'TSM — August',
       publish_date: toISO(secondThursday(year, 7)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
-      year, comm_type: 'tsm', title: 'Sparrow Monthly — September',
+      year, comm_type: 'tsm', title: 'TSM — September',
       publish_date: toISO(secondThursday(year, 8)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
-      year, comm_type: 'tsm', title: 'Sparrow Monthly — October',
+      year, comm_type: 'tsm', title: 'TSM — October',
       publish_date: toISO(secondThursday(year, 9)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
-      year, comm_type: 'tsm', title: 'Sparrow Monthly — November',
+      year, comm_type: 'tsm', title: 'TSM — November',
       publish_date: toISO(secondThursday(year, 10)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
@@ -345,7 +349,7 @@ export async function updateConnection(
   if (error) throw new Error(error.message);
 }
 
-/** Push overdue connection follow-ups onto the caller's Triage Inbox (dedup-safe). */
+/** Push overdue connection follow-ups onto the caller's Incoming Tasks (dedup-safe). */
 export async function syncOverdueConnectionFollowups(): Promise<number> {
   const { data, error } = await supabase.rpc('emit_overdue_connection_followups');
   if (error) throw new Error(error.message);

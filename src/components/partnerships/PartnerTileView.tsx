@@ -12,10 +12,12 @@ export function PartnerTileView({
   partners,
   profiles,
   onOpenPartner,
+  nextCommLabel,
 }: {
   partners: Partner[];
   profiles: Profile[];
   onOpenPartner: (id: string) => void;
+  nextCommLabel?: string;
 }) {
   function ownerName(id: string | null) {
     return id ? (profiles.find((p) => p.id === id)?.full_name ?? 'Unassigned') : 'Unassigned';
@@ -50,7 +52,7 @@ export function PartnerTileView({
             <p className="mt-0.5 text-xs text-sparrow-gray">{ownerName(p.owner_id)}</p>
 
             <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${st.chip}`}>
-              {dueLabel(p)}
+              {dueLabel(p, new Date(), p.cadence_days == null ? nextCommLabel : undefined)}
             </span>
 
             {/* Stage + donor + MOU badges */}
