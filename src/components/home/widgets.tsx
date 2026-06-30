@@ -143,6 +143,13 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
 // ── Triage inbox ──────────────────────────────────────────────────────
 function TriageWidget({ ctx }: { ctx: WidgetContext }) {
   const pending = ctx.tasks.filter((t) => t.assignee_id === ctx.me.id && t.triage_status === 'pending');
+  const unscheduled = ctx.tasks.filter(
+    (t) =>
+      (t.assignee_id === ctx.me.id || t.created_by === ctx.me.id) &&
+      t.triage_status === 'accepted' &&
+      !t.due_date &&
+      t.status !== 'done',
+  );
 
   async function accept(id: string) {
     await acceptTask(id);
@@ -159,35 +166,73 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
     ctx.onChanged();
   }
 
-  if (pending.length === 0) return <Empty>No incoming tasks — you're all caught up. ✨</Empty>;
+  if (pending.length === 0 && unscheduled.length === 0)
+    return <Empty>No incoming tasks — you're all caught up. ✨</Empty>;
+
+  const showLabels = pending.length > 0 && unscheduled.length > 0;
 
   return (
-    <ul className="space-y-2">
-      {pending.map((t) => (
-        <li key={t.id} className="rounded-lg border border-sparrow-rule px-3 py-2">
-          <p className="text-sm font-medium text-sparrow-ink">{t.title}</p>
-          <p className="text-xs text-sparrow-gray">
-            Assigned by {t.creator?.full_name ?? 'the system'}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-            <button onClick={() => void accept(t.id)} className="rounded-md bg-sparrow-green px-2 py-1 font-medium text-white hover:bg-sparrow-green-dark">
-              Accept
-            </button>
-            <button onClick={() => void defer(t.id, 1)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
-              → Tomorrow
-            </button>
-            <button onClick={() => void defer(t.id, 7)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
-              → Next week
-            </button>
-            {t.created_by && (
-              <button onClick={() => void pushBack(t)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
-                Push back
-              </button>
-            )}
-          </div>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-3">
+      {pending.length > 0 && (
+        <div>
+          {showLabels && (
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+              Needs response
+            </p>
+          )}
+          <ul className="space-y-2">
+            {pending.map((t) => (
+              <li key={t.id} className="rounded-lg border border-sparrow-rule px-3 py-2">
+                <p className="text-sm font-medium text-sparrow-ink">{t.title}</p>
+                <p className="text-xs text-sparrow-gray">
+                  Assigned by {t.creator?.full_name ?? 'the system'}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                  <button onClick={() => void accept(t.id)} className="rounded-md bg-sparrow-green px-2 py-1 font-medium text-white hover:bg-sparrow-green-dark">
+                    Accept
+                  </button>
+                  <button onClick={() => void defer(t.id, 1)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
+                    → Tomorrow
+                  </button>
+                  <button onClick={() => void defer(t.id, 7)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
+                    → Next week
+                  </button>
+                  {t.created_by && (
+                    <button onClick={() => void pushBack(t)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
+                      Push back
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {unscheduled.length > 0 && (
+        <div>
+          {showLabels && (
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+              Unscheduled
+            </p>
+          )}
+          <ul className="space-y-2">
+            {unscheduled.map((t) => (
+              <li key={t.id} className="rounded-lg border border-sparrow-rule px-3 py-2">
+                <p className="text-sm font-medium text-sparrow-ink">{t.title}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                  <button onClick={() => void defer(t.id, 0)} className="rounded-md bg-sparrow-green px-2 py-1 font-medium text-white hover:bg-sparrow-green-dark">
+                    Do today
+                  </button>
+                  <button onClick={() => void defer(t.id, 1)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
+                    → Tomorrow
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

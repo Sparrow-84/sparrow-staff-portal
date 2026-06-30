@@ -168,23 +168,12 @@ export async function updateMemberTenantLinks(spaceId: string, tenantId: string)
   if (error) throw new Error(error.message);
 }
 
-export async function fetchOptedInCount(): Promise<number> {
-  const { count, error } = await supabase
-    .from('household_members')
-    .select('id', { count: 'exact', head: true })
-    .eq('park_chat_opt_in', true)
-    .not('phone', 'is', null);
-  if (error) throw new Error(error.message);
-  return count ?? 0;
-}
-
 export interface MemberDraft {
   id?: string;
   tenant_id?: string | null;
   name: string;
   phone: string;
   email: string;
-  park_chat_opt_in: boolean;
 }
 
 export async function syncHouseholdMembers(
@@ -210,7 +199,6 @@ export async function syncHouseholdMembers(
       name: d.name.trim(),
       phone: d.phone.trim() || null,
       email: d.email.trim() || null,
-      park_chat_opt_in: d.park_chat_opt_in,
       sort_order: i,
     };
     const { error } = await supabase.from('household_members').upsert(row);

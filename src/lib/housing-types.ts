@@ -59,7 +59,6 @@ export interface HouseholdMember {
   name: string;
   phone: string | null;
   email: string | null;
-  park_chat_opt_in: boolean;
   is_archived: boolean;
   sort_order: number;
   created_at: string;

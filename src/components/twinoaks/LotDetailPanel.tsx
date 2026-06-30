@@ -177,7 +177,7 @@ export function LotDetailPanel({
         fetchNoticesForSpace(spaceId).catch(() => [] as LotNoticeWithCreator[]),
       ]);
       setMembers(m);
-      setMemberDrafts(m.map((hm) => ({ id: hm.id, tenant_id: hm.tenant_id, name: hm.name, phone: hm.phone ?? '', email: hm.email ?? '', park_chat_opt_in: hm.park_chat_opt_in })));
+      setMemberDrafts(m.map((hm) => ({ id: hm.id, tenant_id: hm.tenant_id, name: hm.name, phone: hm.phone ?? '', email: hm.email ?? '' })));
       setPets(p);
       setPetDrafts(p.map((pt) => ({ id: pt.id, pet_type: pt.pet_type, name: pt.name ?? '', notes: pt.notes ?? '' })));
       setNotices(n);
@@ -300,7 +300,7 @@ export function LotDetailPanel({
   }
 
   // ── Member helpers ───────────────────────────────────────────────
-  const addMember = () => setMemberDrafts((p) => [...p, { name: '', phone: '', email: '', park_chat_opt_in: false }]);
+  const addMember = () => setMemberDrafts((p) => [...p, { name: '', phone: '', email: '' }]);
   const removeMember = (i: number) => setMemberDrafts((p) => p.filter((_, idx) => idx !== i));
   const updateMember = (i: number, patch: Partial<MemberDraft>) =>
     setMemberDrafts((p) => p.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
@@ -668,10 +668,6 @@ export function LotDetailPanel({
                                 <input className="field-input" value={m.phone} onChange={(e) => updateMember(i, { phone: e.target.value })} placeholder="Phone (optional)" />
                                 <input className="field-input" type="email" value={m.email} onChange={(e) => updateMember(i, { email: e.target.value })} placeholder="Email (optional)" />
                               </div>
-                              <label className="flex cursor-pointer items-center gap-2">
-                                <input type="checkbox" checked={m.park_chat_opt_in} onChange={(e) => updateMember(i, { park_chat_opt_in: e.target.checked })} className="h-4 w-4 rounded accent-sparrow-green" />
-                                <span className="text-xs text-sparrow-gray">Opted into park alerts <Info tip="This person has agreed to receive emergency SMS alerts. They can opt out at any time." /></span>
-                              </label>
                             </div>
                           ))}
                           <button type="button" onClick={addMember} className="text-xs font-medium text-sparrow-green hover:underline">+ Add adult</button>
@@ -961,7 +957,6 @@ function ViewBody({
                 <p className="font-medium text-sparrow-ink">{m.name}</p>
                 <p className="text-xs text-sparrow-gray">
                   {[m.phone, m.email].filter(Boolean).join(' · ')}
-                  {m.park_chat_opt_in && <span className="ml-1 text-sparrow-green">· ✓ park alerts</span>}
                 </p>
               </div>
             ))}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Profile } from '@/lib/types';
-import { emitFirstTimeDonorTask, fetchDonations, fetchTouchpoints, logTouchpoint, updatePartner } from '@/lib/partnerships';
+import { emitFirstTimeDonorTask, emitRevisitTask, fetchDonations, fetchTouchpoints, logTouchpoint, updatePartner } from '@/lib/partnerships';
 import {
   DONOR_TIER,
   DONOR_TIER_DESC,
@@ -27,7 +27,7 @@ import {
 } from '@/lib/partnerships-types';
 import { Drawer } from '../lcp/Drawer';
 
-const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'lapsed', 'inactive'];
+const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'inactive'];
 const TIERS: DonorTier[] = ['first_time', 'recurring', 'major', 'lapsed'];
 const MOU_STATUSES: MouStatus[] = ['not_needed', 'needed', 'on_file'];
 
@@ -175,16 +175,11 @@ export function PartnerDetailPanel({
               <button
                 onClick={async () => {
                   setBusy(true);
-                  await logTouchpoint(
-                    {
-                      partner_id: partner.id,
-                      method: 'other',
-                      occurred_on: new Date().toISOString().slice(0, 10),
-                      summary: 'Revisiting in 30 days.',
-                    },
-                    currentUserId,
-                  );
-                  await reload();
+                  await emitRevisitTask(
+                    partner.id,
+                    partner.name,
+                    partner.owner_id ?? currentUserId,
+                  ).catch(() => undefined);
                   setBusy(false);
                   onChanged();
                 }}

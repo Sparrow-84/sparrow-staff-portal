@@ -6,7 +6,7 @@ import type { Profile, TaskComment, TaskWithPeople } from '@/lib/types';
 import { TaskWorkspace } from '@/components/TaskWorkspace';
 
 // The full "My tasks" workspace (List / Board / Calendar views). The Home dashboard
-// (WidgetHome) surfaces today's slice + the triage inbox; this is the deep view.
+// (WidgetHome) surfaces today's slice + Incoming Tasks; this is the deep view.
 export function TasksView() {
   const { profile } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);

@@ -250,5 +250,28 @@ export async function emitFirstTimeDonorTask(
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Emit a 30-day revisit task when Bethany defers action on a non-responsive partner.
+ * Creates a real calendar task instead of logging a fake touchpoint.
+ */
+export async function emitRevisitTask(
+  partnerId: string,
+  partnerName: string,
+  assigneeId: string,
+): Promise<void> {
+  const due = new Date();
+  due.setDate(due.getDate() + 30);
+  const { error } = await supabase.rpc('emit_system_task', {
+    p_system: 'crm',
+    p_ref: `revisit_reengaging:${partnerId}`,
+    p_assignee: assigneeId,
+    p_title: `Revisit ${partnerName} — follow up or archive`,
+    p_department: 'partnerships',
+    p_priority: 'p3',
+    p_due: due.toLocaleDateString('en-CA'),
+  });
+  if (error) throw new Error(error.message);
+}
+
 // Re-export types for convenience
 export type { GivingMethod, MouStatus };

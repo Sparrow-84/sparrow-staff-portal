@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchProfiles } from '@/lib/data';
-import { fetchAllNotices, fetchOptedInCount, fetchSpaces, fetchTenants, fetchWorkOrders, type WorkOrderWithAssignee } from '@/lib/housing';
-import { supabase } from '@/lib/supabase';
+import { fetchAllNotices, fetchSpaces, fetchTenants, fetchWorkOrders, type WorkOrderWithAssignee } from '@/lib/housing';
 import {
   LOT_LEGEND,
   OPEN_WO_STATUSES,
@@ -59,13 +58,6 @@ export function TwinOaksRoom() {
     } catch { /* non-fatal */ }
   }, []);
 
-  // Emergency alert modal
-  const [alertOpen, setAlertOpen] = useState(false);
-  const [alertMessage, setAlertMessage] = useState('');
-  const [optedInCount, setOptedInCount] = useState<number | null>(null);
-  const [alertResult, setAlertResult] = useState<{ sent: number; failed: number } | null>(null);
-  const [alertError, setAlertError] = useState<string | null>(null);
-  const [alertPending, startAlertTransition] = useTransition();
 
   const load = useCallback(async () => {
     try {
@@ -139,32 +131,6 @@ export function TwinOaksRoom() {
     setWoOpen(true);
   }
 
-  function openAlertModal() {
-    setAlertMessage('');
-    setAlertResult(null);
-    setAlertError(null);
-    setAlertOpen(true);
-    void fetchOptedInCount().then(setOptedInCount).catch(() => setOptedInCount(null));
-  }
-
-  function sendAlert() {
-    if (!alertMessage.trim()) return;
-    startAlertTransition(async () => {
-      setAlertError(null);
-      setAlertResult(null);
-      try {
-        const { data, error } = await supabase.functions.invoke('send-park-alert', {
-          body: { message: alertMessage.trim() },
-        });
-        if (error) throw new Error(error.message);
-        setAlertResult(data as { sent: number; failed: number });
-        setAlertMessage('');
-      } catch (e) {
-        setAlertError(e instanceof Error ? e.message : 'Could not send alert.');
-      }
-    });
-  }
-
   if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading Twin Oaks…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
@@ -178,14 +144,6 @@ export function TwinOaksRoom() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {canManage && (
-            <button
-              onClick={openAlertModal}
-              className="rounded-xl border border-priority-p1 px-3 py-2 text-sm font-semibold text-priority-p1 transition hover:bg-priority-p1 hover:text-white"
-            >
-              Send emergency alert
-            </button>
-          )}
           {tab === 'workorders' && canManage && (
             <button onClick={() => newWorkOrder(null)} className="btn-primary">
               + New work order
@@ -308,65 +266,6 @@ export function TwinOaksRoom() {
         onChanged={load}
       />
 
-      {/* Emergency alert modal */}
-      {alertOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-sparrow-ink/40"
-            onClick={() => !alertPending && setAlertOpen(false)}
-            aria-hidden
-          />
-          <div className="fixed inset-x-4 top-1/4 z-50 mx-auto max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <h2 className="mb-1 font-serif text-lg font-semibold text-priority-p1">Send emergency alert</h2>
-            <p className="mb-4 text-xs text-sparrow-gray">
-              This sends an SMS to every adult who has opted into park alerts.
-              {optedInCount !== null && (
-                <span className="ml-1 font-semibold text-sparrow-ink">
-                  {optedInCount} resident{optedInCount !== 1 ? 's' : ''} will receive this message.
-                </span>
-              )}
-            </p>
-
-            {alertResult ? (
-              <div className="rounded-xl bg-sparrow-mist px-4 py-3 text-sm">
-                <p className="font-semibold text-sparrow-green">Alert sent.</p>
-                <p className="text-sparrow-gray">{alertResult.sent} delivered · {alertResult.failed} failed</p>
-                <button onClick={() => setAlertOpen(false)} className="btn-primary mt-4 w-full">
-                  Close
-                </button>
-              </div>
-            ) : (
-              <>
-                <textarea
-                  className="field-input mb-4 w-full"
-                  rows={4}
-                  placeholder="e.g. There is a water main break. Please avoid using water until further notice."
-                  value={alertMessage}
-                  onChange={(e) => setAlertMessage(e.target.value)}
-                  disabled={alertPending}
-                />
-                {alertError && <p className="mb-3 text-sm text-priority-p1">{alertError}</p>}
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => setAlertOpen(false)}
-                    disabled={alertPending}
-                    className="btn-ghost"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={sendAlert}
-                    disabled={alertPending || !alertMessage.trim()}
-                    className="rounded-xl bg-priority-p1 px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-40 hover:bg-red-700"
-                  >
-                    {alertPending ? 'Sending…' : 'Send to all opted-in residents'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </>
-      )}
     </div>
   );
 }

@@ -52,7 +52,10 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
   const showTeam = reports.length > 0;
 
   const mineTasks = useMemo(
-    () => tasks.filter((t) => t.assignee_id === currentUser.id),
+    () =>
+      tasks.filter(
+        (t) => t.assignee_id === currentUser.id || t.created_by === currentUser.id,
+      ),
     [tasks, currentUser.id],
   );
   const teamTasks = useMemo(() => {

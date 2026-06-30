@@ -146,6 +146,11 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
           </button>
         </div>
 
+        {error && (
+          <div className="border-b border-red-200 bg-red-50 px-5 py-3">
+            <p className="text-sm font-medium text-red-700">{error}</p>
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <label className="field-label" htmlFor="t-title">
             Task
@@ -294,7 +299,6 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             </div>
           )}
 
-          {error && <p className="mt-4 text-sm text-priority-p1">{error}</p>}
         </div>
 
         <div className="flex items-center justify-between border-t border-sparrow-rule px-5 py-4">
