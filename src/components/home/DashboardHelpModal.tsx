@@ -11,8 +11,8 @@ const WIDGETS = [
   { name: 'Incoming Tasks', desc: 'Tasks assigned to you — accept, defer, or push back.' },
   { name: 'Org Calendar', desc: 'All-staff meetings, program sessions, and org events.' },
   { name: 'Notifications', desc: '@mentions, task updates, and system alerts.' },
-  { name: 'Team Pulse', desc: 'Your team's task load at a glance. Managers only.' },
-  { name: 'Quick Wins', desc: 'Log small completions that don't have a formal task.' },
+  { name: 'Team Pulse', desc: "Your team's task load at a glance. Managers only." },
+  { name: 'Quick Wins', desc: "Log small completions that don't have a formal task." },
   { name: 'Mini Calendar', desc: 'Month-at-a-glance calendar for quick date reference.' },
 ];
 
