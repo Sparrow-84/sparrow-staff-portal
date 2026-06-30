@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 import type {
+  Donation,
+  DonorStat,
   DonorTier,
   GivingMethod,
   MouStatus,
@@ -142,6 +144,84 @@ export async function syncLapsedPartnerTasks(): Promise<number> {
   const { data, error } = await supabase.rpc('emit_lapsed_partner_tasks');
   if (error) throw new Error(error.message);
   return (data as number | null) ?? 0;
+}
+
+// ── Donations ────────────────────────────────────────────────────────
+
+/**
+ * Fetch aggregate donation stats for all partners in one query.
+ * Returns an empty array (graceful fallback) if the donations table doesn't
+ * exist yet — callers treat missing stats as "no data" rather than crashing.
+ */
+export async function fetchDonorStats(): Promise<DonorStat[]> {
+  const { data, error } = await supabase
+    .from('donations')
+    .select('partner_id, received_on, amount_above_10k')
+    .not('partner_id', 'is', null);
+  if (error) {
+    if (error.message.includes('relation') && error.message.includes('does not exist')) return [];
+    throw new Error(error.message);
+  }
+  const map = new Map<string, DonorStat>();
+  for (const row of data ?? []) {
+    const pid = row.partner_id as string;
+    const existing = map.get(pid);
+    if (!existing) {
+      map.set(pid, {
+        partner_id: pid,
+        gift_count: 1,
+        last_gift_date: row.received_on as string,
+        has_major_gift: row.amount_above_10k as boolean,
+      });
+    } else {
+      existing.gift_count++;
+      if ((row.received_on as string) > (existing.last_gift_date ?? '')) {
+        existing.last_gift_date = row.received_on as string;
+      }
+      if (row.amount_above_10k) existing.has_major_gift = true;
+    }
+  }
+  return Array.from(map.values());
+}
+
+/** Fetch the full donation list for one partner — shown in their detail panel. */
+export async function fetchDonations(partnerId: string): Promise<Donation[]> {
+  const { data, error } = await supabase
+    .from('donations')
+    .select('*')
+    .eq('partner_id', partnerId)
+    .order('received_on', { ascending: false });
+  if (error) {
+    if (error.message.includes('relation') && error.message.includes('does not exist')) return [];
+    throw new Error(error.message);
+  }
+  return (data ?? []) as Donation[];
+}
+
+/**
+ * Auto-patch donor_tier to 'lapsed' for any donor whose last gift was 12+ months ago
+ * and who isn't already marked 'major'. Called on room load alongside other sync tasks
+ * so Bethany never has to manually set a tier to lapsed — it just happens.
+ */
+export async function syncLapsedDonorTiers(
+  partners: Partner[],
+  stats: DonorStat[],
+): Promise<void> {
+  const today = new Date();
+  const LAPSED_MS = 365 * 86_400_000;
+  const statMap = new Map(stats.map((s) => [s.partner_id, s]));
+  const patches: Promise<void>[] = [];
+  for (const p of partners) {
+    if (p.type !== 'donor' || p.donor_tier === 'major') continue;
+    const stat = statMap.get(p.id);
+    if (!stat || stat.gift_count === 0) continue;
+    if (!stat.last_gift_date) continue;
+    const daysSince = today.getTime() - new Date(`${stat.last_gift_date}T12:00:00`).getTime();
+    if (daysSince >= LAPSED_MS && p.donor_tier !== 'lapsed') {
+      patches.push(updatePartner(p.id, { donor_tier: 'lapsed' }).catch(() => undefined));
+    }
+  }
+  await Promise.all(patches);
 }
 
 /**

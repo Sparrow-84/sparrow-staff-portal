@@ -3,8 +3,11 @@ import {
   PARTNER_STAGE,
   PARTNER_TYPE,
   STEWARDSHIP,
+  derivedDonorTier,
   dueLabel,
+  shortDate,
   stewardshipStatus,
+  type DonorStat,
   type Partner,
 } from '@/lib/partnerships-types';
 
@@ -13,11 +16,13 @@ export function PartnerTileView({
   profiles,
   onOpenPartner,
   nextCommLabel,
+  donorStatMap = new Map(),
 }: {
   partners: Partner[];
   profiles: Profile[];
   onOpenPartner: (id: string) => void;
   nextCommLabel?: string;
+  donorStatMap?: Map<string, DonorStat>;
 }) {
   function ownerName(id: string | null) {
     return id ? (profiles.find((p) => p.id === id)?.full_name ?? 'Unassigned') : 'Unassigned';
@@ -33,6 +38,8 @@ export function PartnerTileView({
         const status = stewardshipStatus(p);
         const st = STEWARDSHIP[status];
         const type = PARTNER_TYPE[p.type];
+        const stat = donorStatMap.get(p.id);
+        const tier = derivedDonorTier(p.donor_tier, stat);
         return (
           <button
             key={p.id}
@@ -55,17 +62,36 @@ export function PartnerTileView({
               {dueLabel(p, new Date(), p.cadence_days == null ? nextCommLabel : undefined)}
             </span>
 
-            {/* Stage + donor + MOU badges */}
-            {(p.stage === 'prospect' || p.stage === 'lapsed' || p.donor_tier === 'major' || p.mou_status === 'needed') && (
+            {/* Donation summary for donors */}
+            {p.type === 'donor' && (
+              <p className="mt-1 text-[10px] text-sparrow-gray">
+                {stat && stat.gift_count > 0
+                  ? `${stat.gift_count} gift${stat.gift_count > 1 ? 's' : ''} · last ${shortDate(stat.last_gift_date)}`
+                  : 'No gifts on record'}
+              </p>
+            )}
+
+            {/* Stage + donor tier + MOU badges */}
+            {(p.stage === 'prospect' || tier === 'major' || tier === 'lapsed' || tier === 'first_time' || p.mou_status === 'needed') && (
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {(p.stage === 'prospect' || p.stage === 'lapsed') && (
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${PARTNER_STAGE[p.stage].chip}`}>
-                    {PARTNER_STAGE[p.stage].label}
+                {p.stage === 'prospect' && (
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${PARTNER_STAGE['prospect'].chip}`}>
+                    Prospect
                   </span>
                 )}
-                {p.donor_tier === 'major' && (
+                {tier === 'major' && (
                   <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">
                     Major donor
+                  </span>
+                )}
+                {tier === 'lapsed' && p.type === 'donor' && (
+                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">
+                    Lapsed giving
+                  </span>
+                )}
+                {tier === 'first_time' && (
+                  <span className="rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">
+                    First gift
                   </span>
                 )}
                 {p.mou_status === 'needed' && (

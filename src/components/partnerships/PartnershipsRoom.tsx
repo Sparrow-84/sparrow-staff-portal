@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
-import { fetchArchivedPartners, fetchPartners, syncDueTouchpointTasks, syncLapsedPartnerTasks } from '@/lib/partnerships';
+import { fetchArchivedPartners, fetchDonorStats, fetchPartners, syncDueTouchpointTasks, syncLapsedDonorTiers, syncLapsedPartnerTasks } from '@/lib/partnerships';
 import {
   stewardshipStatus,
+  type DonorStat,
   type Partner,
   type PartnerType,
 } from '@/lib/partnerships-types';
@@ -69,6 +70,7 @@ export function PartnershipsRoom() {
   );
 
   const [nextCommLabel, setNextCommLabel] = useState<string | undefined>(undefined);
+  const [donorStatMap, setDonorStatMap] = useState<Map<string, DonorStat>>(new Map());
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -81,15 +83,17 @@ export function PartnershipsRoom() {
   const load = useCallback(async () => {
     try {
       const year = new Date().getFullYear();
-      const [pp, pr, archived, comms] = await Promise.all([
+      const [pp, pr, archived, comms, stats] = await Promise.all([
         fetchPartners(),
         fetchProfiles(),
         fetchArchivedPartners(),
         fetchComms(year),
+        fetchDonorStats(),
       ]);
       setPartners(pp);
       setProfiles(pr);
       setArchivedPartners(archived);
+      setDonorStatMap(new Map(stats.map((s) => [s.partner_id, s])));
       // Find the next upcoming comm that hasn't been sent — shown for donors/prayer in place of "No cadence"
       const today = new Date().toISOString().slice(0, 10);
       const next = comms
@@ -99,9 +103,10 @@ export function PartnershipsRoom() {
         const d = new Date(`${next.publish_date}T12:00:00`);
         setNextCommLabel(`${next.title} — ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`);
       }
-      // Best-effort: fan overdue touchpoints + lapsed partners to owners' Incoming Tasks.
+      // Best-effort background syncs — overdue tasks, lapsed stages, lapsed donor tiers.
       void syncDueTouchpointTasks().catch(() => undefined);
       void syncLapsedPartnerTasks().catch(() => undefined);
+      void syncLapsedDonorTiers(pp, stats).catch(() => undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load partnerships.');
     } finally {
@@ -333,6 +338,8 @@ export function PartnershipsRoom() {
                 onOpenPartner={openPartner}
                 onChanged={load}
                 nextCommLabel={nextCommLabel}
+                isDonorView={filter === 'donor'}
+                donorStatMap={donorStatMap}
               />
             )}
             {view === 'tile' && (
@@ -341,6 +348,7 @@ export function PartnershipsRoom() {
                 profiles={profiles}
                 onOpenPartner={openPartner}
                 nextCommLabel={nextCommLabel}
+                donorStatMap={donorStatMap}
               />
             )}
           </div>
@@ -354,6 +362,7 @@ export function PartnershipsRoom() {
         currentUserId={profile?.id ?? ''}
         onClose={() => setDetailOpen(false)}
         onChanged={load}
+        donorStat={selected ? (donorStatMap.get(selected.id) ?? null) : null}
       />
       <AddPartnerPanel
         open={addOpen}

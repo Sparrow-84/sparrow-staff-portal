@@ -21,6 +21,51 @@ export type TouchpointMethod = 'email' | 'phone' | 'in_person' | 'text' | 'lette
 export type GivingMethod = 'Givebutter' | 'Check' | 'Cash' | 'Stock' | 'Other';
 export type MouStatus = 'not_needed' | 'needed' | 'on_file';
 
+export interface Donation {
+  id: string;
+  partner_id: string | null;
+  given_by_name: string | null;
+  given_by_email: string | null;
+  amount_above_10k: boolean;
+  designation: string | null;
+  giving_method: string | null;
+  recurring: boolean;
+  received_on: string;
+  created_at: string;
+}
+
+export interface DonorStat {
+  partner_id: string;
+  gift_count: number;
+  last_gift_date: string | null;
+  has_major_gift: boolean;
+}
+
+const DONOR_LAPSED_DAYS = 365;
+
+/**
+ * Derive the effective donor tier from donation history.
+ * 'major' is a one-way ratchet — once set, it stays regardless of recency.
+ * For all other tiers, if the last gift was 12+ months ago the tier reads as 'lapsed'
+ * so Bethany sees it automatically without manual updates.
+ * Returns null when no stat data exists (donations table not yet active).
+ */
+export function derivedDonorTier(
+  stored: DonorTier | null,
+  stat: DonorStat | undefined,
+  today: Date = new Date(),
+): DonorTier | null {
+  if (!stat || stat.gift_count === 0) return stored;
+  if (stat.has_major_gift || stored === 'major') return 'major';
+  if (stat.last_gift_date) {
+    const daysSince = Math.floor(
+      (today.getTime() - new Date(`${stat.last_gift_date}T12:00:00`).getTime()) / 86_400_000,
+    );
+    if (daysSince >= DONOR_LAPSED_DAYS) return 'lapsed';
+  }
+  return stored;
+}
+
 export interface Partner {
   id: string;
   name: string;

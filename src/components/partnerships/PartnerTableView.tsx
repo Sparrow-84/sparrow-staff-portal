@@ -6,14 +6,16 @@ import {
   PARTNER_TYPE,
   STEWARDSHIP,
   daysUntilDue,
+  derivedDonorTier,
   dueLabel,
   shortDate,
   stewardshipStatus,
+  type DonorStat,
   type Partner,
   type PartnerStage,
 } from '@/lib/partnerships-types';
 
-type SortKey = 'name' | 'type' | 'stage' | 'last_touch' | 'due';
+type SortKey = 'name' | 'type' | 'stage' | 'last_touch' | 'due' | 'last_gift' | 'gift_count';
 type SortDir = 'asc' | 'desc';
 
 export function PartnerTableView({
@@ -22,12 +24,16 @@ export function PartnerTableView({
   onOpenPartner,
   onChanged,
   nextCommLabel,
+  isDonorView = false,
+  donorStatMap = new Map(),
 }: {
   partners: Partner[];
   profiles: Profile[];
   onOpenPartner: (id: string) => void;
   onChanged: () => void;
   nextCommLabel?: string;
+  isDonorView?: boolean;
+  donorStatMap?: Map<string, DonorStat>;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -68,6 +74,18 @@ export function PartnerTableView({
       case 'due': {
         const da = daysUntilDue(a, today) ?? 9999;
         const db = daysUntilDue(b, today) ?? 9999;
+        cmp = da - db;
+        break;
+      }
+      case 'last_gift': {
+        const da = donorStatMap.get(a.id)?.last_gift_date ?? '';
+        const db = donorStatMap.get(b.id)?.last_gift_date ?? '';
+        cmp = da.localeCompare(db);
+        break;
+      }
+      case 'gift_count': {
+        const da = donorStatMap.get(a.id)?.gift_count ?? 0;
+        const db = donorStatMap.get(b.id)?.gift_count ?? 0;
         cmp = da - db;
         break;
       }
@@ -116,9 +134,16 @@ export function PartnerTableView({
             </th>
             <SortTh label="Last touch" k="last_touch" />
             <SortTh label="Due" k="due" />
-            <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
-              Cadence
-            </th>
+            {isDonorView ? (
+              <>
+                <SortTh label="Gifts" k="gift_count" />
+                <SortTh label="Last gift" k="last_gift" />
+              </>
+            ) : (
+              <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+                Cadence
+              </th>
+            )}
             <th className="w-8 px-3 py-2" />
           </tr>
         </thead>
@@ -143,16 +168,15 @@ export function PartnerTableView({
                 <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sparrow-ink">{p.name}</span>
-                    {p.donor_tier === 'major' && (
-                      <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">
-                        Major
-                      </span>
-                    )}
+                    {(() => {
+                      const tier = derivedDonorTier(p.donor_tier, donorStatMap.get(p.id));
+                      if (tier === 'major') return <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">Major</span>;
+                      if (tier === 'lapsed' && p.type === 'donor') return <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">Lapsed giving</span>;
+                      if (tier === 'first_time') return <span className="rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">First gift</span>;
+                      return null;
+                    })()}
                     {p.mou_status === 'needed' && (
-                      <span
-                        className="h-2 w-2 rounded-full bg-priority-p1"
-                        title="MOU needed"
-                      />
+                      <span className="h-2 w-2 rounded-full bg-priority-p1" title="MOU needed" />
                     )}
                   </div>
                 </td>
@@ -207,21 +231,35 @@ export function PartnerTableView({
                   </span>
                 </td>
 
-                {/* Cadence — inline editable */}
-                <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="number"
-                    min={1}
-                    defaultValue={p.cadence_days ?? ''}
-                    onBlur={(e) => {
-                      const v = e.target.value ? Math.max(1, Number(e.target.value)) : null;
-                      if (v !== (p.cadence_days ?? null)) void patch(p.id, { cadence_days: v });
-                    }}
-                    placeholder="—"
-                    disabled={isBusy}
-                    className="field-input mt-0 w-16 py-1 text-xs"
-                  />
-                </td>
+                {/* Cadence (non-donor) or gift stats (donor view) */}
+                {isDonorView ? (() => {
+                  const stat = donorStatMap.get(p.id);
+                  return (
+                    <>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">
+                        {stat ? stat.gift_count : '—'}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">
+                        {stat?.last_gift_date ? shortDate(stat.last_gift_date) : '—'}
+                      </td>
+                    </>
+                  );
+                })() : (
+                  <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="number"
+                      min={1}
+                      defaultValue={p.cadence_days ?? ''}
+                      onBlur={(e) => {
+                        const v = e.target.value ? Math.max(1, Number(e.target.value)) : null;
+                        if (v !== (p.cadence_days ?? null)) void patch(p.id, { cadence_days: v });
+                      }}
+                      placeholder="—"
+                      disabled={isBusy}
+                      className="field-input mt-0 w-16 py-1 text-xs"
+                    />
+                  </td>
+                )}
 
                 {/* Open link */}
                 <td

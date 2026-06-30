@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Profile } from '@/lib/types';
-import { emitFirstTimeDonorTask, fetchTouchpoints, logTouchpoint, updatePartner } from '@/lib/partnerships';
+import { emitFirstTimeDonorTask, fetchDonations, fetchTouchpoints, logTouchpoint, updatePartner } from '@/lib/partnerships';
 import {
   DONOR_TIER,
   DONOR_TIER_DESC,
@@ -16,6 +16,8 @@ import {
   shortDate,
   showInactivePrompt,
   stewardshipStatus,
+  type Donation,
+  type DonorStat,
   type DonorTier,
   type MouStatus,
   type Partner,
@@ -36,6 +38,7 @@ export function PartnerDetailPanel({
   currentUserId,
   onClose,
   onChanged,
+  donorStat = null,
 }: {
   open: boolean;
   partner: Partner | null;
@@ -43,8 +46,10 @@ export function PartnerDetailPanel({
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
+  donorStat?: DonorStat | null;
 }) {
   const [touchpoints, setTouchpoints] = useState<Touchpoint[]>([]);
+  const [donations, setDonations] = useState<Donation[]>([]);
   const [busy, setBusy] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -62,12 +67,15 @@ export function PartnerDetailPanel({
 
   const reload = useCallback(async () => {
     if (!partnerId) return;
-    const all = await fetchTouchpoints(partnerId);
-    // Newest first
+    const [all, gifts] = await Promise.all([
+      fetchTouchpoints(partnerId),
+      partner?.type === 'donor' ? fetchDonations(partnerId) : Promise.resolve([]),
+    ]);
     setTouchpoints([...all].sort((a, b) =>
       new Date(b.occurred_on).getTime() - new Date(a.occurred_on).getTime()
     ));
-  }, [partnerId]);
+    setDonations(gifts);
+  }, [partnerId, partner?.type]);
 
   useEffect(() => {
     if (open && partnerId) {
@@ -645,7 +653,59 @@ export function PartnerDetailPanel({
           </ul>
         </section>
 
-        {/* ── 11. Archive / Restore ── */}
+        {/* ── 11. Giving history (donors only) ── */}
+        {isDonor && (
+          <section>
+            <div className="flex items-baseline justify-between">
+              <span className="field-label">Giving history</span>
+              {donorStat && donorStat.gift_count > 0 && (
+                <span className="text-xs text-sparrow-gray">
+                  {donorStat.gift_count} gift{donorStat.gift_count > 1 ? 's' : ''} · last {shortDate(donorStat.last_gift_date)}
+                </span>
+              )}
+            </div>
+
+            {donations.length === 0 ? (
+              <p className="mt-1 text-sm text-sparrow-gray/70">
+                {donorStat === null
+                  ? 'Giving history will appear here once the Givebutter connection is active.'
+                  : 'No gifts on record yet.'}
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {donations.map((d) => (
+                  <li key={d.id} className="rounded-xl border border-sparrow-rule/70 bg-white p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2 text-sm font-medium text-sparrow-ink">
+                          {shortDate(d.received_on)}
+                          {d.amount_above_10k && (
+                            <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">
+                              $10k+
+                            </span>
+                          )}
+                          {d.recurring && (
+                            <span className="rounded-full bg-sparrow-green/10 px-2 py-0.5 text-[10px] font-medium text-sparrow-green">
+                              Recurring
+                            </span>
+                          )}
+                        </div>
+                        {d.designation && (
+                          <p className="mt-0.5 text-xs text-sparrow-gray">{d.designation}</p>
+                        )}
+                      </div>
+                      {d.giving_method && (
+                        <span className="shrink-0 text-xs text-sparrow-gray">{d.giving_method}</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {/* ── 12. Archive / Restore ── */}
         <section className="border-t border-sparrow-rule pt-4">
           {partner.active ? (
             confirmArchive ? (
