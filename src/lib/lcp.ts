@@ -8,6 +8,12 @@ import type {
   CurriculumUnit,
   EventKind,
   Family,
+  FinanceMilestone,
+  FamilyMilestoneProgress,
+  Goal,
+  GoalArea,
+  GoalResponse,
+  GoalStatus,
   Homework,
   HomeworkArea,
   HomeworkStatus,
@@ -510,7 +516,7 @@ export async function fetchCurriculum(): Promise<CurriculumPhase[]> {
     .select(`
       id, number, name,
       units:lcp_units(
-        id, name, month_label, artifact, supplement,
+        id, name, month_label, artifact, supplement, encouragement_text,
         sessions:lcp_sessions(id, session_number, title, focus, scripture)
       )
     `)
@@ -535,7 +541,7 @@ export async function updateCurriculumSession(
 
 export async function updateCurriculumUnit(
   id: number,
-  patch: Partial<Pick<CurriculumUnit, 'artifact' | 'supplement' | 'month_label'>>,
+  patch: Partial<Pick<CurriculumUnit, 'artifact' | 'supplement' | 'month_label' | 'encouragement_text'>>,
 ): Promise<void> {
   const { error } = await supabase.from('lcp_units').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
@@ -592,5 +598,107 @@ export async function updateResource(
 
 export async function deleteResource(id: string): Promise<void> {
   const { error } = await supabase.from('lcp_resources').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Goals ─────────────────────────────────────────────────────────────────────
+
+export async function fetchGoalsForFamily(familyId: string): Promise<Goal[]> {
+  const { data, error } = await supabase
+    .from('lcp_goals')
+    .select('id, family_id, area, title, due_date, status, created_by, created_at, updated_at, met_at')
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Goal[];
+}
+
+export async function fetchGoalResponsesForFamily(familyId: string): Promise<GoalResponse[]> {
+  const { data, error } = await supabase
+    .from('lcp_goal_responses')
+    .select('id, goal_id, family_id, response, note, created_at')
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as GoalResponse[];
+}
+
+export interface GoalInput {
+  family_id: string;
+  area: GoalArea;
+  title: string;
+  due_date: string | null;
+}
+
+export async function createGoal(input: GoalInput, createdBy: string): Promise<void> {
+  const { error } = await supabase.from('lcp_goals').insert({ ...input, created_by: createdBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function updateGoal(
+  id: string,
+  patch: Partial<Pick<Goal, 'title' | 'area' | 'due_date' | 'status' | 'met_at'>>,
+): Promise<void> {
+  const { error } = await supabase.from('lcp_goals').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function markGoalMet(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_goals')
+    .update({ status: 'met' as GoalStatus, met_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function reopenGoal(id: string, newDueDate?: string): Promise<void> {
+  const patch: Partial<Goal> = { status: 'active', met_at: null };
+  if (newDueDate) patch.due_date = newDueDate;
+  const { error } = await supabase.from('lcp_goals').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  const { error } = await supabase.from('lcp_goals').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Finance milestones ────────────────────────────────────────────────────────
+
+export async function fetchFinanceMilestones(): Promise<FinanceMilestone[]> {
+  const { data, error } = await supabase
+    .from('lcp_finance_milestones')
+    .select('id, sort_order, title, description')
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as FinanceMilestone[];
+}
+
+export async function fetchMilestoneProgressForFamily(familyId: string): Promise<FamilyMilestoneProgress[]> {
+  const { data, error } = await supabase
+    .from('lcp_family_milestone_progress')
+    .select('id, family_id, milestone_id, completed_at, completed_by')
+    .eq('family_id', familyId);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as FamilyMilestoneProgress[];
+}
+
+export async function completeMilestone(
+  familyId: string,
+  milestoneId: number,
+  completedBy: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_family_milestone_progress')
+    .insert({ family_id: familyId, milestone_id: milestoneId, completed_by: completedBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function uncompleteMilestone(familyId: string, milestoneId: number): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_family_milestone_progress')
+    .delete()
+    .eq('family_id', familyId)
+    .eq('milestone_id', milestoneId);
   if (error) throw new Error(error.message);
 }

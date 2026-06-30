@@ -2,10 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   AREA_LABEL,
   FAMILY_STATUS,
+  GOAL_AREA_LABEL,
+  GOAL_AREAS,
   HOMEWORK_AREAS,
   type CurriculumSession,
   type Family,
+  type FamilyMilestoneProgress,
   type FamilyStatus,
+  type FinanceMilestone,
+  type Goal,
+  type GoalArea,
+  type GoalResponse,
   type Homework,
   type HomeworkArea,
   type LcpPhaseWithUnits,
@@ -20,26 +27,39 @@ import {
   updateStaffNote,
   assignHomework,
   awardVoucher,
+  completeMilestone,
+  createGoal,
   deleteFamily,
+  deleteGoal,
   deleteHomework,
+  fetchFinanceMilestones,
+  fetchGoalResponsesForFamily,
+  fetchGoalsForFamily,
   fetchHomeworkForFamily,
   fetchMessages,
+  fetchMilestoneProgressForFamily,
   fetchRedemptions,
   fetchStaffNotes,
   fetchVouchers,
   fulfillRedemption,
+  markGoalMet,
+  reopenGoal,
   sendStaffMessage,
   setFamilyActive,
   setHomeworkStatus,
+  uncompleteMilestone,
   updateFamily,
+  updateGoal,
 } from '@/lib/lcp';
 import { money, dayLabel, dueLabel, isOverdue } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
 import { StaffThread } from './StaffThread';
 
-type Tab = 'progress' | 'homework' | 'messages' | 'notes' | 'rewards';
+type Tab = 'progress' | 'goals' | 'milestones' | 'homework' | 'messages' | 'notes' | 'rewards';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'progress', label: 'Progress' },
+  { key: 'goals', label: 'Goals' },
+  { key: 'milestones', label: 'Finance' },
   { key: 'homework', label: 'Homework' },
   { key: 'messages', label: 'Messages' },
   { key: 'notes', label: 'Notes' },
@@ -71,23 +91,35 @@ export function FamilyDetailPanel({
   const [notes, setNotes] = useState<StaffNote[]>([]);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goalResponses, setGoalResponses] = useState<GoalResponse[]>([]);
+  const [milestones, setMilestones] = useState<FinanceMilestone[]>([]);
+  const [milestoneProgress, setMilestoneProgress] = useState<FamilyMilestoneProgress[]>([]);
 
   const familyId = family?.id;
 
   const reloadDetail = useCallback(async () => {
     if (!familyId) return;
-    const [hw, msg, nt, vo, red] = await Promise.all([
+    const [hw, msg, nt, vo, red, gl, gr, ms, mp] = await Promise.all([
       fetchHomeworkForFamily(familyId),
       fetchMessages(familyId),
       fetchStaffNotes(familyId),
       fetchVouchers(familyId),
       fetchRedemptions(),
+      fetchGoalsForFamily(familyId),
+      fetchGoalResponsesForFamily(familyId),
+      fetchFinanceMilestones(),
+      fetchMilestoneProgressForFamily(familyId),
     ]);
     setHomework(hw);
     setMessages(msg);
     setNotes(nt);
     setVouchers(vo);
     setRedemptions(red.filter((r) => r.family_id === familyId));
+    setGoals(gl);
+    setGoalResponses(gr);
+    setMilestones(ms);
+    setMilestoneProgress(mp);
   }, [familyId]);
 
   useEffect(() => {
@@ -125,6 +157,24 @@ export function FamilyDetailPanel({
             onChanged();
             onClose();
           }}
+        />
+      )}
+      {tab === 'goals' && (
+        <GoalsTab
+          family={family}
+          goals={goals}
+          goalResponses={goalResponses}
+          currentUserId={currentUserId}
+          onChanged={() => void reloadDetail()}
+        />
+      )}
+      {tab === 'milestones' && (
+        <MilestonesTab
+          family={family}
+          milestones={milestones}
+          progress={milestoneProgress}
+          currentUserId={currentUserId}
+          onChanged={() => void reloadDetail()}
         />
       )}
       {tab === 'homework' && (
@@ -403,6 +453,270 @@ function ProgressTab({
 
         {err && <p className="mt-2 text-sm text-priority-p1">{err}</p>}
       </div>
+    </div>
+  );
+}
+
+// ── Goals ─────────────────────────────────────────────────────────────
+function GoalsTab({
+  family,
+  goals,
+  goalResponses,
+  currentUserId,
+  onChanged,
+}: {
+  family: Family;
+  goals: Goal[];
+  goalResponses: GoalResponse[];
+  currentUserId: string;
+  onChanged: () => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [area, setArea] = useState<GoalArea>('relational');
+  const [due, setDue] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [extendingId, setExtendingId] = useState<string | null>(null);
+  const [newDue, setNewDue] = useState('');
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  function latestResponse(goalId: string): GoalResponse | null {
+    const rs = goalResponses.filter((r) => r.goal_id === goalId);
+    if (!rs.length) return null;
+    return rs.reduce((a, b) => (a.created_at > b.created_at ? a : b));
+  }
+
+  function needsTimeFlag(goal: Goal): boolean {
+    const r = latestResponse(goal.id);
+    return !!r && r.response === 'needs_time' && r.created_at > goal.updated_at;
+  }
+
+  async function add() {
+    if (!title.trim()) return;
+    setBusy(true);
+    await createGoal({ family_id: family.id, area, title: title.trim(), due_date: due || null }, currentUserId);
+    setTitle('');
+    setDue('');
+    setArea('relational');
+    setBusy(false);
+    onChanged();
+  }
+
+  async function markMet(goal: Goal) {
+    await markGoalMet(goal.id);
+    onChanged();
+  }
+
+  async function reopen(goal: Goal) {
+    await reopenGoal(goal.id);
+    onChanged();
+  }
+
+  async function extendDue(goal: Goal) {
+    if (!newDue) return;
+    await reopenGoal(goal.id, newDue);
+    setExtendingId(null);
+    setNewDue('');
+    onChanged();
+  }
+
+  async function remove(id: string) {
+    await deleteGoal(id);
+    onChanged();
+  }
+
+  const active = goals.filter((g) => g.status === 'active');
+  const met = goals.filter((g) => g.status === 'met');
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-sparrow-rule p-3">
+        <span className="field-label">Add a goal</span>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="What is the participant working toward?"
+          className="field-input"
+        />
+        <div className="mt-2 flex gap-2">
+          <select value={area} onChange={(e) => setArea(e.target.value as GoalArea)} className="field-input mt-0 flex-1">
+            {GOAL_AREAS.map((a) => (
+              <option key={a} value={a}>{GOAL_AREA_LABEL[a]}</option>
+            ))}
+          </select>
+          <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="field-input mt-0" />
+          <button onClick={add} disabled={busy || !title.trim()} className="btn-primary shrink-0">Add</button>
+        </div>
+      </div>
+
+      {active.length === 0 && met.length === 0 && (
+        <p className="text-sm text-sparrow-gray">No goals set yet. Add one above.</p>
+      )}
+
+      {active.length > 0 && (
+        <ul className="space-y-2">
+          {active.map((goal) => {
+            const flag = needsTimeFlag(goal);
+            const dueToday = goal.due_date === today;
+            const overdue = goal.due_date && goal.due_date < today;
+            return (
+              <li
+                key={goal.id}
+                className={`rounded-xl border p-3 ${
+                  flag ? 'border-sparrow-gold/50 bg-sparrow-gold/5'
+                  : dueToday ? 'border-sparrow-green/40 bg-sparrow-green/5'
+                  : overdue ? 'border-priority-p1/30 bg-priority-p1/5'
+                  : 'border-sparrow-rule/70'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <button
+                    onClick={() => markMet(goal)}
+                    className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-sparrow-rule text-white hover:border-sparrow-green"
+                    aria-label="Mark met"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-sparrow-ink">{goal.title}</p>
+                    <p className={`text-xs ${overdue && !flag ? 'text-priority-p1' : 'text-sparrow-gray'}`}>
+                      {GOAL_AREA_LABEL[goal.area]}
+                      {goal.due_date && ` · due ${goal.due_date}`}
+                      {dueToday && ' · today'}
+                    </p>
+                    {flag && (
+                      <p className="mt-1 text-xs font-medium text-sparrow-gold">
+                        ⚑ Participant needs more time — consider adjusting the date
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    {extendingId === goal.id ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="date"
+                          value={newDue}
+                          onChange={(e) => setNewDue(e.target.value)}
+                          className="field-input mt-0 w-36 text-xs"
+                        />
+                        <button onClick={() => extendDue(goal)} disabled={!newDue} className="btn-primary text-xs">Save</button>
+                        <button onClick={() => setExtendingId(null)} className="btn-ghost text-xs">×</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setExtendingId(goal.id); setNewDue(goal.due_date ?? ''); }}
+                        className="text-xs text-sparrow-gray hover:text-sparrow-green"
+                      >
+                        Adjust date
+                      </button>
+                    )}
+                    <button onClick={() => remove(goal.id)} className="text-xs text-sparrow-gray hover:text-priority-p1">Delete</button>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {met.length > 0 && (
+        <div>
+          <span className="field-label text-sparrow-gray">Completed goals</span>
+          <ul className="mt-1 space-y-2">
+            {met.map((goal) => (
+              <li key={goal.id} className="flex items-start gap-2 rounded-xl border border-sparrow-rule/50 p-3 opacity-70">
+                <div className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-sparrow-green text-white text-xs">✓</div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-sparrow-gray line-through">{goal.title}</p>
+                  <p className="text-xs text-sparrow-gray">{GOAL_AREA_LABEL[goal.area]}</p>
+                </div>
+                <button onClick={() => reopen(goal)} className="shrink-0 text-xs text-sparrow-gray hover:text-sparrow-ink">
+                  Reopen
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Finance milestones ────────────────────────────────────────────────
+function MilestonesTab({
+  family,
+  milestones,
+  progress,
+  currentUserId,
+  onChanged,
+}: {
+  family: Family;
+  milestones: FinanceMilestone[];
+  progress: FamilyMilestoneProgress[];
+  currentUserId: string;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState<number | null>(null);
+  const completedIds = new Set(progress.map((p) => p.milestone_id));
+  const completedCount = completedIds.size;
+
+  async function toggle(milestoneId: number) {
+    setBusy(milestoneId);
+    if (completedIds.has(milestoneId)) {
+      await uncompleteMilestone(family.id, milestoneId);
+    } else {
+      await completeMilestone(family.id, milestoneId, currentUserId);
+    }
+    setBusy(null);
+    onChanged();
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between rounded-xl bg-sparrow-mist px-4 py-3">
+        <p className="text-sm text-sparrow-ink">
+          <span className="font-serif text-2xl font-semibold text-sparrow-green">{completedCount}</span>
+          <span className="ml-1.5 text-sparrow-gray">/ {milestones.length} milestones completed</span>
+        </p>
+        <p className="text-xs text-sparrow-gray">Check off with the family as they reach each step</p>
+      </div>
+
+      <ul className="space-y-2">
+        {milestones.map((m) => {
+          const done = completedIds.has(m.id);
+          const prog = progress.find((p) => p.milestone_id === m.id);
+          return (
+            <li
+              key={m.id}
+              className={`flex items-start gap-3 rounded-xl border p-3 transition ${
+                done ? 'border-sparrow-green/30 bg-sparrow-green/5' : 'border-sparrow-rule/70'
+              }`}
+            >
+              <button
+                onClick={() => toggle(m.id)}
+                disabled={busy === m.id}
+                className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 text-white transition ${
+                  done ? 'border-sparrow-green bg-sparrow-green' : 'border-sparrow-rule hover:border-sparrow-green'
+                }`}
+                aria-label={done ? 'Mark incomplete' : 'Mark complete'}
+              >
+                {done && '✓'}
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm font-medium ${done ? 'text-sparrow-gray line-through' : 'text-sparrow-ink'}`}>
+                  {m.sort_order}. {m.title}
+                </p>
+                <p className={`text-xs ${done ? 'text-sparrow-gray' : 'text-sparrow-gray'}`}>
+                  {m.description}
+                  {prog && ` · Completed ${dayLabel(prog.completed_at)}`}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="text-xs text-sparrow-gray">
+        Circle back with Andrew and Shelly on these milestones — this list will be refined.
+      </p>
     </div>
   );
 }

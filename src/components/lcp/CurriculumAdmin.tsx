@@ -95,7 +95,7 @@ export function CurriculumAdmin() {
 
   async function handleUnitSave(
     unitId: number,
-    patch: Partial<Pick<CurriculumUnit, 'artifact' | 'supplement' | 'month_label'>>,
+    patch: Partial<Pick<CurriculumUnit, 'artifact' | 'supplement' | 'month_label' | 'encouragement_text'>>,
   ) {
     await updateCurriculumUnit(unitId, patch);
     setEditingUnitId(null);
@@ -185,13 +185,14 @@ function UnitSection({
   selectedSessionId: number | null;
   onToggleEdit: () => void;
   onUnitSave: (
-    patch: Partial<Pick<CurriculumUnit, 'artifact' | 'supplement' | 'month_label'>>,
+    patch: Partial<Pick<CurriculumUnit, 'artifact' | 'supplement' | 'month_label' | 'encouragement_text'>>,
   ) => Promise<void>;
   onSelectSession: (s: CurriculumSessionDetail) => void;
 }) {
   const [artifact, setArtifact] = useState(unit.artifact ?? '');
   const [supplement, setSupplement] = useState(unit.supplement ?? '');
   const [monthLabel, setMonthLabel] = useState(unit.month_label ?? '');
+  const [encouragementText, setEncouragementText] = useState(unit.encouragement_text ?? '');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -199,7 +200,8 @@ function UnitSection({
     setArtifact(unit.artifact ?? '');
     setSupplement(unit.supplement ?? '');
     setMonthLabel(unit.month_label ?? '');
-  }, [unit.artifact, unit.supplement, unit.month_label]);
+    setEncouragementText(unit.encouragement_text ?? '');
+  }, [unit.artifact, unit.supplement, unit.month_label, unit.encouragement_text]);
 
   async function save() {
     setSaving(true);
@@ -209,6 +211,7 @@ function UnitSection({
         artifact: artifact.trim() || null,
         supplement: supplement.trim() || null,
         month_label: monthLabel.trim() || null,
+        encouragement_text: encouragementText.trim() || null,
       });
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not save unit.');
@@ -233,6 +236,11 @@ function UnitSection({
           )}
           {unit.supplement && (
             <p className="text-xs text-sparrow-gray">Supplement: {unit.supplement}</p>
+          )}
+          {unit.encouragement_text && (
+            <p className="mt-0.5 text-xs italic text-sparrow-gray">
+              Pre-session note set ✓
+            </p>
           )}
         </div>
         <button
@@ -279,6 +287,19 @@ function UnitSection({
               value={supplement}
               onChange={(e) => setSupplement(e.target.value)}
               placeholder="e.g. Parenting with Autism & ADHD"
+              className="field-input"
+            />
+          </div>
+          <div>
+            <label className="field-label">
+              Pre-session encouragement{' '}
+              <span className="font-normal text-sparrow-gray">(optional — shown to participants before this unit's sessions)</span>
+            </label>
+            <textarea
+              rows={4}
+              value={encouragementText}
+              onChange={(e) => setEncouragementText(e.target.value)}
+              placeholder="Write a short note for participants — what's coming up this week, a scripture, an encouraging word. Plain text only."
               className="field-input"
             />
           </div>

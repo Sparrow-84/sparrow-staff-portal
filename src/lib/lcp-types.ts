@@ -194,6 +194,60 @@ export const SESSION_LOG_LABEL: Record<SessionLogType, string> = {
   ad_hoc:           'Ad-hoc Session',
 };
 
+// ── Goals ─────────────────────────────────────────────────────────────────────
+
+export type GoalArea = 'spiritual' | 'physical_financial' | 'emotional' | 'relational';
+export type GoalStatus = 'active' | 'met';
+export type GoalResponseKind = 'met' | 'needs_time';
+
+export interface Goal {
+  id: string;
+  family_id: string;
+  area: GoalArea;
+  title: string;
+  due_date: string | null;
+  status: GoalStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  met_at: string | null;
+}
+
+export interface GoalResponse {
+  id: string;
+  goal_id: string;
+  family_id: string;
+  response: GoalResponseKind;
+  note: string | null;
+  created_at: string;
+}
+
+export const GOAL_AREAS: GoalArea[] = ['spiritual', 'physical_financial', 'emotional', 'relational'];
+
+export const GOAL_AREA_LABEL: Record<GoalArea, string> = {
+  spiritual:         'Spiritual',
+  physical_financial:'Physical & Financial',
+  emotional:         'Emotional',
+  relational:        'Relational',
+};
+
+// ── Finance milestones ────────────────────────────────────────────────────────
+
+export interface FinanceMilestone {
+  id: number;
+  sort_order: number;
+  title: string;
+  description: string;
+}
+
+export interface FamilyMilestoneProgress {
+  id: string;
+  family_id: string;
+  milestone_id: number;
+  completed_at: string;
+  completed_by: string | null;
+}
+
 // ── Curriculum admin ──────────────────────────────────────────────────────────
 
 export type ResourceKind = 'handout' | 'teacher_guide' | 'devotional' | 'ppt' | 'art' | 'other';
@@ -227,6 +281,7 @@ export interface CurriculumUnit {
   month_label: string | null;
   artifact: string | null;
   supplement: string | null;
+  encouragement_text: string | null;
   sessions: CurriculumSessionDetail[];
 }
 
