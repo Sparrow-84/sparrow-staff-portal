@@ -36,6 +36,8 @@ export function NotificationBell() {
   }, []);
 
   const unread = items.filter((n) => !n.read).length;
+  // Only show unread — once you've handled them they're gone, not a growing pile.
+  const displayItems = items.filter((n) => !n.read);
 
   async function openMenu() {
     setOpen(true);
@@ -83,20 +85,23 @@ export function NotificationBell() {
               )}
             </div>
             <ul className="max-h-96 divide-y divide-sparrow-rule overflow-y-auto">
-              {items.length === 0 && (
+              {displayItems.length === 0 && (
                 <li className="px-4 py-6 text-center text-sm text-sparrow-gray">You're all caught up.</li>
               )}
-              {items.map((n) => (
+              {displayItems.map((n) => (
                 <li key={n.id}>
                   <button
                     onClick={() => void onItemClick(n)}
-                    className={`block w-full px-4 py-3 text-left hover:bg-sparrow-mist ${
-                      n.read ? '' : 'bg-sparrow-sage/40'
-                    }`}
+                    className="block w-full px-4 py-3 text-left hover:bg-sparrow-mist"
                   >
-                    <p className="text-sm text-sparrow-ink">{describe(n)}</p>
-                    {n.body && <p className="truncate text-xs text-sparrow-gray">{n.body}</p>}
-                    <p className="mt-0.5 text-[11px] text-sparrow-gray/70">{timeAgo(n.created_at)}</p>
+                    <div className="flex items-start gap-2">
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sparrow-green" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-sparrow-ink">{describe(n)}</p>
+                        {n.body && <p className="truncate text-xs text-sparrow-gray">{n.body}</p>}
+                        <p className="mt-0.5 text-[11px] text-sparrow-gray/70">{timeAgo(n.created_at)}</p>
+                      </div>
+                    </div>
                   </button>
                 </li>
               ))}

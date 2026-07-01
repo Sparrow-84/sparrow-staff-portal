@@ -5,12 +5,14 @@ import { TaskPanel } from './TaskPanel';
 import { TaskListView } from './tasks/TaskListView';
 import { TaskBoardView } from './tasks/TaskBoardView';
 import { TaskCalendarView } from './tasks/TaskCalendarView';
+import { TaskArchiveView } from './tasks/TaskArchiveView';
 
-type Layout = 'list' | 'board' | 'calendar';
+type Layout = 'list' | 'board' | 'calendar' | 'archive';
 const LAYOUTS: { value: Layout; label: string }[] = [
   { value: 'list', label: 'List' },
   { value: 'board', label: 'Board' },
   { value: 'calendar', label: 'Calendar' },
+  { value: 'archive', label: 'Archive' },
 ];
 
 interface Props {
@@ -34,7 +36,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
   // Remember the last-used view per the brief ("system remembers which view each user was last in").
   const [layout, setLayout] = useState<Layout>(() => {
     const saved = typeof window !== 'undefined' ? window.localStorage.getItem('sparrow.taskView') : null;
-    return saved === 'board' || saved === 'calendar' ? saved : 'list';
+    return saved === 'board' || saved === 'calendar' || saved === 'archive' ? saved : 'list';
   });
   useEffect(() => {
     window.localStorage.setItem('sparrow.taskView', layout);
@@ -52,11 +54,9 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
   );
   const showTeam = reports.length > 0;
 
+  // "My tasks" = tasks assigned to me. Tasks I created but delegated away show under My Team.
   const mineTasks = useMemo(
-    () =>
-      tasks.filter(
-        (t) => t.assignee_id === currentUser.id || t.created_by === currentUser.id,
-      ),
+    () => tasks.filter((t) => t.assignee_id === currentUser.id),
     [tasks, currentUser.id],
   );
   const teamTasks = useMemo(() => {
@@ -68,6 +68,10 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
     scope === 'mine'
       ? mineTasks
       : teamTasks.filter((t) => teamFilter === 'all' || t.assignee_id === teamFilter);
+
+  // Done tasks go to Archive only; list/board/calendar show active work.
+  const activeTasks = useMemo(() => visible.filter((t) => t.status !== 'done'), [visible]);
+  const doneTasks = useMemo(() => visible.filter((t) => t.status === 'done'), [visible]);
 
   function openNew() {
     setPanelTask(null);
@@ -127,9 +131,11 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
               ?
             </button>
           )}
-          <button onClick={openNew} className="btn-primary">
-            + New task
-          </button>
+          {layout !== 'archive' && (
+            <button onClick={openNew} className="btn-primary">
+              + New task
+            </button>
+          )}
         </div>
       </div>
 
@@ -169,7 +175,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
       <div className="mt-8">
         {layout === 'list' && (
           <TaskListView
-            tasks={visible}
+            tasks={activeTasks}
             today={today}
             currentUserId={currentUser.id}
             showAssignee={showAssignee}
@@ -179,7 +185,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
         )}
         {layout === 'board' && (
           <TaskBoardView
-            tasks={visible}
+            tasks={activeTasks}
             today={today}
             showAssignee={showAssignee}
             onOpen={openEdit}
@@ -187,7 +193,16 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
           />
         )}
         {layout === 'calendar' && (
-          <TaskCalendarView tasks={visible} today={today} onOpen={openEdit} onMoveDate={moveToDate} />
+          <TaskCalendarView tasks={activeTasks} today={today} onOpen={openEdit} onMoveDate={moveToDate} />
+        )}
+        {layout === 'archive' && (
+          <TaskArchiveView
+            tasks={doneTasks}
+            today={today}
+            showAssignee={showAssignee}
+            onOpen={openEdit}
+            onToggle={toggleDone}
+          />
         )}
       </div>
 
