@@ -50,7 +50,6 @@ import {
   setHomeworkStatus,
   uncompleteMilestone,
   updateFamily,
-  updateGoal,
 } from '@/lib/lcp';
 import { money, dayLabel, dueLabel, isOverdue } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';

@@ -18,7 +18,7 @@ import {
   fetchSubLocations,
 } from '@/lib/inventory';
 import {
-  BATCH_CATEGORIES, BATCH_CATEGORY_HINTS,
+  BATCH_CATEGORIES,
   type InvHouseFlip, type InvFlipItemCheck,
   type InvFlipLeaveBehind, type InvFlipNewItem, type InvSubLocation,
 } from '@/lib/inventory-types';
