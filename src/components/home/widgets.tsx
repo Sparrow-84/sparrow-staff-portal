@@ -239,15 +239,18 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
 // ── Notifications ─────────────────────────────────────────────────────
 function describe(n: AppNotification): string {
   const who = n.actor?.full_name ?? 'Someone';
-  return n.type === 'assigned' ? `${who} assigned you a task` : `${who} commented on a task`;
+  if (n.type === 'mentioned') return `${who} mentioned you`;
+  return `${who} commented on a task`;
 }
 
 function NotificationsWidget({ ctx }: { ctx: WidgetContext }) {
-  const items = ctx.notifications;
-  const unread = items.filter((n) => !n.read).length;
+  // Only show unread comments/mentions — assigned notifications live in Incoming Tasks
+  const displayItems = ctx.notifications
+    .filter((n) => !n.read && n.type !== 'assigned')
+    .slice(0, 6);
 
   async function open(n: AppNotification) {
-    if (!n.read) await markRead(n.id);
+    await markRead(n.id);
     const t = n.task_id ? ctx.tasks.find((x) => x.id === n.task_id) : undefined;
     if (t) ctx.onOpenTask(t);
     ctx.onChanged();
@@ -257,17 +260,15 @@ function NotificationsWidget({ ctx }: { ctx: WidgetContext }) {
     ctx.onChanged();
   }
 
-  if (items.length === 0) return <Empty>You're all caught up.</Empty>;
+  if (displayItems.length === 0) return <Empty>You're all caught up.</Empty>;
   return (
     <>
       <ul className="space-y-1">
-        {items.slice(0, 6).map((n) => (
+        {displayItems.map((n) => (
           <li key={n.id}>
             <button
               onClick={() => void open(n)}
-              className={`block w-full rounded-lg px-2 py-1.5 text-left transition hover:bg-sparrow-mist ${
-                n.read ? '' : 'bg-sparrow-sage/40'
-              }`}
+              className="block w-full rounded-lg bg-sparrow-sage/40 px-2 py-1.5 text-left transition hover:bg-sparrow-mist"
             >
               <p className="text-sm text-sparrow-ink">{describe(n)}</p>
               {n.body && <p className="truncate text-xs text-sparrow-gray">{n.body}</p>}
@@ -275,11 +276,9 @@ function NotificationsWidget({ ctx }: { ctx: WidgetContext }) {
           </li>
         ))}
       </ul>
-      {unread > 0 && (
-        <button onClick={() => void clearAll()} className="mt-2 text-xs text-sparrow-green hover:underline">
-          Mark all read
-        </button>
-      )}
+      <button onClick={() => void clearAll()} className="mt-2 text-xs text-sparrow-green hover:underline">
+        Mark all read
+      </button>
     </>
   );
 }
