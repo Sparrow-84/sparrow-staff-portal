@@ -28,7 +28,7 @@ const CALENDAR_HELP_SECTIONS = [
   },
 ];
 import { useAuth } from '@/auth/AuthContext';
-import { fetchCalendar, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
+import { fetchCalendar, KIND_LABEL, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
 import { AddOrgEventPanel } from '@/components/calendar/AddOrgEventPanel';
 import { OrgEventDetailPanel } from '@/components/calendar/OrgEventDetailPanel';
 import { fetchOrgCalLcpEvents } from '@/lib/lcp';
@@ -70,6 +70,31 @@ const SUB_OFF = 'rounded border border-sparrow-rule px-2.5 py-0.5 text-[11px] fo
 
 type DeadlineTask = Pick<Task, 'id' | 'title' | 'due_date' | 'priority' | 'status' | 'source_system' | 'source_ref'>;
 
+interface CalTooltipState {
+  title: string;
+  sub?: string;
+  time?: string;
+  location?: string;
+  x: number;
+  y: number;
+}
+
+function CalTooltip({ s }: { s: CalTooltipState }) {
+  const left = s.x > window.innerWidth - 290 ? s.x - 274 : s.x + 14;
+  const top = s.y + 16;
+  return (
+    <div
+      className="pointer-events-none fixed z-50 w-56 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg"
+      style={{ left, top }}
+    >
+      <p className="text-sm font-medium leading-snug text-sparrow-ink">{s.title}</p>
+      {s.sub && <p className="mt-1 text-xs text-sparrow-gray">{s.sub}</p>}
+      {s.time && <p className="mt-0.5 text-xs text-sparrow-gray">{s.time}</p>}
+      {s.location && <p className="mt-0.5 text-xs text-sparrow-gray">{s.location}</p>}
+    </div>
+  );
+}
+
 export function CalendarView() {
   const { profile } = useAuth();
   const today = new Date();
@@ -83,6 +108,7 @@ export function CalendarView() {
   const [addDate, setAddDate] = useState(todayStr);
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [calTooltip, setCalTooltip] = useState<CalTooltipState | null>(null);
 
   // Main layer toggles — each independently on/off, all persisted
   const [showAllStaff, setShowAllStaff] = useState(
@@ -364,6 +390,8 @@ export function CalendarView() {
                           key={ev.id}
                           onClick={() => setDetailEvent(ev)}
                           className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${KIND_PILL[ev.kind]}`}
+                          onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
+                          onMouseLeave={() => setCalTooltip(null)}
                         >
                           {ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
                         </button>
@@ -375,8 +403,9 @@ export function CalendarView() {
                     {dayLcpEvents.map(ev => (
                       <div
                         key={ev.id}
-                        title={`LCP · ${EVENT_LABEL[ev.kind]}`}
                         className="mt-0.5 w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight bg-emerald-100 text-emerald-800"
+                        onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: `LCP · ${EVENT_LABEL[ev.kind]}`, x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setCalTooltip(null)}
                       >
                         LCP · {ev.title}
                       </div>
@@ -388,8 +417,9 @@ export function CalendarView() {
                         {dayDeadlines.slice(0, 3).map(task => (
                           <div
                             key={task.id}
-                            title={task.title}
                             className={`w-full truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${DEADLINE_PILL[task.priority]}`}
+                            onMouseEnter={(e) => setCalTooltip({ title: task.title, sub: task.priority.toUpperCase(), x: e.clientX, y: e.clientY })}
+                            onMouseLeave={() => setCalTooltip(null)}
                           >
                             {task.title}
                           </div>
@@ -436,6 +466,7 @@ export function CalendarView() {
         onDeleted={() => { setDetailEvent(null); void load(); }}
         onUpdated={() => { setDetailEvent(null); void load(); }}
       />
+      {calTooltip && <CalTooltip s={calTooltip} />}
     </div>
   );
 }

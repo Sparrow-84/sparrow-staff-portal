@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { Profile, TaskComment, TaskWithPeople } from '@/lib/types';
+import type { Profile, TaskComment, TaskStatus, TaskWithPeople } from '@/lib/types';
 import type { AppNotification } from '@/lib/social';
 import type { QuickWin } from '@/lib/quickwins';
 import type { CalendarEvent } from '@/lib/calendar';
@@ -7,7 +7,7 @@ import type { View } from '../Sidebar';
 import { acceptTask, deferTask, pushBackTask, setTaskStatus } from '@/lib/data';
 import { markAllRead, markRead } from '@/lib/social';
 import { addQuickWinNote, QUICK_WIN_EMOJI } from '@/lib/quickwins';
-import { expandEvents, KIND_PILL } from '@/lib/calendar';
+import { expandEvents, KIND_LABEL, KIND_PILL } from '@/lib/calendar';
 import { bucketFor, dueLabel, isoDate, PRIORITY_META, TIER_META, tierForPriority } from '@/lib/tasks';
 
 /** Everything a widget might need — passed whole so each widget reads what it uses. */
@@ -427,6 +427,47 @@ function TeamPulseWidget({ ctx }: { ctx: WidgetContext }) {
 }
 
 // ── My week (tasks + events, Mon–Sun) ────────────────────────────────
+const WEEK_STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: 'To do',
+  in_progress: 'In progress',
+  done: 'Done',
+};
+
+type WeekTooltipState =
+  | { kind: 'task'; task: TaskWithPeople; x: number; y: number }
+  | { kind: 'event'; event: CalendarEvent; occursAt: Date; x: number; y: number };
+
+function WeekTooltip({ state }: { state: WeekTooltipState }) {
+  const left = state.x > window.innerWidth - 290 ? state.x - 274 : state.x + 14;
+  const top = state.y + 16;
+  if (state.kind === 'task') {
+    const tier = TIER_META[tierForPriority(state.task.priority)];
+    return (
+      <div className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg" style={{ left, top }}>
+        <p className="text-sm font-medium leading-snug text-sparrow-ink">{state.task.title}</p>
+        <div className="mt-2 flex items-center gap-1.5">
+          <span className={`h-2 w-2 shrink-0 rounded-full ${tier.dot}`} aria-hidden />
+          <span className={`text-xs font-medium ${tier.text}`}>{tier.label}</span>
+        </div>
+        <p className="mt-1 text-xs text-sparrow-gray">{WEEK_STATUS_LABELS[state.task.status]}</p>
+        {state.task.notes && <p className="mt-2 line-clamp-3 text-xs text-sparrow-ink/70">{state.task.notes}</p>}
+      </div>
+    );
+  }
+  return (
+    <div className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg" style={{ left, top }}>
+      <p className="text-sm font-medium leading-snug text-sparrow-ink">{state.event.title}</p>
+      <p className="mt-1 text-xs text-sparrow-gray">{KIND_LABEL[state.event.kind]}</p>
+      {!state.event.all_day && (
+        <p className="mt-1 text-xs text-sparrow-gray">
+          {state.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+        </p>
+      )}
+      {state.event.location && <p className="mt-1 text-xs text-sparrow-gray">{state.event.location}</p>}
+    </div>
+  );
+}
+
 function getWeekBounds(today: string): { weekStart: string; weekEnd: string } {
   const d = new Date(today + 'T00:00:00');
   const dow = d.getDay(); // 0=Sun
@@ -439,6 +480,7 @@ function getWeekBounds(today: string): { weekStart: string; weekEnd: string } {
 
 function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
   const { weekStart, weekEnd } = getWeekBounds(ctx.today);
+  const [tooltip, setTooltip] = useState<WeekTooltipState | null>(null);
 
   const weekEvents = expandEvents(
     ctx.events,
@@ -470,7 +512,8 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
   });
 
   return (
-    <div className="grid grid-cols-5 gap-1">
+    <>
+      <div className="grid grid-cols-5 gap-1">
       {days.map(({ date, weekday, dayNum, isToday }) => {
         const dayEvents = weekEvents.filter((o) => isoDate(o.occursAt) === date);
         const dayTasks = myTasks.filter((t) => t.due_date === date);
@@ -496,6 +539,8 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
               <div
                 key={`${o.event.id}-${idx}`}
                 className="mb-0.5 truncate rounded bg-sparrow-green/15 px-1 py-0.5 text-[10px] text-sparrow-green"
+                onMouseEnter={(e) => setTooltip({ kind: 'event', event: o.event, occursAt: o.occursAt, x: e.clientX, y: e.clientY })}
+                onMouseLeave={() => setTooltip(null)}
               >
                 {!o.event.all_day && (
                   <span className="mr-0.5 opacity-70">
@@ -512,6 +557,8 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
                   key={t.id}
                   onClick={() => ctx.onOpenTask(t)}
                   className="mb-0.5 flex w-full items-center gap-1 rounded bg-white/60 px-1 py-0.5 text-left text-[10px] hover:bg-white"
+                  onMouseEnter={(e) => setTooltip({ kind: 'task', task: t, x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => setTooltip(null)}
                 >
                   <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
                   <span className="truncate text-sparrow-ink">{t.title}</span>
@@ -521,7 +568,9 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
           </div>
         );
       })}
-    </div>
+      </div>
+      {tooltip && <WeekTooltip state={tooltip} />}
+    </>
   );
 }
 
