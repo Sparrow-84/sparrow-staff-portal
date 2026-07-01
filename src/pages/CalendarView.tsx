@@ -7,7 +7,7 @@ const CALENDAR_HELP_SECTIONS = [
     items: [
       { label: 'All Staff', desc: 'Org-wide events added by admins — team meetings, site visits, program milestones. On by default.' },
       { label: 'My Depts', desc: 'Events from your department rooms. Enable sub-department chips to filter further. LCP sessions appear here when toggled on.' },
-      { label: 'Deadlines', desc: 'Your task due dates plotted as small colored dots — red for P1, gold for P2, gray for P3/P4. Hover any dot to see the task title.' },
+      { label: 'Deadlines', desc: 'Your task due dates shown as labeled pills — red for P1, gold for P2, gray for P3/P4.' },
     ],
     note: 'Each layer is independent — toggle any combination. Your settings are remembered.',
   },
@@ -52,11 +52,11 @@ function shortTime(isoString: string): string {
   return new Date(isoString).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-const DEADLINE_DOT: Record<Priority, string> = {
-  p1: 'bg-red-500',
-  p2: 'bg-amber-400',
-  p3: 'bg-slate-400',
-  p4: 'bg-slate-300',
+const DEADLINE_PILL: Record<Priority, string> = {
+  p1: 'bg-red-100 text-red-700',
+  p2: 'bg-amber-100 text-amber-700',
+  p3: 'bg-slate-100 text-slate-600',
+  p4: 'bg-slate-100 text-slate-400',
 };
 
 // Filter chip styles — each chip is independent, not a radio group
@@ -382,16 +382,21 @@ export function CalendarView() {
                       </div>
                     ))}
 
-                    {/* Deadline markers — small diamonds, one per task due this day */}
+                    {/* Deadline task pills */}
                     {dayDeadlines.length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-0.5 px-0.5">
-                        {dayDeadlines.map(task => (
-                          <span
+                      <div className="mt-0.5 space-y-0.5">
+                        {dayDeadlines.slice(0, 3).map(task => (
+                          <div
                             key={task.id}
                             title={task.title}
-                            className={`inline-block h-2 w-2 rotate-45 rounded-[1px] opacity-80 ${DEADLINE_DOT[task.priority]}`}
-                          />
+                            className={`w-full truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${DEADLINE_PILL[task.priority]}`}
+                          >
+                            {task.title}
+                          </div>
                         ))}
+                        {dayDeadlines.length > 3 && (
+                          <p className="pl-1 text-[10px] text-sparrow-gray">+{dayDeadlines.length - 3} more</p>
+                        )}
                       </div>
                     )}
                   </div>
