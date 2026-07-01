@@ -21,6 +21,7 @@ export function useDashboardWelcome() {
 const STEPS = [
   {
     icon: '🕊',
+    image: '/brand/logo-primary-circle-green.png',
     title: 'Welcome to Sparrow',
     body: "This is your staff system — the place where Twin Oaks operations, LifeChange Program coordination, partnerships, and team work all live together. Let's take a quick look at what's here.",
     tag: null,
@@ -34,7 +35,7 @@ const STEPS = [
   {
     icon: '✅',
     title: 'My Tasks',
-    body: "Your personal task workspace. Switch between List, Board, and Calendar views — the system remembers which you used last. Managers and admins also see a \"My team\" toggle to check in on direct reports.",
+    body: "Your personal task workspace. Create tasks for yourself or drop something on a teammate's to-do list. Switch between List, Board, and Calendar views — the system remembers which you used last. Managers and admins also see a \"My team\" toggle to check in on direct reports.",
     tag: { icon: '✅', label: 'My Tasks' },
   },
   {
@@ -46,13 +47,13 @@ const STEPS = [
   {
     icon: '💬',
     title: 'Messages',
-    body: "Click Messages in the sidebar and a chat panel slides in from the right. This is where team-wide and one-on-one conversations happen. The badge in the sidebar shows unread messages.",
+    body: "Click Messages in the sidebar and a chat panel slides in from the right. This is where team-wide and one-on-one staff conversations happen. LCP staff will also see messages from program participants here. The badge in the sidebar shows unread messages.",
     tag: { icon: '💬', label: 'Messages' },
   },
   {
     icon: '📄',
     title: 'Resource Library',
-    body: "Staff documents organized by category — handbook, policies, job descriptions, emergency procedures, and more. Read-only reference that lives here so everyone is working from the same version.",
+    body: "Staff documents in one place — staff handbook, policy & procedure manual, role descriptions, emergency procedures, and more. Read-only reference so everyone is always working from the same version.",
     tag: { icon: '📄', label: 'Resource Library' },
   },
   {
@@ -95,7 +96,11 @@ export function DashboardWelcome({ open, onDismiss }: { open: boolean; onDismiss
           Skip tour
         </button>
 
-        <div className="mb-3 text-4xl">{current.icon}</div>
+        {'image' in current && current.image ? (
+          <img src={current.image} alt="Sparrow" className="mb-3 h-12 w-12" />
+        ) : (
+          <div className="mb-3 text-4xl">{current.icon}</div>
+        )}
 
         <h2 className="font-serif text-xl font-semibold text-sparrow-green">{current.title}</h2>
 

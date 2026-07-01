@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 export interface TourStep {
   icon: string;
+  image?: string;
   title: string;
   body: string;
   tag?: { icon: string; label: string } | null;
@@ -48,7 +49,11 @@ export function RoomTour({
           Skip tour
         </button>
 
-        <div className="mb-3 text-4xl">{current.icon}</div>
+        {current.image ? (
+          <img src={current.image} alt="Sparrow" className="mb-3 h-12 w-12" />
+        ) : (
+          <div className="mb-3 text-4xl">{current.icon}</div>
+        )}
 
         <h2 className="font-serif text-xl font-semibold text-sparrow-green">{current.title}</h2>
 

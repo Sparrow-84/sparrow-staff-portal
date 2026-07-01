@@ -1,8 +1,14 @@
 import { useMemo, useState, type DragEvent } from 'react';
-import { isoDate, PRIORITY_META } from '@/lib/tasks';
-import type { TaskWithPeople } from '@/lib/types';
+import { isoDate, PRIORITY_META, TIER_META, tierForPriority } from '@/lib/tasks';
+import type { TaskStatus, TaskWithPeople } from '@/lib/types';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: 'To do',
+  in_progress: 'In progress',
+  done: 'Done',
+};
 
 function monthMatrix(cursor: Date): Date[][] {
   const year = cursor.getFullYear();
@@ -28,10 +34,43 @@ interface Props {
   onMoveDate: (taskId: string, dateIso: string) => void;
 }
 
+interface TooltipState {
+  task: TaskWithPeople;
+  x: number;
+  y: number;
+}
+
+function TaskTooltip({ task, x, y }: TooltipState) {
+  const tier = TIER_META[tierForPriority(task.priority)];
+  const left = x > window.innerWidth - 290 ? x - 274 : x + 14;
+  const top = y + 16;
+
+  return (
+    <div
+      className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg"
+      style={{ left, top }}
+    >
+      <p className="text-sm font-medium leading-snug text-sparrow-ink">{task.title}</p>
+      <div className="mt-2 flex items-center gap-1.5">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${tier.dot}`} aria-hidden />
+        <span className={`text-xs font-medium ${tier.text}`}>{tier.label}</span>
+      </div>
+      <p className="mt-1 text-xs text-sparrow-gray">{STATUS_LABELS[task.status]}</p>
+      {task.assignee && (
+        <p className="mt-1 text-xs text-sparrow-gray">{task.assignee.full_name}</p>
+      )}
+      {task.notes && (
+        <p className="mt-2 line-clamp-3 text-xs text-sparrow-ink/70">{task.notes}</p>
+      )}
+    </div>
+  );
+}
+
 export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
   const [y, m] = today.split('-').map(Number);
   const [cursor, setCursor] = useState(new Date(y, m - 1, 1));
   const [overDate, setOverDate] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   const weeks = useMemo(() => monthMatrix(cursor), [cursor]);
   const byDate = useMemo(() => {
@@ -129,9 +168,13 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
                   <button
                     key={t.id}
                     draggable
-                    onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', t.id);
+                      setTooltip(null);
+                    }}
+                    onMouseEnter={(e) => setTooltip({ task: t, x: e.clientX, y: e.clientY })}
+                    onMouseLeave={() => setTooltip(null)}
                     onClick={() => onOpen(t)}
-                    title={t.title}
                     className={`block w-full cursor-grab truncate rounded px-1.5 py-0.5 text-left text-[11px] active:cursor-grabbing ${PRIORITY_META[t.priority].pill} ${
                       t.status === 'done' ? 'opacity-50 line-through' : ''
                     }`}
@@ -159,7 +202,12 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
               <button
                 key={t.id}
                 draggable
-                onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/plain', t.id);
+                  setTooltip(null);
+                }}
+                onMouseEnter={(e) => setTooltip({ task: t, x: e.clientX, y: e.clientY })}
+                onMouseLeave={() => setTooltip(null)}
                 onClick={() => onOpen(t)}
                 className={`cursor-grab truncate rounded px-2 py-1 text-xs active:cursor-grabbing ${PRIORITY_META[t.priority].pill}`}
               >
@@ -169,6 +217,8 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
           </div>
         </div>
       )}
+
+      {tooltip && <TaskTooltip {...tooltip} />}
     </div>
   );
 }

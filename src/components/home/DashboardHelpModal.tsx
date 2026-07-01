@@ -1,8 +1,10 @@
+import { useAuth } from '@/auth/AuthContext';
+
 const ROOMS = [
-  { icon: '🏡', name: 'Twin Oaks', desc: 'Resident records, lot management, work orders, pets, and notices — all organized by lot.' },
+  { icon: '🏡', name: 'Twin Oaks', desc: 'Resident records, lot management, work orders, and notices — all organized by lot.' },
   { icon: '🌱', name: 'LCP', desc: 'Participant families, session tracking, goals, finance milestones, homework, messaging, and curriculum admin.' },
   { icon: '🤝', name: 'Partnerships', desc: 'Donor and partner relationships, stewardship cadences, collateral tracker, and communications.' },
-  { icon: '⚙️', name: 'Operations', desc: 'Inventory tracking, Benton County filing, onboarding checklists, and shared documents.' },
+  { icon: '⚙️', name: 'Operations', desc: 'Inventory tracking, staff onboarding and management, grant tracking, and shared documents.' },
 ];
 
 const WIDGETS = [
@@ -24,6 +26,9 @@ export function DashboardHelpModal({
   onClose: () => void;
   onReplayTour: () => void;
 }) {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
+
   if (!open) return null;
 
   return (
@@ -48,6 +53,24 @@ export function DashboardHelpModal({
         </div>
 
         <div className="divide-y divide-sparrow-rule">
+          {/* Widgets section */}
+          <div className="px-6 py-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+              Dashboard widgets
+            </p>
+            <p className="mb-4 text-sm text-sparrow-gray">
+              Use <strong className="text-sparrow-ink">Edit home</strong> to show, hide, and rearrange widgets.
+            </p>
+            <div className="space-y-3">
+              {WIDGETS.map((w) => (
+                <div key={w.name}>
+                  <p className="text-sm font-medium text-sparrow-ink">{w.name}</p>
+                  <p className="text-xs text-sparrow-gray">{w.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Rooms section */}
           <div className="px-6 py-5">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
@@ -69,24 +92,6 @@ export function DashboardHelpModal({
             </div>
           </div>
 
-          {/* Widgets section */}
-          <div className="px-6 py-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
-              Dashboard widgets
-            </p>
-            <p className="mb-4 text-sm text-sparrow-gray">
-              Use <strong className="text-sparrow-ink">Edit home</strong> to show, hide, and rearrange widgets.
-            </p>
-            <div className="space-y-3">
-              {WIDGETS.map((w) => (
-                <div key={w.name}>
-                  <p className="text-sm font-medium text-sparrow-ink">{w.name}</p>
-                  <p className="text-xs text-sparrow-gray">{w.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Footer */}
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex flex-col gap-1">
@@ -96,22 +101,24 @@ export function DashboardHelpModal({
               >
                 Replay welcome tour
               </button>
-              <button
-                onClick={() => {
-                  [
-                    'sparrow_staff_welcomed_v1',
-                    'sparrow_toc_toured_v1',
-                    'sparrow_lcp_toured_v1',
-                    'sparrow_partnerships_toured_v1',
-                    'sparrow_ops_toured_v1',
-                  ].forEach((k) => localStorage.removeItem(k));
-                  onClose();
-                  onReplayTour();
-                }}
-                className="text-left text-xs text-sparrow-gray hover:text-sparrow-ink hover:underline"
-              >
-                Reset all tours (show again from scratch)
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    [
+                      'sparrow_staff_welcomed_v1',
+                      'sparrow_toc_toured_v1',
+                      'sparrow_lcp_toured_v1',
+                      'sparrow_partnerships_toured_v1',
+                      'sparrow_ops_toured_v1',
+                    ].forEach((k) => localStorage.removeItem(k));
+                    onClose();
+                    onReplayTour();
+                  }}
+                  className="text-left text-xs text-sparrow-gray hover:text-sparrow-ink hover:underline"
+                >
+                  Reset all tours (show again from scratch)
+                </button>
+              )}
             </div>
             <button onClick={onClose} className="btn-secondary text-sm">
               Done

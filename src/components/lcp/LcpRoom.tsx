@@ -38,6 +38,7 @@ import { PhaseProgressBar } from './PhaseProgressBar';
 const LCP_TOUR_STEPS: TourStep[] = [
   {
     icon: '🌱',
+    image: '/brand/logo-primary-circle-green.png',
     title: 'LifeChange Program',
     body: "This room is where you work with LCP families — tracking their progress, logging sessions, setting goals, assigning homework, and staying in touch throughout the program.",
     tag: null,
