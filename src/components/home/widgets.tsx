@@ -8,7 +8,7 @@ import { acceptTask, deferTask, pushBackTask, setTaskStatus } from '@/lib/data';
 import { markAllRead, markRead } from '@/lib/social';
 import { addQuickWinNote, QUICK_WIN_EMOJI } from '@/lib/quickwins';
 import { expandEvents, KIND_PILL } from '@/lib/calendar';
-import { bucketFor, dueLabel, isoDate, TIER_META, tierForPriority } from '@/lib/tasks';
+import { bucketFor, dueLabel, isoDate, PRIORITY_META, TIER_META, tierForPriority } from '@/lib/tasks';
 
 /** Everything a widget might need — passed whole so each widget reads what it uses. */
 export interface WidgetContext {
@@ -110,7 +110,7 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
   return (
     <ul className="space-y-1">
       {due.map((t) => {
-        const tier = TIER_META[tierForPriority(t.priority)];
+        const meta = PRIORITY_META[t.priority];
         const isFading = fading.has(t.id);
         return (
           <li key={t.id} className="flex items-center gap-2">
@@ -128,7 +128,7 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
               }`}
             >
               <span className="flex items-center gap-2 text-sm text-sparrow-ink">
-                <span className={`h-2 w-2 rounded-full ${tier.dot}`} aria-hidden />
+                <span className={`h-2 w-2 rounded-full ${meta.dot}`} aria-hidden />
                 {t.title}
               </span>
               <span className="shrink-0 text-xs text-sparrow-gray">{dueLabel(t.due_date, ctx.today)}</span>
@@ -506,14 +506,14 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
               </div>
             ))}
             {dayTasks.map((t) => {
-              const tier = TIER_META[tierForPriority(t.priority)];
+              const meta = PRIORITY_META[t.priority];
               return (
                 <button
                   key={t.id}
                   onClick={() => ctx.onOpenTask(t)}
                   className="mb-0.5 flex w-full items-center gap-1 rounded bg-white/60 px-1 py-0.5 text-left text-[10px] hover:bg-white"
                 >
-                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${tier.dot}`} aria-hidden />
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
                   <span className="truncate text-sparrow-ink">{t.title}</span>
                 </button>
               );
