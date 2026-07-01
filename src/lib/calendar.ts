@@ -60,14 +60,18 @@ export interface CalendarEventInput {
   location: string | null;
   recurrence_id: string | null;
   created_by: string;
+  department?: Department | null;
 }
 
 export async function createCalendarEvents(inputs: CalendarEventInput[]): Promise<void> {
   // recurrence_id is omitted from non-recurring rows until migration 0035 is applied;
   // once the column exists, recurring events include it so series deletes work.
-  const rows = inputs.map(({ recurrence_id, ...rest }) =>
-    recurrence_id ? { ...rest, recurrence_id } : rest,
-  );
+  const rows = inputs.map(({ recurrence_id, department, ...rest }) => {
+    const row: Record<string, unknown> = { ...rest };
+    if (recurrence_id) row.recurrence_id = recurrence_id;
+    if (department) row.department = department;
+    return row;
+  });
   const { error } = await supabase.from('calendar_events').insert(rows);
   if (error) throw new Error(error.message);
 }

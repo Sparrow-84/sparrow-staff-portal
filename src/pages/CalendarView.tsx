@@ -178,19 +178,22 @@ export function CalendarView() {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  // Group org events by day (only when All Staff layer is on)
+  // Group events by day, respecting which layer each event belongs to.
+  // All Staff layer = events with department null; My Depts layer = events with a department value.
   const eventsByDay = new Map<string, CalendarEvent[]>();
-  if (showAllStaff) {
-    for (const ev of events) {
-      const d = localISO(new Date(ev.starts_at));
-      const dDate = new Date(d + 'T12:00:00');
-      if (dDate.getFullYear() === year && dDate.getMonth() === month) {
-        if (!eventsByDay.has(d)) eventsByDay.set(d, []);
-        eventsByDay.get(d)!.push(ev);
-      }
+  for (const ev of events) {
+    const isAllStaff = ev.department === null;
+    const isDept = ev.department !== null && myDepts.includes(ev.department) && !disabledDepts.has(ev.department);
+    if (!(isAllStaff && showAllStaff) && !(isDept && showMyDepts)) continue;
+
+    const d = localISO(new Date(ev.starts_at));
+    const dDate = new Date(d + 'T12:00:00');
+    if (dDate.getFullYear() === year && dDate.getMonth() === month) {
+      if (!eventsByDay.has(d)) eventsByDay.set(d, []);
+      eventsByDay.get(d)!.push(ev);
     }
-    for (const arr of eventsByDay.values()) arr.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
   }
+  for (const arr of eventsByDay.values()) arr.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 
   // Group LCP org-cal events by day
   const lcpEventsByDay = new Map<string, LcpEvent[]>();
@@ -411,6 +414,12 @@ export function CalendarView() {
         open={addOpen}
         defaultDate={addDate}
         currentUserId={profile?.id ?? ''}
+        userDepts={myDepts}
+        initialDept={(() => {
+          if (!showMyDepts || showAllStaff) return null;
+          const active = myDepts.filter(d => !disabledDepts.has(d));
+          return active[0] ?? null;
+        })()}
         onClose={() => setAddOpen(false)}
         onCreated={() => { setAddOpen(false); void load(); }}
       />

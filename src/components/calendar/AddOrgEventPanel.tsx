@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ADD_KINDS, createCalendarEvents, type CalendarKind } from '@/lib/calendar';
 import { Drawer } from '@/components/lcp/Drawer';
+import type { Department } from '@/lib/types';
+import { DEPARTMENTS } from '@/lib/types';
 
 const DOW_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -55,11 +57,13 @@ interface Props {
   open: boolean;
   defaultDate: string;
   currentUserId: string;
+  userDepts: Department[];
+  initialDept: Department | null;
   onClose: () => void;
   onCreated: () => void;
 }
 
-export function AddOrgEventPanel({ open, defaultDate, currentUserId, onClose, onCreated }: Props) {
+export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, initialDept, onClose, onCreated }: Props) {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<CalendarKind>('other');
   const [date, setDate] = useState(defaultDate);
@@ -67,6 +71,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, onClose, on
   const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
   const [allDay, setAllDay] = useState(false);
+  const [department, setDepartment] = useState<Department | null>(initialDept);
 
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState<'weekly' | 'biweekly'>('weekly');
@@ -78,6 +83,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, onClose, on
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { setDate(defaultDate); }, [defaultDate]);
+  useEffect(() => { setDepartment(initialDept); }, [initialDept]);
 
   function toggleDay(dow: number) {
     setDaysOfWeek((prev) => {
@@ -111,6 +117,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, onClose, on
         location: location.trim() || null,
         recurrence_id: recurrenceId,
         created_by: currentUserId,
+        department,
       }));
 
       await createCalendarEvents(inputs);
@@ -136,6 +143,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, onClose, on
     setDaysOfWeek(new Set([new Date().getDay()]));
     setUntilMode('date');
     setUntilDate(addMonths(localISO(new Date()), 3));
+    setDepartment(initialDept);
     setError(null);
   }
 
@@ -185,6 +193,22 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, onClose, on
           <select value={kind} onChange={(e) => setKind(e.target.value as CalendarKind)} className="field-input">
             {ADD_KINDS.map((k) => (
               <option key={k.value} value={k.value}>{k.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="field-label">Post to</label>
+          <select
+            value={department ?? ''}
+            onChange={(e) => setDepartment(e.target.value ? e.target.value as Department : null)}
+            className="field-input"
+          >
+            <option value="">All Staff</option>
+            {userDepts.map((d) => (
+              <option key={d} value={d}>
+                {DEPARTMENTS.find((x) => x.value === d)?.label ?? d}
+              </option>
             ))}
           </select>
         </div>
