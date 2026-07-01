@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ADD_KINDS, createCalendarEvents, type CalendarKind } from '@/lib/calendar';
+import { ADD_KINDS, createCalendarEvents, withTzOffset, type CalendarKind } from '@/lib/calendar';
 import { Drawer } from '@/components/lcp/Drawer';
 import type { Department } from '@/lib/types';
 import { DEPARTMENTS } from '@/lib/types';
@@ -16,14 +16,6 @@ function addMonths(dateStr: string, months: number): string {
   return localISO(d);
 }
 
-function withTzOffset(dateStr: string, timeStr: string): string {
-  const d = new Date(`${dateStr}T${timeStr}:00`);
-  const offset = -d.getTimezoneOffset();
-  const sign = offset >= 0 ? '+' : '-';
-  const hh = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
-  const mm = String(Math.abs(offset) % 60).padStart(2, '0');
-  return `${dateStr}T${timeStr}:00${sign}${hh}:${mm}`;
-}
 
 function generateDates(
   startDate: string,

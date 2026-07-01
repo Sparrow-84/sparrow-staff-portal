@@ -1,6 +1,15 @@
 import { supabase } from './supabase';
 import type { Department } from './types';
 
+export function withTzOffset(dateStr: string, timeStr: string): string {
+  const d = new Date(`${dateStr}T${timeStr}:00`);
+  const offset = -d.getTimezoneOffset();
+  const sign = offset >= 0 ? '+' : '-';
+  const hh = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+  const mm = String(Math.abs(offset) % 60).padStart(2, '0');
+  return `${dateStr}T${timeStr}:00${sign}${hh}:${mm}`;
+}
+
 export type CalendarKind = 'meeting' | 'closure' | 'holiday' | 'ooo' | 'lcp_session' | 'toc' | 'other';
 
 export interface CalendarEvent {
@@ -74,6 +83,53 @@ export async function createCalendarEvents(inputs: CalendarEventInput[]): Promis
   });
   const { error } = await supabase.from('calendar_events').insert(rows);
   if (error) throw new Error(error.message);
+}
+
+export async function updateCalendarEvent(
+  id: string,
+  patch: Partial<Pick<CalendarEvent, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'all_day' | 'location'>>,
+): Promise<void> {
+  const { error } = await supabase.from('calendar_events').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateCalendarEventAndFuture(
+  recurrenceId: string,
+  fromStartsAt: string,
+  fields: Partial<Pick<CalendarEvent, 'kind' | 'title' | 'all_day' | 'location'>>,
+  startTime?: string,
+  endTime?: string | null,
+): Promise<void> {
+  if (Object.keys(fields).length > 0) {
+    const { error } = await supabase
+      .from('calendar_events')
+      .update(fields)
+      .eq('recurrence_id', recurrenceId)
+      .gte('starts_at', fromStartsAt);
+    if (error) throw new Error(error.message);
+  }
+
+  if (startTime !== undefined) {
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('id, starts_at')
+      .eq('recurrence_id', recurrenceId)
+      .gte('starts_at', fromStartsAt);
+    if (error) throw new Error(error.message);
+
+    const updates = (data ?? []).map(row => ({
+      id: row.id,
+      starts_at: withTzOffset(row.starts_at.slice(0, 10), startTime),
+      ends_at: endTime ? withTzOffset(row.starts_at.slice(0, 10), endTime) : null,
+    }));
+
+    if (updates.length > 0) {
+      const { error: err } = await supabase
+        .from('calendar_events')
+        .upsert(updates, { onConflict: 'id' });
+      if (err) throw new Error(err.message);
+    }
+  }
 }
 
 export async function deleteCalendarEvent(id: string): Promise<void> {

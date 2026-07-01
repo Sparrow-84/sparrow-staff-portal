@@ -429,6 +429,7 @@ export function CalendarView() {
         isAdmin={profile?.role === 'admin'}
         onClose={() => setDetailEvent(null)}
         onDeleted={() => { setDetailEvent(null); void load(); }}
+        onUpdated={() => { setDetailEvent(null); void load(); }}
       />
     </div>
   );

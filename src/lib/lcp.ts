@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { localDate, localDateOf } from './date';
+import { withTzOffset } from './calendar';
 import type {
   Attendance,
   AttendanceStatus,
@@ -229,10 +230,49 @@ export async function fetchOrgCalLcpEvents(): Promise<LcpEvent[]> {
 
 export async function updateEvent(
   id: string,
-  patch: Partial<Pick<LcpEvent, 'show_on_org_calendar' | 'mandatory' | 'location' | 'title'>>,
+  patch: Partial<Pick<LcpEvent, 'show_on_org_calendar' | 'mandatory' | 'location' | 'title' | 'starts_at' | 'ends_at'>>,
 ): Promise<void> {
   const { error } = await supabase.from('lcp_events').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+export async function updateEventAndFuture(
+  recurrenceId: string,
+  fromStartsAt: string,
+  fields: Partial<Pick<LcpEvent, 'kind' | 'title' | 'mandatory' | 'location'>>,
+  startTime?: string,
+  endTime?: string | null,
+): Promise<void> {
+  if (Object.keys(fields).length > 0) {
+    const { error } = await supabase
+      .from('lcp_events')
+      .update(fields)
+      .eq('recurrence_id', recurrenceId)
+      .gte('starts_at', fromStartsAt);
+    if (error) throw new Error(error.message);
+  }
+
+  if (startTime !== undefined) {
+    const { data, error } = await supabase
+      .from('lcp_events')
+      .select('id, starts_at')
+      .eq('recurrence_id', recurrenceId)
+      .gte('starts_at', fromStartsAt);
+    if (error) throw new Error(error.message);
+
+    const updates = (data ?? []).map(row => ({
+      id: row.id,
+      starts_at: withTzOffset(row.starts_at.slice(0, 10), startTime),
+      ends_at: endTime ? withTzOffset(row.starts_at.slice(0, 10), endTime) : null,
+    }));
+
+    if (updates.length > 0) {
+      const { error: err } = await supabase
+        .from('lcp_events')
+        .upsert(updates, { onConflict: 'id' });
+      if (err) throw new Error(err.message);
+    }
+  }
 }
 
 export async function createEvents(
