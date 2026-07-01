@@ -17,4 +17,5 @@ export const DOCUMENT_CATEGORIES: string[] = [
   'Emergency',
   'Forms',
   'Resources',
+  'Staff Roles',
 ];
