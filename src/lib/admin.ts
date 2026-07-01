@@ -9,6 +9,8 @@ export interface StaffInput {
   manager_email: string | null;
   lcp_role: LcpRole;
   partnerships_access: boolean;
+  ops_access: boolean;
+  toc_access: boolean;
 }
 
 /** All staff including deactivated (admin view). RLS still restricts this to admins in practice. */

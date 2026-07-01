@@ -28,6 +28,8 @@ export interface Profile {
   partnerships_access: boolean;
   /** Operations Room / staff-management access (Andrew, Susanna, Shelly). */
   ops_access: boolean;
+  /** Twin Oaks Room explicit access grant — beyond the implicit TOC dept + admin grant. */
+  toc_access: boolean;
 }
 
 export interface Task {

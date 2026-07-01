@@ -26,8 +26,10 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
   const [department, setDepartment] = useState<Department>('ops');
   const [managerEmail, setManagerEmail] = useState<string>('');
   const [active, setActive] = useState(true);
+  const [tocAccess, setTocAccess] = useState(false);
   const [lcpFull, setLcpFull] = useState(false);
   const [partnershipsAccess, setPartnershipsAccess] = useState(false);
+  const [opsAccess, setOpsAccess] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -39,8 +41,10 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setDepartment(staff.department);
       setManagerEmail(staff.manager_email ?? '');
       setActive(staff.active);
+      setTocAccess(staff.toc_access);
       setLcpFull(staff.lcp_role === 'full');
       setPartnershipsAccess(staff.partnerships_access);
+      setOpsAccess(staff.ops_access);
     } else {
       setFullName('');
       setEmail('');
@@ -48,8 +52,10 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setDepartment('ops');
       setManagerEmail('');
       setActive(true);
+      setTocAccess(false);
       setLcpFull(false);
       setPartnershipsAccess(false);
+      setOpsAccess(false);
     }
   }, [open, staff]);
 
@@ -66,8 +72,10 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       manager_email: managerEmail || null,
       // Checkbox governs the `full` tier only. When unchecked, preserve an existing
       // `extended` grant (set via SQL / Phase-2 read views) rather than clobbering it.
+      toc_access: tocAccess,
       lcp_role: lcpFull ? 'full' : staff?.lcp_role === 'extended' ? 'extended' : null,
       partnerships_access: partnershipsAccess,
+      ops_access: opsAccess,
     };
     startTransition(async () => {
       try {
@@ -191,6 +199,25 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
+                checked={tocAccess}
+                onChange={(e) => setTocAccess(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-sparrow-green"
+              />
+              <span>
+                <span className="font-medium">Twin Oaks Room access</span>
+                <span className="mt-0.5 block text-xs text-sparrow-gray">
+                  Opens the Twin Oaks Room — resident records, lot map, notices, and incident log.
+                  Twin Oaks department staff already have it; grant this to others who need resident
+                  data (e.g. Exec or Ops staff).
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream px-3 py-3">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
                 checked={lcpFull}
                 onChange={(e) => setLcpFull(e.target.checked)}
                 className="mt-0.5 h-4 w-4 accent-sparrow-green"
@@ -225,6 +252,25 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
                   Opens the Partnerships Room — the donor / church / volunteer CRM. Admins and the
                   Partnerships department already have it; grant this to other relationship owners
                   (e.g. FST or volunteer leads). Separate from Role and Department.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream px-3 py-3">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={opsAccess}
+                onChange={(e) => setOpsAccess(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-sparrow-green"
+              />
+              <span>
+                <span className="font-medium">Operations Room access</span>
+                <span className="mt-0.5 block text-xs text-sparrow-gray">
+                  Opens the Operations Room — staff records, HR notes, issue log, 1:1 tracker, and
+                  performance reviews. Grant only to people-managers. Separate from Role and
+                  Department.
                 </span>
               </span>
             </label>
