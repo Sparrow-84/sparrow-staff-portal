@@ -95,3 +95,20 @@ export async function pushBackTask(task: TaskWithPeople, note: string, byId: str
     .eq('id', task.id);
   if (error) throw new Error(error.message);
 }
+
+/** Insert 'mentioned' notifications for @mentions in a task comment. */
+export async function notifyTaskCommentMentions(
+  mentionedIds: string[],
+  actorId: string,
+  taskId: string,
+  body: string,
+): Promise<void> {
+  if (!mentionedIds.length) return;
+  const { error } = await supabase.rpc('task_comment_notify_mentions', {
+    p_mentioned_ids: mentionedIds,
+    p_actor_id: actorId,
+    p_task_id: taskId,
+    p_body: body,
+  });
+  if (error) throw new Error(error.message);
+}

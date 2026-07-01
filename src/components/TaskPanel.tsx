@@ -9,7 +9,9 @@ import {
   type TaskStatus,
   type TaskWithPeople,
 } from '@/lib/types';
-import { addComment, createTask, deleteTask, updateTask, type TaskInput } from '@/lib/data';
+import { addComment, createTask, deleteTask, notifyTaskCommentMentions, updateTask, type TaskInput } from '@/lib/data';
+import { parseMentionIds } from '@/lib/chat';
+import { MentionInput } from '@/components/chat/MentionInput';
 
 interface Props {
   open: boolean;
@@ -113,6 +115,10 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
     startTransition(async () => {
       try {
         await addComment(task.id, body, currentUser.id);
+        const mentioned = parseMentionIds(body, profiles);
+        if (mentioned.length > 0) {
+          void notifyTaskCommentMentions(mentioned, currentUser.id, task.id, body).catch(() => {});
+        }
         setComment('');
         onChanged();
       } catch (e) {
@@ -282,15 +288,15 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
                   </li>
                 ))}
               </ul>
-              <div className="mt-3 flex gap-2">
-                <input
-                  className="field-input !mt-0 flex-1"
+              <div className="mt-3 flex items-end gap-2">
+                <MentionInput
                   value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Add a comment…"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') postComment();
-                  }}
+                  onChange={setComment}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) postComment(); }}
+                  staff={profiles}
+                  disabled={pending}
+                  placeholder="Add a comment… (@ to mention)"
+                  className="field-input mt-0 max-h-24 w-full resize-none"
                 />
                 <button onClick={postComment} disabled={pending || !comment.trim()} className="btn-ghost">
                   Post
