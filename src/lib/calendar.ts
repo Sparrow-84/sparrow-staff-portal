@@ -10,6 +10,18 @@ export function withTzOffset(dateStr: string, timeStr: string): string {
   return `${dateStr}T${timeStr}:00${sign}${hh}:${mm}`;
 }
 
+// Supabase returns timestamptz as UTC (e.g. "2026-07-01T16:00:00Z").
+// These helpers extract the correct local date/time using the browser's timezone.
+export function toLocalDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function toLocalTime(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 export type CalendarKind = 'meeting' | 'closure' | 'holiday' | 'ooo' | 'lcp_session' | 'toc' | 'other';
 
 export interface CalendarEvent {
@@ -119,16 +131,18 @@ export async function updateCalendarEventAndFuture(
 
     const updates = (data ?? []).map(row => ({
       id: row.id,
-      starts_at: withTzOffset(row.starts_at.slice(0, 10), startTime),
-      ends_at: endTime ? withTzOffset(row.starts_at.slice(0, 10), endTime) : null,
+      starts_at: withTzOffset(toLocalDate(row.starts_at), startTime),
+      ends_at: endTime ? withTzOffset(toLocalDate(row.starts_at), endTime) : null,
     }));
 
-    if (updates.length > 0) {
-      const { error: err } = await supabase
-        .from('calendar_events')
-        .upsert(updates, { onConflict: 'id' });
-      if (err) throw new Error(err.message);
-    }
+    // Use individual UPDATEs — upsert triggers the INSERT RLS check (requires created_by)
+    // even when the row already exists, causing a policy violation.
+    await Promise.all(updates.map(u =>
+      supabase.from('calendar_events')
+        .update({ starts_at: u.starts_at, ends_at: u.ends_at })
+        .eq('id', u.id)
+        .then(({ error }) => { if (error) throw new Error(error.message); })
+    ));
   }
 }
 

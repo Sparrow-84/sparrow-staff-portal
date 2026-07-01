@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { localDate, localDateOf } from './date';
-import { withTzOffset } from './calendar';
+import { withTzOffset, toLocalDate } from './calendar';
 import type {
   Attendance,
   AttendanceStatus,
@@ -262,16 +262,16 @@ export async function updateEventAndFuture(
 
     const updates = (data ?? []).map(row => ({
       id: row.id,
-      starts_at: withTzOffset(row.starts_at.slice(0, 10), startTime),
-      ends_at: endTime ? withTzOffset(row.starts_at.slice(0, 10), endTime) : null,
+      starts_at: withTzOffset(toLocalDate(row.starts_at), startTime),
+      ends_at: endTime ? withTzOffset(toLocalDate(row.starts_at), endTime) : null,
     }));
 
-    if (updates.length > 0) {
-      const { error: err } = await supabase
-        .from('lcp_events')
-        .upsert(updates, { onConflict: 'id' });
-      if (err) throw new Error(err.message);
-    }
+    await Promise.all(updates.map(u =>
+      supabase.from('lcp_events')
+        .update({ starts_at: u.starts_at, ends_at: u.ends_at })
+        .eq('id', u.id)
+        .then(({ error }) => { if (error) throw new Error(error.message); })
+    ));
   }
 }
 

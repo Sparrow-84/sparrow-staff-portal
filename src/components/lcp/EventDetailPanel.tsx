@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { EVENT_LABEL, type EventKind, type LcpEvent } from '@/lib/lcp-types';
 import { deleteEvent, deleteEventAndFuture, updateEvent, updateEventAndFuture } from '@/lib/lcp';
-import { withTzOffset } from '@/lib/calendar';
+import { withTzOffset, toLocalDate, toLocalTime } from '@/lib/calendar';
 import { dayLabel, timeLabel } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
 
@@ -51,9 +51,9 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
     if (!event) return;
     setEditTitle(event.title);
     setEditKind(event.kind);
-    setEditDate(event.starts_at.slice(0, 10));
-    setEditStartTime(event.starts_at.slice(11, 16));
-    setEditEndTime(event.ends_at ? event.ends_at.slice(11, 16) : '');
+    setEditDate(toLocalDate(event.starts_at));
+    setEditStartTime(toLocalTime(event.starts_at));
+    setEditEndTime(event.ends_at ? toLocalTime(event.ends_at) : '');
     setEditLocation(event.location ?? '');
     setEditMandatory(event.mandatory);
     setError(null);

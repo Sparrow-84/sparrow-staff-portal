@@ -6,6 +6,8 @@ import {
   updateCalendarEvent,
   updateCalendarEventAndFuture,
   withTzOffset,
+  toLocalDate,
+  toLocalTime,
   KIND_LABEL,
   KIND_PILL,
   type CalendarEvent,
@@ -49,10 +51,10 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
     if (!event) return;
     setEditTitle(event.title);
     setEditKind(event.kind);
-    setEditDate(event.starts_at.slice(0, 10));
+    setEditDate(toLocalDate(event.starts_at));
     setEditAllDay(event.all_day);
-    setEditStartTime(event.all_day ? '09:00' : event.starts_at.slice(11, 16));
-    setEditEndTime(event.ends_at ? event.ends_at.slice(11, 16) : '');
+    setEditStartTime(event.all_day ? '09:00' : toLocalTime(event.starts_at));
+    setEditEndTime(event.ends_at ? toLocalTime(event.ends_at) : '');
     setEditLocation(event.location ?? '');
     setError(null);
     setMode('edit');
