@@ -325,10 +325,18 @@ function timeLabel(d: Date, allDay: boolean): string {
 }
 
 function UpcomingMeetingsWidget({ ctx }: { ctx: WidgetContext }) {
-  const from = new Date(ctx.today + 'T00:00:00');
-  const to = new Date(from);
+  const todayStart = new Date(ctx.today + 'T00:00:00');
+  const to = new Date(todayStart);
   to.setDate(to.getDate() + 3);
-  const occ = expandEvents(ctx.events, from, to).slice(0, 6);
+  const now = new Date();
+  const occ = expandEvents(ctx.events, todayStart, to)
+    .filter((o) => {
+      if (o.event.all_day) return true;
+      if (!o.event.ends_at) return o.occursAt >= now;
+      const durationMs = new Date(o.event.ends_at).getTime() - new Date(o.event.starts_at).getTime();
+      return new Date(o.occursAt.getTime() + durationMs) >= now;
+    })
+    .slice(0, 6);
 
   if (occ.length === 0) return <Empty>Nothing scheduled in the next few days.</Empty>;
 
