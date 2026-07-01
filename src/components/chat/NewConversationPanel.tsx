@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Drawer } from '@/components/lcp/Drawer';
 import { createGroup, fetchStaff, initials, startDirect, type ChatPerson } from '@/lib/chat';
 
@@ -22,6 +22,7 @@ export function NewConversationPanel({
   const [groupName, setGroupName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -36,6 +37,12 @@ export function NewConversationPanel({
   const ids = [...selected];
   const isGroup = ids.length > 1;
   const canCreate = ids.length > 0 && (!isGroup || groupName.trim().length > 0);
+  const needsName = isGroup && groupName.trim().length === 0;
+
+  // Auto-focus the group name field the moment it appears.
+  useEffect(() => {
+    if (isGroup) nameRef.current?.focus();
+  }, [isGroup]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -72,7 +79,7 @@ export function NewConversationPanel({
             {ids.length === 0 ? 'No one selected' : isGroup ? `${ids.length} people` : '1 person'}
           </span>
           <button onClick={() => void create()} disabled={!canCreate || busy} className="btn-primary">
-            {isGroup ? 'Create group' : 'Start chat'}
+            {needsName ? 'Add a group name above' : isGroup ? 'Create group' : 'Start chat'}
           </button>
         </div>
       }
@@ -87,6 +94,7 @@ export function NewConversationPanel({
             Group name
           </label>
           <input
+            ref={nameRef}
             id="group-name"
             value={groupName}
             onChange={(e) => setGroupName(e.target.value)}
