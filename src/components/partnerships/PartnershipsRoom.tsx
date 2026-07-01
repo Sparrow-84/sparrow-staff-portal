@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { localDate } from '@/lib/date';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
 import { fetchArchivedPartners, fetchDonorStats, fetchPartners, syncDueTouchpointTasks, syncLapsedDonorTiers, syncLapsedPartnerTasks } from '@/lib/partnerships';
@@ -136,7 +137,7 @@ export function PartnershipsRoom() {
       setArchivedPartners(archived);
       setDonorStatMap(new Map(stats.map((s) => [s.partner_id, s])));
       // Find the next upcoming comm that hasn't been sent — shown for donors/prayer in place of "No cadence"
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDate();
       const next = comms
         .filter((c) => c.status !== 'sent' && c.publish_date >= today)
         .sort((a, b) => a.publish_date.localeCompare(b.publish_date))[0];

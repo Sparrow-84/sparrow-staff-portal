@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
 import { emitFirstTimeDonorTask, emitRevisitTask, fetchDonations, fetchTouchpoints, logTouchpoint, updatePartner } from '@/lib/partnerships';
 import {
@@ -80,7 +81,7 @@ export function PartnerDetailPanel({
   useEffect(() => {
     if (open && partnerId) {
       setMethod('email');
-      setOccurredOn(new Date().toISOString().slice(0, 10));
+      setOccurredOn(localDate());
       setSummary('');
       setConfirmArchive(false);
       setLogOpen(false);
@@ -217,7 +218,7 @@ export function PartnerDetailPanel({
                 setDirection('outbound');
                 setStageUpdate(partner.stage);
                 setDonorTierUpdate(partner.donor_tier ?? '');
-                setOccurredOn(new Date().toISOString().slice(0, 10));
+                setOccurredOn(localDate());
                 setSummary('');
               }
               setLogOpen((v) => !v);

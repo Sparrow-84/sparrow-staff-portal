@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { localDate } from '@/lib/date';
 import {
   createSocialPost,
   deleteSocialPost,
@@ -103,7 +104,7 @@ export function PartnershipSocialTab() {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   }
 
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = localDate();
 
   const upcoming = posts
     .filter((p) => p.status === 'planned' || p.status === 'scheduled')

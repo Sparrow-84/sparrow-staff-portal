@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { localDate } from '@/lib/date';
 import { fetchMembersForTenant, fetchNoticesForTenant, type LotNoticeWithCreator } from '@/lib/housing';
 import type { HouseholdMember, Space, Tenant } from '@/lib/housing-types';
 
@@ -222,7 +223,7 @@ export function ArchiveTab({ spaces, tenants }: Props) {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDate();
     a.href = url;
     a.download = `toc-archive-${today}.csv`;
     a.click();

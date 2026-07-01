@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { localDate } from '@/lib/date';
 import {
   AREA_LABEL,
   FAMILY_STATUS,
@@ -478,7 +479,7 @@ function GoalsTab({
   const [extendingId, setExtendingId] = useState<string | null>(null);
   const [newDue, setNewDue] = useState('');
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
 
   function latestResponse(goalId: string): GoalResponse | null {
     const rs = goalResponses.filter((r) => r.goal_id === goalId);

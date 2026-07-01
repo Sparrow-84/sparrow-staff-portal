@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { localDate } from '@/lib/date';
 import { householdSortKey, type HouseholdMember, type Space, type Tenant } from '@/lib/housing-types';
 import { fetchHouseholdMembers } from '@/lib/housing';
 
@@ -118,7 +119,7 @@ export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDate();
     a.href = url;
     a.download = `toc-residents-${today}.csv`;
     a.click();

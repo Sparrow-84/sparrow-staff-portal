@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { localDate, localDateOf } from './date';
 import type {
   Attendance,
   AttendanceStatus,
@@ -358,7 +359,7 @@ export async function fetchRecentSessionLogs(weeksBack = 8): Promise<SessionLog[
       created_by_profile:profiles!lcp_session_logs_created_by_fkey(full_name),
       attendance:lcp_session_attendance(id, session_log_id, family_id, status, voucher_awarded, marked_by, marked_at)
     `)
-    .gte('session_date', since.toISOString().slice(0, 10))
+    .gte('session_date', localDateOf(since))
     .order('session_date', { ascending: false })
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -372,7 +373,7 @@ export async function fetchRecentSessionLogs(weeksBack = 8): Promise<SessionLog[
 }
 
 export async function fetchTodayEvents(): Promise<LcpEvent[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
   const { data, error } = await supabase
     .from('lcp_events')
     .select('id, kind, session_id, title, starts_at, ends_at, location, mandatory, rsvp_enabled')

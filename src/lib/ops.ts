@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { localDate } from './date';
 import type {
   Checklist,
   ChecklistKind,
@@ -152,7 +153,7 @@ export async function addReview(staffId: string, dueDate: string, reviewerId: st
 export async function completeReview(id: string, notes: string | null): Promise<void> {
   const { error } = await supabase
     .from('ops_reviews')
-    .update({ status: 'completed', completed_on: new Date().toISOString().slice(0, 10), notes })
+    .update({ status: 'completed', completed_on: localDate(), notes })
     .eq('id', id);
   if (error) throw new Error(error.message);
 }

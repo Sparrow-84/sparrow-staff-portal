@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { localDate } from '@/lib/date';
 import {
   createConnection,
   createEvent,
@@ -19,7 +20,7 @@ function shortDate(iso: string | null): string {
 
 function isOverdue(conn: PartnershipConnection): boolean {
   if (conn.followup_done || !conn.followup_due) return false;
-  return conn.followup_due < new Date().toISOString().slice(0, 10);
+  return conn.followup_due < localDate();
 }
 
 const EMPTY_EVENT_FORM: EventInput = {

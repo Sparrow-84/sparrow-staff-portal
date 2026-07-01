@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
 import {
   DOC_TYPES,
@@ -315,7 +316,7 @@ function TouchpointsTab({
   currentUserId: string;
   onChanged: () => void;
 }) {
-  const [on, setOn] = useState(() => new Date().toISOString().slice(0, 10));
+  const [on, setOn] = useState(() => localDate());
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const last = items[0] ? daysSince(items[0].met_on) : null;

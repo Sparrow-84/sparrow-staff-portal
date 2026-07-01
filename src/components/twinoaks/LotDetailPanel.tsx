@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { localDate } from '@/lib/date';
 import { useAuth } from '@/auth/AuthContext';
 import {
   HOME_OWNERSHIPS,
@@ -156,7 +157,7 @@ export function LotDetailPanel({
   const [error, setError] = useState<string | null>(null);
   const [lotError, setLotError] = useState<string | null>(null);
   const [showMoveOut, setShowMoveOut] = useState(false);
-  const [moveOutDate, setMoveOutDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [moveOutDate, setMoveOutDate] = useState(() => localDate());
   const [showNoticeForm, setShowNoticeForm] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -633,7 +634,7 @@ export function LotDetailPanel({
                     <div className="mb-3 flex items-center justify-between">
                       <SectionHead label={residentLabel} />
                       {tenant && (
-                        <button onClick={() => { setShowMoveOut(true); setMoveOutDate(new Date().toISOString().slice(0, 10)); }} className="text-xs text-priority-p1 hover:underline">
+                        <button onClick={() => { setShowMoveOut(true); setMoveOutDate(localDate()); }} className="text-xs text-priority-p1 hover:underline">
                           Moved out
                         </button>
                       )}

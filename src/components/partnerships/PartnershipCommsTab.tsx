@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { localDate, localDateOf } from '@/lib/date';
 import {
   fetchComms,
   seedCommsForYear,
@@ -101,7 +102,7 @@ export function PartnershipCommsTab() {
     : asksSent === 2 ? 'text-amber-600 bg-amber-100'
     : 'text-red-600 bg-red-100';
 
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = localDate();
 
   return (
     <div className="space-y-4">
@@ -239,7 +240,7 @@ export function PartnershipCommsTab() {
                           {milestones(comm.publish_date).map((m, i) => {
                             const milestoneDateRaw = new Date(comm.publish_date + 'T00:00:00');
                             milestoneDateRaw.setDate(milestoneDateRaw.getDate() + [-10, -7, -5, -3, -1, 0][i]);
-                            const isPastMilestone = milestoneDateRaw.toISOString().slice(0, 10) < todayISO;
+                            const isPastMilestone = localDateOf(milestoneDateRaw) < todayISO;
                             return (
                               <li
                                 key={i}
