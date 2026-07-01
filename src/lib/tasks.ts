@@ -45,11 +45,11 @@ export function groupTasks(
   return groups;
 }
 
-export const PRIORITY_META: Record<Priority, { label: string; dot: string; text: string }> = {
-  p1: { label: 'P1', dot: 'bg-priority-p1', text: 'text-priority-p1' },
-  p2: { label: 'P2', dot: 'bg-priority-p2', text: 'text-priority-p2' },
-  p3: { label: 'P3', dot: 'bg-priority-p3', text: 'text-priority-p3' },
-  p4: { label: 'P4', dot: 'bg-priority-p4', text: 'text-priority-p4' },
+export const PRIORITY_META: Record<Priority, { label: string; dot: string; text: string; pill: string }> = {
+  p1: { label: 'P1', dot: 'bg-priority-p1', text: 'text-priority-p1', pill: 'bg-priority-p1/15 text-priority-p1' },
+  p2: { label: 'P2', dot: 'bg-priority-p2', text: 'text-priority-p2', pill: 'bg-priority-p2/15 text-priority-p2' },
+  p3: { label: 'P3', dot: 'bg-priority-p3', text: 'text-priority-p3', pill: 'bg-priority-p3/15 text-priority-p3' },
+  p4: { label: 'P4', dot: 'bg-priority-p4', text: 'text-priority-p4', pill: 'bg-priority-p4/15 text-priority-p4' },
 };
 
 // ── Three-tier priority overlay (the brief's only priority vocabulary) ──

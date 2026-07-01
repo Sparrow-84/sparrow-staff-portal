@@ -1,6 +1,6 @@
 import { useMemo, useState, type DragEvent } from 'react';
-import { isoDate } from '@/lib/tasks';
-import { DEPT_PILL, type TaskWithPeople } from '@/lib/types';
+import { isoDate, PRIORITY_META } from '@/lib/tasks';
+import type { TaskWithPeople } from '@/lib/types';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -132,7 +132,7 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
                     onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
                     onClick={() => onOpen(t)}
                     title={t.title}
-                    className={`block w-full cursor-grab truncate rounded px-1.5 py-0.5 text-left text-[11px] active:cursor-grabbing ${DEPT_PILL[t.department]} ${
+                    className={`block w-full cursor-grab truncate rounded px-1.5 py-0.5 text-left text-[11px] active:cursor-grabbing ${PRIORITY_META[t.priority].pill} ${
                       t.status === 'done' ? 'opacity-50 line-through' : ''
                     }`}
                   >
@@ -161,7 +161,7 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
                 draggable
                 onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
                 onClick={() => onOpen(t)}
-                className={`cursor-grab truncate rounded px-2 py-1 text-xs active:cursor-grabbing ${DEPT_PILL[t.department]}`}
+                className={`cursor-grab truncate rounded px-2 py-1 text-xs active:cursor-grabbing ${PRIORITY_META[t.priority].pill}`}
               >
                 {t.title}
               </button>
