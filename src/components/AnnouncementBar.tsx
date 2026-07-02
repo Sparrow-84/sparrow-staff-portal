@@ -50,10 +50,11 @@ export function AnnouncementBar() {
             {isAdmin && (
               <button
                 onClick={() => dismiss(a.id)}
-                className="text-xs text-sparrow-gray hover:text-sparrow-ink"
-                aria-label="Dismiss announcement"
+                className="text-xs text-sparrow-gray hover:text-red-600 whitespace-nowrap"
+                aria-label="Clear announcement for everyone"
+                title="Removes this announcement for all staff"
               >
-                ✕
+                Clear for all
               </button>
             )}
           </div>
