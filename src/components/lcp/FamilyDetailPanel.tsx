@@ -63,7 +63,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'homework', label: 'Homework' },
   { key: 'messages', label: 'Messages' },
   { key: 'notes', label: 'Notes' },
-  { key: 'rewards', label: 'Rewards' },
+  { key: 'rewards', label: 'Perks' },
 ];
 
 export function FamilyDetailPanel({

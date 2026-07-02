@@ -181,7 +181,7 @@ export function LcpRoom() {
       {pendingRedemptions.length > 0 && (
         <div className="mt-4 flex items-center justify-between rounded-xl border border-sparrow-gold/40 bg-sparrow-cream px-4 py-3 text-sm">
           <span>
-            🎁 {pendingRedemptions.length} voucher redemption{pendingRedemptions.length > 1 ? 's' : ''} waiting to be
+            ✨ {pendingRedemptions.length} voucher redemption{pendingRedemptions.length > 1 ? 's' : ''} waiting to be
             fulfilled.
           </span>
           <button onClick={() => openFamily(pendingRedemptions[0].family_id)} className="font-medium text-sparrow-green">
