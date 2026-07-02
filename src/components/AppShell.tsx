@@ -27,13 +27,8 @@ export function AppShell() {
 
   useEffect(() => {
     fetchMyOnboardingChecklist()
-      .then((cl) => {
-        if (cl) {
-          setHasOnboarding(true);
-          setView('onboarding');
-        }
-      })
-      .catch(() => {/* non-blocking — missing checklist just means no redirect */});
+      .then((cl) => { if (cl) setHasOnboarding(true); })
+      .catch(() => {});
   }, []);
 
   if (!profile) return null;
