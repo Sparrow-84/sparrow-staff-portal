@@ -38,7 +38,7 @@ export function AppShell() {
 
   if (!profile) return null;
   const isAdmin = profile.role === 'admin';
-  const lcpAccess = isAdmin || profile.lcp_role === 'full';
+  const lcpAccess = isAdmin || profile.lcp_role === 'full' || profile.lcp_role === 'extended';
   const partnershipsAccess =
     isAdmin || profile.department === 'partnerships' || profile.partnerships_access;
   const opsAccess = profile.ops_access;
