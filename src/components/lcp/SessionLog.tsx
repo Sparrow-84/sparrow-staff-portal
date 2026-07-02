@@ -36,9 +36,6 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function todayDow() {
-  return new Date().getDay(); // 0=Sun, 1=Mon ... 4=Thu
-}
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-').map(Number);
@@ -103,15 +100,6 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
     );
   }
 
-  // Suggest tonight's session type based on day of week
-  const dow = todayDow();
-  const tonightType: SessionLogType | null =
-    dow === 1 ? 'monday_mentoring' : dow === 4 ? 'thursday_group' : null;
-
-  function openTonight(type: SessionLogType, eventId: string | null = null) {
-    setEntry({ sessionType: type, sessionDate: todayISO(), eventId, label: SESSION_LOG_LABEL[type] });
-  }
-
   function openManual() {
     setEntry({ sessionType: manualType, sessionDate: manualDate, eventId: null, label: SESSION_LOG_LABEL[manualType] });
     setShowDatePicker(false);
@@ -130,53 +118,36 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
   return (
     <div className="space-y-6">
 
-      {/* Tonight suggestion */}
-      {tonightType && (
-        <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Tonight</h2>
-          <div className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
-            <p className="font-medium text-sparrow-ink">{SESSION_LOG_LABEL[tonightType]}</p>
-            <p className="mt-0.5 text-sm text-sparrow-gray">
-              {families.length} {families.length === 1 ? 'family' : 'families'} active
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                onClick={() => openTonight(tonightType)}
-                className="btn-primary"
-              >
-                Log this session
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Today's calendar events (if any) */}
       {todayEvents.length > 0 && (
         <section>
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
             Today's scheduled events
           </h2>
-          <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+          <div className="space-y-3">
             {todayEvents.map((ev) => {
               const type: SessionLogType =
                 ev.kind === 'curriculum' ? 'thursday_group'
                 : ev.kind === 'one_on_one' ? 'monday_mentoring'
                 : 'ad_hoc';
               return (
-                <li key={ev.id}>
-                  <button
-                    onClick={() => setEntry({ sessionType: type, sessionDate: todayISO(), eventId: ev.id, label: ev.title })}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sparrow-mist"
-                  >
-                    <span className="w-16 shrink-0 text-xs text-sparrow-gray">{timeLabel(ev.starts_at)}</span>
-                    <span className="flex-1 text-sm font-medium text-sparrow-ink">{ev.title}</span>
-                    <span className="shrink-0 text-xs text-sparrow-gray">Log →</span>
-                  </button>
-                </li>
+                <div key={ev.id} className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+                  <p className="font-medium text-sparrow-ink">{ev.title}</p>
+                  <p className="mt-0.5 text-sm text-sparrow-gray">
+                    {timeLabel(ev.starts_at)} · {families.length} {families.length === 1 ? 'family' : 'families'} active
+                  </p>
+                  <div className="mt-3">
+                    <button
+                      onClick={() => setEntry({ sessionType: type, sessionDate: todayISO(), eventId: ev.id, label: ev.title })}
+                      className="btn-primary"
+                    >
+                      Log this session
+                    </button>
+                  </div>
+                </div>
               );
             })}
-          </ul>
+          </div>
         </section>
       )}
 
@@ -255,7 +226,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         </section>
       )}
 
-      {logsByDate.size === 0 && !tonightType && !loading && (
+      {logsByDate.size === 0 && !loading && (
         <p className="text-sm text-sparrow-gray">No sessions logged in the past 8 weeks.</p>
       )}
     </div>
