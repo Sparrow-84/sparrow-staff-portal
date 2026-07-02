@@ -24,6 +24,7 @@ export interface WidgetContext {
   onOpenTask: (t: TaskWithPeople) => void;
   onNavigate: (v: View) => void;
   weekendVisible: boolean;
+  onToggleWeekend: () => void;
 }
 
 export type WidgetKey =
@@ -40,6 +41,7 @@ interface WidgetDef {
   key: WidgetKey;
   label: string;
   Comp: (props: { ctx: WidgetContext }) => ReactNode;
+  HeaderRight?: (props: { ctx: WidgetContext }) => ReactNode;
   managerOnly?: boolean;
   wide?: boolean; // spans both columns on large screens
 }
@@ -609,10 +611,24 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
   );
 }
 
+function MyWeekHeaderRight({ ctx }: { ctx: WidgetContext }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-1.5 text-xs text-sparrow-gray">
+      <input
+        type="checkbox"
+        checked={ctx.weekendVisible}
+        onChange={ctx.onToggleWeekend}
+        className="h-3 w-3 accent-sparrow-green"
+      />
+      Weekends
+    </label>
+  );
+}
+
 // ── Catalog (ordered = the default layout, filtered by availability) ──
 export const WIDGET_CATALOG: WidgetDef[] = [
   { key: 'today_tasks',       label: 'My tasks — today',    Comp: TodayTasksWidget },
-  { key: 'my_week',           label: 'My week',             Comp: MyWeekWidget },
+  { key: 'my_week',           label: 'My week',             Comp: MyWeekWidget, HeaderRight: MyWeekHeaderRight },
   { key: 'triage',            label: 'Incoming tasks',      Comp: TriageWidget },
   { key: 'team_pulse',        label: 'Team pulse',          Comp: TeamPulseWidget, managerOnly: true },
   { key: 'upcoming_meetings', label: 'Upcoming meetings',   Comp: UpcomingMeetingsWidget },

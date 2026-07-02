@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchComments, fetchProfiles, fetchTasks } from '@/lib/data';
 import { fetchNotifications, type AppNotification } from '@/lib/social';
@@ -45,7 +45,6 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [addOpen, setAddOpen] = useState(false);
 
   const [weekendVisible, setWeekendVisible] = useState(false);
-  const weekendRevert = useRef(false);
 
   const [panelTask, setPanelTask] = useState<TaskWithPeople | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -119,6 +118,11 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       },
       onNavigate,
       weekendVisible,
+      onToggleWeekend: () => {
+        const next = !weekendVisible;
+        setWeekendVisible(next);
+        void saveSettings(me!.id, { prefs: { show_weekends: next } });
+      },
     };
   }, [me, tasks, comments, notifications, wins, events, reports, load, onNavigate, weekendVisible]);
 
@@ -153,7 +157,6 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   });
 
   function startEdit() {
-    weekendRevert.current = weekendVisible;
     setDraft(layout);
     setEditing(true);
   }
@@ -162,13 +165,12 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
     setEditing(false);
     setAddOpen(false);
     try {
-      await saveSettings(me!.id, { home_layout: draft, prefs: { show_weekends: weekendVisible } });
+      await saveSettings(me!.id, { home_layout: draft });
     } catch {
       /* layout still applied locally; persistence is best-effort */
     }
   }
   function cancelEdit() {
-    setWeekendVisible(weekendRevert.current);
     setEditing(false);
     setAddOpen(false);
   }
@@ -233,20 +235,9 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       </div>
 
       {editing && (
-        <>
-          <p className="mt-3 text-xs text-sparrow-gray">
-            Drag the top bar of any card to reorder. Remove with &times;. Add more with &ldquo;+ Add widget.&rdquo;
-          </p>
-          <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-sparrow-gray">
-            <input
-              type="checkbox"
-              checked={weekendVisible}
-              onChange={(e) => setWeekendVisible(e.target.checked)}
-              className="h-3.5 w-3.5 accent-sparrow-green"
-            />
-            Show weekends on My Week
-          </label>
-        </>
+        <p className="mt-3 text-xs text-sparrow-gray">
+          Drag the top bar of any card to reorder. Remove with &times;. Add more with &ldquo;+ Add widget.&rdquo;
+        </p>
       )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -274,7 +265,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
           const def = widgetDef(key);
           if (!def) return null;
           const body = (
-            <WidgetCard title={def.label}>
+            <WidgetCard title={def.label} headerRight={def.HeaderRight ? <def.HeaderRight ctx={ctx} /> : undefined}>
               <def.Comp ctx={ctx} />
             </WidgetCard>
           );
