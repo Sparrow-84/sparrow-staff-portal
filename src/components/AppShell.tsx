@@ -47,7 +47,7 @@ export function AppShell() {
   const isSusanna =
     profile.email === 'susannab@sparrowinc.org' ||
     profile.email === 'systems@sparrowinc.org';
-  const PREVIEW_LOCKED: View[] = ['twin-oaks', 'lcp', 'partnerships'];
+  const PREVIEW_LOCKED: View[] = ['twin-oaks', 'partnerships'];
 
   function handleOnboardingDone() {
     setHasOnboarding(false);

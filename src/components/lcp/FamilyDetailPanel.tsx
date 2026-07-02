@@ -246,7 +246,17 @@ function ProgressTab({
 
   async function setJoinedUnit(unitId: number | null) {
     setBusy(true);
-    await updateFamily(family.id, { joined_unit_id: unitId });
+    const patch: Record<string, unknown> = { joined_unit_id: unitId };
+    if (unitId != null) {
+      const unitName = phases.flatMap((p) => p.units).find((u) => u.id === unitId)?.name;
+      if (unitName) {
+        const unitSessions = sessions.filter((s) => s.unit?.name === unitName);
+        if (unitSessions.length > 0) {
+          patch.current_session_number = Math.min(...unitSessions.map((s) => s.session_number));
+        }
+      }
+    }
+    await updateFamily(family.id, patch);
     setBusy(false);
     onChanged();
   }
