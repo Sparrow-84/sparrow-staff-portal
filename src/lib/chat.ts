@@ -23,6 +23,8 @@ export interface ChatMessage {
   channel_id: string;
   author_id: string;
   body: string;
+  voice_url: string | null;
+  voice_duration: number | null;
   created_at: string;
 }
 
@@ -70,11 +72,36 @@ export async function fetchMessages(channelId: string): Promise<ChatMessageWithA
   return (data ?? []) as unknown as ChatMessageWithAuthor[];
 }
 
-export async function sendMessage(channelId: string, authorId: string, body: string): Promise<void> {
+export async function sendMessage(
+  channelId: string,
+  authorId: string,
+  body: string,
+  voice?: { url: string; duration: number },
+): Promise<void> {
   const { error } = await supabase
     .from('chat_messages')
-    .insert({ channel_id: channelId, author_id: authorId, body });
+    .insert({
+      channel_id: channelId,
+      author_id: authorId,
+      body,
+      ...(voice ? { voice_url: voice.url, voice_duration: voice.duration } : {}),
+    });
   if (error) throw new Error(error.message);
+}
+
+export async function uploadVoiceBlob(
+  blob: Blob,
+  channelId: string,
+  userId: string,
+): Promise<{ url: string }> {
+  const ext = blob.type.includes('mp4') || blob.type.includes('aac') ? 'm4a' : 'webm';
+  const path = `${channelId}/${userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from('voice-messages')
+    .upload(path, blob, { contentType: blob.type || 'audio/webm' });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('voice-messages').getPublicUrl(path);
+  return { url: data.publicUrl };
 }
 
 /** Mark a conversation read up to now (clears its unread badge for me). */

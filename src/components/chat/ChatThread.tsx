@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ChatMessageWithAuthor, ChatPerson } from '@/lib/chat';
 import { MentionInput } from './MentionInput';
+import { VoiceRecorder } from './VoiceRecorder';
+import { VoiceMessagePlayer } from './VoiceMessagePlayer';
 
 function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -42,16 +44,19 @@ export function ChatThread({
   meId,
   isGroup,
   onSend,
+  onSendVoice,
   staff,
 }: {
   messages: ChatMessageWithAuthor[];
   meId: string;
   isGroup: boolean;
   onSend: (body: string) => Promise<void>;
+  onSendVoice: (blob: Blob, duration: number) => Promise<void>;
   staff: ChatPerson[];
 }) {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [recording, setRecording] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   // Pin to the newest message as the thread grows.
@@ -113,7 +118,11 @@ export function ChatThread({
                           : 'rounded-bl-sm bg-sparrow-mist text-sparrow-ink'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap break-words">{renderBody(m.body, staff, mine)}</p>
+                      {m.voice_url ? (
+                        <VoiceMessagePlayer url={m.voice_url} duration={m.voice_duration ?? 0} mine={mine} />
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words">{renderBody(m.body, staff, mine)}</p>
+                      )}
                       <p className={`mt-1 text-[10px] ${mine ? 'text-white/70' : 'text-sparrow-gray'}`}>
                         {timeLabel(m.created_at)}
                       </p>
@@ -127,20 +136,37 @@ export function ChatThread({
         <div ref={endRef} />
       </div>
 
-      <div className="flex items-end gap-2 border-t border-sparrow-rule px-4 py-3">
-        <MentionInput
-          value={draft}
-          onChange={setDraft}
-          onKeyDown={onKeyDown}
-          staff={staff}
-          disabled={busy}
-          placeholder="Write a message… (type @ to mention)"
-          className="field-input mt-0 max-h-32 w-full resize-none"
-        />
-        <button onClick={() => void submit()} disabled={busy || !draft.trim()} className="btn-primary">
-          Send
-        </button>
-      </div>
+      {recording ? (
+        <VoiceRecorder onClose={() => setRecording(false)} onSend={onSendVoice} />
+      ) : (
+        <div className="flex items-end gap-2 border-t border-sparrow-rule px-4 py-3">
+          <MentionInput
+            value={draft}
+            onChange={setDraft}
+            onKeyDown={onKeyDown}
+            staff={staff}
+            disabled={busy}
+            placeholder="Write a message… (type @ to mention)"
+            className="field-input mt-0 max-h-32 w-full resize-none"
+          />
+          <button
+            onClick={() => setRecording(true)}
+            disabled={busy}
+            aria-label="Send voice message"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-green disabled:opacity-40"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="23" />
+              <line x1="8" y1="23" x2="16" y2="23" />
+            </svg>
+          </button>
+          <button onClick={() => void submit()} disabled={busy || !draft.trim()} className="btn-primary">
+            Send
+          </button>
+        </div>
+      )}
     </div>
   );
 }

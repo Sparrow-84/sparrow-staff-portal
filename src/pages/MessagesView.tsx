@@ -12,6 +12,7 @@ import {
   parseMentionIds,
   sendMessage,
   subscribeToMessages,
+  uploadVoiceBlob,
   type ChatConversation,
   type ChatMessageWithAuthor,
   type ChatPerson,
@@ -77,6 +78,14 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
     refresh();
   }
 
+  async function handleSendVoice(blob: Blob, duration: number) {
+    if (!activeId) return;
+    const { url } = await uploadVoiceBlob(blob, activeId, meId);
+    await sendMessage(activeId, meId, '', { url, duration });
+    setMessages(await fetchMessages(activeId));
+    refresh();
+  }
+
   function openConversation(c: ChatConversation) {
     setActiveId(c.channel_id);
   }
@@ -137,8 +146,20 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                       </span>
                     </span>
                     <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-xs text-sparrow-gray">
-                        {c.last_body ?? 'No messages yet'}
+                      <span className="flex items-center gap-1 truncate text-xs text-sparrow-gray">
+                        {c.last_body === '' ? (
+                          <>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0">
+                              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                              <line x1="12" y1="19" x2="12" y2="23" />
+                              <line x1="8" y1="23" x2="16" y2="23" />
+                            </svg>
+                            Voice message
+                          </>
+                        ) : (
+                          c.last_body ?? 'No messages yet'
+                        )}
                       </span>
                       {c.unread > 0 && (
                         <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-sparrow-green px-1.5 text-[11px] font-semibold text-white">
@@ -193,6 +214,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                 meId={meId}
                 isGroup={active.kind === 'group'}
                 onSend={handleSend}
+                onSendVoice={handleSendVoice}
                 staff={staff}
               />
             </div>
