@@ -12,6 +12,7 @@ import {
   parseMentionIds,
   sendMessage,
   subscribeToMessages,
+  uploadImageFile,
   uploadVoiceBlob,
   type ChatConversation,
   type ChatMessageWithAuthor,
@@ -86,6 +87,14 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
     refresh();
   }
 
+  async function handleSendImage(file: File) {
+    if (!activeId) return;
+    const { url } = await uploadImageFile(file, activeId, meId);
+    await sendMessage(activeId, meId, '', undefined, url);
+    setMessages(await fetchMessages(activeId));
+    refresh();
+  }
+
   function openConversation(c: ChatConversation) {
     setActiveId(c.channel_id);
   }
@@ -147,7 +156,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                     </span>
                     <span className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-1 truncate text-xs text-sparrow-gray">
-                        {c.last_body === '' ? (
+                        {c.last_attachment_kind === 'voice' ? (
                           <>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0">
                               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
@@ -156,6 +165,14 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                               <line x1="8" y1="23" x2="16" y2="23" />
                             </svg>
                             Voice message
+                          </>
+                        ) : c.last_attachment_kind === 'image' ? (
+                          <>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0">
+                              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                              <circle cx="12" cy="13" r="4" />
+                            </svg>
+                            Photo
                           </>
                         ) : (
                           c.last_body ?? 'No messages yet'
@@ -215,6 +232,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                 isGroup={active.kind === 'group'}
                 onSend={handleSend}
                 onSendVoice={handleSendVoice}
+                onSendImage={handleSendImage}
                 staff={staff}
               />
             </div>

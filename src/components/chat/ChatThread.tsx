@@ -3,6 +3,7 @@ import type { ChatMessageWithAuthor, ChatPerson } from '@/lib/chat';
 import { MentionInput } from './MentionInput';
 import { VoiceRecorder } from './VoiceRecorder';
 import { VoiceMessagePlayer } from './VoiceMessagePlayer';
+import { ImagePicker } from './ImagePicker';
 
 function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -45,6 +46,7 @@ export function ChatThread({
   isGroup,
   onSend,
   onSendVoice,
+  onSendImage,
   staff,
 }: {
   messages: ChatMessageWithAuthor[];
@@ -52,11 +54,13 @@ export function ChatThread({
   isGroup: boolean;
   onSend: (body: string) => Promise<void>;
   onSendVoice: (blob: Blob, duration: number) => Promise<void>;
+  onSendImage: (file: File) => Promise<void>;
   staff: ChatPerson[];
 }) {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [pickingImage, setPickingImage] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   // Pin to the newest message as the thread grows.
@@ -118,7 +122,14 @@ export function ChatThread({
                           : 'rounded-bl-sm bg-sparrow-mist text-sparrow-ink'
                       }`}
                     >
-                      {m.voice_url ? (
+                      {m.image_url ? (
+                        <img
+                          src={m.image_url}
+                          alt=""
+                          loading="lazy"
+                          className="max-h-64 w-auto max-w-full rounded-lg"
+                        />
+                      ) : m.voice_url ? (
                         <VoiceMessagePlayer url={m.voice_url} duration={m.voice_duration ?? 0} mine={mine} />
                       ) : (
                         <p className="whitespace-pre-wrap break-words">{renderBody(m.body, staff, mine)}</p>
@@ -138,6 +149,8 @@ export function ChatThread({
 
       {recording ? (
         <VoiceRecorder onClose={() => setRecording(false)} onSend={onSendVoice} />
+      ) : pickingImage ? (
+        <ImagePicker onClose={() => setPickingImage(false)} onSend={onSendImage} />
       ) : (
         <div className="flex items-end gap-2 border-t border-sparrow-rule px-4 py-3">
           <MentionInput
@@ -149,10 +162,23 @@ export function ChatThread({
             placeholder="Write a message… (type @ to mention)"
             className="field-input mt-0 max-h-32 w-full resize-none"
           />
+          {/* Photo */}
+          <button
+            onClick={() => setPickingImage(true)}
+            disabled={busy}
+            aria-label="Send a photo"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-green disabled:opacity-40"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          </button>
+          {/* Voice */}
           <button
             onClick={() => setRecording(true)}
             disabled={busy}
-            aria-label="Send voice message"
+            aria-label="Send a voice message"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-green disabled:opacity-40"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

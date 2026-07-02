@@ -16,6 +16,7 @@ export interface ChatConversation {
   unread: number;
   other_id: string | null; // direct only: the other member
   other_name: string | null;
+  last_attachment_kind: 'voice' | 'image' | null;
 }
 
 export interface ChatMessage {
@@ -25,6 +26,7 @@ export interface ChatMessage {
   body: string;
   voice_url: string | null;
   voice_duration: number | null;
+  image_url: string | null;
   created_at: string;
 }
 
@@ -77,6 +79,7 @@ export async function sendMessage(
   authorId: string,
   body: string,
   voice?: { url: string; duration: number },
+  imageUrl?: string,
 ): Promise<void> {
   const { error } = await supabase
     .from('chat_messages')
@@ -85,8 +88,24 @@ export async function sendMessage(
       author_id: authorId,
       body,
       ...(voice ? { voice_url: voice.url, voice_duration: voice.duration } : {}),
+      ...(imageUrl ? { image_url: imageUrl } : {}),
     });
   if (error) throw new Error(error.message);
+}
+
+export async function uploadImageFile(
+  file: File,
+  channelId: string,
+  userId: string,
+): Promise<{ url: string }> {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const path = `${channelId}/${userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from('chat-images')
+    .upload(path, file, { contentType: file.type || 'image/jpeg' });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('chat-images').getPublicUrl(path);
+  return { url: data.publicUrl };
 }
 
 export async function uploadVoiceBlob(
