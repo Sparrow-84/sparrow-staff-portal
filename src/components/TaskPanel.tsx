@@ -59,7 +59,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
       setAssigneeId(currentUser.id);
       setStatus('todo');
     }
-  }, [open, task, currentUser]);
+  }, [open, task, currentUser.id, currentUser.department]);
 
   const tomorrow = (() => {
     const d = new Date(today + 'T00:00:00');
