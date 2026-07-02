@@ -150,6 +150,7 @@ export function FamilyDetailPanel({
       {tab === 'progress' && (
         <ProgressTab
           family={family}
+          sessions={sessions}
           phases={phases}
           programUnitId={programUnitId}
           onChanged={onChanged}
@@ -222,12 +223,14 @@ export function FamilyDetailPanel({
 // ── Progress ─────────────────────────────────────────────────────────
 function ProgressTab({
   family,
+  sessions,
   phases,
   programUnitId,
   onChanged,
   onRemoved,
 }: {
   family: Family;
+  sessions: CurriculumSession[];
   phases: LcpPhaseWithUnits[];
   programUnitId: number | null;
   onChanged: () => void;
