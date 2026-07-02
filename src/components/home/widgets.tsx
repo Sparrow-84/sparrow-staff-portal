@@ -23,6 +23,7 @@ export interface WidgetContext {
   onChanged: () => void;
   onOpenTask: (t: TaskWithPeople) => void;
   onNavigate: (v: View) => void;
+  weekendVisible: boolean;
 }
 
 export type WidgetKey =
@@ -477,12 +478,11 @@ function WeekTooltip({ state }: { state: WeekTooltipState }) {
 
 function getWeekBounds(today: string): { weekStart: string; weekEnd: string } {
   const d = new Date(today + 'T00:00:00');
-  const dow = d.getDay(); // 0=Sun
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  return { weekStart: isoDate(monday), weekEnd: isoDate(sunday) };
+  const sunday = new Date(d);
+  sunday.setDate(d.getDate() - d.getDay()); // back to this week's Sunday
+  const saturday = new Date(sunday);
+  saturday.setDate(sunday.getDate() + 6);
+  return { weekStart: isoDate(sunday), weekEnd: isoDate(saturday) };
 }
 
 function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
@@ -505,76 +505,104 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
       t.due_date <= weekEnd,
   );
 
-  const monday = new Date(weekStart + 'T12:00:00');
-  const days = Array.from({ length: 5 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+  const weekSunday = new Date(weekStart + 'T12:00:00');
+  const allDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekSunday);
+    d.setDate(weekSunday.getDate() + i);
     const dStr = isoDate(d);
+    const dow = d.getDay();
     return {
       date: dStr,
       weekday: d.toLocaleDateString(undefined, { weekday: 'short' }),
       dayNum: d.getDate(),
       isToday: dStr === ctx.today,
+      isPast: dStr < ctx.today,
+      isWeekend: dow === 0 || dow === 6,
     };
   });
 
+  const days = allDays.filter((d) => d.isToday || !d.isWeekend || ctx.weekendVisible);
+
   return (
     <>
-      <div className="grid grid-cols-5 gap-1">
-      {days.map(({ date, weekday, dayNum, isToday }) => {
-        const dayEvents = weekEvents.filter((o) => isoDate(o.occursAt) === date);
-        const dayTasks = myTasks.filter((t) => t.due_date === date);
+      <div className="mb-2 flex justify-end">
+        <button
+          onClick={() => ctx.onNavigate('calendar')}
+          className="text-xs text-sparrow-green hover:underline"
+        >
+          My calendar →
+        </button>
+      </div>
+      <div className="flex gap-1 overflow-hidden">
+        {days.map(({ date, weekday, dayNum, isToday, isPast }) => {
+          const dayEvents = weekEvents.filter((o) => isoDate(o.occursAt) === date);
+          const dayTasks = myTasks.filter((t) => t.due_date === date);
 
-        return (
-          <div
-            key={date}
-            className={`min-h-[100px] rounded-lg p-1.5 ${
-              isToday
-                ? 'bg-sparrow-green/10 ring-1 ring-sparrow-green/30'
-                : 'bg-sparrow-mist/40'
-            }`}
-          >
-            <div className="mb-1.5 text-center">
-              <p className={`text-[10px] font-medium uppercase tracking-wide ${isToday ? 'text-sparrow-green' : 'text-sparrow-gray'}`}>
-                {weekday}
-              </p>
-              <p className={`text-sm font-semibold leading-none ${isToday ? 'text-sparrow-green' : 'text-sparrow-ink'}`}>
-                {dayNum}
-              </p>
-            </div>
-            {dayEvents.map((o, idx) => (
-              <div
-                key={`${o.event.id}-${idx}`}
-                className="mb-0.5 truncate rounded bg-sparrow-green/15 px-1 py-0.5 text-[10px] text-sparrow-green"
-                onMouseEnter={(e) => setTooltip({ kind: 'event', event: o.event, occursAt: o.occursAt, x: e.clientX, y: e.clientY })}
-                onMouseLeave={() => setTooltip(null)}
-              >
-                {!o.event.all_day && (
-                  <span className="mr-0.5 opacity-70">
-                    {o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                  </span>
+          if (isPast && !isToday) {
+            const hasContent = dayEvents.length > 0 || dayTasks.length > 0;
+            return (
+              <div key={date} className="flex w-8 shrink-0 flex-col items-center py-1">
+                <p className="text-[9px] font-medium uppercase leading-none text-sparrow-gray opacity-50">
+                  {weekday.charAt(0)}
+                </p>
+                <p className="mt-0.5 text-[10px] leading-none text-sparrow-gray opacity-40">{dayNum}</p>
+                {hasContent && (
+                  <span className="mt-1.5 h-1 w-1 rounded-full bg-sparrow-gray opacity-30" aria-hidden />
                 )}
-                {o.event.title}
               </div>
-            ))}
-            {dayTasks.map((t) => {
-              const meta = PRIORITY_META[t.priority];
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => ctx.onOpenTask(t)}
-                  className="mb-0.5 flex w-full items-center gap-1 rounded bg-white/60 px-1 py-0.5 text-left text-[10px] hover:bg-white"
-                  onMouseEnter={(e) => setTooltip({ kind: 'task', task: t, x: e.clientX, y: e.clientY })}
+            );
+          }
+
+          return (
+            <div
+              key={date}
+              className={`min-h-[100px] min-w-0 flex-1 rounded-lg p-1.5 ${
+                isToday
+                  ? 'bg-sparrow-green/10 ring-1 ring-sparrow-green/30'
+                  : 'bg-sparrow-mist/40'
+              }`}
+            >
+              <div className="mb-1.5 text-center">
+                <p className={`text-[10px] font-medium uppercase tracking-wide ${isToday ? 'text-sparrow-green' : 'text-sparrow-gray'}`}>
+                  {weekday}
+                </p>
+                <p className={`text-sm font-semibold leading-none ${isToday ? 'text-sparrow-green' : 'text-sparrow-ink'}`}>
+                  {dayNum}
+                </p>
+              </div>
+              {dayEvents.map((o, idx) => (
+                <div
+                  key={`${o.event.id}-${idx}`}
+                  className="mb-0.5 truncate rounded bg-sparrow-green/15 px-1 py-0.5 text-[10px] text-sparrow-green"
+                  onMouseEnter={(e) => setTooltip({ kind: 'event', event: o.event, occursAt: o.occursAt, x: e.clientX, y: e.clientY })}
                   onMouseLeave={() => setTooltip(null)}
                 >
-                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
-                  <span className="truncate text-sparrow-ink">{t.title}</span>
-                </button>
-              );
-            })}
-          </div>
-        );
-      })}
+                  {!o.event.all_day && (
+                    <span className="mr-0.5 opacity-70">
+                      {o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                  )}
+                  {o.event.title}
+                </div>
+              ))}
+              {dayTasks.map((t) => {
+                const meta = PRIORITY_META[t.priority];
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => ctx.onOpenTask(t)}
+                    className="mb-0.5 flex w-full items-center gap-1 rounded bg-white/60 px-1 py-0.5 text-left text-[10px] hover:bg-white"
+                    onMouseEnter={(e) => setTooltip({ kind: 'task', task: t, x: e.clientX, y: e.clientY })}
+                    onMouseLeave={() => setTooltip(null)}
+                  >
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
+                    <span className="truncate text-sparrow-ink">{t.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
       {tooltip && <WeekTooltip state={tooltip} />}
     </>
@@ -584,7 +612,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
 // ── Catalog (ordered = the default layout, filtered by availability) ──
 export const WIDGET_CATALOG: WidgetDef[] = [
   { key: 'today_tasks',       label: 'My tasks — today',    Comp: TodayTasksWidget },
-  { key: 'my_week',           label: 'My week',             Comp: MyWeekWidget, wide: true },
+  { key: 'my_week',           label: 'My week',             Comp: MyWeekWidget },
   { key: 'triage',            label: 'Incoming tasks',      Comp: TriageWidget },
   { key: 'team_pulse',        label: 'Team pulse',          Comp: TeamPulseWidget, managerOnly: true },
   { key: 'upcoming_meetings', label: 'Upcoming meetings',   Comp: UpcomingMeetingsWidget },

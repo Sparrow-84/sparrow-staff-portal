@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchComments, fetchProfiles, fetchTasks } from '@/lib/data';
 import { fetchNotifications, type AppNotification } from '@/lib/social';
@@ -44,6 +44,9 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
+  const [weekendVisible, setWeekendVisible] = useState(false);
+  const weekendRevert = useRef(false);
+
   const [panelTask, setPanelTask] = useState<TaskWithPeople | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -78,6 +81,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       setNotifications(n);
       setWins(w);
       setEvents(e);
+      setWeekendVisible((s?.prefs?.show_weekends as boolean) ?? false);
 
       const teamVisible = isAdmin
         ? p.some((x) => x.id !== me.id)
@@ -114,8 +118,9 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
         setPanelOpen(true);
       },
       onNavigate,
+      weekendVisible,
     };
-  }, [me, tasks, comments, notifications, wins, events, reports, load, onNavigate]);
+  }, [me, tasks, comments, notifications, wins, events, reports, load, onNavigate, weekendVisible]);
 
   if (!me || !ctx) return null;
   if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading your dashboard…</p>;
@@ -125,6 +130,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   const notPlaced = availableWidgets(showTeam).filter((d) => !shown.includes(d.key));
 
   const isDragging = editing && dragKey !== null;
+  const dragIsWide = dragKey ? (widgetDef(dragKey)?.wide ?? false) : false;
   const without = isDragging ? shown.filter((k) => k !== dragKey) : shown;
   type DisplayItem = WidgetKey | '__placeholder__';
   let displayItems: DisplayItem[];
@@ -147,6 +153,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   });
 
   function startEdit() {
+    weekendRevert.current = weekendVisible;
     setDraft(layout);
     setEditing(true);
   }
@@ -155,12 +162,13 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
     setEditing(false);
     setAddOpen(false);
     try {
-      await saveSettings(me!.id, { home_layout: draft });
+      await saveSettings(me!.id, { home_layout: draft, prefs: { show_weekends: weekendVisible } });
     } catch {
       /* layout still applied locally; persistence is best-effort */
     }
   }
   function cancelEdit() {
+    setWeekendVisible(weekendRevert.current);
     setEditing(false);
     setAddOpen(false);
   }
@@ -225,9 +233,20 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       </div>
 
       {editing && (
-        <p className="mt-3 text-xs text-sparrow-gray">
-          Drag the top bar of any card to reorder. Remove with &times;. Add more with &ldquo;+ Add widget.&rdquo;
-        </p>
+        <>
+          <p className="mt-3 text-xs text-sparrow-gray">
+            Drag the top bar of any card to reorder. Remove with &times;. Add more with &ldquo;+ Add widget.&rdquo;
+          </p>
+          <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-sparrow-gray">
+            <input
+              type="checkbox"
+              checked={weekendVisible}
+              onChange={(e) => setWeekendVisible(e.target.checked)}
+              className="h-3.5 w-3.5 accent-sparrow-green"
+            />
+            Show weekends on My Week
+          </label>
+        </>
       )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -236,7 +255,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
             return (
               <div
                 key="__placeholder__"
-                className="min-h-[8rem] rounded-2xl border-2 border-dashed border-sparrow-green bg-sparrow-sage/40 flex items-center justify-center"
+                className={`min-h-[8rem] rounded-2xl border-2 border-dashed border-sparrow-green bg-sparrow-sage/40 flex items-center justify-center${dragIsWide ? ' sm:col-span-2' : ''}`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
                   if (dragKey !== null && dropIndex !== null) {
@@ -259,7 +278,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
               <def.Comp ctx={ctx} />
             </WidgetCard>
           );
-          if (!editing) return <div key={key}>{body}</div>;
+          if (!editing) return <div key={key} className={def.wide ? 'sm:col-span-2' : ''}>{body}</div>;
 
           const isBeingDragged = dragKey === key;
           const indexInWithout = without.indexOf(key);
@@ -300,6 +319,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
               }}
               className={[
                 'rounded-2xl ring-2 ring-dashed ring-sparrow-rule transition-opacity',
+                def.wide ? 'sm:col-span-2' : '',
                 isBeingDragged && dropIndex !== null ? 'opacity-0 pointer-events-none' : '',
                 isBeingDragged && dropIndex === null ? 'opacity-30' : '',
               ].join(' ')}
