@@ -81,6 +81,27 @@ export function DocumentsEditor() {
         Add and manage the documents that appear in the staff Documents library. Staff can view but not edit these.
       </p>
 
+      <div className="rounded-xl border border-dashed border-sparrow-rule p-3">
+        {adding ? (
+          <DocForm
+            state={addState}
+            onChange={setAddState}
+            onSave={submitAdd}
+            onCancel={() => setAdding(false)}
+            busy={busy}
+            saveLabel="Add"
+          />
+        ) : (
+          <button
+            onClick={() => { setAdding(true); setEditing(null); }}
+            disabled={busy}
+            className="w-full text-sm text-sparrow-green hover:underline"
+          >
+            + Add document
+          </button>
+        )}
+      </div>
+
       <ul className="space-y-2">
         {docs.map((doc) => (
           <li key={doc.id} className="rounded-xl border border-sparrow-rule bg-white p-3">
@@ -141,26 +162,6 @@ export function DocumentsEditor() {
         ))}
       </ul>
 
-      <div className="rounded-xl border border-dashed border-sparrow-rule p-3">
-        {adding ? (
-          <DocForm
-            state={addState}
-            onChange={setAddState}
-            onSave={submitAdd}
-            onCancel={() => setAdding(false)}
-            busy={busy}
-            saveLabel="Add"
-          />
-        ) : (
-          <button
-            onClick={() => { setAdding(true); setEditing(null); }}
-            disabled={busy}
-            className="w-full text-sm text-sparrow-green hover:underline"
-          >
-            + Add document
-          </button>
-        )}
-      </div>
     </div>
   );
 }
