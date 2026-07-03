@@ -101,9 +101,9 @@ export function docTypeLabel(t: DocType): string {
   return DOC_TYPES.find((d) => d.value === t)?.label ?? t;
 }
 
-/** Touchpoint health by days since last 1:1 (green < 30, amber 30–59, red 60+ / never). */
+/** Touchpoint health by days since last check-in (blank if none logged, green <30, amber 30–59, red 60+). */
 export function touchpointTone(daysSince: number | null): { label: string; chip: string } {
-  if (daysSince === null) return { label: 'never met', chip: 'bg-priority-p1/15 text-priority-p1' };
+  if (daysSince === null) return { label: '', chip: '' };
   if (daysSince >= 60) return { label: `${daysSince}d ago`, chip: 'bg-priority-p1/15 text-priority-p1' };
   if (daysSince >= 30) return { label: `${daysSince}d ago`, chip: 'bg-priority-p2/15 text-priority-p2' };
   return { label: `${daysSince}d ago`, chip: 'bg-sparrow-green/10 text-sparrow-green' };

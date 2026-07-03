@@ -96,7 +96,7 @@ export function OperationsRoom() {
   const overdueReviews = reviews.filter((r) => r.status === 'scheduled' && (daysSince(r.due_date) ?? 0) > 0);
   const overdueTouchpoints = staff.filter((s) => {
     const d = daysSince(lastMet.get(s.id) ?? null);
-    return d === null || d >= 60;
+    return d !== null && d >= 60;
   });
 
   function openStaff(id: string) {
@@ -174,9 +174,11 @@ export function OperationsRoom() {
                         {issues} issue{issues > 1 ? 's' : ''}
                       </span>
                     )}
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`} title="Last 1:1">
-                      {tone.label}
-                    </span>
+                    {tone.label && (
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`} title="Last check-in">
+                        {tone.label}
+                      </span>
+                    )}
                     <span className="shrink-0 text-sparrow-gray">›</span>
                   </button>
                 </li>
