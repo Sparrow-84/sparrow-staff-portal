@@ -13,3 +13,6 @@
 
 # typescript / vite
 *.tsbuildinfo
+
+# test runner output
+/test-results
