@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { addOrgDocument, deleteOrgDocument, fetchOrgDocuments, updateOrgDocument } from '@/lib/documents';
 import { DOCUMENT_CATEGORIES, type OrgDocument } from '@/lib/documents-types';
 
@@ -24,6 +24,16 @@ export function DocumentsEditor() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, OrgDocument[]>();
+    for (const cat of DOCUMENT_CATEGORIES) map.set(cat, []);
+    for (const doc of docs) {
+      if (!map.has(doc.category)) map.set(doc.category, []);
+      map.get(doc.category)!.push(doc);
+    }
+    return map;
+  }, [docs]);
 
   async function submitAdd() {
     if (!addState.title.trim()) return;
@@ -102,65 +112,77 @@ export function DocumentsEditor() {
         )}
       </div>
 
-      <ul className="space-y-2">
-        {docs.map((doc) => (
-          <li key={doc.id} className="rounded-xl border border-sparrow-rule bg-white p-3">
-            {editing?.id === doc.id ? (
-              <DocForm
-                state={editing}
-                onChange={(s) => setEditing(s as EditState)}
-                onSave={submitEdit}
-                onCancel={() => setEditing(null)}
-                busy={busy}
-                saveLabel="Save"
-              />
+      <div className="space-y-5">
+        {[...grouped.entries()].map(([category, items]) => (
+          <section key={category}>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+              {category}
+            </h3>
+            {items.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-sparrow-rule px-3 py-2 text-xs text-sparrow-gray">
+                No documents yet
+              </p>
             ) : (
-              <div className="flex items-start gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-sparrow-ink">{doc.title}</span>
-                    <span className="rounded-full bg-sparrow-mist px-2 py-0.5 text-[11px] text-sparrow-gray">
-                      {doc.category}
-                    </span>
-                    {!doc.url && (
-                      <span className="rounded-full bg-sparrow-rule/60 px-2 py-0.5 text-[11px] text-sparrow-gray">
-                        No link yet
-                      </span>
+              <ul className="space-y-2">
+                {items.map((doc) => (
+                  <li key={doc.id} className="rounded-xl border border-sparrow-rule bg-white p-3">
+                    {editing?.id === doc.id ? (
+                      <DocForm
+                        state={editing}
+                        onChange={(s) => setEditing(s as EditState)}
+                        onSave={submitEdit}
+                        onCancel={() => setEditing(null)}
+                        busy={busy}
+                        saveLabel="Save"
+                      />
+                    ) : (
+                      <div className="flex items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-sparrow-ink">{doc.title}</span>
+                            {!doc.url && (
+                              <span className="rounded-full bg-sparrow-rule/60 px-2 py-0.5 text-[11px] text-sparrow-gray">
+                                No link yet
+                              </span>
+                            )}
+                          </div>
+                          {doc.description && <p className="mt-0.5 text-xs text-sparrow-gray">{doc.description}</p>}
+                          {doc.url && (
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-0.5 block truncate text-xs text-sparrow-green hover:underline"
+                            >
+                              {doc.url}
+                            </a>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <button
+                            onClick={() => setEditing({ id: doc.id, title: doc.title, category: doc.category, description: doc.description ?? '', url: doc.url ?? '' })}
+                            disabled={busy}
+                            className="rounded px-2 py-1 text-xs text-sparrow-gray hover:text-sparrow-ink"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => void remove(doc)}
+                            disabled={busy}
+                            className="rounded px-2 py-1 text-xs text-sparrow-gray hover:text-priority-p1"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
                     )}
-                  </div>
-                  {doc.description && <p className="mt-0.5 text-xs text-sparrow-gray">{doc.description}</p>}
-                  {doc.url && (
-                    <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-0.5 block truncate text-xs text-sparrow-green hover:underline"
-                    >
-                      {doc.url}
-                    </a>
-                  )}
-                </div>
-                <div className="flex shrink-0 gap-1">
-                  <button
-                    onClick={() => setEditing({ id: doc.id, title: doc.title, category: doc.category, description: doc.description ?? '', url: doc.url ?? '' })}
-                    disabled={busy}
-                    className="rounded px-2 py-1 text-xs text-sparrow-gray hover:text-sparrow-ink"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => void remove(doc)}
-                    disabled={busy}
-                    className="rounded px-2 py-1 text-xs text-sparrow-gray hover:text-priority-p1"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
+                  </li>
+                ))}
+              </ul>
             )}
-          </li>
+          </section>
         ))}
-      </ul>
+      </div>
 
     </div>
   );
