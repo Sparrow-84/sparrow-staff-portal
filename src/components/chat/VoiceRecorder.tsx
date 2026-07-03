@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 type Phase = 'recording' | 'preview' | 'sending';
 
+const MAX_SECONDS = 120; // 2-minute cap — keeps files well under the 5 MB bucket limit
+
 function fmt(s: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
@@ -40,6 +42,14 @@ export function VoiceRecorder({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  // Auto-stop when the 2-minute limit is reached
+  useEffect(() => {
+    if (seconds >= MAX_SECONDS && phase === 'recording') {
+      void stopRecording();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seconds]);
 
   function clearTimer() {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -194,8 +204,12 @@ export function VoiceRecorder({
       {/* Recording indicator + timer */}
       <div className="flex flex-1 items-center gap-2">
         <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden />
-        <span className="text-sm font-medium tabular-nums text-sparrow-ink">{fmt(seconds)}</span>
-        <span className="text-xs text-sparrow-gray">Recording…</span>
+        <span className={`text-sm font-medium tabular-nums ${seconds >= MAX_SECONDS - 15 ? 'text-red-500' : 'text-sparrow-ink'}`}>
+          {fmt(seconds)}
+        </span>
+        <span className="text-xs text-sparrow-gray">
+          {seconds >= MAX_SECONDS - 15 ? `Stopping at ${fmt(MAX_SECONDS)}` : 'Recording…'}
+        </span>
       </div>
 
       {/* Stop */}
