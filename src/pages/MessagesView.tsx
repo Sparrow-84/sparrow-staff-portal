@@ -68,9 +68,9 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
     };
   }, [activeId, meId, refresh]);
 
-  async function handleSend(body: string) {
+  async function handleSend(body: string, replyToId?: string) {
     if (!activeId) return;
-    await sendMessage(activeId, meId, body);
+    await sendMessage(activeId, meId, body, undefined, undefined, replyToId);
     const mentionedIds = parseMentionIds(body, staff);
     if (mentionedIds.length) {
       void createMentionNotifications(mentionedIds, meId, activeId, body).catch(() => {});
@@ -230,10 +230,17 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                 messages={messages}
                 meId={meId}
                 isGroup={active.kind === 'group'}
+                channelId={active.channel_id}
                 onSend={handleSend}
                 onSendVoice={handleSendVoice}
                 onSendImage={handleSendImage}
                 staff={staff}
+                onMessageDeleted={(id) => setMessages((prev) => prev.filter((m) => m.id !== id))}
+                onMessageEdited={(id, body) =>
+                  setMessages((prev) =>
+                    prev.map((m) => m.id === id ? { ...m, body, edited_at: new Date().toISOString() } : m)
+                  )
+                }
               />
             </div>
           </>

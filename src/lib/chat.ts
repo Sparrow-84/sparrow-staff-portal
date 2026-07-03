@@ -27,12 +27,21 @@ export interface ChatMessage {
   voice_url: string | null;
   voice_duration: number | null;
   image_url: string | null;
+  // Added by migration 0054 — null-safe until Byron runs it
+  reply_to_id: string | null;
+  edited_at: string | null;
   created_at: string;
 }
 
 /** A message joined with its author's name (for the thread view). */
 export interface ChatMessageWithAuthor extends ChatMessage {
   author: { full_name: string } | null;
+}
+
+export interface ChatReaction {
+  message_id: string;
+  user_id: string;
+  emoji: string;
 }
 
 /** Directory entry used by the "new conversation" picker. */
@@ -80,6 +89,7 @@ export async function sendMessage(
   body: string,
   voice?: { url: string; duration: number },
   imageUrl?: string,
+  replyToId?: string,
 ): Promise<void> {
   const { error } = await supabase
     .from('chat_messages')
@@ -89,6 +99,7 @@ export async function sendMessage(
       body,
       ...(voice ? { voice_url: voice.url, voice_duration: voice.duration } : {}),
       ...(imageUrl ? { image_url: imageUrl } : {}),
+      ...(replyToId ? { reply_to_id: replyToId } : {}),
     });
   if (error) throw new Error(error.message);
 }
@@ -197,4 +208,52 @@ export function subscribeToMessages(
   return () => {
     void supabase.removeChannel(ch);
   };
+}
+
+// ── Message actions (migration 0054) ─────────────────────────────────
+
+export async function deleteMessage(messageId: string): Promise<void> {
+  const { error } = await supabase.from('chat_messages').delete().eq('id', messageId);
+  if (error) throw new Error(error.message);
+}
+
+export async function editMessage(messageId: string, newBody: string): Promise<void> {
+  const { error } = await supabase
+    .from('chat_messages')
+    .update({ body: newBody, edited_at: new Date().toISOString() })
+    .eq('id', messageId);
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchReactions(channelId: string): Promise<ChatReaction[]> {
+  const { data, error } = await supabase
+    .from('chat_reactions')
+    .select('message_id, user_id, emoji')
+    .eq('channel_id', channelId);
+  if (error) return []; // table doesn't exist until 0054
+  return (data ?? []) as ChatReaction[];
+}
+
+export async function addReaction(channelId: string, messageId: string, emoji: string): Promise<void> {
+  await supabase
+    .from('chat_reactions')
+    .upsert({ channel_id: channelId, message_id: messageId, emoji }, { onConflict: 'message_id,user_id,emoji' });
+}
+
+export async function removeReaction(messageId: string, emoji: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase
+    .from('chat_reactions')
+    .delete()
+    .eq('message_id', messageId)
+    .eq('user_id', user.id)
+    .eq('emoji', emoji);
+}
+
+/** For direct messages only: returns when the other member last read the channel. */
+export async function fetchOtherMemberReadAt(channelId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('chat_other_member_read_at', { p_channel: channelId });
+  if (error) return null;
+  return (data as string | null) ?? null;
 }

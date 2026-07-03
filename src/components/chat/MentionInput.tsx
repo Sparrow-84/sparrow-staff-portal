@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { initials, type ChatPerson } from '@/lib/chat';
 
 interface Props {
@@ -16,6 +16,8 @@ interface MentionState {
   atPos: number;
 }
 
+const MAX_HEIGHT = 128; // matches max-h-32 = 8rem
+
 export function MentionInput({ value, onChange, onKeyDown, staff, disabled, placeholder, className }: Props) {
   const [mention, setMention] = useState<MentionState | null>(null);
   const [selected, setSelected] = useState(0);
@@ -32,7 +34,38 @@ export function MentionInput({ value, onChange, onKeyDown, staff, disabled, plac
         .slice(0, 6)
     : [];
 
+  function autoResize(el: HTMLTextAreaElement) {
+    el.style.height = 'auto';
+    const capped = Math.min(el.scrollHeight, MAX_HEIGHT);
+    el.style.height = `${capped}px`;
+    el.style.overflowY = el.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden';
+  }
+
+  // Reset to single-row height after the draft is cleared (e.g. after send).
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta || value) return;
+    ta.style.height = 'auto';
+    ta.style.overflowY = 'hidden';
+  }, [value]);
+
+  // Wrap the current text selection (or cursor position) with a markdown marker pair.
+  function wrapSelection(marker: string) {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const inner = value.slice(start, end);
+    const newVal = value.slice(0, start) + marker + inner + marker + value.slice(end);
+    onChange(newVal);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + marker.length, end + marker.length);
+    }, 0);
+  }
+
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    autoResize(e.target);
     const val = e.target.value;
     const cursor = e.target.selectionStart ?? val.length;
     const before = val.slice(0, cursor);
@@ -69,6 +102,18 @@ export function MentionInput({ value, onChange, onKeyDown, staff, disabled, plac
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Bold (⌘B / Ctrl+B) and italic (⌘I / Ctrl+I) — desktop only.
+    if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+      e.preventDefault();
+      wrapSelection('**');
+      return;
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'i') {
+      e.preventDefault();
+      wrapSelection('*');
+      return;
+    }
+
     if (mention && filtered.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -80,7 +125,8 @@ export function MentionInput({ value, onChange, onKeyDown, staff, disabled, plac
         setSelected((s) => (s - 1 + filtered.length) % filtered.length);
         return;
       }
-      if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+      // Tab or plain Enter (no Cmd/Ctrl) confirms a @mention suggestion.
+      if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey)) {
         e.preventDefault();
         const person = filtered[selected];
         if (person) insertMention(person);
@@ -125,7 +171,11 @@ export function MentionInput({ value, onChange, onKeyDown, staff, disabled, plac
         rows={1}
         placeholder={placeholder}
         disabled={disabled}
+        spellCheck
+        autoCorrect="on"
+        autoCapitalize="sentences"
         className={className}
+        style={{ overflowY: 'hidden' }}
       />
     </div>
   );
