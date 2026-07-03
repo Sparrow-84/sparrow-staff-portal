@@ -22,9 +22,10 @@ interface Props {
   onClose: () => void;
   onDeleted: () => void;
   onUpdated: () => void;
+  onOpenNotes: (event: CalendarEvent) => void;
 }
 
-export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, onDeleted, onUpdated }: Props) {
+export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, onDeleted, onUpdated, onOpenNotes }: Props) {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [confirm, setConfirm] = useState(false);
   const [deletingMode, setDeletingMode] = useState<null | 'single' | 'future'>(null);
@@ -181,67 +182,77 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
       );
     }
 
-    if (!canEdit) return undefined;
-
-    if (!confirm) {
+    // Delete confirmation — show just the confirmation, no other actions
+    if (confirm) {
       return (
-        <div className="flex gap-2">
-          <button onClick={enterEdit} className="flex-1 btn-ghost text-sm">
-            Edit
-          </button>
-          <button
-            onClick={() => setConfirm(true)}
-            className="flex-1 rounded-xl border border-priority-p1/40 py-2 text-sm font-medium text-priority-p1 hover:bg-priority-p1/5"
-          >
-            Delete
-          </button>
+        <div className="space-y-2">
+          <p className="text-xs text-sparrow-gray">
+            {isRecurring
+              ? 'Delete just this event, or this one and all future events in the series?'
+              : 'This cannot be undone.'}
+          </p>
+          {error && <p className="text-xs text-priority-p1">{error}</p>}
+          <div className="flex flex-col gap-2">
+            {isRecurring ? (
+              <>
+                <button
+                  onClick={() => handleDelete('single')}
+                  disabled={deletingMode !== null}
+                  className="w-full rounded-xl border border-priority-p1/40 py-2 text-sm font-medium text-priority-p1 hover:bg-priority-p1/5"
+                >
+                  {deletingMode === 'single' ? 'Deleting…' : 'This event only'}
+                </button>
+                <button
+                  onClick={() => handleDelete('future')}
+                  disabled={deletingMode !== null}
+                  className="w-full rounded-xl bg-priority-p1 py-2 text-sm font-medium text-white hover:bg-priority-p1/90"
+                >
+                  {deletingMode === 'future' ? 'Deleting…' : 'This and all future events'}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => handleDelete('single')}
+                disabled={deletingMode !== null}
+                className="w-full rounded-xl bg-priority-p1 py-2 text-sm font-medium text-white hover:bg-priority-p1/90"
+              >
+                {deletingMode === 'single' ? 'Deleting…' : 'Confirm delete'}
+              </button>
+            )}
+            <button
+              onClick={() => setConfirm(false)}
+              disabled={deletingMode !== null}
+              className="btn-ghost w-full text-sm"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       );
     }
 
+    // View mode — Meeting Notes always visible; edit/delete only for editors
     return (
       <div className="space-y-2">
-        <p className="text-xs text-sparrow-gray">
-          {isRecurring
-            ? 'Delete just this event, or this one and all future events in the series?'
-            : 'This cannot be undone.'}
-        </p>
-        {error && <p className="text-xs text-priority-p1">{error}</p>}
-        <div className="flex flex-col gap-2">
-          {isRecurring ? (
-            <>
-              <button
-                onClick={() => handleDelete('single')}
-                disabled={deletingMode !== null}
-                className="w-full rounded-xl border border-priority-p1/40 py-2 text-sm font-medium text-priority-p1 hover:bg-priority-p1/5"
-              >
-                {deletingMode === 'single' ? 'Deleting…' : 'This event only'}
-              </button>
-              <button
-                onClick={() => handleDelete('future')}
-                disabled={deletingMode !== null}
-                className="w-full rounded-xl bg-priority-p1 py-2 text-sm font-medium text-white hover:bg-priority-p1/90"
-              >
-                {deletingMode === 'future' ? 'Deleting…' : 'This and all future events'}
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => handleDelete('single')}
-              disabled={deletingMode !== null}
-              className="w-full rounded-xl bg-priority-p1 py-2 text-sm font-medium text-white hover:bg-priority-p1/90"
-            >
-              {deletingMode === 'single' ? 'Deleting…' : 'Confirm delete'}
+        <button
+          onClick={() => onOpenNotes(event!)}
+          className="btn-primary w-full"
+        >
+          Meeting Notes
+        </button>
+        {canEdit && (
+          <div className="flex gap-2">
+            <button onClick={enterEdit} className="flex-1 btn-ghost text-sm">
+              Edit
             </button>
-          )}
-          <button
-            onClick={() => setConfirm(false)}
-            disabled={deletingMode !== null}
-            className="btn-ghost w-full text-sm"
-          >
-            Cancel
-          </button>
-        </div>
+            <button
+              onClick={() => setConfirm(true)}
+              className="flex-1 rounded-xl border border-priority-p1/40 py-2 text-sm font-medium text-priority-p1 hover:bg-priority-p1/5"
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
     );
   }

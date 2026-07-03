@@ -32,6 +32,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { fetchCalendar, KIND_LABEL, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
 import { AddOrgEventPanel } from '@/components/calendar/AddOrgEventPanel';
 import { OrgEventDetailPanel } from '@/components/calendar/OrgEventDetailPanel';
+import { MeetingNotesView } from '@/components/calendar/MeetingNotesView';
 import { fetchOrgCalLcpEvents } from '@/lib/lcp';
 import type { LcpEvent } from '@/lib/lcp-types';
 import { EVENT_LABEL } from '@/lib/lcp-types';
@@ -107,6 +108,7 @@ export function CalendarView() {
   const [addOpen, setAddOpen] = useState(false);
   const [addDate, setAddDate] = useState(todayStr);
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
+  const [notesEvent, setNotesEvent] = useState<CalendarEvent | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [calTooltip, setCalTooltip] = useState<CalTooltipState | null>(null);
 
@@ -468,8 +470,16 @@ export function CalendarView() {
         onClose={() => setDetailEvent(null)}
         onDeleted={() => { setDetailEvent(null); void load(); }}
         onUpdated={() => { setDetailEvent(null); void load(); }}
+        onOpenNotes={(ev) => { setDetailEvent(null); setNotesEvent(ev); }}
       />
       {calTooltip && <CalTooltip s={calTooltip} />}
+      {notesEvent && profile && (
+        <MeetingNotesView
+          event={notesEvent}
+          userId={profile.id}
+          onClose={() => setNotesEvent(null)}
+        />
+      )}
     </div>
   );
 }
