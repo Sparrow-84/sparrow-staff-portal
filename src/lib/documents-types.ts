@@ -12,10 +12,7 @@ export interface OrgDocument {
 }
 
 export const DOCUMENT_CATEGORIES: string[] = [
-  'Handbooks',
-  'Policies',
-  'Emergency',
-  'Forms',
-  'Resources',
-  'Staff Roles',
+  'How-Tos & SOPs',
+  'Policies & Handbook',
+  'Role Guides',
 ];

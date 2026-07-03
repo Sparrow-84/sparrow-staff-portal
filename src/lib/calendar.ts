@@ -35,6 +35,7 @@ export interface CalendarEvent {
   recurrence: string | null; // null | 'weekly' | 'biweekly' (legacy field)
   recurrence_id: string | null; // groups recurring series created with the new UI
   department: Department | null;
+  is_personal: boolean;
   created_by: string | null;
   created_at: string;
 }
@@ -82,15 +83,17 @@ export interface CalendarEventInput {
   recurrence_id: string | null;
   created_by: string;
   department?: Department | null;
+  is_personal?: boolean;
 }
 
 export async function createCalendarEvents(inputs: CalendarEventInput[]): Promise<void> {
   // recurrence_id is omitted from non-recurring rows until migration 0035 is applied;
   // once the column exists, recurring events include it so series deletes work.
-  const rows = inputs.map(({ recurrence_id, department, ...rest }) => {
+  const rows = inputs.map(({ recurrence_id, department, is_personal, ...rest }) => {
     const row: Record<string, unknown> = { ...rest };
     if (recurrence_id) row.recurrence_id = recurrence_id;
     if (department) row.department = department;
+    if (is_personal) row.is_personal = true;
     return row;
   });
   const { error } = await supabase.from('calendar_events').insert(rows);

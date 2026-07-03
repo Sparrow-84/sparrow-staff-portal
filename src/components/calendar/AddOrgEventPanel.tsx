@@ -71,6 +71,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
   const [untilMode, setUntilMode] = useState<'date' | 'indefinite'>('date');
   const [untilDate, setUntilDate] = useState(() => addMonths(localISO(new Date()), 3));
 
+  const [isPersonal, setIsPersonal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +110,8 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
         location: location.trim() || null,
         recurrence_id: recurrenceId,
         created_by: currentUserId,
-        department,
+        department: isPersonal ? null : department,
+        is_personal: isPersonal,
       }));
 
       await createCalendarEvents(inputs);
@@ -136,6 +138,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
     setUntilMode('date');
     setUntilDate(addMonths(localISO(new Date()), 3));
     setDepartment(initialDept);
+    setIsPersonal(false);
     setError(null);
   }
 
@@ -192,8 +195,16 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
         <div>
           <label className="field-label">Post to</label>
           <select
-            value={department ?? ''}
-            onChange={(e) => setDepartment(e.target.value ? e.target.value as Department : null)}
+            value={isPersonal ? '__personal__' : (department ?? '')}
+            onChange={(e) => {
+              if (e.target.value === '__personal__') {
+                setIsPersonal(true);
+                setDepartment(null);
+              } else {
+                setIsPersonal(false);
+                setDepartment(e.target.value ? e.target.value as Department : null);
+              }
+            }}
             className="field-input"
           >
             <option value="">All Staff</option>
@@ -202,7 +213,11 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
                 {DEPARTMENTS.find((x) => x.value === d)?.label ?? d}
               </option>
             ))}
+            <option value="__personal__">Personal (only me)</option>
           </select>
+          {isPersonal && (
+            <p className="mt-1 text-xs text-sparrow-gray">Only visible to you — no other staff can see this event.</p>
+          )}
         </div>
 
         <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">

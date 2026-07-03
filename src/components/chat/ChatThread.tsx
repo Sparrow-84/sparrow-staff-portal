@@ -71,7 +71,7 @@ export function ChatThread({
     setDragOver(true);
   }
 
-  function handleDragLeave(e: React.DragEvent) {
+  function handleDragLeave(_e: React.DragEvent) {
     setDragOver(false);
   }
 

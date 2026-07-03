@@ -467,7 +467,7 @@ function WeekTooltip({ state }: { state: WeekTooltipState }) {
   return (
     <div className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg" style={{ left, top }}>
       <p className="text-sm font-medium leading-snug text-sparrow-ink">{state.event.title}</p>
-      <p className="mt-1 text-xs text-sparrow-gray">{KIND_LABEL[state.event.kind]}</p>
+      <p className="mt-1 text-xs text-sparrow-gray">{state.event.is_personal ? 'Personal — only you can see this' : KIND_LABEL[state.event.kind]}</p>
       {!state.event.all_day && (
         <p className="mt-1 text-xs text-sparrow-gray">
           {state.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
@@ -575,7 +575,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
               {dayEvents.map((o, idx) => (
                 <div
                   key={`${o.event.id}-${idx}`}
-                  className="mb-0.5 truncate rounded bg-sparrow-green/15 px-1 py-0.5 text-[10px] text-sparrow-green"
+                  className={`mb-0.5 truncate rounded px-1 py-0.5 text-[10px] ${o.event.is_personal ? 'bg-slate-100 text-slate-500' : 'bg-sparrow-green/15 text-sparrow-green'}`}
                   onMouseEnter={(e) => setTooltip({ kind: 'event', event: o.event, occursAt: o.occursAt, x: e.clientX, y: e.clientY })}
                   onMouseLeave={() => setTooltip(null)}
                 >
@@ -584,6 +584,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
                       {o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                     </span>
                   )}
+                  {o.event.is_personal && <span className="mr-0.5">·</span>}
                   {o.event.title}
                 </div>
               ))}

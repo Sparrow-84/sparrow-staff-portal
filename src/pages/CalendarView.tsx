@@ -7,6 +7,7 @@ const CALENDAR_HELP_SECTIONS = [
     items: [
       { label: 'All Staff', desc: 'Org-wide events added by admins — team meetings, site visits, program milestones. On by default.' },
       { label: 'My Depts', desc: 'Events from your department rooms. Enable sub-department chips to filter further. LCP sessions appear here when toggled on.' },
+      { label: 'Personal', desc: 'Events only you can see — personal reminders, appointments, personal blocks. Nobody else sees these, including admins.' },
       { label: 'Deadlines', desc: 'Your task due dates shown as labeled pills — red for P1, gold for P2, gray for P3/P4.' },
     ],
     note: 'Each layer is independent — toggle any combination. Your settings are remembered.',
@@ -62,7 +63,6 @@ const DEADLINE_PILL: Record<Priority, string> = {
 // Filter chip styles — each chip is independent, not a radio group
 const CHIP_ON  = 'rounded-md border border-sparrow-green bg-sparrow-green px-3 py-1 text-xs font-medium text-white transition';
 const CHIP_OFF = 'rounded-md border border-sparrow-rule px-3 py-1 text-xs font-medium text-sparrow-gray transition hover:border-sparrow-gray hover:text-sparrow-ink';
-const CHIP_DIM = 'cursor-not-allowed rounded-md border border-sparrow-rule px-3 py-1 text-xs font-medium text-sparrow-gray opacity-40';
 
 // Dept sub-chip styles (slightly smaller)
 const SUB_ON  = 'rounded border border-sparrow-green bg-sparrow-green px-2.5 py-0.5 text-[11px] font-medium text-white transition';
@@ -119,6 +119,9 @@ export function CalendarView() {
   );
   const [showDeadlines, setShowDeadlines] = useState(
     () => localStorage.getItem('calendar_show_deadlines') === 'true',
+  );
+  const [showPersonal, setShowPersonal] = useState(
+    () => localStorage.getItem('calendar_show_personal') === 'true',
   );
 
   // Which dept sub-chips the user has explicitly turned OFF (absent = active)
@@ -179,6 +182,9 @@ export function CalendarView() {
   function toggleDeadlines() {
     setShowDeadlines(v => { const n = !v; localStorage.setItem('calendar_show_deadlines', String(n)); return n; });
   }
+  function togglePersonal() {
+    setShowPersonal(v => { const n = !v; localStorage.setItem('calendar_show_personal', String(n)); return n; });
+  }
   function toggleDept(dept: Department) {
     setDisabledDepts(prev => {
       const next = new Set(prev);
@@ -208,9 +214,10 @@ export function CalendarView() {
   // All Staff layer = events with department null; My Depts layer = events with a department value.
   const eventsByDay = new Map<string, CalendarEvent[]>();
   for (const ev of events) {
-    const isAllStaff = ev.department === null;
-    const isDept = ev.department !== null && myDepts.includes(ev.department) && !disabledDepts.has(ev.department);
-    if (!(isAllStaff && showAllStaff) && !(isDept && showMyDepts)) continue;
+    const isPersonal = ev.is_personal;
+    const isAllStaff = !isPersonal && ev.department === null;
+    const isDept = !isPersonal && ev.department !== null && myDepts.includes(ev.department) && !disabledDepts.has(ev.department);
+    if (!(isAllStaff && showAllStaff) && !(isDept && showMyDepts) && !(isPersonal && showPersonal)) continue;
 
     const d = localISO(new Date(ev.starts_at));
     const dDate = new Date(d + 'T12:00:00');
@@ -269,11 +276,7 @@ export function CalendarView() {
               <button onClick={toggleMyDepts} className={showMyDepts ? CHIP_ON : CHIP_OFF}>
                 My Depts
               </button>
-              <button
-                disabled
-                title="Personal layer — coming with staff scheduling"
-                className={CHIP_DIM}
-              >
+              <button onClick={togglePersonal} className={showPersonal ? CHIP_ON : CHIP_OFF}>
                 Personal
               </button>
               <button onClick={toggleDeadlines} className={showDeadlines ? CHIP_ON : CHIP_OFF}>
@@ -389,11 +392,11 @@ export function CalendarView() {
                         <button
                           key={ev.id}
                           onClick={() => setDetailEvent(ev)}
-                          className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${KIND_PILL[ev.kind]}`}
-                          onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
+                          className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind]}`}
+                          onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
                           onMouseLeave={() => setCalTooltip(null)}
                         >
-                          {ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
+                          {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
                         </button>
                       ))}
                       {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
