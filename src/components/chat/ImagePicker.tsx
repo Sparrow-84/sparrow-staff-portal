@@ -5,34 +5,42 @@ type Phase = 'selecting' | 'preview' | 'sending';
 export function ImagePicker({
   onClose,
   onSend,
+  initialFile,
 }: {
   onClose: () => void;
   onSend: (file: File) => Promise<void>;
+  initialFile?: File;
 }) {
-  const [phase, setPhase] = useState<Phase>('selecting');
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [phase, setPhase] = useState<Phase>(initialFile ? 'preview' : 'selecting');
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(() =>
+    initialFile ? URL.createObjectURL(initialFile) : null,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
+  // Ref instead of state so the focus-dismiss guard always sees the current value.
+  const fileSelectedRef = useRef(!!initialFile);
 
   useEffect(() => {
+    if (initialFile) return;
     inputRef.current?.click();
   }, []);
 
-  // If user dismisses the picker without choosing a file, close the bar.
+  // If user dismisses the OS picker without choosing a file, close the bar.
   useEffect(() => {
     if (phase !== 'selecting') return;
     function onFocus() {
       setTimeout(() => {
-        if (phase === 'selecting' && !file) onClose();
+        if (!fileSelectedRef.current) onClose();
       }, 500);
     }
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, [phase, file, onClose]);
+  }, [phase, onClose]);
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) { onClose(); return; }
+    fileSelectedRef.current = true;
     setFile(f);
     setPreviewUrl(URL.createObjectURL(f));
     setPhase('preview');
@@ -73,13 +81,11 @@ export function ImagePicker({
       />
 
       {phase === 'selecting' && (
-        // Invisible placeholder while the OS file picker is open
         <span className="text-sm text-sparrow-gray">Choose a photo…</span>
       )}
 
       {phase === 'preview' && previewUrl && (
         <>
-          {/* Cancel */}
           <button
             onClick={cancel}
             aria-label="Cancel"
@@ -90,7 +96,6 @@ export function ImagePicker({
             </svg>
           </button>
 
-          {/* Thumbnail */}
           <img
             src={previewUrl}
             alt=""
@@ -101,7 +106,6 @@ export function ImagePicker({
             {file?.name}
           </span>
 
-          {/* Send */}
           <button onClick={() => void send()} className="btn-primary">
             Send
           </button>

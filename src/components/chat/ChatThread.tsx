@@ -61,7 +61,28 @@ export function ChatThread({
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
   const [pickingImage, setPickingImage] = useState(false);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+
+  function handleDragOver(e: React.DragEvent) {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    setDragOver(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    setDragOver(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files?.[0];
+    if (!f || !f.type.startsWith('image/')) return;
+    setDroppedFile(f);
+    setPickingImage(true);
+  }
 
   // Pin to the newest message as the thread grows.
   useEffect(() => {
@@ -88,7 +109,17 @@ export function ChatThread({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div
+      className="relative flex h-full flex-col"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {dragOver && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-sparrow-green bg-sparrow-green/10">
+          <p className="font-medium text-sparrow-green">Drop image to send</p>
+        </div>
+      )}
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <p className="mt-8 text-center text-sm text-sparrow-gray">
@@ -150,7 +181,11 @@ export function ChatThread({
       {recording ? (
         <VoiceRecorder onClose={() => setRecording(false)} onSend={onSendVoice} />
       ) : pickingImage ? (
-        <ImagePicker onClose={() => setPickingImage(false)} onSend={onSendImage} />
+        <ImagePicker
+          onClose={() => { setPickingImage(false); setDroppedFile(null); }}
+          onSend={onSendImage}
+          initialFile={droppedFile ?? undefined}
+        />
       ) : (
         <div className="flex items-end gap-2 border-t border-sparrow-rule px-4 py-3">
           <MentionInput
