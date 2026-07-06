@@ -321,9 +321,18 @@ function QuickWinsWidget({ ctx }: { ctx: WidgetContext }) {
 
 // ── Upcoming meetings (today + next 2 days) ───────────────────────────
 function timeLabel(d: Date, allDay: boolean): string {
-  const day = d.toLocaleDateString(undefined, { weekday: 'short' });
-  if (allDay) return `${day} · all day`;
-  return `${day} · ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+  if (allDay) return 'all day';
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+function dayLabel(d: Date, todayStart: Date): string {
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  if (sameDay(d, todayStart)) return 'Today';
+  const tomorrow = new Date(todayStart);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (sameDay(d, tomorrow)) return 'Tomorrow';
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 function UpcomingMeetingsWidget({ ctx }: { ctx: WidgetContext }) {
@@ -342,17 +351,36 @@ function UpcomingMeetingsWidget({ ctx }: { ctx: WidgetContext }) {
 
   if (occ.length === 0) return <Empty>Nothing scheduled in the next few days.</Empty>;
 
+  const groups: { dayKey: string; label: string; items: typeof occ }[] = [];
+  for (const o of occ) {
+    const d = o.occursAt;
+    const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const last = groups[groups.length - 1];
+    if (last?.dayKey === dayKey) {
+      last.items.push(o);
+    } else {
+      groups.push({ dayKey, label: dayLabel(d, todayStart), items: [o] });
+    }
+  }
+
   return (
-    <ul className="space-y-1.5">
-      {occ.map((o, i) => (
-        <li key={`${o.event.id}-${i}`} className="flex items-center gap-2">
-          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${KIND_PILL[o.event.kind]}`}>
-            {timeLabel(o.occursAt, o.event.all_day)}
-          </span>
-          <span className="truncate text-sm text-sparrow-ink">{o.event.title}</span>
-        </li>
+    <div className="space-y-3">
+      {groups.map((g) => (
+        <div key={g.dayKey}>
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-sparrow-muted">{g.label}</p>
+          <ul className="space-y-1.5">
+            {g.items.map((o, i) => (
+              <li key={`${o.event.id}-${i}`} className="flex items-center gap-2">
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${KIND_PILL[o.event.kind]}`}>
+                  {timeLabel(o.occursAt, o.event.all_day)}
+                </span>
+                <span className="truncate text-sm text-sparrow-ink">{o.event.title}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }
 
