@@ -563,7 +563,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
           My calendar →
         </button>
       </div>
-      <div className="flex gap-1 overflow-hidden">
+      <div className="flex gap-1 overflow-x-auto pb-1">
         {days.map(({ date, weekday, dayNum, isToday, isPast }) => {
           const dayEvents = weekEvents.filter((o) => isoDate(o.occursAt) === date);
           const dayTasks = myTasks.filter((t) => t.due_date === date);
@@ -586,7 +586,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
           return (
             <div
               key={date}
-              className={`min-h-[100px] min-w-0 flex-1 rounded-lg p-1.5 ${
+              className={`min-h-[100px] min-w-[64px] flex-1 rounded-lg p-1.5 ${
                 isToday
                   ? 'bg-sparrow-green/10 ring-1 ring-sparrow-green/30'
                   : 'bg-sparrow-mist/40'
