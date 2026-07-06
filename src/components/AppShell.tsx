@@ -33,16 +33,10 @@ export function AppShell() {
 
   if (!profile) return null;
   const isAdmin = profile.role === 'admin';
+  const tocAccess = isAdmin || profile.toc_access;
   const lcpAccess = isAdmin || profile.lcp_role === 'full' || profile.lcp_role === 'extended';
-  const partnershipsAccess =
-    isAdmin || profile.department === 'partnerships' || profile.partnerships_access;
-  const opsAccess = profile.ops_access;
-
-  // Rooms locked during rollout preview — only Susanna can access them
-  const isSusanna =
-    profile.email === 'susannab@sparrowinc.org' ||
-    profile.email === 'systems@sparrowinc.org';
-  const PREVIEW_LOCKED: View[] = [];
+  const partnershipsAccess = isAdmin || profile.partnerships_access;
+  const opsAccess = isAdmin || profile.ops_access;
 
   function handleOnboardingDone() {
     setHasOnboarding(false);
@@ -50,7 +44,6 @@ export function AppShell() {
   }
 
   function handleNavigate(v: View) {
-    if (PREVIEW_LOCKED.includes(v) && !isSusanna) return;
     if (v === 'messages') {
       setChatPanelOpen((prev) => !prev);
       return;
@@ -66,7 +59,7 @@ export function AppShell() {
           <Sidebar
             view={view}
             isAdmin={isAdmin}
-            isSusanna={isSusanna}
+            tocAccess={tocAccess}
             lcpAccess={lcpAccess}
             partnershipsAccess={partnershipsAccess}
             opsAccess={opsAccess}
