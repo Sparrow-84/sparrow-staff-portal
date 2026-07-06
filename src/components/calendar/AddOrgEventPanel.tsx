@@ -51,11 +51,12 @@ interface Props {
   currentUserId: string;
   userDepts: Department[];
   initialDept: Department | null;
+  initialPersonal?: boolean;
   onClose: () => void;
   onCreated: () => void;
 }
 
-export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, initialDept, onClose, onCreated }: Props) {
+export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, initialDept, initialPersonal, onClose, onCreated }: Props) {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<CalendarKind>('other');
   const [date, setDate] = useState(defaultDate);
@@ -71,12 +72,13 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
   const [untilMode, setUntilMode] = useState<'date' | 'indefinite'>('date');
   const [untilDate, setUntilDate] = useState(() => addMonths(localISO(new Date()), 3));
 
-  const [isPersonal, setIsPersonal] = useState(false);
+  const [isPersonal, setIsPersonal] = useState(initialPersonal ?? false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { setDate(defaultDate); }, [defaultDate]);
   useEffect(() => { setDepartment(initialDept); }, [initialDept]);
+  useEffect(() => { setIsPersonal(initialPersonal ?? false); }, [initialPersonal]);
 
   function toggleDay(dow: number) {
     setDaysOfWeek((prev) => {

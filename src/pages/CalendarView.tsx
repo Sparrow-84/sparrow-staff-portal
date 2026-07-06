@@ -373,13 +373,14 @@ export function CalendarView() {
                 const dayLcpEvents = lcpEventsByDay.get(dStr) ?? [];
                 const dayDeadlines = deadlinesByDay.get(dStr) ?? [];
                 const isToday = dStr === todayStr;
+                const isPast = dStr < todayStr;
                 const shown = dayEvents.slice(0, 3);
                 const overflow = dayEvents.length - shown.length;
 
                 return (
-                  <div key={dStr} className="group min-h-[6rem] border-b border-r border-sparrow-rule p-1">
+                  <div key={dStr} className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${isPast ? 'bg-sparrow-mist/30' : ''}`}>
                     <div className="flex items-center justify-between">
-                      <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : 'text-sparrow-ink'}`}>
+                      <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : isPast ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
                         {d}
                       </span>
                       <button
@@ -389,7 +390,7 @@ export function CalendarView() {
                       >+</button>
                     </div>
 
-                    <div className="mt-1 space-y-0.5">
+                    <div className={`mt-1 space-y-0.5 ${isPast ? 'opacity-60' : ''}`}>
                       {shown.map(ev => (
                         <button
                           key={ev.id}
@@ -460,6 +461,7 @@ export function CalendarView() {
           const active = myDepts.filter(d => !disabledDepts.has(d));
           return active[0] ?? null;
         })()}
+        initialPersonal={showPersonal && !showAllStaff}
         onClose={() => setAddOpen(false)}
         onCreated={() => { setAddOpen(false); void load(); }}
       />
