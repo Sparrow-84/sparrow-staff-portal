@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import {
   ADD_KINDS,
   deleteCalendarEvent,
@@ -28,6 +29,7 @@ interface Props {
 export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, onDeleted, onUpdated, onOpenNotes }: Props) {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [confirm, setConfirm] = useState(false);
+  const [notesPreview, setNotesPreview] = useState<{ prep: string; shared: string } | null>(null);
   const [deletingMode, setDeletingMode] = useState<null | 'single' | 'future'>(null);
   const [saving, setSaving] = useState<null | 'single' | 'future'>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +42,30 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
   const [editLocation, setEditLocation] = useState('');
+
+  useEffect(() => {
+    if (!event) { setNotesPreview(null); return; }
+    const eventId = event.id;
+    async function fetchNotesPreview() {
+      const [{ data: priv }, { data: sharedData }] = await Promise.all([
+        supabase
+          .from('meeting_notes')
+          .select('prep_notes')
+          .eq('event_id', eventId)
+          .eq('user_id', currentUserId)
+          .maybeSingle(),
+        supabase
+          .from('event_shared_notes')
+          .select('notes')
+          .eq('event_id', eventId)
+          .maybeSingle(),
+      ]);
+      const prep = priv?.prep_notes ?? '';
+      const shared = sharedData?.notes ?? '';
+      setNotesPreview(prep || shared ? { prep, shared } : null);
+    }
+    void fetchNotesPreview();
+  }, [event?.id, currentUserId]);
 
   function handleClose() {
     setMode('view');
@@ -366,6 +392,29 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Location</p>
               <p className="mt-0.5 text-sm text-sparrow-ink">{event.location}</p>
+            </div>
+          )}
+
+          {notesPreview && (notesPreview.prep || notesPreview.shared) && (
+            <div className="space-y-3">
+              {notesPreview.prep && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Your Notes</p>
+                  <div
+                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-amber-50 p-3 text-sm leading-relaxed text-sparrow-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
+                    dangerouslySetInnerHTML={{ __html: notesPreview.prep }}
+                  />
+                </div>
+              )}
+              {notesPreview.shared && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Shared Notes</p>
+                  <div
+                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-blue-50 p-3 text-sm leading-relaxed text-sparrow-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
+                    dangerouslySetInnerHTML={{ __html: notesPreview.shared }}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

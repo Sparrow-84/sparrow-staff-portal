@@ -9,39 +9,108 @@ interface Props {
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+type ActiveTab = 'your-notes' | 'shared';
+
+function sanitize(html: string): string {
+  return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+}
+
+function Toolbar() {
+  function apply(cmd: string) {
+    document.execCommand(cmd, false, undefined);
+  }
+  return (
+    <div className="flex items-center gap-0.5 border-b border-sparrow-rule bg-white px-4 py-1.5">
+      <button
+        onMouseDown={(e) => { e.preventDefault(); apply('bold'); }}
+        className="rounded px-2.5 py-1 text-sm font-bold text-sparrow-ink hover:bg-sparrow-mist"
+        title="Bold (Ctrl+B)"
+      >
+        B
+      </button>
+      <button
+        onMouseDown={(e) => { e.preventDefault(); apply('italic'); }}
+        className="rounded px-2.5 py-1 text-sm italic text-sparrow-ink hover:bg-sparrow-mist"
+        title="Italic (Ctrl+I)"
+      >
+        I
+      </button>
+      <div className="mx-1.5 h-4 w-px bg-sparrow-rule" />
+      <button
+        onMouseDown={(e) => { e.preventDefault(); apply('insertUnorderedList'); }}
+        className="rounded px-2.5 py-1 text-sm text-sparrow-ink hover:bg-sparrow-mist"
+        title="Bullet list"
+      >
+        • List
+      </button>
+      <button
+        onMouseDown={(e) => { e.preventDefault(); apply('insertOrderedList'); }}
+        className="rounded px-2.5 py-1 text-sm text-sparrow-ink hover:bg-sparrow-mist"
+        title="Numbered list"
+      >
+        1. List
+      </button>
+    </div>
+  );
+}
+
+const CONTENT_CLASSES =
+  'flex-1 overflow-y-auto p-6 text-sm leading-relaxed text-sparrow-ink focus:outline-none ' +
+  '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 ' +
+  '[&_li]:mb-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2';
 
 export function MeetingNotesView({ event, userId, onClose }: Props) {
-  const [prep, setPrep] = useState('');
-  const [live, setLive] = useState('');
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<SaveStatus>('idle');
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [privateStatus, setPrivateStatus] = useState<SaveStatus>('idle');
+  const [sharedStatus, setSharedStatus] = useState<SaveStatus>('idle');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('your-notes');
+
+  const prepRef = useRef<HTMLDivElement>(null);
+  const liveRef = useRef<HTMLDivElement>(null);
+  const sharedRef = useRef<HTMLDivElement>(null);
+
   const latestPrep = useRef('');
   const latestLive = useRef('');
+  const latestShared = useRef('');
+
+  const privateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sharedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
-        .from('meeting_notes')
-        .select('prep_notes, live_notes')
-        .eq('event_id', event.id)
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (data) {
-        setPrep(data.prep_notes);
-        setLive(data.live_notes);
-        latestPrep.current = data.prep_notes;
-        latestLive.current = data.live_notes;
+      const [{ data: priv }, { data: shared }] = await Promise.all([
+        supabase
+          .from('meeting_notes')
+          .select('prep_notes, live_notes')
+          .eq('event_id', event.id)
+          .eq('user_id', userId)
+          .maybeSingle(),
+        supabase
+          .from('event_shared_notes')
+          .select('notes')
+          .eq('event_id', event.id)
+          .maybeSingle(),
+      ]);
+      if (priv) {
+        latestPrep.current = priv.prep_notes;
+        latestLive.current = priv.live_notes;
+        if (prepRef.current) prepRef.current.innerHTML = priv.prep_notes;
+        if (liveRef.current) liveRef.current.innerHTML = priv.live_notes;
+      }
+      if (shared) {
+        latestShared.current = shared.notes;
+        if (sharedRef.current) sharedRef.current.innerHTML = shared.notes;
       }
       setLoading(false);
     }
     void load();
   }, [event.id, userId]);
 
-  // Flush any pending save on unmount — best-effort, no await
+  // Flush any unsaved content on unmount — best-effort, no await
   useEffect(() => {
     return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (privateTimer.current) clearTimeout(privateTimer.current);
+      if (sharedTimer.current) clearTimeout(sharedTimer.current);
       void supabase.from('meeting_notes').upsert(
         {
           event_id: event.id,
@@ -52,14 +121,25 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         },
         { onConflict: 'event_id,user_id' },
       );
+      if (latestShared.current) {
+        void supabase.from('event_shared_notes').upsert(
+          {
+            event_id: event.id,
+            notes: sanitize(latestShared.current),
+            updated_at: new Date().toISOString(),
+            updated_by: userId,
+          },
+          { onConflict: 'event_id' },
+        );
+      }
     };
   }, [event.id, userId]);
 
-  const scheduleSave = useCallback(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    setStatus('idle');
-    saveTimer.current = setTimeout(async () => {
-      setStatus('saving');
+  const schedulePrivateSave = useCallback(() => {
+    if (privateTimer.current) clearTimeout(privateTimer.current);
+    setPrivateStatus('idle');
+    privateTimer.current = setTimeout(async () => {
+      setPrivateStatus('saving');
       const { error } = await supabase.from('meeting_notes').upsert(
         {
           event_id: event.id,
@@ -70,20 +150,52 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         },
         { onConflict: 'event_id,user_id' },
       );
-      setStatus(error ? 'error' : 'saved');
+      setPrivateStatus(error ? 'error' : 'saved');
     }, 1000);
   }, [event.id, userId]);
 
-  function handlePrepChange(val: string) {
-    setPrep(val);
-    latestPrep.current = val;
-    scheduleSave();
+  const scheduleSharedSave = useCallback(() => {
+    if (sharedTimer.current) clearTimeout(sharedTimer.current);
+    setSharedStatus('idle');
+    sharedTimer.current = setTimeout(async () => {
+      setSharedStatus('saving');
+      const { error } = await supabase.from('event_shared_notes').upsert(
+        {
+          event_id: event.id,
+          notes: sanitize(latestShared.current),
+          updated_at: new Date().toISOString(),
+          updated_by: userId,
+        },
+        { onConflict: 'event_id' },
+      );
+      setSharedStatus(error ? 'error' : 'saved');
+    }, 1000);
+  }, [event.id, userId]);
+
+  function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const html = e.nativeEvent.clipboardData?.getData('text/html');
+    if (html) {
+      // Strip inline styles and classes so pasted content uses our own styling
+      const clean = html.replace(/ style="[^"]*"/g, '').replace(/ class="[^"]*"/g, '');
+      document.execCommand('insertHTML', false, clean);
+    } else {
+      const text = e.nativeEvent.clipboardData?.getData('text/plain') ?? '';
+      document.execCommand('insertText', false, text);
+    }
   }
 
-  function handleLiveChange(val: string) {
-    setLive(val);
-    latestLive.current = val;
-    scheduleSave();
+  function handlePrepInput() {
+    latestPrep.current = prepRef.current?.innerHTML ?? '';
+    schedulePrivateSave();
+  }
+  function handleLiveInput() {
+    latestLive.current = liveRef.current?.innerHTML ?? '';
+    schedulePrivateSave();
+  }
+  function handleSharedInput() {
+    latestShared.current = sharedRef.current?.innerHTML ?? '';
+    scheduleSharedSave();
   }
 
   const startsAt = new Date(event.starts_at);
@@ -96,6 +208,8 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
     : endsAt
       ? `${startsAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} – ${endsAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
       : startsAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+  const displayStatus = activeTab === 'your-notes' ? privateStatus : sharedStatus;
 
   if (loading) {
     return (
@@ -119,9 +233,9 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
           <p className="mt-0.5 text-sm text-sparrow-gray">{dateLabel} · {timeLabel}</p>
         </div>
         <div className="flex items-center gap-4">
-          {status === 'saving' && <span className="text-xs text-sparrow-gray">Saving…</span>}
-          {status === 'saved' && <span className="text-xs text-sparrow-gray">Saved</span>}
-          {status === 'error' && <span className="text-xs text-priority-p1">Error saving</span>}
+          {displayStatus === 'saving' && <span className="text-xs text-sparrow-gray">Saving…</span>}
+          {displayStatus === 'saved' && <span className="text-xs text-sparrow-gray">Saved</span>}
+          {displayStatus === 'error' && <span className="text-xs text-priority-p1">Error saving</span>}
           <button
             onClick={onClose}
             className="rounded-xl border border-sparrow-rule px-4 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist"
@@ -131,36 +245,84 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         </div>
       </div>
 
-      {/* Two-pane body */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Prep Notes */}
-        <div className="flex flex-1 flex-col border-r border-sparrow-rule">
-          <div className="border-b border-sparrow-rule bg-amber-50 px-6 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Prep Notes</p>
-            <p className="text-xs text-amber-600/70">Written before the meeting · only visible to you</p>
-          </div>
-          <textarea
-            value={prep}
-            onChange={(e) => handlePrepChange(e.target.value)}
-            placeholder="Add your prep notes here — agenda, talking points, questions to raise…"
-            className="flex-1 resize-none bg-amber-50/20 p-6 text-sm leading-relaxed text-sparrow-ink placeholder-sparrow-gray/40 focus:outline-none"
-          />
-        </div>
-
-        {/* Live Notes */}
-        <div className="flex flex-1 flex-col">
-          <div className="border-b border-sparrow-rule bg-green-50 px-6 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">Live Notes</p>
-            <p className="text-xs text-sparrow-green/60">Written during the meeting · only visible to you</p>
-          </div>
-          <textarea
-            value={live}
-            onChange={(e) => handleLiveChange(e.target.value)}
-            placeholder="Take notes here as the meeting happens — decisions, action items, who said what…"
-            className="flex-1 resize-none bg-green-50/20 p-6 text-sm leading-relaxed text-sparrow-ink placeholder-sparrow-gray/40 focus:outline-none"
-          />
-        </div>
+      {/* Tabs */}
+      <div className="flex border-b border-sparrow-rule">
+        <button
+          onClick={() => setActiveTab('your-notes')}
+          className={`px-6 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === 'your-notes'
+              ? 'border-b-2 border-sparrow-green text-sparrow-green'
+              : 'text-sparrow-gray hover:text-sparrow-ink'
+          }`}
+        >
+          Your Notes
+        </button>
+        <button
+          onClick={() => setActiveTab('shared')}
+          className={`px-6 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === 'shared'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-sparrow-gray hover:text-sparrow-ink'
+          }`}
+        >
+          Shared Notes
+        </button>
       </div>
+
+      {/* Formatting toolbar */}
+      <Toolbar />
+
+      {/* Content */}
+      {activeTab === 'your-notes' ? (
+        <div className="flex flex-1 overflow-hidden">
+          {/* Prep Notes */}
+          <div className="flex flex-1 flex-col border-r border-sparrow-rule">
+            <div className="border-b border-sparrow-rule bg-amber-50 px-6 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Prep Notes</p>
+              <p className="text-xs text-amber-600/70">Written before the meeting · only visible to you</p>
+            </div>
+            <div
+              ref={prepRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={handlePrepInput}
+              onPaste={handlePaste}
+              className={`${CONTENT_CLASSES} bg-amber-50/20`}
+            />
+          </div>
+
+          {/* Live Notes */}
+          <div className="flex flex-1 flex-col">
+            <div className="border-b border-sparrow-rule bg-green-50 px-6 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">Live Notes</p>
+              <p className="text-xs text-sparrow-green/60">Written during the meeting · only visible to you</p>
+            </div>
+            <div
+              ref={liveRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={handleLiveInput}
+              onPaste={handlePaste}
+              className={`${CONTENT_CLASSES} bg-green-50/20`}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-1 flex-col">
+          <div className="border-b border-sparrow-rule bg-blue-50 px-6 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Shared Notes</p>
+            <p className="text-xs text-blue-600/70">Visible and editable by everyone with access to this calendar</p>
+          </div>
+          <div
+            ref={sharedRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={handleSharedInput}
+            onPaste={handlePaste}
+            className={`${CONTENT_CLASSES} bg-blue-50/20`}
+          />
+        </div>
+      )}
     </div>
   );
 }
