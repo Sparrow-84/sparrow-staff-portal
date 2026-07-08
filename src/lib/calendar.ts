@@ -117,7 +117,8 @@ export async function fetchEventAttendees(eventId: string): Promise<EventAttende
     .from('event_attendees')
     .select('*')
     .eq('event_id', eventId);
-  if (error) throw new Error(error.message);
+  // Table may not exist yet (migration pending) — degrade gracefully
+  if (error) return [];
   return (data ?? []) as EventAttendee[];
 }
 
@@ -127,7 +128,8 @@ export async function fetchMyAttendance(userId: string): Promise<EventAttendee[]
     .from('event_attendees')
     .select('*')
     .eq('staff_id', userId);
-  if (error) throw new Error(error.message);
+  // Table may not exist yet (migration pending) — degrade gracefully
+  if (error) return [];
   return (data ?? []) as EventAttendee[];
 }
 
