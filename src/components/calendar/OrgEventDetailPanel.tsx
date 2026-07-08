@@ -80,13 +80,17 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
     if (!event) return;
     setEditTitle(event.title);
     setEditKind(event.kind);
-    setEditDate(toLocalDate(event.starts_at));
     setEditAllDay(event.all_day);
-    setEditStartTime(event.all_day ? '09:00' : toLocalTime(event.starts_at));
-    // Multi-day all-day: populate end date only if it's a different date than start
-    const startD = toLocalDate(event.starts_at);
-    const endD = event.ends_at ? toLocalDate(event.ends_at) : '';
+    // All-day events are stored as UTC midnight (e.g. 2026-07-07T00:00:00+00:00).
+    // Using toLocalDate() on those returns the PREVIOUS day in any timezone west of UTC.
+    // Slice the ISO string directly to get the stored calendar date.
+    const startD = event.all_day ? event.starts_at.slice(0, 10) : toLocalDate(event.starts_at);
+    const endD = event.ends_at
+      ? (event.all_day ? event.ends_at.slice(0, 10) : toLocalDate(event.ends_at))
+      : '';
+    setEditDate(startD);
     setEditEndDate(event.all_day && endD && endD > startD ? endD : '');
+    setEditStartTime(event.all_day ? '09:00' : toLocalTime(event.starts_at));
     setEditEndTime(!event.all_day && event.ends_at ? toLocalTime(event.ends_at) : '');
     setEditLocation(event.location ?? '');
     setError(null);
@@ -167,11 +171,17 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
   const isRecurring = !!event.recurrence_id;
   const canSave = editTitle.trim().length > 0 && editDate && (editAllDay || editStartTime);
 
-  const startsAt = new Date(event.starts_at);
-  const endsAt = event.ends_at ? new Date(event.ends_at) : null;
-  const startDateStr = toLocalDate(event.starts_at);
-  const endDateStr = event.ends_at ? toLocalDate(event.ends_at) : '';
+  // For all-day events use the ISO date component directly (avoids UTC-midnight timezone shift).
+  // Use noon local time for Date objects so toLocaleDateString() never returns the wrong day.
+  const startDateStr = event.all_day ? event.starts_at.slice(0, 10) : toLocalDate(event.starts_at);
+  const endDateStr = event.ends_at
+    ? (event.all_day ? event.ends_at.slice(0, 10) : toLocalDate(event.ends_at))
+    : '';
   const isMultiDay = event.all_day && endDateStr && endDateStr > startDateStr;
+  const startsAt = event.all_day ? new Date(startDateStr + 'T12:00:00') : new Date(event.starts_at);
+  const endsAt = event.ends_at
+    ? (event.all_day ? new Date(endDateStr + 'T12:00:00') : new Date(event.ends_at))
+    : null;
 
   const dateLabel = isMultiDay
     ? `${startsAt.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' })} – ${endsAt!.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}`
