@@ -251,6 +251,25 @@ export async function removeReaction(messageId: string, emoji: string): Promise<
     .eq('emoji', emoji);
 }
 
+// ── Channel management (migration 0060) ──────────────────────────────
+
+/** Any group member can rename the group. */
+export async function renameChannel(channelId: string, title: string): Promise<void> {
+  const { error } = await supabase.rpc('chat_rename_channel', {
+    p_channel: channelId,
+    p_title: title,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Admin or creator can permanently delete a group and all its messages. */
+export async function deleteChannel(channelId: string): Promise<void> {
+  const { error } = await supabase.rpc('chat_delete_channel', {
+    p_channel: channelId,
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** For direct messages only: returns when the other member last read the channel. */
 export async function fetchOtherMemberReadAt(channelId: string): Promise<string | null> {
   const { data, error } = await supabase.rpc('chat_other_member_read_at', { p_channel: channelId });

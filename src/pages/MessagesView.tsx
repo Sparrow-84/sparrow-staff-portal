@@ -5,11 +5,13 @@ import { ChatThread } from '@/components/chat/ChatThread';
 import { NewConversationPanel } from '@/components/chat/NewConversationPanel';
 import {
   conversationLabel,
+  deleteChannel,
   fetchMessages,
   fetchStaff,
   initials,
   markRead,
   parseMentionIds,
+  renameChannel,
   sendMessage,
   subscribeToMessages,
   uploadImageFile,
@@ -36,12 +38,24 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
   const [messages, setMessages] = useState<ChatMessageWithAuthor[]>([]);
   const [newOpen, setNewOpen] = useState(false);
   const [staff, setStaff] = useState<ChatPerson[]>([]);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const isAdmin = profile?.role === 'admin';
 
   useEffect(() => {
     if (!meId) return;
     void fetchStaff(meId).then(setStaff);
   }, [meId]);
   const active = conversations.find((c) => c.channel_id === activeId) ?? null;
+
+  // Reset group management UI when switching threads.
+  useEffect(() => {
+    setRenaming(false);
+    setMenuOpen(false);
+    setConfirmDelete(false);
+  }, [activeId]);
 
   // Load + live-update the open thread; mark it read on open and refresh badges.
   useEffect(() => {
@@ -97,6 +111,35 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
 
   function openConversation(c: ChatConversation) {
     setActiveId(c.channel_id);
+  }
+
+  function startRename() {
+    if (!active) return;
+    setRenameValue(conversationLabel(active));
+    setRenaming(true);
+  }
+
+  async function saveRename() {
+    const title = renameValue.trim();
+    setRenaming(false);
+    if (!title || !activeId || title === conversationLabel(active!)) return;
+    try {
+      await renameChannel(activeId, title);
+      refresh();
+    } catch { /* non-critical — server will have rejected, local state reverts on refresh */ }
+  }
+
+  async function handleDelete() {
+    if (!activeId) return;
+    try {
+      await deleteChannel(activeId);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not delete this group.');
+      return;
+    }
+    setConfirmDelete(false);
+    setActiveId(null);
+    refresh();
   }
 
   return (
@@ -208,11 +251,58 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                 {active.kind === 'group' ? '#' : initials(active.other_name)}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-sparrow-ink">{conversationLabel(active)}</p>
+                {active.kind === 'group' && renaming ? (
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => void saveRename()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void saveRename();
+                      if (e.key === 'Escape') setRenaming(false);
+                    }}
+                    className="w-full bg-transparent text-sm font-semibold text-sparrow-ink outline-none border-b border-sparrow-green"
+                    placeholder="Group name…"
+                  />
+                ) : (
+                  <p className="truncate text-sm font-semibold text-sparrow-ink">{conversationLabel(active)}</p>
+                )}
                 <p className="text-xs text-sparrow-gray">
                   {active.kind === 'group' ? 'Group' : 'Direct message'}
                 </p>
               </div>
+              {active.kind === 'group' && (
+                <div className="relative">
+                  <button
+                    onClick={() => setMenuOpen((o) => !o)}
+                    className="rounded-lg p-1.5 text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+                    aria-label="Group options"
+                  >
+                    •••
+                  </button>
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden />
+                      <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-sparrow-rule bg-white shadow-card">
+                        <button
+                          onClick={() => { setMenuOpen(false); startRename(); }}
+                          className="block w-full px-3 py-2 text-left text-sm hover:bg-sparrow-mist"
+                        >
+                          Rename group
+                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
+                            className="block w-full px-3 py-2 text-left text-sm text-priority-p1 hover:bg-red-50"
+                          >
+                            Delete group
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               {embedded && onClose && (
                 <button
                   onClick={onClose}
@@ -225,6 +315,20 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                 </button>
               )}
             </div>
+            {confirmDelete && (
+              <div className="flex items-center gap-3 border-b border-red-200 bg-red-50 px-4 py-2.5 text-sm">
+                <span className="flex-1 font-medium text-priority-p1">Delete this group and all its messages? This can't be undone.</span>
+                <button
+                  onClick={() => void handleDelete()}
+                  className="shrink-0 rounded-lg bg-priority-p1 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                >
+                  Delete
+                </button>
+                <button onClick={() => setConfirmDelete(false)} className="btn-ghost shrink-0 text-xs">
+                  Cancel
+                </button>
+              </div>
+            )}
             <div className="flex-1 overflow-hidden">
               <ChatThread
                 messages={messages}
