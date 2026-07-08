@@ -4,6 +4,9 @@ import {
   ADD_KINDS,
   deleteCalendarEvent,
   deleteCalendarEventAndFuture,
+  fetchEventAttendees,
+  removeAttendee,
+  setMyAttendance,
   updateCalendarEvent,
   updateCalendarEventAndFuture,
   withTzOffset,
@@ -13,26 +16,31 @@ import {
   KIND_PILL,
   type CalendarEvent,
   type CalendarKind,
+  type EventAttendee,
 } from '@/lib/calendar';
 import { Drawer } from '@/components/lcp/Drawer';
+import type { Profile } from '@/lib/types';
 
 interface Props {
   event: CalendarEvent | null;
   currentUserId: string;
   isAdmin: boolean;
+  profiles: Profile[];
   onClose: () => void;
   onDeleted: () => void;
   onUpdated: () => void;
   onOpenNotes: (event: CalendarEvent) => void;
 }
 
-export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, onDeleted, onUpdated, onOpenNotes }: Props) {
+export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, onClose, onDeleted, onUpdated, onOpenNotes }: Props) {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [confirm, setConfirm] = useState(false);
   const [notesPreview, setNotesPreview] = useState<{ prep: string; live: string; shared: string } | null>(null);
   const [deletingMode, setDeletingMode] = useState<null | 'single' | 'future'>(null);
   const [saving, setSaving] = useState<null | 'single' | 'future'>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attendees, setAttendees] = useState<EventAttendee[]>([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
 
   // Edit form state
   const [editTitle, setEditTitle] = useState('');
@@ -68,6 +76,47 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
     }
     void fetchNotesPreview();
   }, [event?.id, currentUserId]);
+
+  // Load attendees whenever the event changes (skip personal events — they have no attendees)
+  useEffect(() => {
+    if (!event || event.is_personal) { setAttendees([]); return; }
+    setAttendanceLoading(true);
+    void fetchEventAttendees(event.id)
+      .then(setAttendees)
+      .finally(() => setAttendanceLoading(false));
+  }, [event?.id]);
+
+  const myRow = attendees.find((a) => a.staff_id === currentUserId);
+  // All Staff default ON, dept default OFF
+  const isAttending = event?.department === null
+    ? myRow?.status !== 'opted_out'
+    : myRow?.status === 'attending';
+
+  async function toggleAttendance() {
+    if (!event) return;
+    setAttendanceLoading(true);
+    try {
+      if (event.department === null) {
+        // All Staff: toggle opt-out
+        if (myRow?.status === 'opted_out') {
+          await removeAttendee(event.id, currentUserId);
+        } else {
+          await setMyAttendance(event.id, currentUserId, 'opted_out');
+        }
+      } else {
+        // Dept: toggle attending
+        if (myRow?.status === 'attending') {
+          await removeAttendee(event.id, currentUserId);
+        } else {
+          await setMyAttendance(event.id, currentUserId, 'attending');
+        }
+      }
+      setAttendees(await fetchEventAttendees(event.id));
+      onUpdated();
+    } finally {
+      setAttendanceLoading(false);
+    }
+  }
 
   function handleClose() {
     setMode('view');
@@ -432,6 +481,41 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Location</p>
               <p className="mt-0.5 text-sm text-sparrow-ink">{event.location}</p>
+            </div>
+          )}
+
+          {/* Attendance — hidden for personal events */}
+          {!event.is_personal && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Your widget</p>
+              <div className="mt-1.5 flex items-center gap-3">
+                <button
+                  onClick={() => void toggleAttendance()}
+                  disabled={attendanceLoading}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                    isAttending
+                      ? 'bg-sparrow-green text-white hover:bg-sparrow-green/90'
+                      : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                  }`}
+                >
+                  {isAttending ? '✓ On my widget' : '+ Add to my widget'}
+                </button>
+                {event.department === null && (
+                  <span className="text-xs text-sparrow-gray">All Staff — shown by default</span>
+                )}
+              </div>
+              {(() => {
+                const goingIds = attendees.filter((a) => a.status === 'attending').map((a) => a.staff_id);
+                const names = goingIds
+                  .filter((id) => id !== currentUserId)
+                  .map((id) => profiles.find((p) => p.id === id)?.full_name)
+                  .filter(Boolean);
+                return names.length > 0 ? (
+                  <p className="mt-1.5 text-xs text-sparrow-gray">
+                    Also attending: {names.join(', ')}
+                  </p>
+                ) : null;
+              })()}
             </div>
           )}
 

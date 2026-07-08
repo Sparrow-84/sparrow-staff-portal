@@ -3,7 +3,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { fetchComments, fetchProfiles, fetchTasks } from '@/lib/data';
 import { fetchNotifications, type AppNotification } from '@/lib/social';
 import { fetchQuickWins, type QuickWin } from '@/lib/quickwins';
-import { fetchCalendar, type CalendarEvent } from '@/lib/calendar';
+import { fetchCalendar, fetchMyAttendance, type CalendarEvent, type EventAttendee } from '@/lib/calendar';
 import { fetchSettings, saveSettings } from '@/lib/settings';
 import { isoDate } from '@/lib/tasks';
 import type { Profile, TaskComment, TaskWithPeople } from '@/lib/types';
@@ -34,6 +34,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [wins, setWins] = useState<QuickWin[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [attendance, setAttendance] = useState<EventAttendee[]>([]);
   const [layout, setLayout] = useState<WidgetKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,13 +66,14 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   const load = useCallback(async () => {
     if (!me) return;
     try {
-      const [p, t, c, n, w, e, s] = await Promise.all([
+      const [p, t, c, n, w, e, att, s] = await Promise.all([
         fetchProfiles(),
         fetchTasks(),
         fetchComments(),
         fetchNotifications(),
         fetchQuickWins(),
         fetchCalendar(),
+        fetchMyAttendance(me.id),
         fetchSettings(me.id),
       ]);
       setProfiles(p);
@@ -80,6 +82,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       setNotifications(n);
       setWins(w);
       setEvents(e);
+      setAttendance(att);
       setWeekendVisible((s?.prefs?.show_weekends as boolean) ?? false);
 
       const teamVisible = isAdmin
@@ -100,21 +103,35 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
     void load();
   }, [load]);
 
-  // Filter events to only those the current user is allowed to see, mirroring
-  // CalendarView's myDepts logic so widgets don't leak other departments' events.
+  // Filter events for widget display: dept access check + attendance/RSVP check.
+  // All Staff (dept=null): show unless opted_out. Dept events: show only if attending
+  // OR the current user created it. Personal: own events only (RLS-enforced at DB).
   const visibleEvents = useMemo(() => {
     if (!me) return [];
-    if (me.role === 'admin') return events;
     const myDepts = new Set<string>([me.department]);
     if (me.partnerships_access) myDepts.add('partnerships');
     if (me.ops_access) myDepts.add('ops');
     if (me.lcp_role !== null) myDepts.add('lcp');
+    if (me.role === 'admin') {
+      (['toc', 'lcp', 'partnerships', 'ops'] as const).forEach((d) => myDepts.add(d));
+    }
+
+    const attendanceMap = new Map(attendance.map((a) => [a.event_id, a.status]));
+
     return events.filter((ev) => {
       if (ev.is_personal) return ev.created_by === me.id;
-      if (ev.department === null) return true; // all-staff events
-      return myDepts.has(ev.department);
+      if (ev.department === null) {
+        // All Staff: on by default, off if opted_out
+        return attendanceMap.get(ev.id) !== 'opted_out';
+      }
+      // Dept event: check access first
+      if (!myDepts.has(ev.department)) return false;
+      // Creator always sees their own events on the widget
+      if (ev.created_by === me.id) return true;
+      // Everyone else needs an explicit attending row
+      return attendanceMap.get(ev.id) === 'attending';
     });
-  }, [events, me]);
+  }, [events, attendance, me]);
 
   const ctx: WidgetContext | null = useMemo(() => {
     if (!me) return null;
@@ -140,7 +157,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
         void saveSettings(me!.id, { prefs: { show_weekends: next } });
       },
     };
-  }, [me, tasks, comments, notifications, wins, visibleEvents, reports, load, onNavigate, weekendVisible]);
+  }, [me, tasks, comments, notifications, wins, visibleEvents, attendance, reports, load, onNavigate, weekendVisible]);
 
   if (!me || !ctx) return null;
   if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading your dashboard…</p>;

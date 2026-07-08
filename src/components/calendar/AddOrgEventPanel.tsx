@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { ADD_KINDS, createCalendarEvents, withTzOffset, type CalendarKind } from '@/lib/calendar';
+import { useEffect, useRef, useState } from 'react';
+import { ADD_KINDS, addEventAttendees, createCalendarEvents, withTzOffset, type CalendarKind } from '@/lib/calendar';
 import { Drawer } from '@/components/lcp/Drawer';
-import type { Department } from '@/lib/types';
+import type { Department, Profile } from '@/lib/types';
 import { DEPARTMENTS } from '@/lib/types';
 
 const DOW_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -105,13 +105,14 @@ interface Props {
   defaultDate: string;
   currentUserId: string;
   userDepts: Department[];
+  profiles: Profile[];
   initialDept: Department | null;
   initialPersonal?: boolean;
   onClose: () => void;
   onCreated: () => void;
 }
 
-export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, initialDept, initialPersonal, onClose, onCreated }: Props) {
+export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, profiles, initialDept, initialPersonal, onClose, onCreated }: Props) {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<CalendarKind>('other');
   const [date, setDate] = useState(defaultDate);
@@ -121,6 +122,12 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
   const [location, setLocation] = useState('');
   const [allDay, setAllDay] = useState(false);
   const [department, setDepartment] = useState<Department | null>(initialDept);
+
+  // Attendees — only relevant for dept events (not personal, not all-staff)
+  const [attendeeIds, setAttendeeIds] = useState<string[]>([]);
+  const [attendeeSearch, setAttendeeSearch] = useState('');
+  const [attendeeDropdownOpen, setAttendeeDropdownOpen] = useState(false);
+  const attendeeRef = useRef<HTMLDivElement>(null);
 
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState<Frequency>('weekly');
@@ -188,7 +195,14 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
         is_personal: isPersonal,
       }));
 
-      await createCalendarEvents(inputs);
+      const createdIds = await createCalendarEvents(inputs);
+
+      // For dept events, add creator + chosen attendees so the event shows on their widgets
+      if (!isPersonal && department && createdIds.length > 0) {
+        const allAttendees = Array.from(new Set([currentUserId, ...attendeeIds]));
+        await addEventAttendees(createdIds, title.trim(), allAttendees, currentUserId);
+      }
+
       reset();
       onCreated();
     } catch (e) {
@@ -215,6 +229,8 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
     setUntilDate(addMonths(localISO(new Date()), 3));
     setDepartment(initialDept);
     setIsPersonal(false);
+    setAttendeeIds([]);
+    setAttendeeSearch('');
     setError(null);
   }
 
@@ -377,6 +393,70 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
             className="field-input"
           />
         </div>
+
+        {/* Attendees — dept events only */}
+        {!isPersonal && department && (
+          <div ref={attendeeRef} className="relative">
+            <label className="field-label">
+              Attendees <span className="font-normal text-sparrow-gray">(optional — adds event to their widget)</span>
+            </label>
+            {attendeeIds.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {attendeeIds.map((id) => {
+                  const p = profiles.find((x) => x.id === id);
+                  return (
+                    <span key={id} className="flex items-center gap-1 rounded-full bg-sparrow-sage px-2.5 py-0.5 text-xs font-medium text-sparrow-ink">
+                      {p?.full_name ?? id}
+                      <button
+                        type="button"
+                        onClick={() => setAttendeeIds((prev) => prev.filter((x) => x !== id))}
+                        className="ml-0.5 text-sparrow-gray hover:text-sparrow-ink"
+                        aria-label={`Remove ${p?.full_name ?? id}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            <input
+              type="text"
+              value={attendeeSearch}
+              onChange={(e) => { setAttendeeSearch(e.target.value); setAttendeeDropdownOpen(true); }}
+              onFocus={() => setAttendeeDropdownOpen(true)}
+              onBlur={() => setTimeout(() => setAttendeeDropdownOpen(false), 150)}
+              placeholder="Search staff…"
+              className="field-input"
+            />
+            {attendeeDropdownOpen && attendeeSearch.trim() && (
+              <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-sparrow-rule bg-white shadow-lg">
+                {profiles
+                  .filter((p) =>
+                    p.id !== currentUserId &&
+                    !attendeeIds.includes(p.id) &&
+                    p.full_name.toLowerCase().includes(attendeeSearch.toLowerCase()),
+                  )
+                  .map((p) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        onMouseDown={() => {
+                          setAttendeeIds((prev) => [...prev, p.id]);
+                          setAttendeeSearch('');
+                          setAttendeeDropdownOpen(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-sparrow-ink hover:bg-sparrow-mist"
+                      >
+                        {p.full_name}
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            )}
+            <p className="mt-1 text-xs text-sparrow-gray">You're always added as attending. Selected staff will be notified.</p>
+          </div>
+        )}
 
         {/* Recurrence */}
         <div className="border-t border-sparrow-rule pt-4">

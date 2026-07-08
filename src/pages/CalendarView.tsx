@@ -37,7 +37,8 @@ import { fetchOrgCalLcpEvents } from '@/lib/lcp';
 import type { LcpEvent } from '@/lib/lcp-types';
 import { EVENT_LABEL } from '@/lib/lcp-types';
 import { supabase } from '@/lib/supabase';
-import type { Department, Priority, Task } from '@/lib/types';
+import { fetchProfiles } from '@/lib/data';
+import type { Department, Priority, Profile, Task } from '@/lib/types';
 import { DEPARTMENTS } from '@/lib/types';
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -147,9 +148,14 @@ export function CalendarView() {
 
   const [deadlineTasks, setDeadlineTasks] = useState<DeadlineTask[]>([]);
   const [lcpOrgEvents, setLcpOrgEvents] = useState<LcpEvent[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
 
   const load = useCallback(async () => {
-    try { setEvents(await fetchCalendar()); }
+    try {
+      const [evs, profs] = await Promise.all([fetchCalendar(), fetchProfiles()]);
+      setEvents(evs);
+      setProfiles(profs);
+    }
     finally { setLoading(false); }
   }, []);
 
@@ -576,6 +582,7 @@ export function CalendarView() {
         defaultDate={addDate}
         currentUserId={profile?.id ?? ''}
         userDepts={myDepts}
+        profiles={profiles}
         initialDept={(() => {
           if (!showMyDepts || showAllStaff) return null;
           const active = myDepts.filter(d => !disabledDepts.has(d));
@@ -589,6 +596,7 @@ export function CalendarView() {
         event={detailEvent}
         currentUserId={profile?.id ?? ''}
         isAdmin={profile?.role === 'admin'}
+        profiles={profiles}
         onClose={() => setDetailEvent(null)}
         onDeleted={() => { setDetailEvent(null); void load(); }}
         onUpdated={() => { setDetailEvent(null); void load(); }}

@@ -86,7 +86,7 @@ export interface CalendarEventInput {
   is_personal?: boolean;
 }
 
-export async function createCalendarEvents(inputs: CalendarEventInput[]): Promise<void> {
+export async function createCalendarEvents(inputs: CalendarEventInput[]): Promise<string[]> {
   // recurrence_id is omitted from non-recurring rows until migration 0035 is applied;
   // once the column exists, recurring events include it so series deletes work.
   const rows = inputs.map(({ recurrence_id, department, is_personal, ...rest }) => {
@@ -96,8 +96,110 @@ export async function createCalendarEvents(inputs: CalendarEventInput[]): Promis
     if (is_personal) row.is_personal = true;
     return row;
   });
-  const { error } = await supabase.from('calendar_events').insert(rows);
+  const { data, error } = await supabase.from('calendar_events').insert(rows).select('id');
   if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => r.id as string);
+}
+
+// ── Attendance / RSVP ────────────────────────────────────────────────
+
+export interface EventAttendee {
+  event_id: string;
+  staff_id: string;
+  status: 'attending' | 'opted_out';
+  added_by: string | null;
+  created_at: string;
+}
+
+/** Fetch all attendance rows for a specific event (for the detail panel). */
+export async function fetchEventAttendees(eventId: string): Promise<EventAttendee[]> {
+  const { data, error } = await supabase
+    .from('event_attendees')
+    .select('*')
+    .eq('event_id', eventId);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as EventAttendee[];
+}
+
+/** Fetch the current user's attendance rows across all events (for widget filtering). */
+export async function fetchMyAttendance(userId: string): Promise<EventAttendee[]> {
+  const { data, error } = await supabase
+    .from('event_attendees')
+    .select('*')
+    .eq('staff_id', userId);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as EventAttendee[];
+}
+
+/** Set current user's own attendance status (upsert). */
+export async function setMyAttendance(
+  eventId: string,
+  userId: string,
+  status: 'attending' | 'opted_out',
+): Promise<void> {
+  const { error } = await supabase
+    .from('event_attendees')
+    .upsert({ event_id: eventId, staff_id: userId, status, added_by: userId });
+  if (error) throw new Error(error.message);
+}
+
+/** Remove an attendance row (self opt-back-to-default, or creator removing someone). */
+export async function removeAttendee(eventId: string, staffId: string): Promise<void> {
+  const { error } = await supabase
+    .from('event_attendees')
+    .delete()
+    .eq('event_id', eventId)
+    .eq('staff_id', staffId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Creator adds a list of staff as attendees across all event IDs in a series.
+ * Sends one notification per attendee (not per occurrence).
+ */
+export async function addEventAttendees(
+  eventIds: string[],
+  eventTitle: string,
+  staffIds: string[],
+  actorId: string,
+): Promise<void> {
+  const rows = eventIds.flatMap((eid) =>
+    staffIds.map((sid) => ({ event_id: eid, staff_id: sid, status: 'attending' as const, added_by: actorId })),
+  );
+  const { error } = await supabase.from('event_attendees').upsert(rows);
+  if (error) throw new Error(error.message);
+
+  const toNotify = staffIds.filter((id) => id !== actorId);
+  if (toNotify.length > 0) {
+    await supabase.rpc('notify_event_attendees', {
+      p_staff_ids: toNotify,
+      p_actor_id: actorId,
+      p_event_id: eventIds[0],
+      p_event_title: eventTitle,
+      p_notification_type: 'event_invited',
+    });
+  }
+}
+
+/** Creator removes a staff member from all events in a series and notifies them. */
+export async function removeEventAttendee(
+  eventIds: string[],
+  eventTitle: string,
+  staffId: string,
+  actorId: string,
+): Promise<void> {
+  for (const eid of eventIds) {
+    await removeAttendee(eid, staffId);
+  }
+  if (staffId !== actorId) {
+    await supabase.rpc('notify_event_attendees', {
+      p_staff_ids: [staffId],
+      p_actor_id: actorId,
+      p_event_id: eventIds[0],
+      p_event_title: eventTitle,
+      p_notification_type: 'event_removed',
+    });
+  }
 }
 
 export async function updateCalendarEvent(

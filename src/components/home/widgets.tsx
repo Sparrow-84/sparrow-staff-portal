@@ -243,6 +243,8 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
 function describe(n: AppNotification): string {
   const who = n.actor?.full_name ?? 'Someone';
   if (n.type === 'mentioned') return `${who} mentioned you`;
+  if (n.type === 'event_invited') return `${who} added you to an event`;
+  if (n.type === 'event_removed') return `${who} removed you from an event`;
   return `${who} commented on a task`;
 }
 
