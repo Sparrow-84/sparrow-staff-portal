@@ -213,7 +213,7 @@ export function CalendarView() {
   while (cells.length % 7 !== 0) cells.push(null);
 
   // Group events by day, respecting which layer each event belongs to.
-  // All Staff layer = events with department null; My Depts layer = events with a department value.
+  // Multi-day all-day events are expanded across every day they span.
   const eventsByDay = new Map<string, CalendarEvent[]>();
   for (const ev of events) {
     const isPersonal = ev.is_personal;
@@ -221,11 +221,29 @@ export function CalendarView() {
     const isDept = !isPersonal && ev.department !== null && myDepts.includes(ev.department) && !disabledDepts.has(ev.department);
     if (!(isAllStaff && showAllStaff) && !(isDept && showMyDepts) && !(isPersonal && showPersonal)) continue;
 
-    const d = localISO(new Date(ev.starts_at));
-    const dDate = new Date(d + 'T12:00:00');
-    if (dDate.getFullYear() === year && dDate.getMonth() === month) {
-      if (!eventsByDay.has(d)) eventsByDay.set(d, []);
-      eventsByDay.get(d)!.push(ev);
+    const startD = localISO(new Date(ev.starts_at));
+    const endD = ev.all_day && ev.ends_at ? localISO(new Date(ev.ends_at)) : startD;
+    const isMultiDay = endD > startD;
+
+    if (isMultiDay) {
+      // Expand across all days in the span
+      const cursor = new Date(startD + 'T12:00:00');
+      const endDate = new Date(endD + 'T12:00:00');
+      while (cursor <= endDate) {
+        const d = localISO(cursor);
+        const dDate = new Date(d + 'T12:00:00');
+        if (dDate.getFullYear() === year && dDate.getMonth() === month) {
+          if (!eventsByDay.has(d)) eventsByDay.set(d, []);
+          eventsByDay.get(d)!.push(ev);
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    } else {
+      const dDate = new Date(startD + 'T12:00:00');
+      if (dDate.getFullYear() === year && dDate.getMonth() === month) {
+        if (!eventsByDay.has(startD)) eventsByDay.set(startD, []);
+        eventsByDay.get(startD)!.push(ev);
+      }
     }
   }
   for (const arr of eventsByDay.values()) arr.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
@@ -391,17 +409,21 @@ export function CalendarView() {
                     </div>
 
                     <div className={`mt-1 space-y-0.5 ${isPast ? 'opacity-60' : ''}`}>
-                      {shown.map(ev => (
-                        <button
-                          key={ev.id}
-                          onClick={() => setDetailEvent(ev)}
-                          className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind]}`}
-                          onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
-                          onMouseLeave={() => setCalTooltip(null)}
-                        >
-                          {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
-                        </button>
-                      ))}
+                      {shown.map(ev => {
+                        const evStartD = localISO(new Date(ev.starts_at));
+                        const isStart = dStr === evStartD;
+                        return (
+                          <button
+                            key={ev.id}
+                            onClick={() => setDetailEvent(ev)}
+                            className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind]} ${!isStart ? 'opacity-75' : ''}`}
+                            onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
+                            onMouseLeave={() => setCalTooltip(null)}
+                          >
+                            {!isStart ? '↳ ' : ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
+                          </button>
+                        );
+                      })}
                       {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
                     </div>
 

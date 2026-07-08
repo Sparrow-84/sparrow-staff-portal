@@ -38,6 +38,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
   const [editTitle, setEditTitle] = useState('');
   const [editKind, setEditKind] = useState<CalendarKind>('other');
   const [editDate, setEditDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState(''); // multi-day all-day end date
   const [editAllDay, setEditAllDay] = useState(false);
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
@@ -82,7 +83,11 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
     setEditDate(toLocalDate(event.starts_at));
     setEditAllDay(event.all_day);
     setEditStartTime(event.all_day ? '09:00' : toLocalTime(event.starts_at));
-    setEditEndTime(event.ends_at ? toLocalTime(event.ends_at) : '');
+    // Multi-day all-day: populate end date only if it's a different date than start
+    const startD = toLocalDate(event.starts_at);
+    const endD = event.ends_at ? toLocalDate(event.ends_at) : '';
+    setEditEndDate(event.all_day && endD && endD > startD ? endD : '');
+    setEditEndTime(!event.all_day && event.ends_at ? toLocalTime(event.ends_at) : '');
     setEditLocation(event.location ?? '');
     setError(null);
     setMode('edit');
@@ -101,9 +106,11 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
       const newStartsAt = editAllDay
         ? `${editDate}T00:00:00+00:00`
         : withTzOffset(editDate, editStartTime);
-      const newEndsAt = !editAllDay && editEndTime
-        ? withTzOffset(editDate, editEndTime)
-        : null;
+      const newEndsAt = editAllDay && editEndDate && editEndDate > editDate
+        ? `${editEndDate}T00:00:00+00:00`
+        : !editAllDay && editEndTime
+          ? withTzOffset(editDate, editEndTime)
+          : null;
 
       const basePatch = {
         title: editTitle.trim(),
@@ -162,11 +169,15 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
 
   const startsAt = new Date(event.starts_at);
   const endsAt = event.ends_at ? new Date(event.ends_at) : null;
-  const dateLabel = startsAt.toLocaleDateString(undefined, {
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-  });
+  const startDateStr = toLocalDate(event.starts_at);
+  const endDateStr = event.ends_at ? toLocalDate(event.ends_at) : '';
+  const isMultiDay = event.all_day && endDateStr && endDateStr > startDateStr;
+
+  const dateLabel = isMultiDay
+    ? `${startsAt.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' })} – ${endsAt!.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}`
+    : startsAt.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const timeLabel = event.all_day
-    ? 'All day'
+    ? isMultiDay ? 'Multi-day event' : 'All day'
     : endsAt
       ? `${startsAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} – ${endsAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
       : startsAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -324,8 +335,8 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
           </label>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <label className="field-label">Date</label>
+            <div className={editAllDay ? 'col-span-1' : 'col-span-2'}>
+              <label className="field-label">{editAllDay ? 'Start date' : 'Date'}</label>
               <input
                 type="date"
                 value={editDate}
@@ -333,6 +344,20 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
                 className="field-input"
               />
             </div>
+            {editAllDay && (
+              <div>
+                <label className="field-label">
+                  End date <span className="font-normal text-sparrow-gray">(optional)</span>
+                </label>
+                <input
+                  type="date"
+                  value={editEndDate}
+                  min={editDate}
+                  onChange={(e) => setEditEndDate(e.target.value)}
+                  className="field-input"
+                />
+              </div>
+            )}
             {!editAllDay && (
               <>
                 <div>
