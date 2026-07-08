@@ -7,6 +7,7 @@ import { daysSince, touchpointTone, type Checklist, type Issue, type Review, typ
 import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { StaffMemberPanel } from './StaffMemberPanel';
 import { InventoryRoom } from '@/components/inventory/InventoryRoom';
+import { DeptCalendar } from '@/components/calendar/DeptCalendar';
 
 const OPS_TOUR_STEPS: TourStep[] = [
   {
@@ -46,7 +47,7 @@ export function OperationsRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [opsTab, setOpsTab] = useState<'staff' | 'inventory'>('staff');
+  const [opsTab, setOpsTab] = useState<'staff' | 'inventory' | 'calendar'>('staff');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -117,7 +118,7 @@ export function OperationsRoom() {
 
       {/* Tabs */}
       <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
-        {(['staff', 'inventory'] as const).map((t) => (
+        {(['staff', 'inventory', 'calendar'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setOpsTab(t)}
@@ -125,7 +126,7 @@ export function OperationsRoom() {
               opsTab === t ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
             }`}
           >
-            {t === 'staff' ? 'Staff' : 'Inventory'}
+            {t === 'staff' ? 'Staff' : t === 'inventory' ? 'Inventory' : 'Calendar'}
           </button>
         ))}
       </div>
@@ -133,6 +134,10 @@ export function OperationsRoom() {
       {opsTab === 'inventory' ? (
         <div className="mt-6">
           <InventoryRoom />
+        </div>
+      ) : opsTab === 'calendar' ? (
+        <div className="mt-6" style={{ height: '70vh' }}>
+          <DeptCalendar department="ops" />
         </div>
       ) : null}
 

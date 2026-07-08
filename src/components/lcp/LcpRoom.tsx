@@ -32,6 +32,7 @@ import { AddEventPanel } from './AddEventPanel';
 import { EventDetailPanel } from './EventDetailPanel';
 import { LcpCalendar } from './LcpCalendar';
 import { CurriculumAdmin } from './CurriculumAdmin';
+import { DeptCalendar } from '@/components/calendar/DeptCalendar';
 import { LcpProgress } from './LcpProgress';
 import { PhaseProgressBar } from './PhaseProgressBar';
 
@@ -89,7 +90,7 @@ export function LcpRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'families' | 'progress' | 'calendar' | 'session-log' | 'curriculum'>('families');
+  const [tab, setTab] = useState<'families' | 'progress' | 'session-log' | 'session-cal' | 'team-cal' | 'curriculum'>('families');
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [event, setEvent] = useState<LcpEvent | null>(null);
@@ -191,8 +192,8 @@ export function LcpRoom() {
       )}
 
       {/* Tabs */}
-      <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
-        {(['families', 'progress', 'session-log', 'calendar', 'curriculum'] as const).map((t) => (
+      <div className="mt-6 inline-flex flex-wrap rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
+        {(['families', 'progress', 'session-log', 'session-cal', 'team-cal', 'curriculum'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -200,7 +201,10 @@ export function LcpRoom() {
               tab === t ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
             }`}
           >
-            {t === 'session-log' ? 'Session Log' : t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'session-log' ? 'Session Log'
+              : t === 'session-cal' ? 'Session Cal'
+              : t === 'team-cal' ? 'Team Cal'
+              : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
@@ -293,6 +297,10 @@ export function LcpRoom() {
         />
       ) : tab === 'curriculum' ? (
         <CurriculumAdmin />
+      ) : tab === 'team-cal' ? (
+        <div className="mt-6" style={{ height: '70vh' }}>
+          <DeptCalendar department="lcp" />
+        </div>
       ) : (
         <div className="mt-6">
           {calendarLog ? (

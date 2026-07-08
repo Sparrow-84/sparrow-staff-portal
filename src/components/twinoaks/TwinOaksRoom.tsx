@@ -22,6 +22,7 @@ import { IncidentLogTab } from './IncidentLogTab';
 import { ResidentsTab } from './ResidentsTab';
 import { NoticesTab } from './NoticesTab';
 import { ArchiveTab } from './ArchiveTab';
+import { DeptCalendar } from '@/components/calendar/DeptCalendar';
 
 const PRIORITY_RANK: Record<WoPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
@@ -74,7 +75,7 @@ export function TwinOaksRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'property' | 'residents' | 'workorders' | 'notices' | 'incidents' | 'archive'>('property');
+  const [tab, setTab] = useState<'property' | 'residents' | 'workorders' | 'notices' | 'incidents' | 'archive' | 'calendar'>('property');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [lotOpen, setLotOpen] = useState(false);
@@ -203,6 +204,7 @@ export function TwinOaksRoom() {
             { key: 'workorders', label: 'Work orders' },
             { key: 'notices',    label: 'Notices' },
             ...(canManage ? [{ key: 'incidents', label: 'Incidents' }, { key: 'archive', label: 'Archive' }] : []),
+            { key: 'calendar', label: 'Calendar' },
           ] as { key: typeof tab; label: string }[]
         ).map(({ key, label }) => (
           <button
@@ -217,7 +219,11 @@ export function TwinOaksRoom() {
         ))}
       </div>
 
-      {tab === 'archive' ? (
+      {tab === 'calendar' ? (
+        <div className="mt-6" style={{ height: '70vh' }}>
+          <DeptCalendar department="toc" />
+        </div>
+      ) : tab === 'archive' ? (
         <ArchiveTab spaces={spaces} tenants={tenants} />
       ) : tab === 'incidents' ? (
         <IncidentLogTab spaces={spaces} />

@@ -324,7 +324,7 @@ export function CalendarView() {
   }
 
   // Depts that are active but don't yet have a calendar built (show placeholder banner)
-  const DEPTS_WITH_CALENDARS: Department[] = ['lcp'];
+  const DEPTS_WITH_CALENDARS: Department[] = ['lcp', 'toc', 'partnerships', 'ops'];
   const activeDeptLabels = myDepts
     .filter(d => showMyDepts && !disabledDepts.has(d) && !DEPTS_WITH_CALENDARS.includes(d))
     .map(d => DEPARTMENTS.find(x => x.value === d)?.label ?? d);

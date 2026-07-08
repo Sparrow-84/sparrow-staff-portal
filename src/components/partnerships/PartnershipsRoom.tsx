@@ -24,6 +24,7 @@ import { PartnershipSocialTab } from './PartnershipSocialTab';
 import { PartnershipEventsTab } from './PartnershipEventsTab';
 import { PrayerMeetingTab } from './PrayerMeetingTab';
 import { fetchComms } from '@/lib/partnerships-tabs';
+import { DeptCalendar } from '@/components/calendar/DeptCalendar';
 
 const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
   {
@@ -64,7 +65,7 @@ const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
   },
 ];
 
-type Tab = 'directory' | 'comms' | 'collateral' | 'social' | 'events' | 'prayer';
+type Tab = 'directory' | 'comms' | 'collateral' | 'social' | 'events' | 'prayer' | 'calendar';
 type View = 'table' | 'tile';
 type Filter = 'all' | 'archived' | PartnerType;
 
@@ -75,6 +76,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'social', label: 'Social' },
   { key: 'events', label: 'Events' },
   { key: 'prayer', label: 'Prayer' },
+  { key: 'calendar', label: 'Calendar' },
 ];
 
 const FILTERS: { key: Filter; label: string }[] = [
@@ -275,6 +277,11 @@ export function PartnershipsRoom() {
           {activeTab === 'social' && <PartnershipSocialTab />}
           {activeTab === 'events' && <PartnershipEventsTab />}
           {activeTab === 'prayer' && <PrayerMeetingTab />}
+          {activeTab === 'calendar' && (
+            <div style={{ height: '70vh' }}>
+              <DeptCalendar department="partnerships" />
+            </div>
+          )}
         </div>
       )}
 
