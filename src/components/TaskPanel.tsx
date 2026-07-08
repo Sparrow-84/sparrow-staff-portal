@@ -121,11 +121,12 @@ interface Props {
   currentUser: Profile;
   comments: TaskComment[];
   today: string;
+  readOnly?: boolean;
   onClose: () => void;
   onChanged: () => void;
 }
 
-export function TaskPanel({ open, task, profiles, currentUser, comments, today, onClose, onChanged }: Props) {
+export function TaskPanel({ open, task, profiles, currentUser, comments, today, readOnly = false, onClose, onChanged }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -326,11 +327,21 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
         }`}
       >
         <div className="flex items-center justify-between border-b border-sparrow-rule px-5 py-4">
-          <h2 className="font-serif text-lg font-semibold">{task ? 'Edit task' : 'New task'}</h2>
+          <h2 className="font-serif text-lg font-semibold">
+            {task ? (readOnly ? 'View task' : 'Edit task') : 'New task'}
+          </h2>
           <button onClick={onClose} className="btn-ghost" aria-label="Close">
             ✕
           </button>
         </div>
+
+        {readOnly && (
+          <div className="border-b border-sparrow-rule bg-sparrow-cream px-5 py-3">
+            <p className="text-sm text-sparrow-gray">
+              You assigned this task — you can comment below but can't edit it.
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="border-b border-red-200 bg-red-50 px-5 py-3">
@@ -344,10 +355,11 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
           </label>
           <input
             id="t-title"
-            className="field-input text-base"
+            className="field-input text-base disabled:opacity-60"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="What needs doing?"
+            disabled={readOnly}
             autoFocus
           />
 
@@ -357,10 +369,11 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             </label>
             <textarea
               id="t-notes"
-              className="field-input"
+              className="field-input disabled:opacity-60"
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              disabled={readOnly}
             />
           </div>
 
@@ -369,16 +382,21 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             <div className="mt-1 flex items-center gap-2">
               <input
                 type="date"
-                className="field-input !mt-0 flex-1"
+                className="field-input !mt-0 flex-1 disabled:opacity-60"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+                disabled={readOnly}
               />
-              <button type="button" className="btn-ghost" onClick={() => setDueDate(today)}>
-                Today
-              </button>
-              <button type="button" className="btn-ghost" onClick={() => setDueDate(tomorrow)}>
-                Tomorrow
-              </button>
+              {!readOnly && (
+                <>
+                  <button type="button" className="btn-ghost" onClick={() => setDueDate(today)}>
+                    Today
+                  </button>
+                  <button type="button" className="btn-ghost" onClick={() => setDueDate(tomorrow)}>
+                    Tomorrow
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -389,9 +407,10 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
               </label>
               <select
                 id="t-dept"
-                className="field-input"
+                className="field-input disabled:opacity-60"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value as Department)}
+                disabled={readOnly}
               >
                 {DEPARTMENTS.map((d) => (
                   <option key={d.value} value={d.value}>
@@ -406,9 +425,10 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
               </label>
               <select
                 id="t-priority"
-                className="field-input"
+                className="field-input disabled:opacity-60"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as Priority)}
+                disabled={readOnly}
               >
                 {PRIORITIES.map((p) => (
                   <option key={p.value} value={p.value}>
@@ -426,9 +446,10 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
               </label>
               <select
                 id="t-assignee"
-                className="field-input"
+                className="field-input disabled:opacity-60"
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
+                disabled={readOnly}
               >
                 {profiles.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -443,9 +464,10 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
               </label>
               <select
                 id="t-status"
-                className="field-input"
+                className="field-input disabled:opacity-60"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TaskStatus)}
+                disabled={readOnly}
               >
                 <option value="todo">To do</option>
                 <option value="in_progress">In progress</option>
@@ -462,10 +484,11 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                className="field-input !mt-0 flex-1"
+                className="field-input !mt-0 flex-1 disabled:opacity-60"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
                 placeholder="e.g. Personal, Client work…"
+                disabled={readOnly}
               />
               {label && (
                 <button
@@ -660,7 +683,9 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
         </div>
 
         <div className="flex items-center justify-between border-t border-sparrow-rule px-5 py-4">
-          {task ? (
+          {readOnly ? (
+            <span />
+          ) : task ? (
             deleteChoice ? (
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs text-sparrow-gray">Delete recurring task:</span>
@@ -695,14 +720,20 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
           ) : (
             <span />
           )}
-          <div className="flex gap-2">
-            <button onClick={onClose} className="btn-ghost">
-              Cancel
+          {readOnly ? (
+            <button onClick={onClose} className="btn-primary">
+              Close
             </button>
-            <button onClick={save} disabled={pending} className="btn-primary">
-              {saveLabel}
-            </button>
-          </div>
+          ) : (
+            <div className="flex gap-2">
+              <button onClick={onClose} className="btn-ghost">
+                Cancel
+              </button>
+              <button onClick={save} disabled={pending} className="btn-primary">
+                {saveLabel}
+              </button>
+            </div>
+          )}
         </div>
       </aside>
     </>

@@ -32,6 +32,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [panelTask, setPanelTask] = useState<TaskWithPeople | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [panelReadOnly, setPanelReadOnly] = useState(false);
 
   // Remember the last-used view per the brief ("system remembers which view each user was last in").
   const [layout, setLayout] = useState<Layout>(() => {
@@ -54,10 +55,21 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
   );
   const showTeam = reports.length > 0;
 
-  // "My tasks" = tasks assigned to me. Tasks I created but delegated away show under My Team.
+  // Non-managers can't see "My Team" — surface tasks they created and delegated so they
+  // don't lose track. These open read-only in the panel (can comment, can't edit).
+  const isNonManager = currentUser.role === 'staff';
+  const delegatedIds = useMemo(() => {
+    if (!isNonManager) return new Set<string>();
+    return new Set(
+      tasks
+        .filter((t) => t.created_by === currentUser.id && t.assignee_id !== currentUser.id)
+        .map((t) => t.id),
+    );
+  }, [tasks, currentUser.id, isNonManager]);
+
   const mineTasks = useMemo(
-    () => tasks.filter((t) => t.assignee_id === currentUser.id),
-    [tasks, currentUser.id],
+    () => tasks.filter((t) => t.assignee_id === currentUser.id || delegatedIds.has(t.id)),
+    [tasks, currentUser.id, delegatedIds],
   );
   const teamTasks = useMemo(() => {
     const reportIds = new Set(reports.map((r) => r.id));
@@ -75,19 +87,23 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
 
   function openNew() {
     setPanelTask(null);
+    setPanelReadOnly(false);
     setPanelOpen(true);
   }
   function openEdit(t: TaskWithPeople) {
     setPanelTask(t);
+    setPanelReadOnly(delegatedIds.has(t.id));
     setPanelOpen(true);
   }
   function toggleDone(t: TaskWithPeople) {
+    if (delegatedIds.has(t.id)) return;
     startTransition(async () => {
       await setTaskStatus(t.id, t.status === 'done' ? 'todo' : 'done');
       onChanged();
     });
   }
   function moveToStatus(taskId: string, status: TaskStatus) {
+    if (delegatedIds.has(taskId)) return;
     const t = tasks.find((x) => x.id === taskId);
     if (!t || t.status === status) return;
     startTransition(async () => {
@@ -189,6 +205,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
             today={today}
             userId={currentUser.id}
             showAssignee={showAssignee}
+            delegatedIds={delegatedIds}
             onOpen={openEdit}
             onMoveStatus={moveToStatus}
           />
@@ -214,6 +231,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
         currentUser={currentUser}
         comments={panelTask ? comments.filter((c) => c.task_id === panelTask.id) : []}
         today={today}
+        readOnly={panelReadOnly}
         onClose={() => setPanelOpen(false)}
         onChanged={onChanged}
       />
