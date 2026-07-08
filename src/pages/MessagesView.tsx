@@ -42,7 +42,6 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
   const [renameValue, setRenameValue] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const isAdmin = profile?.role === 'admin';
 
   useEffect(() => {
     if (!meId) return;
@@ -290,14 +289,12 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                         >
                           Rename group
                         </button>
-                        {isAdmin && (
-                          <button
-                            onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
-                            className="block w-full px-3 py-2 text-left text-sm text-priority-p1 hover:bg-red-50"
-                          >
-                            Delete group
-                          </button>
-                        )}
+                        <button
+                          onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
+                          className="block w-full px-3 py-2 text-left text-sm text-priority-p1 hover:bg-red-50"
+                        >
+                          Delete group
+                        </button>
                       </div>
                     </>
                   )}

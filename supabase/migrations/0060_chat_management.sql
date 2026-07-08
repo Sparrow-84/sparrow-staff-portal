@@ -1,5 +1,5 @@
 -- 0060_chat_management.sql
--- Group chat rename (any member) and delete (admin or creator) via SECURITY DEFINER RPCs.
+-- Group chat rename and delete via SECURITY DEFINER RPCs — any member can do either.
 
 -- Rename: any member of a group chat can update its title.
 create or replace function chat_rename_channel(p_channel uuid, p_title text)
@@ -19,22 +19,17 @@ begin
 end;
 $$;
 
--- Delete: admin or channel creator only. Removes messages, reactions, members, then channel.
+-- Delete: any member can permanently delete a group and all its messages.
 create or replace function chat_delete_channel(p_channel uuid)
 returns void language plpgsql security definer as $$
 begin
   if not exists (
-    select 1 from chat_channels
-    where id = p_channel
-    and (
-      created_by = auth.uid()
-      or exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-    )
+    select 1 from chat_members where channel_id = p_channel and user_id = auth.uid()
   ) then
-    raise exception 'Not authorized to delete this channel';
+    raise exception 'Not a member of this channel';
   end if;
 
-  -- Dependency order: reactions → messages → members → channel
+  -- Dependency order: reactions -> messages -> members -> channel
   delete from chat_reactions where channel_id = p_channel;
   delete from chat_messages  where channel_id = p_channel;
   delete from chat_members   where channel_id = p_channel;
