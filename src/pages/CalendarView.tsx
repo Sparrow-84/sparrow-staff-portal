@@ -212,9 +212,10 @@ export function CalendarView() {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  // Group events by day, respecting which layer each event belongs to.
-  // Multi-day all-day events are expanded across every day they span.
-  const eventsByDay = new Map<string, CalendarEvent[]>();
+  // Partition events: single-day go into a map keyed by date; multi-day all-day events
+  // go into a separate array for spanning-bar rendering across the week grid.
+  const singleDayByDate = new Map<string, CalendarEvent[]>();
+  const visibleMultiDay: CalendarEvent[] = [];
   for (const ev of events) {
     const isPersonal = ev.is_personal;
     const isAllStaff = !isPersonal && ev.department === null;
@@ -223,30 +224,76 @@ export function CalendarView() {
 
     const startD = localISO(new Date(ev.starts_at));
     const endD = ev.all_day && ev.ends_at ? localISO(new Date(ev.ends_at)) : startD;
-    const isMultiDay = endD > startD;
 
-    if (isMultiDay) {
-      // Expand across all days in the span
-      const cursor = new Date(startD + 'T12:00:00');
-      const endDate = new Date(endD + 'T12:00:00');
-      while (cursor <= endDate) {
-        const d = localISO(cursor);
-        const dDate = new Date(d + 'T12:00:00');
-        if (dDate.getFullYear() === year && dDate.getMonth() === month) {
-          if (!eventsByDay.has(d)) eventsByDay.set(d, []);
-          eventsByDay.get(d)!.push(ev);
-        }
-        cursor.setDate(cursor.getDate() + 1);
-      }
+    if (ev.all_day && endD > startD) {
+      visibleMultiDay.push(ev);
     } else {
       const dDate = new Date(startD + 'T12:00:00');
       if (dDate.getFullYear() === year && dDate.getMonth() === month) {
-        if (!eventsByDay.has(startD)) eventsByDay.set(startD, []);
-        eventsByDay.get(startD)!.push(ev);
+        if (!singleDayByDate.has(startD)) singleDayByDate.set(startD, []);
+        singleDayByDate.get(startD)!.push(ev);
       }
     }
   }
-  for (const arr of eventsByDay.values()) arr.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  for (const arr of singleDayByDate.values()) arr.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+
+  // Group cells into week rows for spanning bar rendering
+  const weeks: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+
+  type MultiDayBar = {
+    event: CalendarEvent;
+    startCol: number;
+    span: number;
+    lane: number;
+    isActualStart: boolean;
+    isActualEnd: boolean;
+  };
+
+  function getBarsForWeek(week: (number | null)[]): MultiDayBar[] {
+    const weekDates = week.map(d => (d !== null ? cellDate(d) : null));
+    const nonNull = weekDates.filter((d): d is string => d !== null);
+    if (nonNull.length === 0) return [];
+    const weekStart = nonNull[0];
+    const weekEnd = nonNull[nonNull.length - 1];
+
+    type Raw = Omit<MultiDayBar, 'lane'>;
+    const raw: Raw[] = [];
+
+    for (const ev of visibleMultiDay) {
+      const evStart = localISO(new Date(ev.starts_at));
+      const evEnd = localISO(new Date(ev.ends_at!));
+      if (evEnd < weekStart || evStart > weekEnd) continue;
+
+      let startCol = 0;
+      for (let c = 0; c < 7; c++) {
+        if (weekDates[c] !== null && weekDates[c]! >= evStart) { startCol = c; break; }
+      }
+      let endCol = 6;
+      for (let c = 6; c >= 0; c--) {
+        if (weekDates[c] !== null && weekDates[c]! <= evEnd) { endCol = c; break; }
+      }
+
+      raw.push({
+        event: ev,
+        startCol,
+        span: endCol - startCol + 1,
+        isActualStart: evStart >= weekStart,
+        isActualEnd: evEnd <= weekEnd,
+      });
+    }
+
+    // Longer spans first so they claim lower lanes
+    raw.sort((a, b) => b.span - a.span || a.startCol - b.startCol);
+
+    const laneEnds: number[] = [];
+    return raw.map(bar => {
+      let lane = laneEnds.findIndex(end => end < bar.startCol);
+      if (lane === -1) lane = laneEnds.length;
+      laneEnds[lane] = bar.startCol + bar.span - 1;
+      return { ...bar, lane };
+    });
+  }
 
   // Group LCP org-cal events by day
   const lcpEventsByDay = new Map<string, LcpEvent[]>();
@@ -373,90 +420,127 @@ export function CalendarView() {
           <p className="p-8 text-sm text-sparrow-gray">Loading…</p>
         ) : (
           <>
-            <div className="grid grid-cols-7 border-l border-t border-sparrow-rule">
+            <div className="border-l border-t border-sparrow-rule">
               {/* Day-of-week headers */}
-              {DOW.map(d => (
-                <div key={d} className="border-b border-r border-sparrow-rule bg-sparrow-mist px-2 py-1.5 text-center text-xs font-semibold text-sparrow-gray">
-                  {d}
-                </div>
-              ))}
+              <div className="grid grid-cols-7">
+                {DOW.map(d => (
+                  <div key={d} className="border-b border-r border-sparrow-rule bg-sparrow-mist px-2 py-1.5 text-center text-xs font-semibold text-sparrow-gray">
+                    {d}
+                  </div>
+                ))}
+              </div>
 
-              {/* Day cells */}
-              {cells.map((d, i) => {
-                if (d === null) {
-                  return <div key={`pad-${i}`} className="min-h-[6rem] border-b border-r border-sparrow-rule bg-sparrow-mist/30" />;
-                }
-                const dStr = cellDate(d);
-                const dayEvents    = eventsByDay.get(dStr) ?? [];
-                const dayLcpEvents = lcpEventsByDay.get(dStr) ?? [];
-                const dayDeadlines = deadlinesByDay.get(dStr) ?? [];
-                const isToday = dStr === todayStr;
-                const isPast = dStr < todayStr;
-                const shown = dayEvents.slice(0, 3);
-                const overflow = dayEvents.length - shown.length;
-
+              {/* Week rows — each has an optional multi-day spanning band + day cells */}
+              {weeks.map((week, wi) => {
+                const bars = getBarsForWeek(week);
+                const numLanes = bars.length > 0 ? Math.max(...bars.map(b => b.lane)) + 1 : 0;
                 return (
-                  <div key={dStr} className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${isPast ? 'bg-sparrow-mist/30' : ''}`}>
-                    <div className="flex items-center justify-between">
-                      <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : isPast ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
-                        {d}
-                      </span>
-                      <button
-                        onClick={() => openAdd(dStr)}
-                        className="hidden rounded px-1 text-sm leading-none text-sparrow-gray hover:text-sparrow-green group-hover:block"
-                        aria-label={`Add event on ${dStr}`}
-                      >+</button>
-                    </div>
-
-                    <div className={`mt-1 space-y-0.5 ${isPast ? 'opacity-60' : ''}`}>
-                      {shown.map(ev => {
-                        const evStartD = localISO(new Date(ev.starts_at));
-                        const isStart = dStr === evStartD;
-                        return (
-                          <button
-                            key={ev.id}
-                            onClick={() => setDetailEvent(ev)}
-                            className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind]} ${!isStart ? 'opacity-75' : ''}`}
-                            onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
-                            onMouseLeave={() => setCalTooltip(null)}
-                          >
-                            {!isStart ? '↳ ' : ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
-                          </button>
-                        );
-                      })}
-                      {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
-                    </div>
-
-                    {/* LCP dept events (show_on_org_calendar = true) */}
-                    {dayLcpEvents.map(ev => (
+                  <div key={wi}>
+                    {/* Spanning bars for multi-day all-day events */}
+                    {numLanes > 0 && (
                       <div
-                        key={ev.id}
-                        className="mt-0.5 w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight bg-emerald-100 text-emerald-800"
-                        onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: `LCP · ${EVENT_LABEL[ev.kind]}`, x: e.clientX, y: e.clientY })}
-                        onMouseLeave={() => setCalTooltip(null)}
+                        className="grid grid-cols-7 border-b border-sparrow-rule px-0.5 pb-0.5 pt-0.5"
+                        style={{ gridAutoRows: '20px', rowGap: '2px' }}
                       >
-                        LCP · {ev.title}
-                      </div>
-                    ))}
-
-                    {/* Deadline task pills */}
-                    {dayDeadlines.length > 0 && (
-                      <div className="mt-0.5 space-y-0.5">
-                        {dayDeadlines.slice(0, 3).map(task => (
-                          <div
-                            key={task.id}
-                            className={`w-full truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${DEADLINE_PILL[task.priority]}`}
-                            onMouseEnter={(e) => setCalTooltip({ title: task.title, sub: task.priority.toUpperCase(), x: e.clientX, y: e.clientY })}
-                            onMouseLeave={() => setCalTooltip(null)}
-                          >
-                            {task.title}
-                          </div>
-                        ))}
-                        {dayDeadlines.length > 3 && (
-                          <p className="pl-1 text-[10px] text-sparrow-gray">+{dayDeadlines.length - 3} more</p>
-                        )}
+                        {bars.map(bar => {
+                          const rounding =
+                            bar.isActualStart && bar.isActualEnd ? 'rounded'
+                            : bar.isActualStart ? 'rounded-l'
+                            : bar.isActualEnd ? 'rounded-r'
+                            : '';
+                          return (
+                            <button
+                              key={bar.event.id}
+                              onClick={() => setDetailEvent(bar.event)}
+                              style={{ gridColumn: `${bar.startCol + 1} / span ${bar.span}`, gridRow: bar.lane + 1 }}
+                              className={`h-5 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-80 ${rounding} ${bar.event.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[bar.event.kind]}`}
+                              onMouseEnter={(e) => setCalTooltip({ title: bar.event.title, sub: bar.event.is_personal ? 'Personal' : KIND_LABEL[bar.event.kind], x: e.clientX, y: e.clientY })}
+                              onMouseLeave={() => setCalTooltip(null)}
+                            >
+                              {bar.event.title}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
+
+                    {/* Day cells */}
+                    <div className="grid grid-cols-7">
+                      {week.map((d, col) => {
+                        if (d === null) {
+                          return <div key={`pad-${wi}-${col}`} className="min-h-[6rem] border-b border-r border-sparrow-rule bg-sparrow-mist/30" />;
+                        }
+                        const dStr = cellDate(d);
+                        const dayEvents    = singleDayByDate.get(dStr) ?? [];
+                        const dayLcpEvents = lcpEventsByDay.get(dStr) ?? [];
+                        const dayDeadlines = deadlinesByDay.get(dStr) ?? [];
+                        const isToday = dStr === todayStr;
+                        const isPast = dStr < todayStr;
+                        const shown = dayEvents.slice(0, 3);
+                        const overflow = dayEvents.length - shown.length;
+
+                        return (
+                          <div key={dStr} className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${isPast ? 'bg-sparrow-mist/30' : ''}`}>
+                            <div className="flex items-center justify-between">
+                              <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : isPast ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
+                                {d}
+                              </span>
+                              <button
+                                onClick={() => openAdd(dStr)}
+                                className="hidden rounded px-1 text-sm leading-none text-sparrow-gray hover:text-sparrow-green group-hover:block"
+                                aria-label={`Add event on ${dStr}`}
+                              >+</button>
+                            </div>
+
+                            <div className={`mt-1 space-y-0.5 ${isPast ? 'opacity-60' : ''}`}>
+                              {shown.map(ev => (
+                                <button
+                                  key={ev.id}
+                                  onClick={() => setDetailEvent(ev)}
+                                  className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind]}`}
+                                  onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
+                                  onMouseLeave={() => setCalTooltip(null)}
+                                >
+                                  {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
+                                </button>
+                              ))}
+                              {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
+                            </div>
+
+                            {/* LCP dept events (show_on_org_calendar = true) */}
+                            {dayLcpEvents.map(ev => (
+                              <div
+                                key={ev.id}
+                                className="mt-0.5 w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight bg-emerald-100 text-emerald-800"
+                                onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: `LCP · ${EVENT_LABEL[ev.kind]}`, x: e.clientX, y: e.clientY })}
+                                onMouseLeave={() => setCalTooltip(null)}
+                              >
+                                LCP · {ev.title}
+                              </div>
+                            ))}
+
+                            {/* Deadline task pills */}
+                            {dayDeadlines.length > 0 && (
+                              <div className="mt-0.5 space-y-0.5">
+                                {dayDeadlines.slice(0, 3).map(task => (
+                                  <div
+                                    key={task.id}
+                                    className={`w-full truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${DEADLINE_PILL[task.priority]}`}
+                                    onMouseEnter={(e) => setCalTooltip({ title: task.title, sub: task.priority.toUpperCase(), x: e.clientX, y: e.clientY })}
+                                    onMouseLeave={() => setCalTooltip(null)}
+                                  >
+                                    {task.title}
+                                  </div>
+                                ))}
+                                {dayDeadlines.length > 3 && (
+                                  <p className="pl-1 text-[10px] text-sparrow-gray">+{dayDeadlines.length - 3} more</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
