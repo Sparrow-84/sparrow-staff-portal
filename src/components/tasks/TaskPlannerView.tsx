@@ -33,13 +33,14 @@ interface Props {
   today: string;
   delegatedIds: Set<string>;
   onOpen: (task: TaskWithPeople) => void;
-  onMoveDate: (taskId: string, dateIso: string) => void;
+  onMoveDate: (taskId: string, dateIso: string | null) => void;
   onToggle: (task: TaskWithPeople) => void;
 }
 
 export function TaskPlannerView({ tasks, today, delegatedIds, onOpen, onMoveDate, onToggle }: Props) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [overDate, setOverDate] = useState<string | null>(null);
+  const [overUndated, setOverUndated] = useState(false);
 
   const weekStart = useMemo(() => getWeekStart(today, weekOffset), [today, weekOffset]);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -165,13 +166,28 @@ export function TaskPlannerView({ tasks, today, delegatedIds, onOpen, onMoveDate
         })}
       </div>
 
-      {/* Undated tray */}
-      {undated.length > 0 && (
-        <div className="mt-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
-            No date · {undated.length}{' '}
-            <span className="font-normal normal-case">(drag onto a day to schedule)</span>
-          </p>
+      {/* Undated tray — always visible; drop here to clear a due date */}
+      <div
+        className={`mt-4 rounded-xl border-2 border-dashed p-3 transition ${
+          overUndated ? 'border-sparrow-gold bg-amber-50' : 'border-sparrow-rule'
+        }`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOverUndated(true);
+        }}
+        onDragLeave={() => setOverUndated(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setOverUndated(false);
+          const id = e.dataTransfer.getData('text/plain');
+          if (id) onMoveDate(id, null);
+        }}
+      >
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+          Unscheduled{undated.length > 0 ? ` · ${undated.length}` : ''}{' '}
+          <span className="font-normal normal-case">— drag here to clear due date</span>
+        </p>
+        {undated.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {undated.map((t) => (
               <button
@@ -185,8 +201,10 @@ export function TaskPlannerView({ tasks, today, delegatedIds, onOpen, onMoveDate
               </button>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-xs text-sparrow-gray/50">No unscheduled tasks</p>
+        )}
+      </div>
     </div>
   );
 }

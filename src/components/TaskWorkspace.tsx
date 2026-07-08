@@ -113,7 +113,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
       onChanged();
     });
   }
-  function moveToDate(taskId: string, dateIso: string) {
+  function moveToDate(taskId: string, dateIso: string | null) {
     const t = tasks.find((x) => x.id === taskId);
     if (!t || t.due_date === dateIso) return;
     startTransition(async () => {
