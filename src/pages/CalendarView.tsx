@@ -430,117 +430,128 @@ export function CalendarView() {
                 ))}
               </div>
 
-              {/* Week rows — each has an optional multi-day spanning band + day cells */}
+              {/* Week rows — bars and day cells share ONE 7-col grid for perfect alignment */}
               {weeks.map((week, wi) => {
                 const bars = getBarsForWeek(week);
                 const numLanes = bars.length > 0 ? Math.max(...bars.map(b => b.lane)) + 1 : 0;
+                // Row 1 = bar band (auto-sized), Row 2 = day cells. When no bars, one row.
+                const cellRow = numLanes > 0 ? 2 : 1;
                 return (
-                  <div key={wi}>
-                    {/* Spanning bars for multi-day all-day events */}
-                    {numLanes > 0 && (
-                      <div
-                        className="grid grid-cols-7 border-b border-sparrow-rule px-0.5 pb-0.5 pt-0.5"
-                        style={{ gridAutoRows: '20px', rowGap: '2px' }}
-                      >
-                        {bars.map(bar => {
-                          const rounding =
-                            bar.isActualStart && bar.isActualEnd ? 'rounded'
-                            : bar.isActualStart ? 'rounded-l'
-                            : bar.isActualEnd ? 'rounded-r'
-                            : '';
-                          return (
-                            <button
-                              key={bar.event.id}
-                              onClick={() => setDetailEvent(bar.event)}
-                              style={{ gridColumn: `${bar.startCol + 1} / span ${bar.span}`, gridRow: bar.lane + 1 }}
-                              className={`h-5 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-80 ${rounding} ${bar.event.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[bar.event.kind]}`}
-                              onMouseEnter={(e) => setCalTooltip({ title: bar.event.title, sub: bar.event.is_personal ? 'Personal' : KIND_LABEL[bar.event.kind], x: e.clientX, y: e.clientY })}
-                              onMouseLeave={() => setCalTooltip(null)}
-                            >
-                              {bar.event.title}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                  <div
+                    key={wi}
+                    className="grid grid-cols-7"
+                    style={numLanes > 0 ? { gridTemplateRows: `${numLanes * 22 + 4}px auto` } : undefined}
+                  >
+                    {/* Multi-day spanning bars in grid row 1 */}
+                    {bars.map(bar => {
+                      const rounding =
+                        bar.isActualStart && bar.isActualEnd ? 'rounded'
+                        : bar.isActualStart ? 'rounded-l'
+                        : bar.isActualEnd ? 'rounded-r'
+                        : '';
+                      return (
+                        <button
+                          key={bar.event.id}
+                          onClick={() => setDetailEvent(bar.event)}
+                          style={{
+                            gridColumn: `${bar.startCol + 1} / span ${bar.span}`,
+                            gridRow: 1,
+                            marginTop: `${2 + bar.lane * 22}px`,
+                          }}
+                          className={`mx-0.5 h-5 truncate px-1.5 text-left text-[11px] font-medium leading-5 transition hover:opacity-80 ${rounding} ${bar.event.is_personal ? 'bg-slate-400 text-white' : KIND_PILL[bar.event.kind]}`}
+                          onMouseEnter={(e) => setCalTooltip({ title: bar.event.title, sub: bar.event.is_personal ? 'Personal' : KIND_LABEL[bar.event.kind], x: e.clientX, y: e.clientY })}
+                          onMouseLeave={() => setCalTooltip(null)}
+                        >
+                          {bar.event.title}
+                        </button>
+                      );
+                    })}
 
-                    {/* Day cells */}
-                    <div className="grid grid-cols-7">
-                      {week.map((d, col) => {
-                        if (d === null) {
-                          return <div key={`pad-${wi}-${col}`} className="min-h-[6rem] border-b border-r border-sparrow-rule bg-sparrow-mist/30" />;
-                        }
-                        const dStr = cellDate(d);
-                        const dayEvents    = singleDayByDate.get(dStr) ?? [];
-                        const dayLcpEvents = lcpEventsByDay.get(dStr) ?? [];
-                        const dayDeadlines = deadlinesByDay.get(dStr) ?? [];
-                        const isToday = dStr === todayStr;
-                        const isPast = dStr < todayStr;
-                        const shown = dayEvents.slice(0, 3);
-                        const overflow = dayEvents.length - shown.length;
-
+                    {/* Day cells in grid row 2 (explicit column placement) */}
+                    {week.map((d, col) => {
+                      if (d === null) {
                         return (
-                          <div key={dStr} className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${isPast ? 'bg-sparrow-mist/30' : ''}`}>
-                            <div className="flex items-center justify-between">
-                              <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : isPast ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
-                                {d}
-                              </span>
+                          <div
+                            key={`pad-${wi}-${col}`}
+                            style={{ gridColumn: col + 1, gridRow: cellRow }}
+                            className="min-h-[6rem] border-b border-r border-sparrow-rule bg-sparrow-mist/30"
+                          />
+                        );
+                      }
+                      const dStr = cellDate(d);
+                      const dayEvents    = singleDayByDate.get(dStr) ?? [];
+                      const dayLcpEvents = lcpEventsByDay.get(dStr) ?? [];
+                      const dayDeadlines = deadlinesByDay.get(dStr) ?? [];
+                      const isToday = dStr === todayStr;
+                      const isPast = dStr < todayStr;
+                      const shown = dayEvents.slice(0, 3);
+                      const overflow = dayEvents.length - shown.length;
+
+                      return (
+                        <div
+                          key={dStr}
+                          style={{ gridColumn: col + 1, gridRow: cellRow }}
+                          className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${isPast ? 'bg-sparrow-mist/30' : ''}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : isPast ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
+                              {d}
+                            </span>
+                            <button
+                              onClick={() => openAdd(dStr)}
+                              className="hidden rounded px-1 text-sm leading-none text-sparrow-gray hover:text-sparrow-green group-hover:block"
+                              aria-label={`Add event on ${dStr}`}
+                            >+</button>
+                          </div>
+
+                          <div className={`mt-1 space-y-0.5 ${isPast ? 'opacity-60' : ''}`}>
+                            {shown.map(ev => (
                               <button
-                                onClick={() => openAdd(dStr)}
-                                className="hidden rounded px-1 text-sm leading-none text-sparrow-gray hover:text-sparrow-green group-hover:block"
-                                aria-label={`Add event on ${dStr}`}
-                              >+</button>
-                            </div>
-
-                            <div className={`mt-1 space-y-0.5 ${isPast ? 'opacity-60' : ''}`}>
-                              {shown.map(ev => (
-                                <button
-                                  key={ev.id}
-                                  onClick={() => setDetailEvent(ev)}
-                                  className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind]}`}
-                                  onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
-                                  onMouseLeave={() => setCalTooltip(null)}
-                                >
-                                  {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
-                                </button>
-                              ))}
-                              {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
-                            </div>
-
-                            {/* LCP dept events (show_on_org_calendar = true) */}
-                            {dayLcpEvents.map(ev => (
-                              <div
                                 key={ev.id}
-                                className="mt-0.5 w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight bg-emerald-100 text-emerald-800"
-                                onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: `LCP · ${EVENT_LABEL[ev.kind]}`, x: e.clientX, y: e.clientY })}
+                                onClick={() => setDetailEvent(ev)}
+                                className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind]}`}
+                                onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
                                 onMouseLeave={() => setCalTooltip(null)}
                               >
-                                LCP · {ev.title}
-                              </div>
+                                {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
+                              </button>
                             ))}
-
-                            {/* Deadline task pills */}
-                            {dayDeadlines.length > 0 && (
-                              <div className="mt-0.5 space-y-0.5">
-                                {dayDeadlines.slice(0, 3).map(task => (
-                                  <div
-                                    key={task.id}
-                                    className={`w-full truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${DEADLINE_PILL[task.priority]}`}
-                                    onMouseEnter={(e) => setCalTooltip({ title: task.title, sub: task.priority.toUpperCase(), x: e.clientX, y: e.clientY })}
-                                    onMouseLeave={() => setCalTooltip(null)}
-                                  >
-                                    {task.title}
-                                  </div>
-                                ))}
-                                {dayDeadlines.length > 3 && (
-                                  <p className="pl-1 text-[10px] text-sparrow-gray">+{dayDeadlines.length - 3} more</p>
-                                )}
-                              </div>
-                            )}
+                            {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
                           </div>
-                        );
-                      })}
-                    </div>
+
+                          {/* LCP dept events (show_on_org_calendar = true) */}
+                          {dayLcpEvents.map(ev => (
+                            <div
+                              key={ev.id}
+                              className="mt-0.5 w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight bg-emerald-100 text-emerald-800"
+                              onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: `LCP · ${EVENT_LABEL[ev.kind]}`, x: e.clientX, y: e.clientY })}
+                              onMouseLeave={() => setCalTooltip(null)}
+                            >
+                              LCP · {ev.title}
+                            </div>
+                          ))}
+
+                          {/* Deadline task pills */}
+                          {dayDeadlines.length > 0 && (
+                            <div className="mt-0.5 space-y-0.5">
+                              {dayDeadlines.slice(0, 3).map(task => (
+                                <div
+                                  key={task.id}
+                                  className={`w-full truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${DEADLINE_PILL[task.priority]}`}
+                                  onMouseEnter={(e) => setCalTooltip({ title: task.title, sub: task.priority.toUpperCase(), x: e.clientX, y: e.clientY })}
+                                  onMouseLeave={() => setCalTooltip(null)}
+                                >
+                                  {task.title}
+                                </div>
+                              ))}
+                              {dayDeadlines.length > 3 && (
+                                <p className="pl-1 text-[10px] text-sparrow-gray">+{dayDeadlines.length - 3} more</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
