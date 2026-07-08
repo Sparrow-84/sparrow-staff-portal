@@ -60,6 +60,7 @@ const CONTENT_CLASSES =
 
 export function MeetingNotesView({ event, userId, onClose }: Props) {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [privateStatus, setPrivateStatus] = useState<SaveStatus>('idle');
   const [sharedStatus, setSharedStatus] = useState<SaveStatus>('idle');
 
@@ -71,44 +72,61 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   const latestLive = useRef('');
   const latestShared = useRef('');
 
+  // Guard: only allow unmount flush and saves if initial load succeeded.
+  // Without this, a failed load would autosave empty strings over existing notes.
+  const loadSucceeded = useRef(false);
+
   const privateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sharedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     async function load() {
-      const [{ data: priv }, { data: shared }] = await Promise.all([
-        supabase
-          .from('meeting_notes')
-          .select('prep_notes, live_notes')
-          .eq('event_id', event.id)
-          .eq('user_id', userId)
-          .maybeSingle(),
-        supabase
-          .from('event_shared_notes')
-          .select('notes')
-          .eq('event_id', event.id)
-          .maybeSingle(),
-      ]);
-      if (priv) {
-        latestPrep.current = priv.prep_notes;
-        latestLive.current = priv.live_notes;
-        if (prepRef.current) prepRef.current.innerHTML = priv.prep_notes;
-        if (liveRef.current) liveRef.current.innerHTML = priv.live_notes;
+      try {
+        const [{ data: priv, error: privErr }, { data: shared, error: sharedErr }] = await Promise.all([
+          supabase
+            .from('meeting_notes')
+            .select('prep_notes, live_notes')
+            .eq('event_id', event.id)
+            .eq('user_id', userId)
+            .maybeSingle(),
+          supabase
+            .from('event_shared_notes')
+            .select('notes')
+            .eq('event_id', event.id)
+            .maybeSingle(),
+        ]);
+        if (privErr || sharedErr) {
+          setLoadError(true);
+          setLoading(false);
+          return;
+        }
+        if (priv) {
+          latestPrep.current = priv.prep_notes;
+          latestLive.current = priv.live_notes;
+          if (prepRef.current) prepRef.current.innerHTML = priv.prep_notes;
+          if (liveRef.current) liveRef.current.innerHTML = priv.live_notes;
+        }
+        if (shared) {
+          latestShared.current = shared.notes;
+          if (sharedRef.current) sharedRef.current.innerHTML = shared.notes;
+        }
+        loadSucceeded.current = true;
+        setLoading(false);
+      } catch {
+        setLoadError(true);
+        setLoading(false);
       }
-      if (shared) {
-        latestShared.current = shared.notes;
-        if (sharedRef.current) sharedRef.current.innerHTML = shared.notes;
-      }
-      setLoading(false);
     }
     void load();
   }, [event.id, userId]);
 
-  // Flush any unsaved content on unmount — best-effort, no await
+  // Flush any unsaved content on unmount — best-effort, no await.
+  // Skipped entirely if initial load failed to prevent overwriting existing notes with empty state.
   useEffect(() => {
     return () => {
       if (privateTimer.current) clearTimeout(privateTimer.current);
       if (sharedTimer.current) clearTimeout(sharedTimer.current);
+      if (!loadSucceeded.current) return;
       void supabase.from('meeting_notes').upsert(
         {
           event_id: event.id,
@@ -134,6 +152,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   }, [event.id, userId]);
 
   const schedulePrivateSave = useCallback(() => {
+    if (!loadSucceeded.current) return;
     if (privateTimer.current) clearTimeout(privateTimer.current);
     setPrivateStatus('idle');
     privateTimer.current = setTimeout(async () => {
@@ -153,6 +172,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   }, [event.id, userId]);
 
   const scheduleSharedSave = useCallback(() => {
+    if (!loadSucceeded.current) return;
     if (sharedTimer.current) clearTimeout(sharedTimer.current);
     setSharedStatus('idle');
     sharedTimer.current = setTimeout(async () => {
@@ -218,6 +238,21 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
         <p className="text-sm text-sparrow-gray">Loading notes…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-white">
+        <p className="text-sm font-medium text-sparrow-ink">Could not load meeting notes.</p>
+        <p className="text-sm text-sparrow-gray">Your existing notes are safe. Try closing and reopening, or refreshing the page.</p>
+        <button
+          onClick={onClose}
+          className="rounded-xl border border-sparrow-rule px-4 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist"
+        >
+          Close
+        </button>
       </div>
     );
   }
