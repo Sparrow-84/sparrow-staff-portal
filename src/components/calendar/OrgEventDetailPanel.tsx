@@ -29,7 +29,7 @@ interface Props {
 export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, onDeleted, onUpdated, onOpenNotes }: Props) {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [confirm, setConfirm] = useState(false);
-  const [notesPreview, setNotesPreview] = useState<{ prep: string; shared: string } | null>(null);
+  const [notesPreview, setNotesPreview] = useState<{ prep: string; live: string; shared: string } | null>(null);
   const [deletingMode, setDeletingMode] = useState<null | 'single' | 'future'>(null);
   const [saving, setSaving] = useState<null | 'single' | 'future'>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
       const [{ data: priv }, { data: sharedData }] = await Promise.all([
         supabase
           .from('meeting_notes')
-          .select('prep_notes')
+          .select('prep_notes, live_notes')
           .eq('event_id', eventId)
           .eq('user_id', currentUserId)
           .maybeSingle(),
@@ -61,8 +61,9 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
           .maybeSingle(),
       ]);
       const prep = priv?.prep_notes ?? '';
+      const live = priv?.live_notes ?? '';
       const shared = sharedData?.notes ?? '';
-      setNotesPreview(prep || shared ? { prep, shared } : null);
+      setNotesPreview(prep || live || shared ? { prep, live, shared } : null);
     }
     void fetchNotesPreview();
   }, [event?.id, currentUserId]);
@@ -395,14 +396,23 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
             </div>
           )}
 
-          {notesPreview && (notesPreview.prep || notesPreview.shared) && (
+          {notesPreview && (notesPreview.prep || notesPreview.live || notesPreview.shared) && (
             <div className="space-y-3">
               {notesPreview.prep && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Your Notes</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Prep Notes</p>
                   <div
                     className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-amber-50 p-3 text-sm leading-relaxed text-sparrow-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
                     dangerouslySetInnerHTML={{ __html: notesPreview.prep }}
+                  />
+                </div>
+              )}
+              {notesPreview.live && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">Live Notes</p>
+                  <div
+                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-green-50 p-3 text-sm leading-relaxed text-sparrow-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
+                    dangerouslySetInnerHTML={{ __html: notesPreview.live }}
                   />
                 </div>
               )}

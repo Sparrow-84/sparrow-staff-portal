@@ -9,7 +9,6 @@ interface Props {
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
-type ActiveTab = 'your-notes' | 'shared';
 
 function sanitize(html: string): string {
   return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
@@ -63,7 +62,6 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   const [loading, setLoading] = useState(true);
   const [privateStatus, setPrivateStatus] = useState<SaveStatus>('idle');
   const [sharedStatus, setSharedStatus] = useState<SaveStatus>('idle');
-  const [activeTab, setActiveTab] = useState<ActiveTab>('your-notes');
 
   const prepRef = useRef<HTMLDivElement>(null);
   const liveRef = useRef<HTMLDivElement>(null);
@@ -209,7 +207,12 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
       ? `${startsAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} – ${endsAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
       : startsAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
-  const displayStatus = activeTab === 'your-notes' ? privateStatus : sharedStatus;
+  // Show the most active save status in the header
+  const displayStatus: SaveStatus =
+    privateStatus === 'saving' || sharedStatus === 'saving' ? 'saving'
+    : privateStatus === 'error' || sharedStatus === 'error' ? 'error'
+    : privateStatus === 'saved' || sharedStatus === 'saved' ? 'saved'
+    : 'idle';
 
   if (loading) {
     return (
@@ -245,73 +248,48 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-sparrow-rule">
-        <button
-          onClick={() => setActiveTab('your-notes')}
-          className={`px-6 py-2.5 text-sm font-medium transition-colors ${
-            activeTab === 'your-notes'
-              ? 'border-b-2 border-sparrow-green text-sparrow-green'
-              : 'text-sparrow-gray hover:text-sparrow-ink'
-          }`}
-        >
-          Your Notes
-        </button>
-        <button
-          onClick={() => setActiveTab('shared')}
-          className={`px-6 py-2.5 text-sm font-medium transition-colors ${
-            activeTab === 'shared'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-sparrow-gray hover:text-sparrow-ink'
-          }`}
-        >
-          Shared Notes
-        </button>
-      </div>
-
       {/* Formatting toolbar */}
       <Toolbar />
 
-      {/* Content */}
-      {activeTab === 'your-notes' ? (
-        <div className="flex flex-1 overflow-hidden">
-          {/* Prep Notes */}
-          <div className="flex flex-1 flex-col border-r border-sparrow-rule">
-            <div className="border-b border-sparrow-rule bg-amber-50 px-6 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Prep Notes</p>
-              <p className="text-xs text-amber-600/70">Written before the meeting · only visible to you</p>
-            </div>
-            <div
-              ref={prepRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={handlePrepInput}
-              onPaste={handlePaste}
-              className={`${CONTENT_CLASSES} bg-amber-50/20`}
-            />
+      {/* Three-column notes area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Prep Notes */}
+        <div className="flex flex-1 flex-col border-r border-sparrow-rule">
+          <div className="border-b border-sparrow-rule bg-amber-50 px-6 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Prep Notes</p>
+            <p className="text-xs text-amber-600/70">Before the meeting · only visible to you</p>
           </div>
-
-          {/* Live Notes */}
-          <div className="flex flex-1 flex-col">
-            <div className="border-b border-sparrow-rule bg-green-50 px-6 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">Live Notes</p>
-              <p className="text-xs text-sparrow-green/60">Written during the meeting · only visible to you</p>
-            </div>
-            <div
-              ref={liveRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={handleLiveInput}
-              onPaste={handlePaste}
-              className={`${CONTENT_CLASSES} bg-green-50/20`}
-            />
-          </div>
+          <div
+            ref={prepRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={handlePrepInput}
+            onPaste={handlePaste}
+            className={`${CONTENT_CLASSES} bg-amber-50/20`}
+          />
         </div>
-      ) : (
+
+        {/* Live Notes */}
+        <div className="flex flex-1 flex-col border-r border-sparrow-rule">
+          <div className="border-b border-sparrow-rule bg-green-50 px-6 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">Live Notes</p>
+            <p className="text-xs text-sparrow-green/60">During the meeting · only visible to you</p>
+          </div>
+          <div
+            ref={liveRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={handleLiveInput}
+            onPaste={handlePaste}
+            className={`${CONTENT_CLASSES} bg-green-50/20`}
+          />
+        </div>
+
+        {/* Shared Notes */}
         <div className="flex flex-1 flex-col">
           <div className="border-b border-sparrow-rule bg-blue-50 px-6 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Shared Notes</p>
-            <p className="text-xs text-blue-600/70">Visible and editable by everyone with access to this calendar</p>
+            <p className="text-xs text-blue-600/70">Visible to everyone with calendar access</p>
           </div>
           <div
             ref={sharedRef}
@@ -322,7 +300,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
             className={`${CONTENT_CLASSES} bg-blue-50/20`}
           />
         </div>
-      )}
+      </div>
     </div>
   );
 }
