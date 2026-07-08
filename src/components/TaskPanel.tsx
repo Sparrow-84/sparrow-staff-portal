@@ -1,4 +1,4 @@
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import {
   DEPARTMENTS,
   PRIORITIES,
@@ -9,10 +9,110 @@ import {
   type TaskStatus,
   type TaskWithPeople,
 } from '@/lib/types';
-import { addComment, createTask, deleteTask, notifyTaskCommentMentions, updateTask, type TaskInput } from '@/lib/data';
+import {
+  addComment,
+  createTask,
+  deleteTask,
+  deleteFutureRecurringTasks,
+  notifyTaskCommentMentions,
+  updateTask,
+  type TaskInput,
+} from '@/lib/data';
 import { parseMentionIds } from '@/lib/chat';
 import { MentionInput } from '@/components/chat/MentionInput';
 import { LABEL_COLORS, LabelPill } from '@/components/LabelPill';
+
+// ── Recurrence helpers ────────────────────────────────────────────────────────
+
+function rLocalISO(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function rAddMonths(base: Date, n: number): Date {
+  const d = new Date(base);
+  d.setMonth(d.getMonth() + n);
+  return d;
+}
+
+function getNthDow(d: Date): { n: number; dow: number } {
+  return { dow: d.getDay(), n: Math.ceil(d.getDate() / 7) };
+}
+
+const DOW_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const NTH = ['', '1st', '2nd', '3rd', '4th', '5th'];
+
+function monthlyDateLabel(startDate: string): string {
+  if (!startDate) return 'Monthly on this date';
+  const d = new Date(startDate + 'T12:00:00');
+  return `Monthly on day ${d.getDate()}`;
+}
+
+function monthlyDowLabel(startDate: string): string {
+  if (!startDate) return 'Monthly on this weekday';
+  const d = new Date(startDate + 'T12:00:00');
+  const { n, dow } = getNthDow(d);
+  return `Monthly on the ${NTH[n] ?? `${n}th`} ${DOW_NAMES[dow]}`;
+}
+
+function generateTaskDates(
+  startDate: string,
+  freq: 'weekly' | 'biweekly' | 'monthly-date' | 'monthly-dow',
+  daysOfWeek: number[],
+  untilDate: string,
+): string[] {
+  if (!startDate || !untilDate || untilDate < startDate) return startDate ? [startDate] : [];
+  const dates: string[] = [];
+
+  if (freq === 'weekly' || freq === 'biweekly') {
+    const step = freq === 'biweekly' ? 14 : 7;
+    const start = new Date(startDate + 'T12:00:00');
+    const activeDows = daysOfWeek.length > 0 ? daysOfWeek : [start.getDay()];
+    for (const dow of activeDows) {
+      const d = new Date(start);
+      const diff = (dow - d.getDay() + 7) % 7;
+      d.setDate(d.getDate() + diff);
+      while (rLocalISO(d) <= untilDate) {
+        dates.push(rLocalISO(d));
+        d.setDate(d.getDate() + step);
+      }
+    }
+    return [...new Set(dates)].sort();
+  }
+
+  if (freq === 'monthly-date') {
+    let cur = new Date(startDate + 'T12:00:00');
+    while (rLocalISO(cur) <= untilDate) {
+      dates.push(rLocalISO(cur));
+      cur = rAddMonths(cur, 1);
+    }
+    return dates;
+  }
+
+  if (freq === 'monthly-dow') {
+    const start = new Date(startDate + 'T12:00:00');
+    const { n, dow } = getNthDow(start);
+    for (let mo = 0; mo <= 120; mo++) {
+      const ref = rAddMonths(start, mo);
+      const target = new Date(ref.getFullYear(), ref.getMonth(), 1);
+      let count = 0;
+      while (target.getMonth() === ref.getMonth()) {
+        if (target.getDay() === dow) {
+          count++;
+          if (count === n) break;
+        }
+        target.setDate(target.getDate() + 1);
+      }
+      if (rLocalISO(target) > untilDate) break;
+      if (rLocalISO(target) >= startDate) dates.push(rLocalISO(target));
+    }
+    return dates;
+  }
+
+  return [startDate];
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props {
   open: boolean;
@@ -40,11 +140,22 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
   const [labelColor, setLabelColor] = useState('blue');
   const [comment, setComment] = useState('');
 
+  // Recurring task state (new tasks only)
+  const [recurring, setRecurring] = useState(false);
+  const [rFrequency, setRFrequency] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly');
+  const [rMonthlyMode, setRMonthlyMode] = useState<'date' | 'dow'>('date');
+  const [rDaysOfWeek, setRDaysOfWeek] = useState<number[]>([]);
+  const [rUntilDate, setRUntilDate] = useState('');
+
+  // Delete confirmation for recurring tasks
+  const [deleteChoice, setDeleteChoice] = useState(false);
+
   // Reset the form whenever the panel opens for a new/different task.
   useEffect(() => {
     if (!open) return;
     setError(null);
     setComment('');
+    setDeleteChoice(false);
     if (task) {
       setTitle(task.title);
       setNotes(task.notes ?? '');
@@ -65,24 +176,49 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
       setStatus('todo');
       setLabel('');
       setLabelColor('blue');
+      setRecurring(false);
+      setRFrequency('weekly');
+      setRMonthlyMode('date');
+      setRDaysOfWeek([]);
+      setRUntilDate('');
     }
   }, [open, task, currentUser.id, currentUser.department]);
 
   const tomorrow = (() => {
     const d = new Date(today + 'T00:00:00');
     d.setDate(d.getDate() + 1);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
+
+  function handleToggleRecurring(checked: boolean) {
+    setRecurring(checked);
+    if (checked && dueDate && rDaysOfWeek.length === 0) {
+      setRDaysOfWeek([new Date(dueDate + 'T12:00:00').getDay()]);
+    }
+  }
+
+  function toggleDow(i: number) {
+    setRDaysOfWeek((prev) => (prev.includes(i) ? prev.filter((d) => d !== i) : [...prev, i]));
+  }
+
+  const effectiveFreq: 'weekly' | 'biweekly' | 'monthly-date' | 'monthly-dow' = useMemo(() => {
+    if (rFrequency === 'monthly') return rMonthlyMode === 'dow' ? 'monthly-dow' : 'monthly-date';
+    return rFrequency;
+  }, [rFrequency, rMonthlyMode]);
+
+  const occurrenceDates = useMemo((): string[] => {
+    if (!recurring || !dueDate) return [];
+    const effectiveDows =
+      rDaysOfWeek.length > 0 ? rDaysOfWeek : [new Date(dueDate + 'T12:00:00').getDay()];
+    return generateTaskDates(dueDate, effectiveFreq, effectiveDows, rUntilDate);
+  }, [recurring, dueDate, effectiveFreq, rDaysOfWeek, rUntilDate]);
 
   function save() {
     if (!title.trim()) {
       setError('A title is required.');
       return;
     }
-    const input: TaskInput = {
+    const base: TaskInput = {
       title: title.trim(),
       notes: notes.trim() || null,
       due_date: dueDate || null,
@@ -95,8 +231,18 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
     };
     startTransition(async () => {
       try {
-        if (task) await updateTask(task.id, input);
-        else await createTask(input, currentUser.id);
+        if (task) {
+          await updateTask(task.id, base);
+        } else if (recurring && occurrenceDates.length > 1) {
+          const rid = crypto.randomUUID();
+          await Promise.all(
+            occurrenceDates.map((d) =>
+              createTask({ ...base, due_date: d, recurrence_id: rid }, currentUser.id),
+            ),
+          );
+        } else {
+          await createTask(base, currentUser.id);
+        }
         onChanged();
         onClose();
       } catch (e) {
@@ -107,9 +253,26 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
 
   function remove() {
     if (!task) return;
+    if (task.recurrence_id && !deleteChoice) {
+      setDeleteChoice(true);
+      return;
+    }
     startTransition(async () => {
       try {
         await deleteTask(task.id);
+        onChanged();
+        onClose();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Could not delete.');
+      }
+    });
+  }
+
+  function removeFuture() {
+    if (!task?.recurrence_id || !task.due_date) return;
+    startTransition(async () => {
+      try {
+        await deleteFutureRecurringTasks(task.recurrence_id!, task.due_date!);
         onChanged();
         onClose();
       } catch (e) {
@@ -137,6 +300,14 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
   }
 
   const nameById = (id: string) => profiles.find((p) => p.id === id)?.full_name ?? 'Someone';
+
+  const saveLabel = pending
+    ? 'Saving…'
+    : task
+      ? 'Save'
+      : recurring && occurrenceDates.length > 1
+        ? `Create ${occurrenceDates.length} tasks`
+        : 'Create task';
 
   return (
     <>
@@ -166,6 +337,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             <p className="text-sm font-medium text-red-700">{error}</p>
           </div>
         )}
+
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <label className="field-label" htmlFor="t-title">
             Task
@@ -298,7 +470,10 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
               {label && (
                 <button
                   type="button"
-                  onClick={() => { setLabel(''); setLabelColor('blue'); }}
+                  onClick={() => {
+                    setLabel('');
+                    setLabelColor('blue');
+                  }}
                   className="shrink-0 text-xs text-sparrow-gray hover:text-sparrow-ink"
                   aria-label="Clear label"
                 >
@@ -327,6 +502,128 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             )}
           </div>
 
+          {/* Recurring badge for existing tasks */}
+          {task?.recurrence_id && (
+            <div className="mt-3 rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink">
+              Part of a recurring series — changes apply to this task only.
+            </div>
+          )}
+
+          {/* Recurring setup — new tasks only */}
+          {!task && (
+            <div className="mt-4 border-t border-sparrow-rule pt-4">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={recurring}
+                  onChange={(e) => handleToggleRecurring(e.target.checked)}
+                  className="h-4 w-4 accent-sparrow-green"
+                />
+                <span className="text-sm font-medium text-sparrow-ink">Repeat this task</span>
+              </label>
+
+              {recurring && (
+                <div className="mt-3 space-y-3">
+                  {/* Frequency */}
+                  <div>
+                    <span className="field-label block mb-1">Repeats</span>
+                    <div className="flex gap-2">
+                      {(['weekly', 'biweekly', 'monthly'] as const).map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setRFrequency(f)}
+                          className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                            rFrequency === f
+                              ? 'border-sparrow-green bg-sparrow-green text-white'
+                              : 'border-sparrow-rule bg-white text-sparrow-gray hover:text-sparrow-ink'
+                          }`}
+                        >
+                          {f === 'weekly' ? 'Weekly' : f === 'biweekly' ? 'Every 2 weeks' : 'Monthly'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* DOW grid for weekly / biweekly */}
+                  {(rFrequency === 'weekly' || rFrequency === 'biweekly') && (
+                    <div>
+                      <span className="field-label block mb-1">On</span>
+                      <div className="flex gap-1">
+                        {DOW_LABELS.map((dl, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => toggleDow(i)}
+                            className={`h-8 w-9 rounded-lg border text-xs font-medium transition ${
+                              rDaysOfWeek.includes(i)
+                                ? 'border-sparrow-green bg-sparrow-green text-white'
+                                : 'border-sparrow-rule bg-white text-sparrow-gray hover:text-sparrow-ink'
+                            }`}
+                          >
+                            {dl}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Monthly mode radio */}
+                  {rFrequency === 'monthly' && (
+                    <div className="space-y-1.5">
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="rMonthlyMode"
+                          checked={rMonthlyMode === 'date'}
+                          onChange={() => setRMonthlyMode('date')}
+                          className="accent-sparrow-green"
+                        />
+                        {monthlyDateLabel(dueDate)}
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="rMonthlyMode"
+                          checked={rMonthlyMode === 'dow'}
+                          onChange={() => setRMonthlyMode('dow')}
+                          className="accent-sparrow-green"
+                        />
+                        {monthlyDowLabel(dueDate)}
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Until date */}
+                  <div>
+                    <label className="field-label" htmlFor="r-until">
+                      Repeat until
+                    </label>
+                    <input
+                      id="r-until"
+                      type="date"
+                      className="field-input"
+                      value={rUntilDate}
+                      onChange={(e) => setRUntilDate(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Occurrence count preview */}
+                  {rUntilDate && (
+                    <p className="text-xs text-sparrow-gray">
+                      {occurrenceDates.length === 0
+                        ? 'No dates match — check your settings.'
+                        : occurrenceDates.length === 1
+                          ? '1 task will be created'
+                          : `${occurrenceDates.length} tasks will be created`}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Comments (existing tasks only) */}
           {task && (
             <div className="mt-6 border-t border-sparrow-rule pt-4">
               <p className="field-label">Comments</p>
@@ -346,7 +643,9 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
                 <MentionInput
                   value={comment}
                   onChange={setComment}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) postComment(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) postComment();
+                  }}
                   staff={profiles}
                   disabled={pending}
                   placeholder="Add a comment… (@ to mention)"
@@ -358,14 +657,41 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
               </div>
             </div>
           )}
-
         </div>
 
         <div className="flex items-center justify-between border-t border-sparrow-rule px-5 py-4">
           {task ? (
-            <button onClick={remove} disabled={pending} className="btn-ghost text-priority-p1">
-              Delete
-            </button>
+            deleteChoice ? (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-sparrow-gray">Delete recurring task:</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={remove}
+                    disabled={pending}
+                    className="btn-ghost text-xs text-priority-p1"
+                  >
+                    This task only
+                  </button>
+                  <button
+                    onClick={removeFuture}
+                    disabled={pending}
+                    className="btn-ghost text-xs text-priority-p1"
+                  >
+                    This + future
+                  </button>
+                  <button
+                    onClick={() => setDeleteChoice(false)}
+                    className="btn-ghost text-xs"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={remove} disabled={pending} className="btn-ghost text-priority-p1">
+                Delete
+              </button>
+            )
           ) : (
             <span />
           )}
@@ -374,7 +700,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
               Cancel
             </button>
             <button onClick={save} disabled={pending} className="btn-primary">
-              {pending ? 'Saving…' : task ? 'Save' : 'Create task'}
+              {saveLabel}
             </button>
           </div>
         </div>

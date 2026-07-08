@@ -14,6 +14,7 @@ export interface TaskInput {
   status: TaskStatus;
   label?: string | null;
   label_color?: string | null;
+  recurrence_id?: string | null;
 }
 
 // ── Reads (RLS filters rows to what the signed-in user may see) ──────
@@ -61,6 +62,15 @@ export async function setTaskStatus(id: string, status: TaskStatus): Promise<voi
 
 export async function deleteTask(id: string): Promise<void> {
   const { error } = await supabase.from('tasks').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteFutureRecurringTasks(recurrenceId: string, fromDate: string): Promise<void> {
+  const { error } = await supabase
+    .from('tasks')
+    .delete()
+    .eq('recurrence_id', recurrenceId)
+    .gte('due_date', fromDate);
   if (error) throw new Error(error.message);
 }
 

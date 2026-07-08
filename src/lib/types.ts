@@ -47,6 +47,7 @@ export interface Task {
   source_ref: string | null; // room-stable key for dedup, e.g. 'homework:<uuid>'
   label: string | null;
   label_color: string | null;
+  recurrence_id: string | null;
   position: number;
   created_at: string;
   updated_at: string;
