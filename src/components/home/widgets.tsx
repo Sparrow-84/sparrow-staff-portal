@@ -517,9 +517,94 @@ function getWeekBounds(today: string): { weekStart: string; weekEnd: string } {
   return { weekStart: isoDate(sunday), weekEnd: isoDate(saturday) };
 }
 
+function DayDetailPopup({
+  date,
+  events,
+  tasks,
+  onClose,
+  onOpenTask,
+}: {
+  date: string;
+  events: { event: CalendarEvent; occursAt: Date }[];
+  tasks: TaskWithPeople[];
+  onClose: () => void;
+  onOpenTask: (t: TaskWithPeople) => void;
+}) {
+  const heading = new Date(date + 'T12:00:00').toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-sparrow-ink/20" onClick={onClose} aria-hidden />
+      <div className="fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-sparrow-rule bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-3">
+          <h3 className="font-serif text-base font-semibold text-sparrow-ink">{heading}</h3>
+          <button onClick={onClose} className="btn-ghost" aria-label="Close">✕</button>
+        </div>
+        <div className="max-h-96 overflow-y-auto px-4 py-3">
+          {events.length === 0 && tasks.length === 0 && (
+            <p className="py-4 text-center text-sm text-sparrow-gray">Nothing scheduled for this day.</p>
+          )}
+          {events.length > 0 && (
+            <div className={tasks.length > 0 ? 'mb-4' : ''}>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-sparrow-gray">Events</p>
+              <div className="space-y-2">
+                {events.map((o, i) => (
+                  <div key={`${o.event.id}-${i}`} className="rounded-lg bg-sparrow-mist px-3 py-2">
+                    <p className="text-sm font-medium text-sparrow-ink">{o.event.title}</p>
+                    <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-sparrow-gray">
+                      {!o.event.all_day && (
+                        <span>{o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+                      )}
+                      {o.event.location && <span>{o.event.location}</span>}
+                      <span>{o.event.is_personal ? 'Personal' : KIND_LABEL[o.event.kind]}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {tasks.length > 0 && (
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-sparrow-gray">Tasks</p>
+              <div className="space-y-1.5">
+                {tasks.map((t) => {
+                  const tier = TIER_META[tierForPriority(t.priority)];
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => { onOpenTask(t); onClose(); }}
+                      className="block w-full rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-left hover:bg-sparrow-mist"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${tier.dot}`} aria-hidden />
+                        <span className="text-sm text-sparrow-ink">{t.title}</span>
+                      </div>
+                      <div className="mt-0.5 flex gap-3">
+                        <span className={`text-xs ${tier.text}`}>{tier.label}</span>
+                        <span className="text-xs text-sparrow-gray">{WEEK_STATUS_LABELS[t.status]}</span>
+                      </div>
+                      {t.notes && (
+                        <p className="mt-1 line-clamp-2 text-xs text-sparrow-gray">{t.notes}</p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
   const { weekStart, weekEnd } = getWeekBounds(ctx.today);
   const [tooltip, setTooltip] = useState<WeekTooltipState | null>(null);
+  const [dayPopup, setDayPopup] = useState<string | null>(null);
 
   const weekEvents = expandEvents(
     ctx.events,
@@ -573,7 +658,12 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
           if (isPast && !isToday) {
             const hasContent = dayEvents.length > 0 || dayTasks.length > 0;
             return (
-              <div key={date} className="flex w-8 shrink-0 flex-col items-center py-1">
+              <button
+                key={date}
+                onClick={() => setDayPopup(date)}
+                className="flex w-8 shrink-0 flex-col items-center py-1 transition-opacity hover:opacity-70"
+                title={`View ${weekday}`}
+              >
                 <p className="text-[9px] font-medium uppercase leading-none text-sparrow-gray opacity-50">
                   {weekday.charAt(0)}
                 </p>
@@ -581,14 +671,15 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
                 {hasContent && (
                   <span className="mt-1.5 h-1 w-1 rounded-full bg-sparrow-gray opacity-30" aria-hidden />
                 )}
-              </div>
+              </button>
             );
           }
 
           return (
             <div
               key={date}
-              className={`min-h-[100px] min-w-[64px] flex-1 rounded-lg p-1.5 ${
+              onClick={() => setDayPopup(date)}
+              className={`min-h-[100px] min-w-[64px] flex-1 cursor-pointer rounded-lg p-1.5 transition-colors hover:ring-1 hover:ring-sparrow-green/40 ${
                 isToday
                   ? 'bg-sparrow-green/10 ring-1 ring-sparrow-green/30'
                   : 'bg-sparrow-mist/40'
@@ -623,7 +714,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
                 return (
                   <button
                     key={t.id}
-                    onClick={() => ctx.onOpenTask(t)}
+                    onClick={(e) => { e.stopPropagation(); ctx.onOpenTask(t); }}
                     className="mb-0.5 flex w-full items-center gap-1 rounded bg-white/60 px-1 py-0.5 text-left text-[10px] hover:bg-white"
                     onMouseEnter={(e) => setTooltip({ kind: 'task', task: t, x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => setTooltip(null)}
@@ -638,6 +729,15 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
         })}
       </div>
       {tooltip && <WeekTooltip state={tooltip} />}
+      {dayPopup && (
+        <DayDetailPopup
+          date={dayPopup}
+          events={weekEvents.filter((o) => isoDate(o.occursAt) === dayPopup)}
+          tasks={myTasks.filter((t) => t.due_date === dayPopup)}
+          onClose={() => setDayPopup(null)}
+          onOpenTask={ctx.onOpenTask}
+        />
+      )}
     </>
   );
 }
