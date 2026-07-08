@@ -9,6 +9,8 @@ import { isoDate } from '@/lib/tasks';
 import type { Profile, TaskComment, TaskWithPeople } from '@/lib/types';
 import { AnnouncementBar } from '../AnnouncementBar';
 import { TaskPanel } from '../TaskPanel';
+import { OrgEventDetailPanel } from '../calendar/OrgEventDetailPanel';
+import { MeetingNotesView } from '../calendar/MeetingNotesView';
 import type { View } from '../Sidebar';
 import {
   availableWidgets,
@@ -49,6 +51,8 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
 
   const [panelTask, setPanelTask] = useState<TaskWithPeople | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [eventPanelEvent, setEventPanelEvent] = useState<CalendarEvent | null>(null);
+  const [notesEvent, setNotesEvent] = useState<CalendarEvent | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const { welcomeOpen, dismissWelcome, reopenWelcome } = useDashboardWelcome();
 
@@ -149,6 +153,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
         setPanelTask(t);
         setPanelOpen(true);
       },
+      onOpenEvent: (e) => setEventPanelEvent(e),
       onNavigate,
       weekendVisible,
       onToggleWeekend: () => {
@@ -380,6 +385,23 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
         onClose={() => setPanelOpen(false)}
         onChanged={load}
       />
+      <OrgEventDetailPanel
+        event={eventPanelEvent}
+        currentUserId={me.id}
+        isAdmin={isAdmin}
+        profiles={profiles}
+        onClose={() => setEventPanelEvent(null)}
+        onDeleted={() => { setEventPanelEvent(null); void load(); }}
+        onUpdated={() => { setEventPanelEvent(null); void load(); }}
+        onOpenNotes={(ev) => { setEventPanelEvent(null); setNotesEvent(ev); }}
+      />
+      {notesEvent && (
+        <MeetingNotesView
+          event={notesEvent}
+          userId={me.id}
+          onClose={() => setNotesEvent(null)}
+        />
+      )}
     </div>
   );
 }

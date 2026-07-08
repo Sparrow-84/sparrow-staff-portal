@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { setTaskStatus, updateTask } from '@/lib/data';
 import type { Profile, TaskComment, TaskStatus, TaskWithPeople } from '@/lib/types';
 import { TaskPanel } from './TaskPanel';
@@ -44,6 +44,24 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
   useEffect(() => {
     window.localStorage.setItem('sparrow.taskView', layout);
   }, [layout]);
+
+  // When navigating here from the My Week widget task click, open the pending task once loaded.
+  const pendingOpenId = useRef<string | null>(
+    typeof window !== 'undefined' ? sessionStorage.getItem('sparrow.pendingTaskOpen') : null,
+  );
+  useEffect(() => {
+    if (!pendingOpenId.current || tasks.length === 0) return;
+    const id = pendingOpenId.current;
+    pendingOpenId.current = null;
+    sessionStorage.removeItem('sparrow.pendingTaskOpen');
+    const t = tasks.find((x) => x.id === id);
+    if (t) {
+      const isDelegated = t.created_by === currentUser.id && t.assignee_id !== currentUser.id;
+      setPanelTask(t);
+      setPanelReadOnly(isDelegated);
+      setPanelOpen(true);
+    }
+  }, [tasks, currentUser.id]);
 
   const isAdmin = currentUser.role === 'admin';
   const reports = useMemo(

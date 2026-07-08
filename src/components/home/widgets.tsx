@@ -22,6 +22,7 @@ export interface WidgetContext {
   today: string;
   onChanged: () => void;
   onOpenTask: (t: TaskWithPeople) => void;
+  onOpenEvent: (e: CalendarEvent) => void;
   onNavigate: (v: View) => void;
   weekendVisible: boolean;
   onToggleWeekend: () => void;
@@ -522,13 +523,15 @@ function DayDetailPopup({
   events,
   tasks,
   onClose,
-  onOpenTask,
+  onNavigateToTask,
+  onOpenEvent,
 }: {
   date: string;
   events: { event: CalendarEvent; occursAt: Date }[];
   tasks: TaskWithPeople[];
   onClose: () => void;
-  onOpenTask: (t: TaskWithPeople) => void;
+  onNavigateToTask: (id: string) => void;
+  onOpenEvent: (e: CalendarEvent) => void;
 }) {
   const heading = new Date(date + 'T12:00:00').toLocaleDateString(undefined, {
     weekday: 'long',
@@ -552,7 +555,11 @@ function DayDetailPopup({
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-sparrow-gray">Events</p>
               <div className="space-y-2">
                 {events.map((o, i) => (
-                  <div key={`${o.event.id}-${i}`} className="rounded-lg bg-sparrow-mist px-3 py-2">
+                  <button
+                    key={`${o.event.id}-${i}`}
+                    onClick={() => { onOpenEvent(o.event); onClose(); }}
+                    className="block w-full rounded-lg bg-sparrow-mist px-3 py-2 text-left hover:bg-sparrow-sage/30"
+                  >
                     <p className="text-sm font-medium text-sparrow-ink">{o.event.title}</p>
                     <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-sparrow-gray">
                       {!o.event.all_day && (
@@ -560,8 +567,9 @@ function DayDetailPopup({
                       )}
                       {o.event.location && <span>{o.event.location}</span>}
                       <span>{o.event.is_personal ? 'Personal' : KIND_LABEL[o.event.kind]}</span>
+                      <span className="ml-auto font-medium text-sparrow-green">Open notes →</span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -575,7 +583,7 @@ function DayDetailPopup({
                   return (
                     <button
                       key={t.id}
-                      onClick={() => { onOpenTask(t); onClose(); }}
+                      onClick={() => { onNavigateToTask(t.id); }}
                       className="block w-full rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-left hover:bg-sparrow-mist"
                     >
                       <div className="flex items-center gap-2">
@@ -735,7 +743,15 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
           events={weekEvents.filter((o) => isoDate(o.occursAt) === dayPopup)}
           tasks={myTasks.filter((t) => t.due_date === dayPopup)}
           onClose={() => setDayPopup(null)}
-          onOpenTask={ctx.onOpenTask}
+          onNavigateToTask={(id) => {
+            sessionStorage.setItem('sparrow.pendingTaskOpen', id);
+            ctx.onNavigate('tasks');
+            setDayPopup(null);
+          }}
+          onOpenEvent={(ev) => {
+            ctx.onOpenEvent(ev);
+            setDayPopup(null);
+          }}
         />
       )}
     </>
