@@ -55,17 +55,17 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
   );
   const showTeam = reports.length > 0;
 
-  // Non-managers can't see "My Team" — surface tasks they created and delegated so they
-  // don't lose track. These open read-only in the panel (can comment, can't edit).
-  const isNonManager = currentUser.role === 'staff';
-  const delegatedIds = useMemo(() => {
-    if (!isNonManager) return new Set<string>();
-    return new Set(
-      tasks
-        .filter((t) => t.created_by === currentUser.id && t.assignee_id !== currentUser.id)
-        .map((t) => t.id),
-    );
-  }, [tasks, currentUser.id, isNonManager]);
+  // Surface tasks created by the current user but assigned to someone else so they
+  // don't lose track of what they've delegated. These open read-only (can comment, can't edit).
+  const delegatedIds = useMemo(
+    () =>
+      new Set(
+        tasks
+          .filter((t) => t.created_by === currentUser.id && t.assignee_id !== currentUser.id)
+          .map((t) => t.id),
+      ),
+    [tasks, currentUser.id],
+  );
 
   const mineTasks = useMemo(
     () => tasks.filter((t) => t.assignee_id === currentUser.id || delegatedIds.has(t.id)),

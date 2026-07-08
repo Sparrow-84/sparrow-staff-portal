@@ -46,12 +46,21 @@ export async function fetchComments(): Promise<TaskComment[]> {
 
 // ── Writes (RLS enforces who may insert/update/delete) ───────────────
 export async function createTask(input: TaskInput, createdBy: string): Promise<void> {
-  const { error } = await supabase.from('tasks').insert({ ...input, created_by: createdBy });
+  let { error } = await supabase.from('tasks').insert({ ...input, created_by: createdBy });
+  if (error?.message.includes('schema cache')) {
+    // New columns (label, label_color, recurrence_id) not yet migrated — retry without them.
+    const { label: _l, label_color: _lc, recurrence_id: _r, ...safe } = input;
+    ({ error } = await supabase.from('tasks').insert({ ...safe, created_by: createdBy }));
+  }
   if (error) throw new Error(error.message);
 }
 
 export async function updateTask(id: string, patch: Partial<TaskInput>): Promise<void> {
-  const { error } = await supabase.from('tasks').update(patch).eq('id', id);
+  let { error } = await supabase.from('tasks').update(patch).eq('id', id);
+  if (error?.message.includes('schema cache')) {
+    const { label: _l, label_color: _lc, recurrence_id: _r, ...safe } = patch;
+    ({ error } = await supabase.from('tasks').update(safe).eq('id', id));
+  }
   if (error) throw new Error(error.message);
 }
 
