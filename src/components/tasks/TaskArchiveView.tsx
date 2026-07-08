@@ -99,10 +99,10 @@ export function TaskArchiveView({ tasks, delegatedTasks, today, showAssignee, on
             </p>
             <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
               {delegatedTasks.map((t) => (
-                <li key={t.id} className="flex items-center gap-3 px-4 py-3 hover:bg-sparrow-mist">
+                <li key={t.id} className={`flex items-center gap-3 px-4 py-3 transition-opacity hover:bg-sparrow-mist ${t.status === 'done' ? 'opacity-60 hover:opacity-100' : ''}`}>
                   <button onClick={() => onOpen(t)} className="flex flex-1 items-center gap-3 text-left">
                     <span className="flex-1">
-                      <span className="text-sm text-sparrow-ink">{t.title}</span>
+                      <span className={`text-sm ${t.status === 'done' ? 'line-through text-sparrow-gray' : 'text-sparrow-ink'}`}>{t.title}</span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                         {t.label && t.label_color && (
                           <LabelPill label={t.label} color={t.label_color} />
