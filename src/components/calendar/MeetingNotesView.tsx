@@ -82,7 +82,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   useEffect(() => {
     async function load() {
       try {
-        const [{ data: priv, error: privErr }, { data: shared, error: sharedErr }] = await Promise.all([
+        const [{ data: priv, error: privErr }, { data: shared }] = await Promise.all([
           supabase
             .from('meeting_notes')
             .select('prep_notes, live_notes')
@@ -95,8 +95,10 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
             .eq('event_id', event.id)
             .maybeSingle(),
         ]);
-        if (privErr || sharedErr) {
-          setLoadError((privErr ?? sharedErr)?.message ?? 'Unknown error');
+        // Private notes are the critical path — fail if those error.
+        // Shared notes degrade gracefully (schema cache may be stale after migrations).
+        if (privErr) {
+          setLoadError(privErr.message);
           setLoading(false);
           return;
         }
