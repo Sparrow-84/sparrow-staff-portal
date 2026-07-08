@@ -430,53 +430,25 @@ export function CalendarView() {
                 ))}
               </div>
 
-              {/* Week rows — bars and day cells share ONE 7-col grid for perfect alignment */}
+              {/* Week rows */}
               {weeks.map((week, wi) => {
                 const bars = getBarsForWeek(week);
                 const numLanes = bars.length > 0 ? Math.max(...bars.map(b => b.lane)) + 1 : 0;
-                // Row 1 = bar band (auto-sized), Row 2 = day cells. When no bars, one row.
-                const cellRow = numLanes > 0 ? 2 : 1;
-                return (
-                  <div
-                    key={wi}
-                    className="grid grid-cols-7"
-                    style={numLanes > 0 ? { gridTemplateRows: `${numLanes * 22 + 4}px auto` } : undefined}
-                  >
-                    {/* Multi-day spanning bars in grid row 1 */}
-                    {bars.map(bar => {
-                      const rounding =
-                        bar.isActualStart && bar.isActualEnd ? 'rounded'
-                        : bar.isActualStart ? 'rounded-l'
-                        : bar.isActualEnd ? 'rounded-r'
-                        : '';
-                      return (
-                        <button
-                          key={bar.event.id}
-                          onClick={() => setDetailEvent(bar.event)}
-                          style={{
-                            gridColumn: `${bar.startCol + 1} / span ${bar.span}`,
-                            gridRow: 1,
-                            marginTop: `${2 + bar.lane * 22}px`,
-                          }}
-                          className={`mx-0.5 h-5 truncate px-1.5 text-left text-[11px] font-medium leading-5 transition hover:opacity-80 ${rounding} ${bar.event.is_personal ? 'bg-slate-400 text-white' : KIND_PILL[bar.event.kind]}`}
-                          onMouseEnter={(e) => setCalTooltip({ title: bar.event.title, sub: bar.event.is_personal ? 'Personal' : KIND_LABEL[bar.event.kind], x: e.clientX, y: e.clientY })}
-                          onMouseLeave={() => setCalTooltip(null)}
-                        >
-                          {bar.event.title}
-                        </button>
-                      );
-                    })}
 
-                    {/* Day cells in grid row 2 (explicit column placement) */}
+                // For each column, which bars cover it (sorted by lane)
+                const barsByCol: MultiDayBar[][] = week.map(() => []);
+                for (const bar of bars) {
+                  for (let c = bar.startCol; c < bar.startCol + bar.span; c++) {
+                    barsByCol[c].push(bar);
+                  }
+                }
+                for (const arr of barsByCol) arr.sort((a, b) => a.lane - b.lane);
+
+                return (
+                  <div key={wi} className="grid grid-cols-7">
                     {week.map((d, col) => {
                       if (d === null) {
-                        return (
-                          <div
-                            key={`pad-${wi}-${col}`}
-                            style={{ gridColumn: col + 1, gridRow: cellRow }}
-                            className="min-h-[6rem] border-b border-r border-sparrow-rule bg-sparrow-mist/30"
-                          />
-                        );
+                        return <div key={`pad-${wi}-${col}`} className="min-h-[6rem] border-b border-r border-sparrow-rule bg-sparrow-mist/30" />;
                       }
                       const dStr = cellDate(d);
                       const dayEvents    = singleDayByDate.get(dStr) ?? [];
@@ -486,13 +458,11 @@ export function CalendarView() {
                       const isPast = dStr < todayStr;
                       const shown = dayEvents.slice(0, 3);
                       const overflow = dayEvents.length - shown.length;
+                      const colBars = barsByCol[col];
 
                       return (
-                        <div
-                          key={dStr}
-                          style={{ gridColumn: col + 1, gridRow: cellRow }}
-                          className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${isPast ? 'bg-sparrow-mist/30' : ''}`}
-                        >
+                        <div key={dStr} className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${isPast ? 'bg-sparrow-mist/30' : ''}`}>
+                          {/* Day number */}
                           <div className="flex items-center justify-between">
                             <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : isPast ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
                               {d}
@@ -504,6 +474,41 @@ export function CalendarView() {
                             >+</button>
                           </div>
 
+                          {/* Multi-day bar segments — below day number, one slot per lane.
+                              Negative margins extend the stripe to the cell borders so
+                              adjacent cells' stripes appear as one continuous band. */}
+                          {numLanes > 0 && (
+                            <div className="mt-1 space-y-0.5">
+                              {Array.from({ length: numLanes }, (_, lane) => {
+                                const bar = colBars.find(b => b.lane === lane);
+                                if (!bar) return <div key={lane} className="h-5" />;
+                                const isFirstCell = col === bar.startCol;
+                                const isLastCell  = col === bar.startCol + bar.span - 1;
+                                const roundL = bar.isActualStart && isFirstCell;
+                                const roundR = bar.isActualEnd   && isLastCell;
+                                const extL = !roundL; // extend left to cell border
+                                const extR = !roundR; // extend right to cell border
+                                const rounding = roundL && roundR ? 'rounded' : roundL ? 'rounded-l' : roundR ? 'rounded-r' : 'rounded-none';
+                                return (
+                                  <button
+                                    key={bar.event.id}
+                                    onClick={() => setDetailEvent(bar.event)}
+                                    style={{
+                                      marginLeft:  extL ? '-0.25rem' : undefined,
+                                      marginRight: extR ? '-0.25rem' : undefined,
+                                    }}
+                                    className={`block h-5 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-80 ${rounding} ${bar.event.is_personal ? 'bg-slate-400 text-white' : KIND_PILL[bar.event.kind]}`}
+                                    onMouseEnter={(e) => setCalTooltip({ title: bar.event.title, sub: bar.event.is_personal ? 'Personal' : KIND_LABEL[bar.event.kind], x: e.clientX, y: e.clientY })}
+                                    onMouseLeave={() => setCalTooltip(null)}
+                                  >
+                                    {isFirstCell ? bar.event.title : ''}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Single-day events */}
                           <div className={`mt-1 space-y-0.5 ${isPast ? 'opacity-60' : ''}`}>
                             {shown.map(ev => (
                               <button
