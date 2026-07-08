@@ -57,21 +57,20 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
   );
   const showTeam = reports.length > 0;
 
-  // Surface tasks created by the current user but assigned to someone else so they
-  // don't lose track of what they've delegated. These open read-only (can comment, can't edit).
-  const delegatedIds = useMemo(
-    () =>
-      new Set(
-        tasks
-          .filter((t) => t.created_by === currentUser.id && t.assignee_id !== currentUser.id)
-          .map((t) => t.id),
-      ),
+  // Tasks the current user created but assigned to someone else. Shown in Archive under
+  // "Assigned out" — not in active work views. Open read-only (can comment, can't edit).
+  const delegatedTasks = useMemo(
+    () => tasks.filter((t) => t.created_by === currentUser.id && t.assignee_id !== currentUser.id),
     [tasks, currentUser.id],
+  );
+  const delegatedIds = useMemo(
+    () => new Set(delegatedTasks.map((t) => t.id)),
+    [delegatedTasks],
   );
 
   const mineTasks = useMemo(
-    () => tasks.filter((t) => t.assignee_id === currentUser.id || delegatedIds.has(t.id)),
-    [tasks, currentUser.id, delegatedIds],
+    () => tasks.filter((t) => t.assignee_id === currentUser.id),
+    [tasks, currentUser.id],
   );
   const teamTasks = useMemo(() => {
     const reportIds = new Set(reports.map((r) => r.id));
@@ -207,7 +206,6 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
             today={today}
             userId={currentUser.id}
             showAssignee={showAssignee}
-            delegatedIds={delegatedIds}
             onOpen={openEdit}
             onMoveStatus={moveToStatus}
           />
@@ -216,7 +214,6 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
           <TaskPlannerView
             tasks={activeTasks}
             today={today}
-            delegatedIds={delegatedIds}
             onOpen={openEdit}
             onMoveDate={moveToDate}
             onToggle={toggleDone}
@@ -228,6 +225,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
         {layout === 'archive' && (
           <TaskArchiveView
             tasks={doneTasks}
+            delegatedTasks={delegatedTasks}
             today={today}
             showAssignee={showAssignee}
             onOpen={openEdit}

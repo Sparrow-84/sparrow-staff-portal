@@ -26,12 +26,11 @@ interface Props {
   today: string;
   userId: string;
   showAssignee: boolean;
-  delegatedIds: Set<string>;
   onOpen: (task: TaskWithPeople) => void;
   onMoveStatus: (taskId: string, status: TaskStatus) => void;
 }
 
-export function TaskBoardView({ tasks, today, userId, showAssignee, delegatedIds, onOpen, onMoveStatus }: Props) {
+export function TaskBoardView({ tasks, today, userId, showAssignee, onOpen, onMoveStatus }: Props) {
   const [overCol, setOverCol] = useState<TaskStatus | null>(null);
   const [colTitles, setColTitles] = useState<ColTitles>(() => loadColTitles(userId));
   const [editingCol, setEditingCol] = useState<TaskStatus | null>(null);
@@ -110,7 +109,7 @@ export function TaskBoardView({ tasks, today, userId, showAssignee, delegatedIds
             </div>
             <div className="space-y-2">
               {items.map((t) => (
-                <Card key={t.id} task={t} today={today} showAssignee={showAssignee} isDelegated={delegatedIds.has(t.id)} onOpen={() => onOpen(t)} />
+                <Card key={t.id} task={t} today={today} showAssignee={showAssignee} onOpen={() => onOpen(t)} />
               ))}
               {items.length === 0 && (
                 <p className="px-1 py-6 text-center text-xs text-sparrow-gray/70">Drop tasks here</p>
@@ -127,23 +126,19 @@ function Card({
   task,
   today,
   showAssignee,
-  isDelegated,
   onOpen,
 }: {
   task: TaskWithPeople;
   today: string;
   showAssignee: boolean;
-  isDelegated: boolean;
   onOpen: () => void;
 }) {
   return (
     <button
-      draggable={!isDelegated}
-      onDragStart={isDelegated ? undefined : (e) => e.dataTransfer.setData('text/plain', task.id)}
+      draggable
+      onDragStart={(e) => e.dataTransfer.setData('text/plain', task.id)}
       onClick={onOpen}
-      className={`block w-full rounded-lg border border-sparrow-rule bg-white p-3 text-left shadow-card ${
-        isDelegated ? 'cursor-pointer opacity-80' : 'cursor-grab active:cursor-grabbing'
-      }`}
+      className="block w-full cursor-grab rounded-lg border border-sparrow-rule bg-white p-3 text-left shadow-card active:cursor-grabbing"
     >
       {task.label && task.label_color && (
         <div className="mb-1.5">
@@ -158,10 +153,7 @@ function Card({
           <span className="text-xs text-sparrow-gray">{dueLabel(task.due_date, today)}</span>
         )}
       </div>
-      {isDelegated && task.assignee && (
-        <p className="mt-1 text-xs text-blue-500">→ {task.assignee.full_name.split(' ')[0]}</p>
-      )}
-      {!isDelegated && showAssignee && task.assignee && (
+      {showAssignee && task.assignee && (
         <p className="mt-1 text-xs text-sparrow-gray">{task.assignee.full_name}</p>
       )}
     </button>

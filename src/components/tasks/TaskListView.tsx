@@ -76,22 +76,17 @@ function TaskRow({
   onOpen: () => void;
 }) {
   const done = task.status === 'done';
-  const isDelegated = task.created_by === currentUserId && task.assignee_id !== currentUserId;
-  const assignedByOther = !isDelegated && task.created_by !== task.assignee_id && task.assignee_id === currentUserId;
+  const assignedByOther = task.created_by !== task.assignee_id && task.assignee_id === currentUserId;
 
   return (
     <li className="flex items-center gap-3 px-4 py-3 hover:bg-sparrow-mist">
-      {isDelegated ? (
-        <span className="flex h-4 w-4 shrink-0 items-center justify-center text-xs text-sparrow-gray">→</span>
-      ) : (
-        <input
-          type="checkbox"
-          checked={done}
-          onChange={onToggle}
-          aria-label={done ? 'Mark not done' : 'Mark done'}
-          className="h-4 w-4 shrink-0 cursor-pointer accent-sparrow-green"
-        />
-      )}
+      <input
+        type="checkbox"
+        checked={done}
+        onChange={onToggle}
+        aria-label={done ? 'Mark not done' : 'Mark done'}
+        className="h-4 w-4 shrink-0 cursor-pointer accent-sparrow-green"
+      />
       <button onClick={onOpen} className="flex flex-1 items-center gap-3 text-left">
         <span className="flex-1">
           <span className={`text-sm ${done ? 'text-sparrow-gray line-through' : 'text-sparrow-ink'}`}>
@@ -108,11 +103,6 @@ function TaskRow({
             )}
             {showAssignee && task.assignee && (
               <span className="text-xs text-sparrow-gray">{task.assignee.full_name}</span>
-            )}
-            {isDelegated && task.assignee && (
-              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] text-blue-600">
-                → {task.assignee.full_name.split(' ')[0]}
-              </span>
             )}
             {assignedByOther && task.creator && (
               <span className="rounded-full bg-sparrow-cream px-2 py-0.5 text-[11px] text-sparrow-ink">

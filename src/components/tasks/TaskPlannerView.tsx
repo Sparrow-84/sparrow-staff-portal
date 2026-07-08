@@ -31,13 +31,12 @@ function weekRangeLabel(days: Date[]): string {
 interface Props {
   tasks: TaskWithPeople[];
   today: string;
-  delegatedIds: Set<string>;
   onOpen: (task: TaskWithPeople) => void;
   onMoveDate: (taskId: string, dateIso: string | null) => void;
   onToggle: (task: TaskWithPeople) => void;
 }
 
-export function TaskPlannerView({ tasks, today, delegatedIds, onOpen, onMoveDate, onToggle }: Props) {
+export function TaskPlannerView({ tasks, today, onOpen, onMoveDate, onToggle }: Props) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [overDate, setOverDate] = useState<string | null>(null);
   const [overUndated, setOverUndated] = useState(false);
@@ -150,7 +149,6 @@ export function TaskPlannerView({ tasks, today, delegatedIds, onOpen, onMoveDate
                   <PlannerTask
                     key={t.id}
                     task={t}
-                    isDelegated={delegatedIds.has(t.id)}
                     onOpen={() => onOpen(t)}
                     onToggle={() => onToggle(t)}
                   />
@@ -211,38 +209,30 @@ export function TaskPlannerView({ tasks, today, delegatedIds, onOpen, onMoveDate
 
 function PlannerTask({
   task,
-  isDelegated,
   onOpen,
   onToggle,
 }: {
   task: TaskWithPeople;
-  isDelegated: boolean;
   onOpen: () => void;
   onToggle: () => void;
 }) {
   const done = task.status === 'done';
   return (
     <div
-      draggable={!isDelegated}
-      onDragStart={isDelegated ? undefined : (e) => e.dataTransfer.setData('text/plain', task.id)}
-      className={`rounded-lg border border-sparrow-rule bg-white px-2 py-1.5 transition-opacity ${
-        isDelegated ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
-      } ${done ? 'opacity-50' : ''}`}
+      draggable
+      onDragStart={(e) => e.dataTransfer.setData('text/plain', task.id)}
+      className={`cursor-grab rounded-lg border border-sparrow-rule bg-white px-2 py-1.5 active:cursor-grabbing ${done ? 'opacity-50' : ''}`}
     >
       <div className="flex items-start gap-1.5">
-        {isDelegated ? (
-          <span className="mt-0.5 shrink-0 text-[10px] leading-none text-blue-400">→</span>
-        ) : (
-          <input
-            type="checkbox"
-            checked={done}
-            onChange={(e) => {
-              e.stopPropagation();
-              onToggle();
-            }}
-            className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer accent-sparrow-green"
-          />
-        )}
+        <input
+          type="checkbox"
+          checked={done}
+          onChange={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer accent-sparrow-green"
+        />
         <button onClick={onOpen} className="min-w-0 flex-1 text-left">
           {task.label && task.label_color && (
             <div className="mb-0.5">
