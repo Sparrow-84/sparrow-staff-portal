@@ -100,6 +100,22 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
     void load();
   }, [load]);
 
+  // Filter events to only those the current user is allowed to see, mirroring
+  // CalendarView's myDepts logic so widgets don't leak other departments' events.
+  const visibleEvents = useMemo(() => {
+    if (!me) return [];
+    if (me.role === 'admin') return events;
+    const myDepts = new Set<string>([me.department]);
+    if (me.partnerships_access) myDepts.add('partnerships');
+    if (me.ops_access) myDepts.add('ops');
+    if (me.lcp_role !== null) myDepts.add('lcp');
+    return events.filter((ev) => {
+      if (ev.is_personal) return ev.created_by === me.id;
+      if (ev.department === null) return true; // all-staff events
+      return myDepts.has(ev.department);
+    });
+  }, [events, me]);
+
   const ctx: WidgetContext | null = useMemo(() => {
     if (!me) return null;
     return {
@@ -108,7 +124,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       comments,
       notifications,
       wins,
-      events,
+      events: visibleEvents,
       reports,
       today: isoDate(new Date()),
       onChanged: load,
@@ -124,7 +140,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
         void saveSettings(me!.id, { prefs: { show_weekends: next } });
       },
     };
-  }, [me, tasks, comments, notifications, wins, events, reports, load, onNavigate, weekendVisible]);
+  }, [me, tasks, comments, notifications, wins, visibleEvents, reports, load, onNavigate, weekendVisible]);
 
   if (!me || !ctx) return null;
   if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading your dashboard…</p>;
