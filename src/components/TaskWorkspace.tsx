@@ -187,6 +187,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
           <TaskBoardView
             tasks={activeTasks}
             today={today}
+            userId={currentUser.id}
             showAssignee={showAssignee}
             onOpen={openEdit}
             onMoveStatus={moveToStatus}
