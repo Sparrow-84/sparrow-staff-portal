@@ -12,6 +12,7 @@ import {
 import { addComment, createTask, deleteTask, notifyTaskCommentMentions, updateTask, type TaskInput } from '@/lib/data';
 import { parseMentionIds } from '@/lib/chat';
 import { MentionInput } from '@/components/chat/MentionInput';
+import { LABEL_COLORS, LabelPill } from '@/components/LabelPill';
 
 interface Props {
   open: boolean;
@@ -35,6 +36,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
   const [priority, setPriority] = useState<Priority>('p3');
   const [assigneeId, setAssigneeId] = useState(currentUser.id);
   const [status, setStatus] = useState<TaskStatus>('todo');
+  const [label, setLabel] = useState('');
+  const [labelColor, setLabelColor] = useState('blue');
   const [comment, setComment] = useState('');
 
   // Reset the form whenever the panel opens for a new/different task.
@@ -50,6 +53,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
       setPriority(task.priority);
       setAssigneeId(task.assignee_id);
       setStatus(task.status);
+      setLabel(task.label ?? '');
+      setLabelColor(task.label_color ?? 'blue');
     } else {
       setTitle('');
       setNotes('');
@@ -58,6 +63,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
       setPriority('p3');
       setAssigneeId(currentUser.id);
       setStatus('todo');
+      setLabel('');
+      setLabelColor('blue');
     }
   }, [open, task, currentUser.id, currentUser.department]);
 
@@ -83,6 +90,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
       priority,
       assignee_id: assigneeId,
       status,
+      label: label.trim() || null,
+      label_color: label.trim() ? labelColor : null,
     };
     startTransition(async () => {
       try {
@@ -271,6 +280,51 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
                 <option value="done">Done</option>
               </select>
             </div>
+          </div>
+
+          {/* Label */}
+          <div className="mt-4">
+            <label className="field-label">
+              Label <span className="font-normal text-sparrow-gray">(optional)</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                className="field-input !mt-0 flex-1"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="e.g. Personal, Client work…"
+              />
+              {label && (
+                <button
+                  type="button"
+                  onClick={() => { setLabel(''); setLabelColor('blue'); }}
+                  className="shrink-0 text-xs text-sparrow-gray hover:text-sparrow-ink"
+                  aria-label="Clear label"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {label && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <span className="text-[11px] text-sparrow-gray">Color:</span>
+                {LABEL_COLORS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setLabelColor(c.id)}
+                    aria-label={c.id}
+                    className={`h-5 w-5 shrink-0 rounded-full ${c.swatch} transition ${
+                      labelColor === c.id ? 'ring-2 ring-sparrow-ink ring-offset-1' : 'opacity-60 hover:opacity-100'
+                    }`}
+                  />
+                ))}
+                <span className="ml-1">
+                  <LabelPill label={label} color={labelColor} />
+                </span>
+              </div>
+            )}
           </div>
 
           {task && (

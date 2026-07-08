@@ -3,6 +3,7 @@ import { BUCKETS, dueLabel, groupTasks } from '@/lib/tasks';
 import type { TaskWithPeople } from '@/lib/types';
 import { PriorityChip } from '../PriorityChip';
 import { DeptTag } from '../DeptTag';
+import { LabelPill } from '../LabelPill';
 
 interface Props {
   tasks: TaskWithPeople[];
@@ -92,6 +93,9 @@ function TaskRow({
             {task.title}
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {task.label && task.label_color && (
+              <LabelPill label={task.label} color={task.label_color} />
+            )}
             {task.due_date && (
               <span className={`text-xs ${overdue ? 'font-medium text-priority-p1' : 'text-sparrow-gray'}`}>
                 {dueLabel(task.due_date, today)}

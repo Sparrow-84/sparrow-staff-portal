@@ -12,6 +12,8 @@ export interface TaskInput {
   priority: Priority;
   assignee_id: string;
   status: TaskStatus;
+  label?: string | null;
+  label_color?: string | null;
 }
 
 // ── Reads (RLS filters rows to what the signed-in user may see) ──────

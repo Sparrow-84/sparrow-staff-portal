@@ -3,6 +3,7 @@ import { dueLabel } from '@/lib/tasks';
 import type { TaskStatus, TaskWithPeople } from '@/lib/types';
 import { PriorityChip } from '../PriorityChip';
 import { DeptTag } from '../DeptTag';
+import { LabelPill } from '../LabelPill';
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: 'todo', label: 'To do' },
@@ -83,6 +84,11 @@ function Card({
       onClick={onOpen}
       className="block w-full cursor-grab rounded-lg border border-sparrow-rule bg-white p-3 text-left shadow-card active:cursor-grabbing"
     >
+      {task.label && task.label_color && (
+        <div className="mb-1.5">
+          <LabelPill label={task.label} color={task.label_color} />
+        </div>
+      )}
       <p className="text-sm text-sparrow-ink">{task.title}</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <PriorityChip p={task.priority} />

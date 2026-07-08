@@ -45,6 +45,8 @@ export interface Task {
   created_by: string | null; // null = system-generated (emitted by a room)
   source_system: string | null; // 'lcp' | 'crm' | 'toc' | null (created in System 2)
   source_ref: string | null; // room-stable key for dedup, e.g. 'homework:<uuid>'
+  label: string | null;
+  label_color: string | null;
   position: number;
   created_at: string;
   updated_at: string;
