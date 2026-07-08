@@ -340,7 +340,11 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, onClose, on
               <input
                 type="date"
                 value={editDate}
-                onChange={(e) => setEditDate(e.target.value)}
+                onChange={(e) => {
+                  setEditDate(e.target.value);
+                  // Clear end date if start moves to or past it
+                  if (editEndDate && e.target.value >= editEndDate) setEditEndDate('');
+                }}
                 className="field-input"
               />
             </div>

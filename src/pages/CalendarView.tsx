@@ -475,10 +475,12 @@ export function CalendarView() {
                           </div>
 
                           {/* Multi-day bar segments — below day number, one slot per lane.
-                              Negative margins extend the stripe to the cell borders so
-                              adjacent cells' stripes appear as one continuous band. */}
+                              Container uses -mx-1 to extend to the cell's border inner edges.
+                              Buttons use display:block (auto-width) so they fill the container
+                              minus any per-button margin. This gives a near-seamless band
+                              across covered days with only the 1px cell border as a divider. */}
                           {numLanes > 0 && (
-                            <div className="mt-1 space-y-0.5">
+                            <div className="-mx-1 mt-1 space-y-0.5">
                               {Array.from({ length: numLanes }, (_, lane) => {
                                 const bar = colBars.find(b => b.lane === lane);
                                 if (!bar) return <div key={lane} className="h-5" />;
@@ -486,18 +488,20 @@ export function CalendarView() {
                                 const isLastCell  = col === bar.startCol + bar.span - 1;
                                 const roundL = bar.isActualStart && isFirstCell;
                                 const roundR = bar.isActualEnd   && isLastCell;
-                                const extL = !roundL; // extend left to cell border
-                                const extR = !roundR; // extend right to cell border
-                                const rounding = roundL && roundR ? 'rounded' : roundL ? 'rounded-l' : roundR ? 'rounded-r' : 'rounded-none';
+                                // mx-1 adds back the inset for rounded ends; rounded-none prevents
+                                // Tailwind's default border-radius on the non-rounded side.
+                                const shapeClass = roundL && roundR
+                                  ? 'mx-1 rounded'
+                                  : roundL
+                                  ? 'ml-1 rounded-l rounded-r-none'
+                                  : roundR
+                                  ? 'mr-1 rounded-r rounded-l-none'
+                                  : 'rounded-none';
                                 return (
                                   <button
                                     key={bar.event.id}
                                     onClick={() => setDetailEvent(bar.event)}
-                                    style={{
-                                      marginLeft:  extL ? '-0.25rem' : undefined,
-                                      marginRight: extR ? '-0.25rem' : undefined,
-                                    }}
-                                    className={`block h-5 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-80 ${rounding} ${bar.event.is_personal ? 'bg-slate-400 text-white' : KIND_PILL[bar.event.kind]}`}
+                                    className={`block h-5 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-80 ${shapeClass} ${bar.event.is_personal ? 'bg-slate-400 text-white' : KIND_PILL[bar.event.kind]}`}
                                     onMouseEnter={(e) => setCalTooltip({ title: bar.event.title, sub: bar.event.is_personal ? 'Personal' : KIND_LABEL[bar.event.kind], x: e.clientX, y: e.clientY })}
                                     onMouseLeave={() => setCalTooltip(null)}
                                   >
