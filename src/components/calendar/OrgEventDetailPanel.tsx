@@ -487,7 +487,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
           {/* Attendance — hidden for personal events */}
           {!event.is_personal && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Your widget</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Attendance</p>
               <div className="mt-1.5 flex items-center gap-3">
                 <button
                   onClick={() => void toggleAttendance()}
@@ -498,10 +498,10 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                       : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
                   }`}
                 >
-                  {isAttending ? '✓ On my widget' : '+ Add to my widget'}
+                  {isAttending ? '✓ Attending' : 'Not attending'}
                 </button>
                 {event.department === null && (
-                  <span className="text-xs text-sparrow-gray">All Staff — shown by default</span>
+                  <span className="text-xs text-sparrow-gray">All Staff — attending by default</span>
                 )}
               </div>
               {(() => {
