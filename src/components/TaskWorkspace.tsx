@@ -6,11 +6,13 @@ import { TaskListView } from './tasks/TaskListView';
 import { TaskBoardView } from './tasks/TaskBoardView';
 import { TaskCalendarView } from './tasks/TaskCalendarView';
 import { TaskArchiveView } from './tasks/TaskArchiveView';
+import { TaskPlannerView } from './tasks/TaskPlannerView';
 
-type Layout = 'list' | 'board' | 'calendar' | 'archive';
+type Layout = 'list' | 'board' | 'planner' | 'calendar' | 'archive';
 const LAYOUTS: { value: Layout; label: string }[] = [
   { value: 'list', label: 'List' },
   { value: 'board', label: 'Board' },
+  { value: 'planner', label: 'Planner' },
   { value: 'calendar', label: 'Calendar' },
   { value: 'archive', label: 'Archive' },
 ];
@@ -37,7 +39,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
   // Remember the last-used view per the brief ("system remembers which view each user was last in").
   const [layout, setLayout] = useState<Layout>(() => {
     const saved = typeof window !== 'undefined' ? window.localStorage.getItem('sparrow.taskView') : null;
-    return saved === 'board' || saved === 'calendar' || saved === 'archive' ? saved : 'list';
+    return saved === 'board' || saved === 'planner' || saved === 'calendar' || saved === 'archive' ? saved : 'list';
   });
   useEffect(() => {
     window.localStorage.setItem('sparrow.taskView', layout);
@@ -208,6 +210,16 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
             delegatedIds={delegatedIds}
             onOpen={openEdit}
             onMoveStatus={moveToStatus}
+          />
+        )}
+        {layout === 'planner' && (
+          <TaskPlannerView
+            tasks={activeTasks}
+            today={today}
+            delegatedIds={delegatedIds}
+            onOpen={openEdit}
+            onMoveDate={moveToDate}
+            onToggle={toggleDone}
           />
         )}
         {layout === 'calendar' && (
