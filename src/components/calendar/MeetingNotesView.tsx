@@ -60,7 +60,7 @@ const CONTENT_CLASSES =
 
 export function MeetingNotesView({ event, userId, onClose }: Props) {
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [privateStatus, setPrivateStatus] = useState<SaveStatus>('idle');
   const [sharedStatus, setSharedStatus] = useState<SaveStatus>('idle');
 
@@ -96,7 +96,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
             .maybeSingle(),
         ]);
         if (privErr || sharedErr) {
-          setLoadError(true);
+          setLoadError((privErr ?? sharedErr)?.message ?? 'Unknown error');
           setLoading(false);
           return;
         }
@@ -112,8 +112,8 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         }
         loadSucceeded.current = true;
         setLoading(false);
-      } catch {
-        setLoadError(true);
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : String(e));
         setLoading(false);
       }
     }
@@ -126,7 +126,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
     return () => {
       if (privateTimer.current) clearTimeout(privateTimer.current);
       if (sharedTimer.current) clearTimeout(sharedTimer.current);
-      if (!loadSucceeded.current) return;
+      if (!loadSucceeded.current) return; // eslint-disable-line @typescript-eslint/no-unnecessary-condition
       void supabase.from('meeting_notes').upsert(
         {
           event_id: event.id,
@@ -247,6 +247,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-white">
         <p className="text-sm font-medium text-sparrow-ink">Could not load meeting notes.</p>
         <p className="text-sm text-sparrow-gray">Your existing notes are safe. Try closing and reopening, or refreshing the page.</p>
+        <p className="rounded bg-sparrow-mist px-3 py-2 font-mono text-xs text-sparrow-ink">{loadError}</p>
         <button
           onClick={onClose}
           className="rounded-xl border border-sparrow-rule px-4 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist"
