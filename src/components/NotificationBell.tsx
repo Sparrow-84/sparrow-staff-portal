@@ -75,7 +75,7 @@ export function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
-          <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-sparrow-rule bg-white shadow-card">
+          <div className="fixed right-4 top-16 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-sparrow-rule bg-white shadow-card">
             <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-2">
               <span className="text-sm font-semibold text-sparrow-ink">Notifications</span>
               {unread > 0 && (

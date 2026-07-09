@@ -144,7 +144,7 @@ export function MentionInput({ value, onChange, onKeyDown, staff, disabled, plac
   const suggestion = mention && filtered.length > 0 ? filtered[selected] : null;
 
   return (
-    <div className="relative flex-1">
+    <div className="relative min-w-0 flex-1">
       {suggestion && (
         <div className="absolute bottom-full left-0 z-50 mb-1 flex items-center gap-2">
           <div

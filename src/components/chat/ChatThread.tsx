@@ -226,7 +226,7 @@ export function ChatThread({
       )}
 
       {/* Message list */}
-      <div className="flex-1 space-y-2 overflow-y-auto px-4 py-4">
+      <div className="flex-1 space-y-2 overflow-x-hidden overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <p className="mt-8 text-center text-sm text-sparrow-gray">No messages yet — say hello.</p>
         ) : (
@@ -251,22 +251,19 @@ export function ChatThread({
                     {dayLabel(m.created_at)}
                   </p>
                 )}
-                <div className={`flex items-end gap-1.5 ${mine ? 'justify-end' : 'justify-start'}`}>
+                <div className={`flex items-end ${mine ? 'justify-end' : 'justify-start'}`}>
 
-                  {/* Actions (left side for sent, right side for received) */}
-                  {!mine && (
-                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="relative max-w-[78%]">
+                    {/* Action buttons float above the bubble — no layout footprint, no horizontal overflow */}
+                    <div className={`absolute -top-7 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 ${mine ? 'right-0' : 'left-0'}`}>
                       <ActionButtons
-                        mine={false}
+                        mine={mine}
                         onReact={(e) => { e.stopPropagation(); setEmojiPickerId(m.id); }}
                         onReply={() => setReplyTo(m)}
-                        onEdit={() => {}}
-                        onDelete={() => {}}
+                        onEdit={() => { if (mine) startEdit(m); }}
+                        onDelete={() => { if (mine) void handleDelete(m.id); }}
                       />
                     </div>
-                  )}
-
-                  <div className="max-w-[78%]">
                     {showName && (
                       <p className="mb-0.5 pl-1 text-[11px] font-medium text-sparrow-gray">
                         {m.author?.full_name ?? 'Staff'}
@@ -349,19 +346,6 @@ export function ChatThread({
                       <p className={`mt-0.5 text-[10px] text-sparrow-gray ${mine ? 'text-right' : ''}`}>Seen</p>
                     )}
                   </div>
-
-                  {/* Actions (right side for sent) */}
-                  {mine && (
-                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                      <ActionButtons
-                        mine={true}
-                        onReact={(e) => { e.stopPropagation(); setEmojiPickerId(m.id); }}
-                        onReply={() => setReplyTo(m)}
-                        onEdit={() => startEdit(m)}
-                        onDelete={() => void handleDelete(m.id)}
-                      />
-                    </div>
-                  )}
                 </div>
 
                 {/* Emoji picker */}
