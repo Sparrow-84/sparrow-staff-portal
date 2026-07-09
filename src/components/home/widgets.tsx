@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import type { Profile, TaskComment, TaskStatus, TaskWithPeople } from '@/lib/types';
 import type { AppNotification } from '@/lib/social';
 import type { QuickWin } from '@/lib/quickwins';
@@ -81,6 +81,13 @@ function addDays(today: string, n: number): string {
 // ── My tasks — today ──────────────────────────────────────────────────
 function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
   const [fading, setFading] = useState<Set<string>>(new Set());
+  const pendingTimeouts = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    return () => {
+      pendingTimeouts.current.forEach((id) => clearTimeout(id));
+    };
+  }, []);
 
   const mine = ctx.tasks.filter(
     (t) => t.assignee_id === ctx.me.id && t.triage_status === 'accepted' && t.status !== 'done',
@@ -94,10 +101,12 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
 
   function complete(t: TaskWithPeople) {
     setFading((s) => new Set(s).add(t.id));
-    window.setTimeout(async () => {
+    const tid = window.setTimeout(async () => {
+      pendingTimeouts.current.delete(t.id);
       await setTaskStatus(t.id, 'done');
       ctx.onChanged();
     }, 450);
+    pendingTimeouts.current.set(t.id, tid);
   }
 
   if (due.length === 0) {
@@ -119,23 +128,21 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
         return (
           <li key={t.id} className="flex items-center gap-2">
             <button
+              onClick={() => ctx.onOpenTask(t)}
+              className={`flex flex-1 items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-sparrow-mist ${
+                isFading ? 'text-sparrow-gray line-through opacity-50' : ''
+              }`}
+            >
+              <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
+              <span className="flex-1 text-sm text-sparrow-ink">{t.title}</span>
+              <span className="shrink-0 text-xs text-sparrow-gray">{dueLabel(t.due_date, ctx.today)}</span>
+            </button>
+            <button
               onClick={() => complete(t)}
               aria-label="Complete task"
               className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-sparrow-rule transition hover:border-sparrow-green hover:bg-sparrow-sage"
             >
               {isFading && <span className="h-2.5 w-2.5 rounded-full bg-sparrow-green" />}
-            </button>
-            <button
-              onClick={() => ctx.onOpenTask(t)}
-              className={`flex flex-1 items-center justify-between gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-sparrow-mist ${
-                isFading ? 'text-sparrow-gray line-through opacity-50' : ''
-              }`}
-            >
-              <span className="flex items-center gap-2 text-sm text-sparrow-ink">
-                <span className={`h-2 w-2 rounded-full ${meta.dot}`} aria-hidden />
-                {t.title}
-              </span>
-              <span className="shrink-0 text-xs text-sparrow-gray">{dueLabel(t.due_date, ctx.today)}</span>
             </button>
           </li>
         );
