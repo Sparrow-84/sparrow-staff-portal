@@ -1,6 +1,50 @@
 import { supabase } from './supabase';
 import type { Department } from './types';
 
+// ── Event comments ────────────────────────────────────────────────────
+
+export interface EventComment {
+  id: string;
+  event_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  author: { full_name: string } | null;
+}
+
+export async function fetchEventComments(eventId: string): Promise<EventComment[]> {
+  const { data, error } = await supabase
+    .from('event_comments')
+    .select('*, author:profiles!event_comments_author_id_fkey(full_name)')
+    .eq('event_id', eventId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as EventComment[];
+}
+
+export async function addEventComment(eventId: string, body: string, authorId: string): Promise<void> {
+  const { error } = await supabase
+    .from('event_comments')
+    .insert({ event_id: eventId, author_id: authorId, body });
+  if (error) throw new Error(error.message);
+}
+
+export async function notifyEventCommentMentions(
+  mentionedIds: string[],
+  actorId: string,
+  eventId: string,
+  body: string,
+): Promise<void> {
+  if (!mentionedIds.length) return;
+  const { error } = await supabase.rpc('event_comment_notify_mentions', {
+    p_mentioned_ids: mentionedIds,
+    p_actor_id: actorId,
+    p_event_id: eventId,
+    p_body: body,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export function withTzOffset(dateStr: string, timeStr: string): string {
   const d = new Date(`${dateStr}T${timeStr}:00`);
   const offset = -d.getTimezoneOffset();

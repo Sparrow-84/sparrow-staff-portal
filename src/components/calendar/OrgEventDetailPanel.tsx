@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   ADD_KINDS,
+  addEventComment,
   deleteCalendarEvent,
   deleteCalendarEventAndFuture,
   fetchEventAttendees,
+  fetchEventComments,
+  notifyEventCommentMentions,
   removeAttendee,
   setMyAttendance,
   updateCalendarEvent,
@@ -17,8 +20,11 @@ import {
   type CalendarEvent,
   type CalendarKind,
   type EventAttendee,
+  type EventComment,
 } from '@/lib/calendar';
+import { parseMentionIds } from '@/lib/chat';
 import { Drawer } from '@/components/lcp/Drawer';
+import { MentionInput } from '@/components/chat/MentionInput';
 import type { Profile } from '@/lib/types';
 
 interface Props {
@@ -41,6 +47,9 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
   const [error, setError] = useState<string | null>(null);
   const [attendees, setAttendees] = useState<EventAttendee[]>([]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [eventComments, setEventComments] = useState<EventComment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [commentPending, setCommentPending] = useState(false);
 
   // Edit form state
   const [editTitle, setEditTitle] = useState('');
@@ -86,6 +95,12 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
       .finally(() => setAttendanceLoading(false));
   }, [event?.id]);
 
+  // Load comments whenever the event changes
+  useEffect(() => {
+    if (!event) { setEventComments([]); setCommentText(''); return; }
+    void fetchEventComments(event.id).then(setEventComments).catch(() => {});
+  }, [event?.id]);
+
   const myRow = attendees.find((a) => a.staff_id === currentUserId);
   // All Staff default ON, dept default OFF
   const isAttending = event?.department === null
@@ -123,6 +138,23 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
     setConfirm(false);
     setError(null);
     onClose();
+  }
+
+  async function postComment() {
+    if (!event || !commentText.trim() || commentPending) return;
+    const body = commentText.trim();
+    setCommentPending(true);
+    try {
+      await addEventComment(event.id, body, currentUserId);
+      const mentioned = parseMentionIds(body, profiles);
+      if (mentioned.length) {
+        void notifyEventCommentMentions(mentioned, currentUserId, event.id, body).catch(() => {});
+      }
+      setCommentText('');
+      setEventComments(await fetchEventComments(event.id));
+    } finally {
+      setCommentPending(false);
+    }
   }
 
   function enterEdit() {
@@ -550,6 +582,43 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
               )}
             </div>
           )}
+
+          {/* Comments */}
+          <div className="border-t border-sparrow-rule pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Comments</p>
+            <ul className="mt-2 space-y-3">
+              {eventComments.length === 0 && (
+                <li className="text-sm text-sparrow-gray">No comments yet.</li>
+              )}
+              {eventComments.map((c) => (
+                <li key={c.id} className="text-sm">
+                  <span className="font-medium text-sparrow-ink">{c.author?.full_name ?? 'Staff'}</span>
+                  <span className="ml-2 text-xs text-sparrow-gray">
+                    {new Date(c.created_at).toLocaleDateString()}
+                  </span>
+                  <p className="text-sparrow-ink">{c.body}</p>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3 flex items-end gap-2">
+              <MentionInput
+                value={commentText}
+                onChange={setCommentText}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) void postComment(); }}
+                staff={profiles}
+                disabled={commentPending}
+                placeholder="Add a comment… (@ to mention)"
+                className="field-input mt-0 max-h-24 w-full resize-none"
+              />
+              <button
+                onClick={() => void postComment()}
+                disabled={commentPending || !commentText.trim()}
+                className="btn-ghost"
+              >
+                Post
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </Drawer>
