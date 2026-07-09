@@ -61,6 +61,9 @@ const CONTENT_CLASSES =
 export function MeetingNotesView({ event, userId, onClose }: Props) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Fetched content held in state so a second effect can write it to the
+  // contentEditable refs after the DOM has rendered (refs are null during loading).
+  const [initialContent, setInitialContent] = useState<{ prep: string; live: string; shared: string } | null>(null);
   const [privateStatus, setPrivateStatus] = useState<SaveStatus>('idle');
   const [sharedStatus, setSharedStatus] = useState<SaveStatus>('idle');
 
@@ -102,17 +105,14 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
           setLoading(false);
           return;
         }
-        if (priv) {
-          latestPrep.current = priv.prep_notes;
-          latestLive.current = priv.live_notes;
-          if (prepRef.current) prepRef.current.innerHTML = priv.prep_notes;
-          if (liveRef.current) liveRef.current.innerHTML = priv.live_notes;
-        }
-        if (shared) {
-          latestShared.current = shared.notes;
-          if (sharedRef.current) sharedRef.current.innerHTML = shared.notes;
-        }
+        const prep = priv?.prep_notes ?? '';
+        const live = priv?.live_notes ?? '';
+        const sharedNotes = shared?.notes ?? '';
+        latestPrep.current = prep;
+        latestLive.current = live;
+        latestShared.current = sharedNotes;
         loadSucceeded.current = true;
+        setInitialContent({ prep, live, shared: sharedNotes });
         setLoading(false);
       } catch (e) {
         setLoadError(e instanceof Error ? e.message : String(e));
@@ -121,6 +121,15 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
     }
     void load();
   }, [event.id, userId]);
+
+  // Apply fetched content to contentEditable refs after the DOM renders.
+  // Runs once when initialContent is set (loading false → divs are in the DOM).
+  useEffect(() => {
+    if (!initialContent) return;
+    if (prepRef.current) prepRef.current.innerHTML = initialContent.prep;
+    if (liveRef.current) liveRef.current.innerHTML = initialContent.live;
+    if (sharedRef.current) sharedRef.current.innerHTML = initialContent.shared;
+  }, [initialContent]);
 
   // Flush any unsaved content on unmount — best-effort, no await.
   // Skipped entirely if initial load failed to prevent overwriting existing notes with empty state.
