@@ -251,11 +251,11 @@ export function ChatThread({
                     {dayLabel(m.created_at)}
                   </p>
                 )}
-                <div className={`flex items-end ${mine ? 'justify-end' : 'justify-start'}`}>
+                <div className={`flex items-end gap-1 ${mine ? 'justify-end' : 'justify-start'}`}>
 
-                  <div className="relative max-w-[78%]">
-                    {/* Action buttons float above the bubble — no layout footprint, no horizontal overflow */}
-                    <div className={`absolute -top-7 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 ${mine ? 'right-0' : 'left-0'}`}>
+                  {/* Action buttons beside bubble — left side for mine, right side for others */}
+                  {mine && (
+                    <div className="flex shrink-0 items-center gap-0.5 self-end pb-1 opacity-0 transition-opacity group-hover:opacity-100">
                       <ActionButtons
                         mine={mine}
                         onReact={(e) => { e.stopPropagation(); setEmojiPickerId(m.id); }}
@@ -264,6 +264,9 @@ export function ChatThread({
                         onDelete={() => { if (mine) void handleDelete(m.id); }}
                       />
                     </div>
+                  )}
+
+                  <div className="relative max-w-[72%]">
                     {showName && (
                       <p className="mb-0.5 pl-1 text-[11px] font-medium text-sparrow-gray">
                         {m.author?.full_name ?? 'Staff'}
@@ -346,6 +349,19 @@ export function ChatThread({
                       <p className={`mt-0.5 text-[10px] text-sparrow-gray ${mine ? 'text-right' : ''}`}>Seen</p>
                     )}
                   </div>
+
+                  {/* Action buttons right of bubble for others' messages */}
+                  {!mine && (
+                    <div className="flex shrink-0 items-center gap-0.5 self-end pb-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <ActionButtons
+                        mine={mine}
+                        onReact={(e) => { e.stopPropagation(); setEmojiPickerId(m.id); }}
+                        onReply={() => setReplyTo(m)}
+                        onEdit={() => { if (mine) startEdit(m); }}
+                        onDelete={() => { if (mine) void handleDelete(m.id); }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Emoji picker */}
