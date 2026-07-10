@@ -25,6 +25,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
   const [role, setRole] = useState<AppRole>('staff');
   const [department, setDepartment] = useState<Department>('ops');
   const [managerEmail, setManagerEmail] = useState<string>('');
+  const [roleDescription, setRoleDescription] = useState('');
   const [active, setActive] = useState(true);
   const [tocAccess, setTocAccess] = useState(false);
   const [lcpFull, setLcpFull] = useState(false);
@@ -40,6 +41,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setRole(staff.role);
       setDepartment(staff.department);
       setManagerEmail(staff.manager_email ?? '');
+      setRoleDescription(staff.role_description ?? '');
       setActive(staff.active);
       setTocAccess(staff.toc_access);
       setLcpFull(staff.lcp_role === 'full');
@@ -51,6 +53,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setRole('staff');
       setDepartment('ops');
       setManagerEmail('');
+      setRoleDescription('');
       setActive(true);
       setTocAccess(false);
       setLcpFull(false);
@@ -70,6 +73,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       role,
       department,
       manager_email: managerEmail || null,
+      role_description: roleDescription.trim() || null,
       // Checkbox governs the `full` tier only. When unchecked, preserve an existing
       // `extended` grant (set via SQL / Phase-2 read views) rather than clobbering it.
       toc_access: tocAccess,
@@ -187,6 +191,20 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="mt-4">
+            <label className="field-label" htmlFor="s-role-desc">
+              Role description <span className="font-normal text-sparrow-gray">(shown on Team page)</span>
+            </label>
+            <input
+              id="s-role-desc"
+              type="text"
+              className="field-input"
+              value={roleDescription}
+              onChange={(e) => setRoleDescription(e.target.value)}
+              placeholder="e.g. Family Services Team Lead"
+            />
           </div>
 
           <p className="mt-4 rounded-lg bg-sparrow-sage/50 px-3 py-2 text-xs text-sparrow-ink">

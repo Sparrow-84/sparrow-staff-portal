@@ -9,6 +9,7 @@ const CALENDAR_HELP_SECTIONS = [
       { label: 'My Depts', desc: 'Events from your department rooms. Enable sub-department chips to filter further. LCP sessions appear here when toggled on.' },
       { label: 'Personal', desc: 'Events only you can see — personal reminders, appointments, personal blocks. Nobody else sees these, including admins.' },
       { label: 'Deadlines', desc: 'Your task due dates shown as labeled pills — red for P1, gold for P2, gray for P3/P4.' },
+      { label: 'Office Rooms', desc: 'Shows all events that have an office room booked. Hover any event to see which room. Use this to check availability before scheduling a meeting in the office.' },
     ],
     note: 'Each layer is independent — toggle any combination. Your settings are remembered.',
   },
@@ -126,6 +127,9 @@ export function CalendarView() {
   const [showPersonal, setShowPersonal] = useState(
     () => localStorage.getItem('calendar_show_personal') === 'true',
   );
+  const [showRooms, setShowRooms] = useState(
+    () => localStorage.getItem('calendar_show_rooms') === 'true',
+  );
 
   // Which dept sub-chips the user has explicitly turned OFF (absent = active)
   const [disabledDepts, setDisabledDepts] = useState<Set<Department>>(() => {
@@ -193,6 +197,9 @@ export function CalendarView() {
   function togglePersonal() {
     setShowPersonal(v => { const n = !v; localStorage.setItem('calendar_show_personal', String(n)); return n; });
   }
+  function toggleRooms() {
+    setShowRooms(v => { const n = !v; localStorage.setItem('calendar_show_rooms', String(n)); return n; });
+  }
   function toggleDept(dept: Department) {
     setDisabledDepts(prev => {
       const next = new Set(prev);
@@ -226,7 +233,8 @@ export function CalendarView() {
     const isPersonal = ev.is_personal;
     const isAllStaff = !isPersonal && ev.department === null;
     const isDept = !isPersonal && ev.department !== null && myDepts.includes(ev.department) && !disabledDepts.has(ev.department);
-    if (!(isAllStaff && showAllStaff) && !(isDept && showMyDepts) && !(isPersonal && showPersonal)) continue;
+    const isRoomBooked = showRooms && !!ev.room_id;
+    if (!(isAllStaff && showAllStaff) && !(isDept && showMyDepts) && !(isPersonal && showPersonal) && !isRoomBooked) continue;
 
     const startD = ev.all_day ? ev.starts_at.slice(0, 10) : localISO(new Date(ev.starts_at));
     const endD = ev.all_day && ev.ends_at ? ev.ends_at.slice(0, 10) : startD;
@@ -355,6 +363,9 @@ export function CalendarView() {
               <button onClick={toggleDeadlines} className={showDeadlines ? CHIP_ON : CHIP_OFF}>
                 Deadlines
               </button>
+              <button onClick={toggleRooms} className={showRooms ? CHIP_ON : CHIP_OFF}>
+                Office Rooms
+              </button>
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -480,17 +491,22 @@ export function CalendarView() {
 
                             {/* Single-day events */}
                             <div className={`mt-1 space-y-0.5 ${isPast ? 'opacity-60' : ''}`}>
-                              {shown.map(ev => (
-                                <button
-                                  key={ev.id}
-                                  onClick={() => setDetailEvent(ev)}
-                                  className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind]}`}
-                                  onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
-                                  onMouseLeave={() => setCalTooltip(null)}
-                                >
-                                  {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
-                                </button>
-                              ))}
+                              {shown.map(ev => {
+                                const roomName = ev.office_room?.name ?? null;
+                                const sub = ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind];
+                                const subWithRoom = roomName ? `${sub} · ${roomName}` : sub;
+                                return (
+                                  <button
+                                    key={ev.id}
+                                    onClick={() => setDetailEvent(ev)}
+                                    className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind]}`}
+                                    onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: subWithRoom, time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
+                                    onMouseLeave={() => setCalTooltip(null)}
+                                  >
+                                    {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
+                                  </button>
+                                );
+                              })}
                               {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
                             </div>
 

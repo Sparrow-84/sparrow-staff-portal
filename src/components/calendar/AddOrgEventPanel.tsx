@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ADD_KINDS, addEventAttendees, createCalendarEvents, withTzOffset, type CalendarKind } from '@/lib/calendar';
+import { ADD_KINDS, addEventAttendees, createCalendarEvents, fetchOfficeRooms, withTzOffset, type CalendarKind } from '@/lib/calendar';
 import { Drawer } from '@/components/lcp/Drawer';
-import type { Department, Profile } from '@/lib/types';
+import type { Department, OfficeRoom, Profile } from '@/lib/types';
 import { DEPARTMENTS } from '@/lib/types';
 
 const DOW_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -140,9 +140,14 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [rooms, setRooms] = useState<OfficeRoom[]>([]);
+  const [roomId, setRoomId] = useState<string>('');
+  const [isPrivateMeeting, setIsPrivateMeeting] = useState(false);
+
   useEffect(() => { setDate(defaultDate); }, [defaultDate]);
   useEffect(() => { setDepartment(initialDept); }, [initialDept]);
   useEffect(() => { setIsPersonal(initialPersonal ?? false); }, [initialPersonal]);
+  useEffect(() => { void fetchOfficeRooms().then(setRooms); }, []);
 
   function toggleDay(dow: number) {
     setDaysOfWeek((prev) => {
@@ -178,6 +183,8 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
       const recurrenceId = recurring && occurrenceDates.length > 1 ? crypto.randomUUID() : null;
       const multiDayEnd = allDay && !recurring && endDate && endDate > date ? endDate : null;
 
+      const selectedRoom = rooms.find((r) => r.id === roomId) ?? null;
+
       const inputs = occurrenceDates.map((d) => ({
         kind,
         title: title.trim(),
@@ -193,6 +200,8 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
         created_by: currentUserId,
         department: isPersonal ? null : department,
         is_personal: isPersonal,
+        room_id: roomId || null,
+        is_private_meeting: selectedRoom?.blocks_whole_office ? isPrivateMeeting : false,
       }));
 
       const createdIds = await createCalendarEvents(inputs);
@@ -231,6 +240,8 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
     setIsPersonal(false);
     setAttendeeIds([]);
     setAttendeeSearch('');
+    setRoomId('');
+    setIsPrivateMeeting(false);
     setError(null);
   }
 
@@ -393,6 +404,41 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
             className="field-input"
           />
         </div>
+
+        {/* Office room booking */}
+        {rooms.length > 0 && (
+          <div>
+            <label className="field-label">
+              Office room <span className="font-normal text-sparrow-gray">(optional)</span>
+            </label>
+            <select
+              value={roomId}
+              onChange={(e) => { setRoomId(e.target.value); setIsPrivateMeeting(false); }}
+              className="field-input"
+            >
+              <option value="">No room booked</option>
+              {rooms.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+            {roomId && rooms.find((r) => r.id === roomId)?.blocks_whole_office && (
+              <label className="mt-2 flex cursor-pointer items-start gap-2.5 text-sm text-sparrow-ink">
+                <input
+                  type="checkbox"
+                  checked={isPrivateMeeting}
+                  onChange={(e) => setIsPrivateMeeting(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                />
+                <span>
+                  <span className="font-medium">Private meeting — do not walk through</span>
+                  <span className="mt-0.5 block text-xs text-sparrow-gray">
+                    This blocks the whole office. Other rooms will show as unavailable during this time.
+                  </span>
+                </span>
+              </label>
+            )}
+          </div>
+        )}
 
         {/* Attendees — dept events only */}
         {!isPersonal && department && (

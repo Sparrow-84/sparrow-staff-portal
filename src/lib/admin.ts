@@ -11,6 +11,7 @@ export interface StaffInput {
   partnerships_access: boolean;
   ops_access: boolean;
   toc_access: boolean;
+  role_description?: string | null;
 }
 
 /** All staff including deactivated (admin view). RLS still restricts this to admins in practice. */

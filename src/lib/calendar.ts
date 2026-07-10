@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Department } from './types';
+import type { Department, OfficeRoom } from './types';
 
 // ── Event comments ────────────────────────────────────────────────────
 
@@ -82,6 +82,9 @@ export interface CalendarEvent {
   is_personal: boolean;
   created_by: string | null;
   created_at: string;
+  room_id: string | null;
+  is_private_meeting: boolean;
+  office_room: { name: string } | null;
 }
 
 export interface EventOccurrence {
@@ -128,16 +131,20 @@ export interface CalendarEventInput {
   created_by: string;
   department?: Department | null;
   is_personal?: boolean;
+  room_id?: string | null;
+  is_private_meeting?: boolean;
 }
 
 export async function createCalendarEvents(inputs: CalendarEventInput[]): Promise<string[]> {
   // recurrence_id is omitted from non-recurring rows until migration 0035 is applied;
   // once the column exists, recurring events include it so series deletes work.
-  const rows = inputs.map(({ recurrence_id, department, is_personal, ...rest }) => {
+  const rows = inputs.map(({ recurrence_id, department, is_personal, room_id, is_private_meeting, ...rest }) => {
     const row: Record<string, unknown> = { ...rest };
     if (recurrence_id) row.recurrence_id = recurrence_id;
     if (department) row.department = department;
     if (is_personal) row.is_personal = true;
+    if (room_id) row.room_id = room_id;
+    if (is_private_meeting) row.is_private_meeting = true;
     return row;
   });
   const { data, error } = await supabase.from('calendar_events').insert(rows).select('id');
@@ -311,10 +318,62 @@ export async function deleteCalendarEventAndFuture(recurrenceId: string, fromSta
   if (error) throw new Error(error.message);
 }
 
+export async function fetchOfficeRooms(): Promise<OfficeRoom[]> {
+  const { data, error } = await supabase
+    .from('office_rooms')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order');
+  if (error) return []; // graceful if migration not yet applied
+  return (data ?? []) as OfficeRoom[];
+}
+
+/** Returns true if the given room is already booked during [startsAt, endsAt]. */
+export async function checkRoomConflict(
+  roomId: string,
+  startsAt: string,
+  endsAt: string,
+  excludeEventId?: string,
+): Promise<boolean> {
+  let q = supabase
+    .from('calendar_events')
+    .select('id')
+    .eq('room_id', roomId)
+    .lt('starts_at', endsAt)
+    .gt('ends_at', startsAt);
+  if (excludeEventId) q = q.neq('id', excludeEventId);
+  const { data } = await q;
+  return (data?.length ?? 0) > 0;
+}
+
+/** Returns true if there is a private Resident Services booking during [startsAt, endsAt]. */
+export async function checkWholeOfficeBlocked(
+  startsAt: string,
+  endsAt: string,
+  excludeEventId?: string,
+): Promise<boolean> {
+  let q = supabase
+    .from('calendar_events')
+    .select('id, office_room:room_id(blocks_whole_office)')
+    .eq('is_private_meeting', true)
+    .lt('starts_at', endsAt)
+    .gt('ends_at', startsAt);
+  if (excludeEventId) q = q.neq('id', excludeEventId);
+  const { data } = await q;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).some((r: any) => {
+    const room = Array.isArray(r.office_room) ? r.office_room[0] : r.office_room;
+    return room?.blocks_whole_office === true;
+  });
+}
+
 export async function fetchCalendar(): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase.from('calendar_events').select('*').order('starts_at');
+  const { data, error } = await supabase
+    .from('calendar_events')
+    .select('*, office_room:room_id(name)')
+    .order('starts_at');
   if (error) throw new Error(error.message);
-  return (data ?? []) as CalendarEvent[];
+  return (data ?? []) as unknown as CalendarEvent[];
 }
 
 /**

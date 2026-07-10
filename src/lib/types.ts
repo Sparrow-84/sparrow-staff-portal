@@ -14,6 +14,20 @@ export type PriorityTier = 'sleep' | 'week' | 'whenever';
 /** LCP access tier (System 1). null = no LifeChange access. Full = participant PII + notes. */
 export type LcpRole = 'full' | 'extended' | null;
 
+export interface WorkSchedule {
+  days: string[]; // e.g. ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+  start: string;  // '09:00'
+  end: string;    // '17:00'
+}
+
+export interface OfficeRoom {
+  id: string;
+  name: string;
+  blocks_whole_office: boolean;
+  is_active: boolean;
+  sort_order: number;
+}
+
 export interface Profile {
   id: string;
   email: string;
@@ -30,6 +44,10 @@ export interface Profile {
   ops_access: boolean;
   /** Twin Oaks Room explicit access grant — beyond the implicit TOC dept + admin grant. */
   toc_access: boolean;
+  work_schedule: WorkSchedule | null;
+  blurb: string | null;
+  photo_url: string | null;
+  role_description: string | null;
 }
 
 export interface Task {
