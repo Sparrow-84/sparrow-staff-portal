@@ -1,6 +1,79 @@
 import { supabase } from './supabase';
 import type { Department, OfficeRoom } from './types';
 
+// ── Calendar labels ───────────────────────────────────────────────────
+
+export type LabelScope = 'preset' | 'all_staff' | 'dept' | 'personal';
+
+export interface CalendarLabel {
+  id: string;
+  name: string;
+  color: string;       // matches a LABEL_COLORS id ('green', 'blue', 'lime', etc.)
+  scope: LabelScope;
+  department: Department | null;
+  is_preset: boolean;
+  sort_order: number;
+  created_by: string | null;
+}
+
+/** Multi-layer mode: event pill color is determined by its source layer, not its label. */
+export const LAYER_PILL: Record<string, string> = {
+  all_staff:    'bg-emerald-600 text-white',
+  personal:     'bg-violet-500 text-white',
+  toc:          'bg-teal-600 text-white',
+  lcp:          'bg-blue-600 text-white',
+  partnerships: 'bg-amber-500 text-white',
+  ops:          'bg-rose-500 text-white',
+};
+
+export function getLayerPill(ev: { is_personal: boolean; department: Department | null }): string {
+  if (ev.is_personal) return LAYER_PILL.personal;
+  if (!ev.department) return LAYER_PILL.all_staff;
+  return LAYER_PILL[ev.department] ?? LAYER_PILL.all_staff;
+}
+
+export async function fetchCalendarLabels(): Promise<CalendarLabel[]> {
+  const { data, error } = await supabase
+    .from('calendar_labels')
+    .select('*')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+  if (error) return []; // table may not exist until 0065 is applied
+  return (data ?? []) as CalendarLabel[];
+}
+
+export async function createCalendarLabel(input: {
+  name: string;
+  color: string;
+  scope: LabelScope;
+  department?: Department | null;
+  created_by: string;
+}): Promise<CalendarLabel> {
+  const { data, error } = await supabase
+    .from('calendar_labels')
+    .insert({
+      name: input.name,
+      color: input.color,
+      scope: input.scope,
+      department: input.department ?? null,
+      created_by: input.created_by,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as CalendarLabel;
+}
+
+export async function updateCalendarLabel(id: string, patch: { name?: string; color?: string }): Promise<void> {
+  const { error } = await supabase.from('calendar_labels').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteCalendarLabel(id: string): Promise<void> {
+  const { error } = await supabase.from('calendar_labels').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // ── Event comments ────────────────────────────────────────────────────
 
 export interface EventComment {
@@ -85,6 +158,8 @@ export interface CalendarEvent {
   room_id: string | null;
   is_private_meeting: boolean;
   office_room: { name: string } | null;
+  label_id: string | null;
+  label: CalendarLabel | null;
 }
 
 export interface EventOccurrence {
@@ -133,18 +208,20 @@ export interface CalendarEventInput {
   is_personal?: boolean;
   room_id?: string | null;
   is_private_meeting?: boolean;
+  label_id?: string | null;
 }
 
 export async function createCalendarEvents(inputs: CalendarEventInput[]): Promise<string[]> {
   // recurrence_id is omitted from non-recurring rows until migration 0035 is applied;
   // once the column exists, recurring events include it so series deletes work.
-  const rows = inputs.map(({ recurrence_id, department, is_personal, room_id, is_private_meeting, ...rest }) => {
+  const rows = inputs.map(({ recurrence_id, department, is_personal, room_id, is_private_meeting, label_id, ...rest }) => {
     const row: Record<string, unknown> = { ...rest };
     if (recurrence_id) row.recurrence_id = recurrence_id;
     if (department) row.department = department;
     if (is_personal) row.is_personal = true;
     if (room_id) row.room_id = room_id;
     if (is_private_meeting) row.is_private_meeting = true;
+    if (label_id) row.label_id = label_id;
     return row;
   });
   const { data, error } = await supabase.from('calendar_events').insert(rows).select('id');
@@ -257,7 +334,7 @@ export async function removeEventAttendee(
 
 export async function updateCalendarEvent(
   id: string,
-  patch: Partial<Pick<CalendarEvent, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'all_day' | 'location'>>,
+  patch: Partial<Pick<CalendarEvent, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'all_day' | 'location' | 'label_id'>>,
 ): Promise<void> {
   const { error } = await supabase.from('calendar_events').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
@@ -368,12 +445,22 @@ export async function checkWholeOfficeBlocked(
 }
 
 export async function fetchCalendar(): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase
-    .from('calendar_events')
-    .select('*, office_room:room_id(name)')
-    .order('starts_at');
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as CalendarEvent[];
+  try {
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('*, office_room:room_id(name), label:label_id(id, name, color, scope, department, is_preset, sort_order, created_by)')
+      .order('starts_at');
+    if (error) throw error;
+    return (data ?? []) as unknown as CalendarEvent[];
+  } catch {
+    // label_id column may not exist until migration 0065 is applied — degrade gracefully
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('*, office_room:room_id(name)')
+      .order('starts_at');
+    if (error) throw new Error(error.message);
+    return ((data ?? []) as unknown as CalendarEvent[]).map((ev) => ({ ...ev, label_id: null, label: null }));
+  }
 }
 
 /**

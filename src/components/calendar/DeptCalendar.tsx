@@ -6,6 +6,15 @@ import {
   KIND_PILL,
   type CalendarEvent,
 } from '@/lib/calendar';
+import { LABEL_COLORS } from '@/components/LabelPill';
+
+function eventPillClass(ev: CalendarEvent): string {
+  if (ev.label?.color) {
+    const meta = LABEL_COLORS.find((c) => c.id === ev.label!.color);
+    if (meta) return meta.pill;
+  }
+  return KIND_PILL[ev.kind];
+}
 import { fetchProfiles } from '@/lib/data';
 import type { Department, Profile } from '@/lib/types';
 import { AddOrgEventPanel } from './AddOrgEventPanel';
@@ -210,7 +219,7 @@ export function DeptCalendar({ department }: Props) {
                     <button
                       key={`bar-${bi}`}
                       onClick={() => setDetailEvent(bar.event)}
-                      onMouseEnter={(e) => setTooltip({ title: bar.event.title, sub: KIND_LABEL[bar.event.kind], x: e.clientX, y: e.clientY })}
+                      onMouseEnter={(e) => setTooltip({ title: bar.event.title, sub: bar.event.label?.name ?? KIND_LABEL[bar.event.kind], x: e.clientX, y: e.clientY })}
                       onMouseLeave={() => setTooltip(null)}
                       style={{
                         position: 'absolute',
@@ -220,7 +229,7 @@ export function DeptCalendar({ department }: Props) {
                         height: 20,
                         borderRadius: bar.isActualStart && bar.isActualEnd ? 4 : bar.isActualStart ? '4px 0 0 4px' : bar.isActualEnd ? '0 4px 4px 0' : 0,
                       }}
-                      className={`z-10 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-75 ${KIND_PILL[bar.event.kind]}`}
+                      className={`z-10 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-75 ${eventPillClass(bar.event)}`}
                     >
                       {bar.isActualStart ? bar.event.title : ''}
                     </button>
@@ -259,9 +268,9 @@ export function DeptCalendar({ department }: Props) {
                               <button
                                 key={ev.id}
                                 onClick={() => setDetailEvent(ev)}
-                                onMouseEnter={(e) => setTooltip({ title: ev.title, sub: KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), x: e.clientX, y: e.clientY })}
+                                onMouseEnter={(e) => setTooltip({ title: ev.title, sub: ev.label?.name ?? KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), x: e.clientX, y: e.clientY })}
                                 onMouseLeave={() => setTooltip(null)}
-                                className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${KIND_PILL[ev.kind]}`}
+                                className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${eventPillClass(ev)}`}
                               >
                                 {ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
                               </button>
@@ -296,6 +305,7 @@ export function DeptCalendar({ department }: Props) {
         open={addOpen}
         defaultDate={addDate}
         currentUserId={currentUserId}
+        isAdmin={isAdmin}
         userDepts={[department]}
         profiles={profiles}
         initialDept={department}

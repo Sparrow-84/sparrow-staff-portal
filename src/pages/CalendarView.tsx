@@ -30,7 +30,8 @@ const CALENDAR_HELP_SECTIONS = [
   },
 ];
 import { useAuth } from '@/auth/AuthContext';
-import { fetchCalendar, KIND_LABEL, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
+import { fetchCalendar, KIND_LABEL, KIND_PILL, LAYER_PILL, getLayerPill, type CalendarEvent } from '@/lib/calendar';
+import { LABEL_COLORS } from '@/components/LabelPill';
 import { AddOrgEventPanel } from '@/components/calendar/AddOrgEventPanel';
 import { OrgEventDetailPanel } from '@/components/calendar/OrgEventDetailPanel';
 import { MeetingNotesView } from '@/components/calendar/MeetingNotesView';
@@ -342,6 +343,23 @@ export function CalendarView() {
   }
   function openAdd(dStr: string) { setAddDate(dStr); setAddOpen(true); }
 
+  // Dynamic color mode: 1 active source layer → label colors; 2+ → layer colors
+  const activeSourceLayers = [showAllStaff, showMyDepts, showPersonal].filter(Boolean).length;
+  const isMultiLayer = activeSourceLayers > 1;
+
+  function eventPillClass(ev: CalendarEvent): string {
+    if (isMultiLayer) return getLayerPill(ev);
+    if (ev.label?.color) {
+      const meta = LABEL_COLORS.find((c) => c.id === ev.label!.color);
+      if (meta) return meta.pill;
+    }
+    // Fallback for events without labels (pre-migration or unlabeled)
+    return ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind];
+  }
+
+  // Suppress unused import warning — LAYER_PILL referenced via getLayerPill
+  void LAYER_PILL;
+
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
@@ -493,14 +511,13 @@ export function CalendarView() {
                             <div className={`mt-1 space-y-0.5 ${isPast ? 'opacity-60' : ''}`}>
                               {shown.map(ev => {
                                 const roomName = ev.office_room?.name ?? null;
-                                const sub = ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind];
-                                const subWithRoom = roomName ? `${sub} · ${roomName}` : sub;
+                                const labelName = ev.label?.name ?? (ev.is_personal ? 'Personal' : KIND_LABEL[ev.kind]);
                                 return (
                                   <button
                                     key={ev.id}
                                     onClick={() => setDetailEvent(ev)}
-                                    className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind]}`}
-                                    onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: subWithRoom, time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
+                                    className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${eventPillClass(ev)}`}
+                                    onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: roomName ? `${labelName} · ${roomName}` : labelName, time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
                                     onMouseLeave={() => setCalTooltip(null)}
                                   >
                                     {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
@@ -564,13 +581,13 @@ export function CalendarView() {
                         <button
                           key={`bar-${bar.event.id}-${wi}`}
                           onClick={() => setDetailEvent(bar.event)}
-                          className={`absolute h-5 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-80 ${roundedClass} ${bar.event.is_personal ? 'bg-slate-400 text-white' : KIND_PILL[bar.event.kind]}`}
+                          className={`absolute h-5 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-80 ${roundedClass} ${eventPillClass(bar.event)}`}
                           style={{
                             left: `calc(${leftPct}% + ${leftAdj}px)`,
                             width: `calc(${widthPct}% - ${leftAdj}px - ${rightAdj}px)`,
                             top: topPx,
                           }}
-                          onMouseEnter={(e) => setCalTooltip({ title: bar.event.title, sub: bar.event.is_personal ? 'Personal' : KIND_LABEL[bar.event.kind], x: e.clientX, y: e.clientY })}
+                          onMouseEnter={(e) => setCalTooltip({ title: bar.event.title, sub: bar.event.label?.name ?? (bar.event.is_personal ? 'Personal' : KIND_LABEL[bar.event.kind]), x: e.clientX, y: e.clientY })}
                           onMouseLeave={() => setCalTooltip(null)}
                         >
                           {bar.event.title}
@@ -597,6 +614,7 @@ export function CalendarView() {
         open={addOpen}
         defaultDate={addDate}
         currentUserId={profile?.id ?? ''}
+        isAdmin={profile?.role === 'admin'}
         userDepts={myDepts}
         profiles={profiles}
         initialDept={(() => {

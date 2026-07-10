@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ADD_KINDS, addEventAttendees, createCalendarEvents, fetchOfficeRooms, withTzOffset, type CalendarKind } from '@/lib/calendar';
+import { addEventAttendees, createCalendarEvents, fetchOfficeRooms, withTzOffset } from '@/lib/calendar';
 import { Drawer } from '@/components/lcp/Drawer';
+import { CalendarLabelPicker } from '@/components/calendar/CalendarLabelPicker';
 import type { Department, OfficeRoom, Profile } from '@/lib/types';
 import { DEPARTMENTS } from '@/lib/types';
 
@@ -104,6 +105,7 @@ interface Props {
   open: boolean;
   defaultDate: string;
   currentUserId: string;
+  isAdmin: boolean;
   userDepts: Department[];
   profiles: Profile[];
   initialDept: Department | null;
@@ -112,9 +114,9 @@ interface Props {
   onCreated: () => void;
 }
 
-export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, profiles, initialDept, initialPersonal, onClose, onCreated }: Props) {
+export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, userDepts, profiles, initialDept, initialPersonal, onClose, onCreated }: Props) {
   const [title, setTitle] = useState('');
-  const [kind, setKind] = useState<CalendarKind>('other');
+  const [labelId, setLabelId] = useState<string | null>(null);
   const [date, setDate] = useState(defaultDate);
   const [endDate, setEndDate] = useState(''); // multi-day all-day end date
   const [startTime, setStartTime] = useState('09:00');
@@ -145,8 +147,8 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
   const [isPrivateMeeting, setIsPrivateMeeting] = useState(false);
 
   useEffect(() => { setDate(defaultDate); }, [defaultDate]);
-  useEffect(() => { setDepartment(initialDept); }, [initialDept]);
-  useEffect(() => { setIsPersonal(initialPersonal ?? false); }, [initialPersonal]);
+  useEffect(() => { setDepartment(initialDept); setLabelId(null); }, [initialDept]);
+  useEffect(() => { setIsPersonal(initialPersonal ?? false); setLabelId(null); }, [initialPersonal]);
   useEffect(() => { void fetchOfficeRooms().then(setRooms); }, []);
 
   function toggleDay(dow: number) {
@@ -173,7 +175,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
     return generateDates(date, frequency, [...daysOfWeek], effectiveUntil);
   })();
 
-  const canSubmit = title.trim() && date && (allDay || startTime) && occurrenceDates.length > 0;
+  const canSubmit = title.trim() && date && (allDay || startTime) && occurrenceDates.length > 0 && !!labelId;
 
   async function submit() {
     if (!canSubmit) return;
@@ -186,7 +188,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
       const selectedRoom = rooms.find((r) => r.id === roomId) ?? null;
 
       const inputs = occurrenceDates.map((d) => ({
-        kind,
+        kind: 'other' as const,   // kind kept in DB for legacy; label drives color/display
         title: title.trim(),
         starts_at: allDay ? `${d}T00:00:00+00:00` : withTzOffset(d, startTime),
         ends_at: multiDayEnd
@@ -202,6 +204,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
         is_personal: isPersonal,
         room_id: roomId || null,
         is_private_meeting: selectedRoom?.blocks_whole_office ? isPrivateMeeting : false,
+        label_id: labelId,
       }));
 
       const createdIds = await createCalendarEvents(inputs);
@@ -223,7 +226,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
 
   function reset() {
     setTitle('');
-    setKind('other');
+    setLabelId(null);
     setDate(defaultDate);
     setEndDate('');
     setStartTime('09:00');
@@ -292,20 +295,21 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, userDepts, 
           />
         </div>
 
-        <div>
-          <label className="field-label">Type</label>
-          <select value={kind} onChange={(e) => setKind(e.target.value as CalendarKind)} className="field-input">
-            {ADD_KINDS.map((k) => (
-              <option key={k.value} value={k.value}>{k.label}</option>
-            ))}
-          </select>
-        </div>
+        <CalendarLabelPicker
+          value={labelId}
+          isPersonal={isPersonal}
+          department={isPersonal ? null : department}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onChange={(id) => setLabelId(id)}
+        />
 
         <div>
           <label className="field-label">Post to</label>
           <select
             value={isPersonal ? '__personal__' : (department ?? '')}
             onChange={(e) => {
+              setLabelId(null);
               if (e.target.value === '__personal__') {
                 setIsPersonal(true);
                 setDepartment(null);

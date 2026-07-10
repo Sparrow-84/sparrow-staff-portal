@@ -7,7 +7,7 @@ import type { View } from '../Sidebar';
 import { acceptTask, deferTask, pushBackTask, setTaskStatus } from '@/lib/data';
 import { markAllRead, markRead } from '@/lib/social';
 import { addQuickWinNote, QUICK_WIN_EMOJI } from '@/lib/quickwins';
-import { expandEvents, KIND_LABEL, KIND_PILL } from '@/lib/calendar';
+import { expandEvents, KIND_LABEL, getLayerPill } from '@/lib/calendar';
 import { bucketFor, dueLabel, isoDate, PRIORITY_META, TIER_META, tierForPriority } from '@/lib/tasks';
 
 /** Everything a widget might need — passed whole so each widget reads what it uses. */
@@ -381,7 +381,7 @@ function UpcomingMeetingsWidget({ ctx }: { ctx: WidgetContext }) {
           <ul className="space-y-1.5">
             {g.items.map((o, i) => (
               <li key={`${o.event.id}-${i}`} className="flex items-center gap-2">
-                <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${KIND_PILL[o.event.kind]}`}>
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${getLayerPill(o.event)}`}>
                   {timeLabel(o.occursAt, o.event.all_day)}
                 </span>
                 <span className="truncate text-sm text-sparrow-ink">{o.event.title}</span>
@@ -505,7 +505,7 @@ function WeekTooltip({ state }: { state: WeekTooltipState }) {
   return (
     <div className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg" style={{ left, top }}>
       <p className="text-sm font-medium leading-snug text-sparrow-ink">{state.event.title}</p>
-      <p className="mt-1 text-xs text-sparrow-gray">{state.event.is_personal ? 'Personal — only you can see this' : KIND_LABEL[state.event.kind]}</p>
+      <p className="mt-1 text-xs text-sparrow-gray">{state.event.is_personal ? 'Personal — only you can see this' : (state.event.label?.name ?? KIND_LABEL[state.event.kind])}</p>
       {!state.event.all_day && (
         <p className="mt-1 text-xs text-sparrow-gray">
           {state.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
@@ -573,7 +573,7 @@ function DayDetailPopup({
                         <span>{o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
                       )}
                       {o.event.location && <span>{o.event.location}</span>}
-                      <span>{o.event.is_personal ? 'Personal' : KIND_LABEL[o.event.kind]}</span>
+                      <span>{o.event.is_personal ? 'Personal' : (o.event.label?.name ?? KIND_LABEL[o.event.kind])}</span>
                       <span className="ml-auto font-medium text-sparrow-green">Open notes →</span>
                     </div>
                   </button>
@@ -711,7 +711,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
               {dayEvents.map((o, idx) => (
                 <div
                   key={`${o.event.id}-${idx}`}
-                  className={`mb-0.5 truncate rounded px-1 py-0.5 text-[10px] ${o.event.is_personal ? 'bg-slate-100 text-slate-500' : 'bg-sparrow-green/15 text-sparrow-green'}`}
+                  className={`mb-0.5 truncate rounded px-1 py-0.5 text-[10px] ${getLayerPill(o.event)}`}
                   onMouseEnter={(e) => setTooltip({ kind: 'event', event: o.event, occursAt: o.occursAt, x: e.clientX, y: e.clientY })}
                   onMouseLeave={() => setTooltip(null)}
                 >

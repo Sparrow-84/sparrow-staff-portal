@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
-  ADD_KINDS,
   addEventComment,
   deleteCalendarEvent,
   deleteCalendarEventAndFuture,
@@ -16,15 +15,15 @@ import {
   toLocalDate,
   toLocalTime,
   KIND_LABEL,
-  KIND_PILL,
   type CalendarEvent,
-  type CalendarKind,
   type EventAttendee,
   type EventComment,
 } from '@/lib/calendar';
 import { parseMentionIds } from '@/lib/chat';
 import { Drawer } from '@/components/lcp/Drawer';
 import { MentionInput } from '@/components/chat/MentionInput';
+import { CalendarLabelPicker } from '@/components/calendar/CalendarLabelPicker';
+import { LABEL_COLORS } from '@/components/LabelPill';
 import type { Profile } from '@/lib/types';
 
 interface Props {
@@ -53,7 +52,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
   // Edit form state
   const [editTitle, setEditTitle] = useState('');
-  const [editKind, setEditKind] = useState<CalendarKind>('other');
+  const [editLabelId, setEditLabelId] = useState<string | null>(null);
   const [editDate, setEditDate] = useState('');
   const [editEndDate, setEditEndDate] = useState(''); // multi-day all-day end date
   const [editAllDay, setEditAllDay] = useState(false);
@@ -160,7 +159,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
   function enterEdit() {
     if (!event) return;
     setEditTitle(event.title);
-    setEditKind(event.kind);
+    setEditLabelId(event.label_id ?? null);
     setEditAllDay(event.all_day);
     // All-day events are stored as UTC midnight (e.g. 2026-07-07T00:00:00+00:00).
     // Using toLocalDate() on those returns the PREVIOUS day in any timezone west of UTC.
@@ -199,7 +198,8 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
       const basePatch = {
         title: editTitle.trim(),
-        kind: editKind,
+        kind: event.kind, // preserve original kind — not editable via UI
+        label_id: editLabelId,
         all_day: editAllDay,
         location: editLocation.trim() || null,
       };
@@ -391,7 +391,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
       open={!!event}
       onClose={handleClose}
       title={mode === 'edit' ? 'Edit Event' : event.title}
-      subtitle={mode === 'edit' ? undefined : KIND_LABEL[event.kind]}
+      subtitle={mode === 'edit' ? undefined : (event.label?.name ?? KIND_LABEL[event.kind])}
       footer={renderFooter()}
     >
       {mode === 'edit' ? (
@@ -406,14 +406,14 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
             />
           </div>
 
-          <div>
-            <label className="field-label">Type</label>
-            <select value={editKind} onChange={(e) => setEditKind(e.target.value as CalendarKind)} className="field-input">
-              {ADD_KINDS.map((k) => (
-                <option key={k.value} value={k.value}>{k.label}</option>
-              ))}
-            </select>
-          </div>
+          <CalendarLabelPicker
+            value={editLabelId}
+            isPersonal={event.is_personal}
+            department={event.is_personal ? null : event.department}
+            currentUserId={currentUserId}
+            isAdmin={isAdmin}
+            onChange={(id) => setEditLabelId(id)}
+          />
 
           <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
             <input
@@ -493,10 +493,16 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
         </div>
       ) : (
         <div className="space-y-5">
-          <div className="flex gap-2">
-            <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${KIND_PILL[event.kind]}`}>
-              {KIND_LABEL[event.kind]}
-            </span>
+          <div className="flex flex-wrap gap-2">
+            {event.label ? (
+              <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${LABEL_COLORS.find((c) => c.id === event.label!.color)?.pill ?? 'bg-slate-100 text-slate-600'}`}>
+                {event.label.name}
+              </span>
+            ) : (
+              <span className="inline-block rounded-full bg-sparrow-mist px-3 py-1 text-xs font-medium text-sparrow-gray">
+                {KIND_LABEL[event.kind]}
+              </span>
+            )}
             {isRecurring && (
               <span className="inline-block rounded-full bg-sparrow-mist px-3 py-1 text-xs font-medium text-sparrow-gray">
                 Recurring
