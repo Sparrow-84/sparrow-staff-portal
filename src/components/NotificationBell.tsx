@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchNotifications, markAllRead, markRead, type AppNotification } from '@/lib/social';
+import type { View } from './Sidebar';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -18,7 +19,12 @@ function describe(n: AppNotification): string {
   return `${who} commented on a task`;
 }
 
-export function NotificationBell() {
+function viewForNotification(n: AppNotification): View {
+  if (n.type === 'mentioned') return 'messages';
+  return 'tasks';
+}
+
+export function NotificationBell({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [items, setItems] = useState<AppNotification[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -44,6 +50,8 @@ export function NotificationBell() {
     await load();
   }
   async function onItemClick(n: AppNotification) {
+    setOpen(false);
+    onNavigate(viewForNotification(n));
     if (!n.read) {
       await markRead(n.id);
       void load();

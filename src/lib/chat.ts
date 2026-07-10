@@ -234,10 +234,10 @@ export async function fetchReactions(channelId: string): Promise<ChatReaction[]>
   return (data ?? []) as ChatReaction[];
 }
 
-export async function addReaction(channelId: string, messageId: string, emoji: string): Promise<void> {
+export async function addReaction(channelId: string, messageId: string, emoji: string, userId: string): Promise<void> {
   await supabase
     .from('chat_reactions')
-    .upsert({ channel_id: channelId, message_id: messageId, emoji }, { onConflict: 'message_id,user_id,emoji' });
+    .upsert({ channel_id: channelId, message_id: messageId, emoji, user_id: userId }, { onConflict: 'message_id,user_id,emoji' });
 }
 
 export async function removeReaction(messageId: string, emoji: string): Promise<void> {

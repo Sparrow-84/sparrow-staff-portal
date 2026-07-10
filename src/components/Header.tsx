@@ -43,7 +43,7 @@ export function Header({ profile, onMenu, onNavigate }: { profile: Profile; onMe
       </div>
       <div className="flex items-center gap-3">
         <MessagesButton onNavigate={onNavigate} />
-        <NotificationBell />
+        <NotificationBell onNavigate={onNavigate} />
         <div className="hidden text-right sm:block">
           <p className="text-sm font-medium text-sparrow-ink">{profile.full_name}</p>
           <p className="text-xs capitalize text-sparrow-gray">{profile.role}</p>

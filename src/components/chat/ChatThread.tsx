@@ -184,7 +184,7 @@ export function ChatThread({
       await removeReaction(msgId, emoji);
       setReactions((prev) => prev.filter((r) => !(r.message_id === msgId && r.user_id === meId && r.emoji === emoji)));
     } else {
-      await addReaction(channelId, msgId, emoji);
+      await addReaction(channelId, msgId, emoji, meId);
       setReactions((prev) => [...prev, { message_id: msgId, user_id: meId, emoji }]);
     }
     setEmojiPickerId(null);
