@@ -21,6 +21,7 @@ import {
   type ChatPerson,
 } from '@/lib/chat';
 import { createMentionNotifications } from '@/lib/social';
+import { sendPush } from '@/lib/push';
 
 function previewTime(iso: string): string {
   const d = new Date(iso);
@@ -88,6 +89,15 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
     if (mentionedIds.length) {
       void createMentionNotifications(mentionedIds, meId, activeId, body).catch(() => {});
     }
+    if (active?.kind === 'direct' && active.other_id) {
+      void sendPush({
+        to: 'user',
+        userId: active.other_id,
+        title: profile?.full_name ?? 'New message',
+        body: body.length > 80 ? body.slice(0, 80) + '…' : body,
+        url: `${window.location.origin}/messages`,
+      });
+    }
     setMessages(await fetchMessages(activeId));
     refresh();
   }
@@ -96,6 +106,15 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
     if (!activeId) return;
     const { url } = await uploadVoiceBlob(blob, activeId, meId);
     await sendMessage(activeId, meId, '', { url, duration });
+    if (active?.kind === 'direct' && active.other_id) {
+      void sendPush({
+        to: 'user',
+        userId: active.other_id,
+        title: profile?.full_name ?? 'New message',
+        body: '🎤 Voice message',
+        url: `${window.location.origin}/messages`,
+      });
+    }
     setMessages(await fetchMessages(activeId));
     refresh();
   }
@@ -104,6 +123,15 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
     if (!activeId) return;
     const { url } = await uploadImageFile(file, activeId, meId);
     await sendMessage(activeId, meId, '', undefined, url);
+    if (active?.kind === 'direct' && active.other_id) {
+      void sendPush({
+        to: 'user',
+        userId: active.other_id,
+        title: profile?.full_name ?? 'New message',
+        body: '📷 Photo',
+        url: `${window.location.origin}/messages`,
+      });
+    }
     setMessages(await fetchMessages(activeId));
     refresh();
   }

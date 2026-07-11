@@ -1,5 +1,13 @@
 import { supabase } from './supabase';
-import type { Profile, WorkSchedule } from './types';
+import type { Profile, ScheduleBlock, WorkSchedule } from './types';
+
+/** Reads schedules saved before the multi-block format; wraps the old single {days,start,end} shape into one block. */
+export function normalizeSchedule(schedule: WorkSchedule | (ScheduleBlock & { blocks?: undefined }) | null): ScheduleBlock[] {
+  if (!schedule) return [];
+  if (Array.isArray((schedule as WorkSchedule).blocks)) return (schedule as WorkSchedule).blocks;
+  const legacy = schedule as ScheduleBlock;
+  return legacy.days ? [{ days: legacy.days, start: legacy.start, end: legacy.end }] : [];
+}
 
 export async function fetchTeamProfiles(): Promise<Profile[]> {
   const { data, error } = await supabase
@@ -25,10 +33,19 @@ export async function fetchCurrentEvents(): Promise<{ department: string | null;
 
 export async function updateMyProfile(
   id: string,
-  patch: { blurb?: string | null; work_schedule?: WorkSchedule | null },
+  patch: { blurb?: string | null; work_schedule?: WorkSchedule | null; photo_url?: string | null; push_enabled?: boolean },
 ): Promise<void> {
   const { error } = await supabase.from('profiles').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+export async function uploadAvatarPhoto(userId: string, file: File): Promise<string> {
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const path = `${userId}.${ext}`;
+  const { error } = await supabase.storage.from('staff-avatars').upload(path, file, { upsert: true });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('staff-avatars').getPublicUrl(path);
+  return `${data.publicUrl}?v=${Date.now()}`;
 }
 
 const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -39,15 +56,17 @@ export function getAvailability(
   profile: Profile,
   currentEvents: { department: string | null; created_by: string | null }[],
 ): AvailabilityStatus {
-  const schedule = profile.work_schedule;
-  if (!schedule) return 'unknown';
+  const blocks = normalizeSchedule(profile.work_schedule);
+  if (blocks.length === 0) return 'unknown';
 
   const now = new Date();
   const todayName = DAYS_SHORT[now.getDay()];
-  if (!schedule.days.includes(todayName)) return 'off';
-
   const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  if (nowTime < schedule.start || nowTime > schedule.end) return 'off';
+
+  const inCurrentBlock = blocks.some(
+    (b) => b.days.includes(todayName) && nowTime >= b.start && nowTime <= b.end,
+  );
+  if (!inCurrentBlock) return 'off';
 
   const inMeeting = currentEvents.some(
     (ev) => ev.department === profile.department || ev.department === null,

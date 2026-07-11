@@ -6,6 +6,7 @@ import {
   fetchAnnouncements,
   type Announcement,
 } from '@/lib/social';
+import { sendPush } from '@/lib/push';
 
 // A single slim bar of team-wide notices on the home screen (admins post/dismiss).
 export function AnnouncementBar() {
@@ -28,7 +29,15 @@ export function AnnouncementBar() {
 
   async function post() {
     if (!draft.trim() || !profile) return;
-    await createAnnouncement(draft.trim(), profile.id);
+    const text = draft.trim();
+    await createAnnouncement(text, profile.id);
+    void sendPush({
+      to: 'staff',
+      excludeId: profile.id,
+      title: `Announcement — ${profile.full_name}`,
+      body: text.length > 100 ? text.slice(0, 100) + '…' : text,
+      url: window.location.origin + '/',
+    });
     setDraft('');
     setPosting(false);
     void load();

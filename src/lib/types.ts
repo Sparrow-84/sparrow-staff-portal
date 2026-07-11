@@ -14,10 +14,15 @@ export type PriorityTier = 'sleep' | 'week' | 'whenever';
 /** LCP access tier (System 1). null = no LifeChange access. Full = participant PII + notes. */
 export type LcpRole = 'full' | 'extended' | null;
 
-export interface WorkSchedule {
+/** One chunk of working time — some staff work several of these in a day. */
+export interface ScheduleBlock {
   days: string[]; // e.g. ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
   start: string;  // '09:00'
   end: string;    // '17:00'
+}
+
+export interface WorkSchedule {
+  blocks: ScheduleBlock[];
 }
 
 export interface OfficeRoom {
@@ -48,6 +53,7 @@ export interface Profile {
   blurb: string | null;
   photo_url: string | null;
   role_description: string | null;
+  push_enabled: boolean;
 }
 
 export interface Task {

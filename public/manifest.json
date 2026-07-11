@@ -1,0 +1,21 @@
+{
+  "name": "Sparrow Staff Portal",
+  "short_name": "Sparrow",
+  "description": "Sparrow internal staff dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F5F0",
+  "theme_color": "#1E4D30",
+  "icons": [
+    {
+      "src": "/brand/logo-primary-circle-green.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/logo-primary-circle-green.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
