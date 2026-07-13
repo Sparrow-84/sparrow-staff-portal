@@ -20,6 +20,7 @@ import {
   type EventComment,
 } from '@/lib/calendar';
 import { parseMentionIds } from '@/lib/chat';
+import { sendPush } from '@/lib/push';
 import { Drawer } from '@/components/lcp/Drawer';
 import { MentionInput } from '@/components/chat/MentionInput';
 import { CalendarLabelPicker } from '@/components/calendar/CalendarLabelPicker';
@@ -219,6 +220,13 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
       }
 
       setMode('view');
+      void sendPush({
+        to: 'staff',
+        excludeId: currentUserId,
+        title: 'Calendar update',
+        body: `${editTitle.trim()} has been updated`,
+        url: `${window.location.origin}/calendar`,
+      });
       onUpdated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save.');

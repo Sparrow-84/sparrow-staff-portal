@@ -3,6 +3,8 @@ import { EVENT_LABEL, type EventKind, type LcpEvent } from '@/lib/lcp-types';
 import { deleteEvent, deleteEventAndFuture, updateEvent, updateEventAndFuture } from '@/lib/lcp';
 import { withTzOffset, toLocalDate, toLocalTime } from '@/lib/calendar';
 import { dayLabel, timeLabel } from '@/lib/lcp-format';
+import { useAuth } from '@/auth/AuthContext';
+import { sendPush, sendLcpFamilyPush } from '@/lib/push';
 import { Drawer } from './Drawer';
 
 const KIND_COLOR: Record<string, string> = {
@@ -24,6 +26,7 @@ interface Props {
 }
 
 export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onChanged }: Props) {
+  const { profile } = useAuth();
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [confirmStep, setConfirmStep] = useState<'idle' | 'confirm'>('idle');
   const [deletingMode, setDeletingMode] = useState<null | 'single' | 'future'>(null);
@@ -94,6 +97,20 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
       }
 
       setMode('view');
+      const pushTitle = 'LCP schedule update';
+      const pushBody = `${editTitle.trim()} has been updated`;
+      void sendPush({
+        to: 'staff',
+        excludeId: profile?.id,
+        title: pushTitle,
+        body: pushBody,
+        url: `${window.location.origin}/lcp`,
+      });
+      void sendLcpFamilyPush({
+        title: pushTitle,
+        body: pushBody,
+        url: `${window.location.origin}/`,
+      });
       onChanged?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save.');

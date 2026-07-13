@@ -78,3 +78,15 @@ export async function sendPush(params: {
     // Push failures are non-critical — never block the primary action
   }
 }
+
+export async function sendLcpFamilyPush(params: {
+  title: string;
+  body: string;
+  url?: string;
+}): Promise<void> {
+  try {
+    await supabase.functions.invoke('send-push-lcp', { body: params });
+  } catch {
+    // Push failures are non-critical — never block the primary action
+  }
+}
