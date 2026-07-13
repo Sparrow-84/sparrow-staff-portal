@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
-import { fetchTeamProfiles, fetchCurrentEvents, getAvailability, type AvailabilityStatus } from '@/lib/team';
+import { fetchTeamProfiles, fetchCurrentEvents, getAvailability, normalizeSchedule, type AvailabilityStatus } from '@/lib/team';
 import { departmentLabel } from '@/lib/types';
 import type { Profile } from '@/lib/types';
 
@@ -42,16 +42,19 @@ function AvailabilityDot({ status }: { status: AvailabilityStatus }) {
   );
 }
 
+function fmtTime(t: string): string {
+  const [h, m] = t.split(':').map(Number);
+  const suffix = h >= 12 ? 'pm' : 'am';
+  const hour = h % 12 || 12;
+  return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, '0')}${suffix}`;
+}
+
 function scheduleText(schedule: Profile['work_schedule']): string {
-  if (!schedule) return '';
-  const days = schedule.days.join(' · ');
-  const fmt = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    const suffix = h >= 12 ? 'pm' : 'am';
-    const hour = h % 12 || 12;
-    return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, '0')}${suffix}`;
-  };
-  return `${days}  ${fmt(schedule.start)}–${fmt(schedule.end)}`;
+  const blocks = normalizeSchedule(schedule);
+  if (blocks.length === 0) return '';
+  return blocks
+    .map((b) => `${b.days.join(' · ')}  ${fmtTime(b.start)}–${fmtTime(b.end)}`)
+    .join(', ');
 }
 
 function StaffCard({
@@ -66,9 +69,17 @@ function StaffCard({
   return (
     <div className={`flex gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card ${isMe ? 'ring-1 ring-sparrow-green/30' : ''}`}>
       {/* Avatar */}
-      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${avatarColor(staff.full_name)}`}>
-        {initials(staff.full_name)}
-      </div>
+      {staff.photo_url ? (
+        <img
+          src={staff.photo_url}
+          alt={staff.full_name}
+          className="h-12 w-12 shrink-0 rounded-full object-cover"
+        />
+      ) : (
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${avatarColor(staff.full_name)}`}>
+          {initials(staff.full_name)}
+        </div>
+      )}
 
       {/* Content */}
       <div className="min-w-0 flex-1">

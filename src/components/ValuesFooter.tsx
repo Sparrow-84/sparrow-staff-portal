@@ -1,12 +1,8 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/auth/AuthContext';
-import { fetchSettings } from '@/lib/settings';
-
 type Snippet =
   | { kind: 'verse'; text: string; reference: string }
   | { kind: 'phrase'; text: string };
 
-// Rotates daily so it doesn't go stale. Per-user toggle in Settings.
+// Rotates daily so it doesn't go stale.
 // Matthew 10:31 (index 10) and Matthew 10:29–31 (index 26) are intentionally separated.
 const SNIPPETS: Snippet[] = [
   { kind: 'verse', text: 'We love because he first loved us.', reference: '1 John 4:19' },
@@ -160,31 +156,12 @@ const SNIPPETS: Snippet[] = [
   },
 ];
 
-/** Custom event SettingsView fires so the footer updates instantly on toggle. */
-export const VALUES_FOOTER_EVENT = 'sparrow:valuesfooter';
-
 function dayOfYear(d: Date): number {
   const start = new Date(d.getFullYear(), 0, 0);
   return Math.floor((d.getTime() - start.getTime()) / 86_400_000);
 }
 
 export function ValuesFooter() {
-  const { profile } = useAuth();
-  const [enabled, setEnabled] = useState(true);
-
-  useEffect(() => {
-    if (!profile) return;
-    fetchSettings(profile.id)
-      .then((s) => setEnabled(s?.values_footer_enabled ?? true))
-      .catch(() => {
-        /* non-critical; default to showing */
-      });
-    const handler = (e: Event) => setEnabled((e as CustomEvent<boolean>).detail);
-    window.addEventListener(VALUES_FOOTER_EVENT, handler);
-    return () => window.removeEventListener(VALUES_FOOTER_EVENT, handler);
-  }, [profile]);
-
-  if (!enabled) return null;
   const snippet = SNIPPETS[dayOfYear(new Date()) % SNIPPETS.length];
 
   return (
