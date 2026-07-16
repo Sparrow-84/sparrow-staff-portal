@@ -33,19 +33,10 @@ export async function fetchCurrentEvents(): Promise<{ department: string | null;
 
 export async function updateMyProfile(
   id: string,
-  patch: { blurb?: string | null; work_schedule?: WorkSchedule | null; photo_url?: string | null; push_enabled?: boolean },
+  patch: { blurb?: string | null; work_schedule?: WorkSchedule | null; push_enabled?: boolean },
 ): Promise<void> {
   const { error } = await supabase.from('profiles').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
-}
-
-export async function uploadAvatarPhoto(userId: string, file: File): Promise<string> {
-  const ext = file.name.split('.').pop() ?? 'jpg';
-  const path = `${userId}.${ext}`;
-  const { error } = await supabase.storage.from('staff-avatars').upload(path, file, { upsert: true });
-  if (error) throw new Error(error.message);
-  const { data } = supabase.storage.from('staff-avatars').getPublicUrl(path);
-  return `${data.publicUrl}?v=${Date.now()}`;
 }
 
 const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

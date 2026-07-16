@@ -4,6 +4,8 @@ import { fetchTeamProfiles, fetchCurrentEvents, getAvailability, normalizeSchedu
 import { departmentLabel } from '@/lib/types';
 import type { Profile } from '@/lib/types';
 
+// One entry per staff member so no two people share a color while headcount stays under this length.
+// If the team grows past this list, add more entries — colors will otherwise start repeating.
 const AVATAR_COLORS = [
   'bg-sparrow-green',
   'bg-blue-600',
@@ -11,12 +13,24 @@ const AVATAR_COLORS = [
   'bg-teal-600',
   'bg-amber-600',
   'bg-rose-600',
+  'bg-indigo-600',
+  'bg-pink-600',
+  'bg-cyan-600',
+  'bg-orange-600',
+  'bg-lime-600',
+  'bg-fuchsia-600',
+  'bg-sky-600',
+  'bg-emerald-700',
 ];
 
-function avatarColor(name: string): string {
-  let hash = 0;
-  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffff;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+/** Assigns each person a distinct color, in order of when they joined, so it's stable as people are added. */
+function assignAvatarColors(team: Profile[]): Record<string, string> {
+  const byJoinDate = [...team].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const colors: Record<string, string> = {};
+  byJoinDate.forEach((member, i) => {
+    colors[member.id] = AVATAR_COLORS[i % AVATAR_COLORS.length];
+  });
+  return colors;
 }
 
 function initials(name: string): string {
@@ -61,25 +75,19 @@ function StaffCard({
   staff,
   status,
   isMe,
+  color,
 }: {
   staff: Profile;
   status: AvailabilityStatus;
   isMe: boolean;
+  color: string;
 }) {
   return (
     <div className={`flex gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card ${isMe ? 'ring-1 ring-sparrow-green/30' : ''}`}>
       {/* Avatar */}
-      {staff.photo_url ? (
-        <img
-          src={staff.photo_url}
-          alt={staff.full_name}
-          className="h-12 w-12 shrink-0 rounded-full object-cover"
-        />
-      ) : (
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${avatarColor(staff.full_name)}`}>
-          {initials(staff.full_name)}
-        </div>
-      )}
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${color}`}>
+        {initials(staff.full_name)}
+      </div>
 
       {/* Content */}
       <div className="min-w-0 flex-1">
@@ -134,6 +142,8 @@ export function TeamView() {
 
   if (!profile) return null;
 
+  const avatarColors = assignAvatarColors(team);
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="mb-6">
@@ -153,6 +163,7 @@ export function TeamView() {
               staff={member}
               status={getAvailability(member, currentEvents)}
               isMe={member.id === profile.id}
+              color={avatarColors[member.id]}
             />
           ))}
         </div>

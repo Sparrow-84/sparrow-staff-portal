@@ -1,6 +1,6 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
-import { updateMyProfile, uploadAvatarPhoto, normalizeSchedule } from '@/lib/team';
+import { updateMyProfile, normalizeSchedule } from '@/lib/team';
 import { getPushPermission, requestPushPermission } from '@/lib/push';
 import type { ScheduleBlock } from '@/lib/types';
 
@@ -13,8 +13,6 @@ export function SettingsView() {
   // Profile fields
   const [blurb, setBlurb] = useState('');
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([{ ...BLANK_BLOCK, days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] }]);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [photoUploading, setPhotoUploading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -25,7 +23,6 @@ export function SettingsView() {
     setPushEnabled(profile.push_enabled ?? true);
     setPushBlocked(getPushPermission() === 'denied');
     setBlurb(profile.blurb ?? '');
-    setPhotoUrl(profile.photo_url);
     const blocks = normalizeSchedule(profile.work_schedule);
     if (blocks.length > 0) setScheduleBlocks(blocks);
   }, [profile]);
@@ -70,24 +67,6 @@ export function SettingsView() {
     setScheduleBlocks((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !profile) return;
-    setPhotoUploading(true);
-    setProfileStatus(null);
-    try {
-      const url = await uploadAvatarPhoto(profile.id, file);
-      await updateMyProfile(profile.id, { photo_url: url });
-      setPhotoUrl(url);
-      setProfileStatus('Profile saved.');
-    } catch {
-      setProfileStatus('Could not upload photo — try again.');
-    } finally {
-      setPhotoUploading(false);
-      e.target.value = '';
-    }
-  }
-
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
       <h1 className="font-serif text-2xl font-semibold">Settings</h1>
@@ -110,23 +89,6 @@ export function SettingsView() {
               </p>
             </div>
           )}
-
-          <div className="mb-4">
-            <p className="field-label">Photo</p>
-            <div className="mt-1 flex items-center gap-3">
-              {photoUrl ? (
-                <img src={photoUrl} alt={profile.full_name} className="h-14 w-14 rounded-full object-cover" />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-sparrow-mist text-sm text-sparrow-gray">
-                  None
-                </div>
-              )}
-              <label className="btn-ghost cursor-pointer border border-sparrow-rule text-sm">
-                {photoUploading ? 'Uploading…' : photoUrl ? 'Change photo' : 'Upload photo'}
-                <input type="file" accept="image/*" className="hidden" disabled={photoUploading} onChange={(e) => void handlePhotoChange(e)} />
-              </label>
-            </div>
-          </div>
 
           <div className="mb-4">
             <label className="field-label" htmlFor="blurb">About me</label>
