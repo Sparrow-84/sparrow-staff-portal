@@ -1,8 +1,18 @@
 import { useMemo, useState, type DragEvent } from 'react';
 import { isoDate, PRIORITY_META, TIER_META, tierForPriority } from '@/lib/tasks';
+import { LABEL_COLORS } from '@/components/LabelPill';
 import type { TaskStatus, TaskWithPeople } from '@/lib/types';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Color by the task's own label when it has one; otherwise fall back to priority color.
+function pillClassFor(t: TaskWithPeople): string {
+  if (t.label && t.label_color) {
+    const meta = LABEL_COLORS.find((c) => c.id === t.label_color);
+    if (meta) return meta.pill;
+  }
+  return PRIORITY_META[t.priority].pill;
+}
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
   todo: 'To do',
@@ -175,7 +185,7 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
                     onMouseEnter={(e) => setTooltip({ task: t, x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => setTooltip(null)}
                     onClick={() => onOpen(t)}
-                    className={`block w-full cursor-grab truncate rounded px-1.5 py-0.5 text-left text-[11px] active:cursor-grabbing ${PRIORITY_META[t.priority].pill} ${
+                    className={`block w-full cursor-grab truncate rounded px-1.5 py-0.5 text-left text-[11px] active:cursor-grabbing ${pillClassFor(t)} ${
                       t.status === 'done' ? 'opacity-50 line-through' : ''
                     }`}
                   >
@@ -209,7 +219,7 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
                 onMouseEnter={(e) => setTooltip({ task: t, x: e.clientX, y: e.clientY })}
                 onMouseLeave={() => setTooltip(null)}
                 onClick={() => onOpen(t)}
-                className={`cursor-grab truncate rounded px-2 py-1 text-xs active:cursor-grabbing ${PRIORITY_META[t.priority].pill}`}
+                className={`cursor-grab truncate rounded px-2 py-1 text-xs active:cursor-grabbing ${pillClassFor(t)}`}
               >
                 {t.title}
               </button>

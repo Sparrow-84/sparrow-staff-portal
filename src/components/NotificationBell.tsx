@@ -27,6 +27,7 @@ function viewForNotification(n: AppNotification): View {
 export function NotificationBell({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [items, setItems] = useState<AppNotification[]>([]);
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<'unread' | 'all'>('unread');
 
   async function load() {
     try {
@@ -42,8 +43,7 @@ export function NotificationBell({ onNavigate }: { onNavigate: (v: View) => void
   }, []);
 
   const unread = items.filter((n) => !n.read).length;
-  // Only show unread — once you've handled them they're gone, not a growing pile.
-  const displayItems = items.filter((n) => !n.read);
+  const displayItems = filter === 'unread' ? items.filter((n) => !n.read) : items;
 
   async function openMenu() {
     setOpen(true);
@@ -51,6 +51,9 @@ export function NotificationBell({ onNavigate }: { onNavigate: (v: View) => void
   }
   async function onItemClick(n: AppNotification) {
     setOpen(false);
+    if (n.task_id) {
+      sessionStorage.setItem('sparrow.pendingTaskOpen', n.task_id);
+    }
     onNavigate(viewForNotification(n));
     if (!n.read) {
       await markRead(n.id);
@@ -85,7 +88,20 @@ export function NotificationBell({ onNavigate }: { onNavigate: (v: View) => void
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
           <div className="fixed right-4 top-16 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-sparrow-rule bg-white shadow-card">
             <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-2">
-              <span className="text-sm font-semibold text-sparrow-ink">Notifications</span>
+              <div className="flex items-center gap-1 text-xs">
+                <button
+                  onClick={() => setFilter('unread')}
+                  className={`rounded-full px-2 py-0.5 font-medium ${filter === 'unread' ? 'bg-sparrow-green/10 text-sparrow-green' : 'text-sparrow-gray hover:text-sparrow-ink'}`}
+                >
+                  Unread
+                </button>
+                <button
+                  onClick={() => setFilter('all')}
+                  className={`rounded-full px-2 py-0.5 font-medium ${filter === 'all' ? 'bg-sparrow-green/10 text-sparrow-green' : 'text-sparrow-gray hover:text-sparrow-ink'}`}
+                >
+                  All
+                </button>
+              </div>
               {unread > 0 && (
                 <button onClick={() => void clearAll()} className="text-xs text-sparrow-green hover:underline">
                   Mark all read
@@ -94,16 +110,18 @@ export function NotificationBell({ onNavigate }: { onNavigate: (v: View) => void
             </div>
             <ul className="max-h-96 divide-y divide-sparrow-rule overflow-y-auto">
               {displayItems.length === 0 && (
-                <li className="px-4 py-6 text-center text-sm text-sparrow-gray">You're all caught up.</li>
+                <li className="px-4 py-6 text-center text-sm text-sparrow-gray">
+                  {filter === 'unread' ? "You're all caught up." : 'No notifications yet.'}
+                </li>
               )}
               {displayItems.map((n) => (
                 <li key={n.id}>
                   <button
                     onClick={() => void onItemClick(n)}
-                    className="block w-full px-4 py-3 text-left hover:bg-sparrow-mist"
+                    className={`block w-full px-4 py-3 text-left hover:bg-sparrow-mist ${n.read ? 'opacity-60' : ''}`}
                   >
                     <div className="flex items-start gap-2">
-                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sparrow-green" />
+                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? 'bg-sparrow-gray/40' : 'bg-sparrow-green'}`} />
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-sparrow-ink">{describe(n)}</p>
                         {n.body && <p className="truncate text-xs text-sparrow-gray">{n.body}</p>}

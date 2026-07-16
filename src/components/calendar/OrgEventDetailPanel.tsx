@@ -206,15 +206,21 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
       };
 
       if (saveMode === 'future' && event.recurrence_id) {
+        // If the edited event's date moved, shift every following occurrence by the same
+        // amount instead of only changing the one being edited.
+        const oldDateOnly = event.all_day ? event.starts_at.slice(0, 10) : toLocalDate(event.starts_at);
+        const dateDeltaMs =
+          editDate !== oldDateOnly
+            ? new Date(`${editDate}T12:00:00`).getTime() - new Date(`${oldDateOnly}T12:00:00`).getTime()
+            : 0;
         await updateCalendarEventAndFuture(
           event.recurrence_id,
           event.starts_at,
           basePatch,
           editAllDay ? undefined : editStartTime,
           editAllDay ? undefined : (editEndTime || null),
+          dateDeltaMs || undefined,
         );
-        // Apply this event's (possibly new) date on top
-        await updateCalendarEvent(event.id, { ...basePatch, starts_at: newStartsAt, ends_at: newEndsAt });
       } else {
         await updateCalendarEvent(event.id, { ...basePatch, starts_at: newStartsAt, ends_at: newEndsAt });
       }

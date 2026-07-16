@@ -219,6 +219,10 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
       setError('A title is required.');
       return;
     }
+    if (!task && recurring && (!dueDate || !rUntilDate)) {
+      setError('Recurring tasks need a due date and a "Repeat until" date — fill both in, or uncheck "Repeat this task."');
+      return;
+    }
     const base: TaskInput = {
       title: title.trim(),
       notes: notes.trim() || null,
@@ -620,7 +624,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
                   {/* Until date */}
                   <div>
                     <label className="field-label" htmlFor="r-until">
-                      Repeat until
+                      Repeat until <span className="text-red-600">*</span>
                     </label>
                     <input
                       id="r-until"
@@ -628,19 +632,20 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
                       className="field-input"
                       value={rUntilDate}
                       onChange={(e) => setRUntilDate(e.target.value)}
+                      required
                     />
                   </div>
 
                   {/* Occurrence count preview */}
-                  {rUntilDate && (
-                    <p className="text-xs text-sparrow-gray">
-                      {occurrenceDates.length === 0
+                  <p className="text-xs text-sparrow-gray">
+                    {!rUntilDate
+                      ? 'Required — this task will only save as recurring once you set an end date.'
+                      : occurrenceDates.length === 0
                         ? 'No dates match — check your settings.'
                         : occurrenceDates.length === 1
                           ? '1 task will be created'
                           : `${occurrenceDates.length} tasks will be created`}
-                    </p>
-                  )}
+                  </p>
                 </div>
               )}
             </div>

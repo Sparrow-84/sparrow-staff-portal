@@ -153,7 +153,9 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
 
 // ── Triage inbox ──────────────────────────────────────────────────────
 function TriageWidget({ ctx }: { ctx: WidgetContext }) {
-  const pending = ctx.tasks.filter((t) => t.assignee_id === ctx.me.id && t.triage_status === 'pending');
+  const pending = ctx.tasks.filter(
+    (t) => t.assignee_id === ctx.me.id && t.triage_status === 'pending' && t.status !== 'done',
+  );
   const unscheduled = ctx.tasks.filter(
     (t) =>
       t.assignee_id === ctx.me.id &&

@@ -346,6 +346,7 @@ export async function updateCalendarEventAndFuture(
   fields: Partial<Pick<CalendarEvent, 'kind' | 'title' | 'all_day' | 'location'>>,
   startTime?: string,
   endTime?: string | null,
+  dateDeltaMs?: number,
 ): Promise<void> {
   if (Object.keys(fields).length > 0) {
     const { error } = await supabase
@@ -356,19 +357,32 @@ export async function updateCalendarEventAndFuture(
     if (error) throw new Error(error.message);
   }
 
-  if (startTime !== undefined) {
+  if (startTime !== undefined || dateDeltaMs) {
     const { data, error } = await supabase
       .from('calendar_events')
-      .select('id, starts_at')
+      .select('id, starts_at, ends_at')
       .eq('recurrence_id', recurrenceId)
       .gte('starts_at', fromStartsAt);
     if (error) throw new Error(error.message);
 
-    const updates = (data ?? []).map(row => ({
-      id: row.id,
-      starts_at: withTzOffset(toLocalDate(row.starts_at), startTime),
-      ends_at: endTime ? withTzOffset(toLocalDate(row.starts_at), endTime) : null,
-    }));
+    // Shift each occurrence's date by the same delta the edited event moved by
+    // (so the rest of the series keeps its own relative time), then reapply a
+    // time-of-day change on top if one was made.
+    const updates = (data ?? []).map((row) => {
+      const shiftedStartsAt = dateDeltaMs
+        ? new Date(new Date(row.starts_at).getTime() + dateDeltaMs).toISOString()
+        : row.starts_at;
+      if (startTime !== undefined) {
+        return {
+          id: row.id,
+          starts_at: withTzOffset(toLocalDate(shiftedStartsAt), startTime),
+          ends_at: endTime ? withTzOffset(toLocalDate(shiftedStartsAt), endTime) : null,
+        };
+      }
+      const shiftedEndsAt =
+        dateDeltaMs && row.ends_at ? new Date(new Date(row.ends_at).getTime() + dateDeltaMs).toISOString() : row.ends_at;
+      return { id: row.id, starts_at: shiftedStartsAt, ends_at: shiftedEndsAt };
+    });
 
     // Use individual UPDATEs — upsert triggers the INSERT RLS check (requires created_by)
     // even when the row already exists, causing a policy violation.
