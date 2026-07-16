@@ -263,7 +263,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
       </div>
 
       {/* Thread */}
-      <div className={`flex-1 flex-col bg-white ${active ? 'flex' : (embedded ? 'hidden' : 'hidden md:flex')}`}>
+      <div className={`min-w-0 flex-1 flex-col bg-white ${active ? 'flex' : (embedded ? 'hidden' : 'hidden md:flex')}`}>
         {active ? (
           <>
             <div className="flex items-center gap-3 border-b border-sparrow-rule px-4 py-3">

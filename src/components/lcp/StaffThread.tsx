@@ -54,7 +54,7 @@ export function StaffThread({
           onChange={(e) => setDraft(e.target.value)}
           rows={2}
           placeholder="Reply to the family…"
-          className="field-input mt-0 flex-1 resize-none"
+          className="field-input mt-0 min-w-0 flex-1 resize-none"
         />
         <button onClick={submit} disabled={busy || !draft.trim()} className="btn-primary">
           Send

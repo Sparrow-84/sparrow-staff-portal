@@ -214,7 +214,7 @@ export function ChatThread({
 
   return (
     <div
-      className="relative flex h-full flex-col"
+      className="relative flex h-full min-w-0 flex-col"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
