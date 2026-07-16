@@ -347,6 +347,14 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
           </div>
         )}
 
+        {!readOnly && task && task.created_by === currentUser.id && task.assignee_id !== currentUser.id && (
+          <div className="border-b border-sparrow-rule bg-sparrow-cream px-5 py-3">
+            <p className="text-sm text-sparrow-gray">
+              You assigned this to {task.assignee?.full_name ?? 'someone else'} — they'll be notified if you edit it.
+            </p>
+          </div>
+        )}
+
         {error && (
           <div className="border-b border-red-200 bg-red-50 px-5 py-3">
             <p className="text-sm font-medium text-red-700">{error}</p>

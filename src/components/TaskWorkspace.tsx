@@ -56,9 +56,8 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
     sessionStorage.removeItem('sparrow.pendingTaskOpen');
     const t = tasks.find((x) => x.id === id);
     if (t) {
-      const isDelegated = t.created_by === currentUser.id && t.assignee_id !== currentUser.id;
       setPanelTask(t);
-      setPanelReadOnly(isDelegated);
+      setPanelReadOnly(false);
       setPanelOpen(true);
     }
   }, [tasks, currentUser.id]);
@@ -111,7 +110,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
   }
   function openEdit(t: TaskWithPeople) {
     setPanelTask(t);
-    setPanelReadOnly(delegatedIds.has(t.id));
+    setPanelReadOnly(false);
     setPanelOpen(true);
   }
   function toggleDone(t: TaskWithPeople) {

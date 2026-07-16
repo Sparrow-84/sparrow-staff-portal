@@ -15,6 +15,7 @@ function timeAgo(iso: string): string {
 function describe(n: AppNotification): string {
   const who = n.actor?.full_name ?? 'Someone';
   if (n.type === 'assigned') return `${who} assigned you a task`;
+  if (n.type === 'edited') return `${who} updated a task assigned to you`;
   if (n.type === 'mentioned') return `${who} mentioned you in a message`;
   return `${who} commented on a task`;
 }

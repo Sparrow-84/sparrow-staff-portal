@@ -255,6 +255,7 @@ function describe(n: AppNotification): string {
   if (n.type === 'mentioned') return `${who} mentioned you`;
   if (n.type === 'event_invited') return `${who} added you to an event`;
   if (n.type === 'event_removed') return `${who} removed you from an event`;
+  if (n.type === 'edited') return `${who} updated a task assigned to you`;
   return `${who} commented on a task`;
 }
 
