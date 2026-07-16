@@ -18,6 +18,7 @@ export function TaskListView({ tasks, today, currentUserId, showAssignee, onTogg
   const groups = useMemo(() => weekListGroups(tasks, today), [tasks, today]);
 
   if (tasks.length === 0) return <EmptyState />;
+  if (groups.length === 0) return <EmptyState allDoneThisWeek />;
 
   return (
     <div className="space-y-8">
@@ -46,10 +47,16 @@ export function TaskListView({ tasks, today, currentUserId, showAssignee, onTogg
   );
 }
 
-function EmptyState() {
+function EmptyState({ allDoneThisWeek = false }: { allDoneThisWeek?: boolean }) {
   return (
     <p className="rounded-xl border border-dashed border-sparrow-rule bg-white p-8 text-center text-sm text-sparrow-gray">
-      Nothing here yet. Click <span className="font-medium text-sparrow-green">+ New task</span> to add one.
+      {allDoneThisWeek ? (
+        <>Nothing due this week. 🎉 Later tasks are on the Board, Calendar, or Planner view.</>
+      ) : (
+        <>
+          Nothing here yet. Click <span className="font-medium text-sparrow-green">+ New task</span> to add one.
+        </>
+      )}
     </p>
   );
 }

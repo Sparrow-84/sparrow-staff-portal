@@ -70,7 +70,6 @@ export function weekListGroups(tasks: TaskWithPeople[], today: string): DayGroup
   const overdue: TaskWithPeople[] = [];
   const todayItems: TaskWithPeople[] = [];
   const byDate = new Map<string, TaskWithPeople[]>();
-  const later: TaskWithPeople[] = [];
   const noDate: TaskWithPeople[] = [];
 
   for (const t of tasks) {
@@ -84,9 +83,9 @@ export function weekListGroups(tasks: TaskWithPeople[], today: string): DayGroup
       const list = byDate.get(t.due_date) ?? [];
       list.push(t);
       byDate.set(t.due_date, list);
-    } else {
-      later.push(t);
     }
+    // Anything due after this week is left off the list entirely — it'll
+    // appear here once its day arrives. Still visible in Board/Calendar/Planner.
   }
 
   const groups: DayGroup[] = [];
@@ -103,7 +102,6 @@ export function weekListGroups(tasks: TaskWithPeople[], today: string): DayGroup
     }
   }
 
-  if (later.length > 0) groups.push({ key: 'later', label: 'Upcoming', items: later });
   if (noDate.length > 0) groups.push({ key: 'no_date', label: 'No date', items: noDate });
 
   return groups;
