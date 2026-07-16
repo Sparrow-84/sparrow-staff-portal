@@ -45,6 +45,70 @@ export function groupTasks(
   return groups;
 }
 
+export interface DayGroup {
+  key: string;
+  label: string;
+  items: TaskWithPeople[];
+}
+
+/**
+ * List view grouping: Overdue pinned first, then Today, then each remaining
+ * day of the current week (Mon–Sun) in order — skipping any day with nothing
+ * due — then anything further out, then undated tasks. Unlike groupTasks(),
+ * this shrinks to nothing once the week's work is done instead of holding a
+ * standing "this week / upcoming" bucket.
+ */
+export function weekListGroups(tasks: TaskWithPeople[], today: string): DayGroup[] {
+  const todayD = new Date(today + 'T00:00:00');
+  const mondayOffset = (todayD.getDay() + 6) % 7; // days since Monday (0 = Monday)
+  const weekStart = new Date(todayD);
+  weekStart.setDate(weekStart.getDate() - mondayOffset);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const weekEndIso = isoDate(weekEnd);
+
+  const overdue: TaskWithPeople[] = [];
+  const todayItems: TaskWithPeople[] = [];
+  const byDate = new Map<string, TaskWithPeople[]>();
+  const later: TaskWithPeople[] = [];
+  const noDate: TaskWithPeople[] = [];
+
+  for (const t of tasks) {
+    if (!t.due_date) {
+      noDate.push(t);
+    } else if (t.due_date < today) {
+      overdue.push(t);
+    } else if (t.due_date === today) {
+      todayItems.push(t);
+    } else if (t.due_date <= weekEndIso) {
+      const list = byDate.get(t.due_date) ?? [];
+      list.push(t);
+      byDate.set(t.due_date, list);
+    } else {
+      later.push(t);
+    }
+  }
+
+  const groups: DayGroup[] = [];
+  if (overdue.length > 0) groups.push({ key: 'overdue', label: 'Overdue', items: overdue });
+  if (todayItems.length > 0) groups.push({ key: 'today', label: 'Today', items: todayItems });
+
+  for (const d = new Date(todayD); ; ) {
+    d.setDate(d.getDate() + 1);
+    const iso = isoDate(d);
+    if (iso > weekEndIso) break;
+    const items = byDate.get(iso);
+    if (items && items.length > 0) {
+      groups.push({ key: iso, label: d.toLocaleDateString(undefined, { weekday: 'long' }), items });
+    }
+  }
+
+  if (later.length > 0) groups.push({ key: 'later', label: 'Upcoming', items: later });
+  if (noDate.length > 0) groups.push({ key: 'no_date', label: 'No date', items: noDate });
+
+  return groups;
+}
+
 export const PRIORITY_META: Record<Priority, { label: string; dot: string; text: string; pill: string }> = {
   p1: { label: 'P1', dot: 'bg-priority-p1', text: 'text-priority-p1', pill: 'bg-priority-p1/15 text-priority-p1' },
   p2: { label: 'P2', dot: 'bg-priority-p2', text: 'text-priority-p2', pill: 'bg-priority-p2/15 text-priority-p2' },

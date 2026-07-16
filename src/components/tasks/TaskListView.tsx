@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { BUCKETS, dueLabel, groupTasks } from '@/lib/tasks';
+import { dueLabel, weekListGroups } from '@/lib/tasks';
 import type { TaskWithPeople } from '@/lib/types';
 import { PriorityChip } from '../PriorityChip';
 import { DeptTag } from '../DeptTag';
@@ -15,37 +15,33 @@ interface Props {
 }
 
 export function TaskListView({ tasks, today, currentUserId, showAssignee, onToggle, onOpen }: Props) {
-  const groups = useMemo(() => groupTasks(tasks, today), [tasks, today]);
+  const groups = useMemo(() => weekListGroups(tasks, today), [tasks, today]);
 
   if (tasks.length === 0) return <EmptyState />;
 
   return (
     <div className="space-y-8">
-      {BUCKETS.map(({ key, label }) => {
-        const items = groups[key];
-        if (items.length === 0) return null;
-        return (
-          <section key={key}>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
-              {label} <span className="text-sparrow-gray/70">· {items.length}</span>
-            </h2>
-            <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
-              {items.map((t) => (
-                <TaskRow
-                  key={t.id}
-                  task={t}
-                  today={today}
-                  overdue={key === 'overdue'}
-                  showAssignee={showAssignee}
-                  currentUserId={currentUserId}
-                  onToggle={() => onToggle(t)}
-                  onOpen={() => onOpen(t)}
-                />
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+      {groups.map(({ key, label, items }) => (
+        <section key={key}>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            {label} <span className="text-sparrow-gray/70">· {items.length}</span>
+          </h2>
+          <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+            {items.map((t) => (
+              <TaskRow
+                key={t.id}
+                task={t}
+                today={today}
+                overdue={key === 'overdue'}
+                showAssignee={showAssignee}
+                currentUserId={currentUserId}
+                onToggle={() => onToggle(t)}
+                onOpen={() => onOpen(t)}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
