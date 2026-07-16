@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   const { title, body, url } = await req.json() as PushPayload;
 
   const { data } = await supabase
-    .from('lcp_families')
+    .from('families')
     .select('id')
     .eq('push_enabled', true);
 
