@@ -16,6 +16,7 @@ import {
   deleteFutureRecurringTasks,
   notifyTaskCommentMentions,
   updateTask,
+  updateFutureRecurringTasks,
   type TaskInput,
 } from '@/lib/data';
 import { parseMentionIds } from '@/lib/chat';
@@ -141,7 +142,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
   const [labelColor, setLabelColor] = useState('blue');
   const [comment, setComment] = useState('');
 
-  // Recurring task state (new tasks only)
+  // Recurring task state — for new tasks, or converting an existing non-recurring
+  // task into the start of a series.
   const [recurring, setRecurring] = useState(false);
   const [rFrequency, setRFrequency] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly');
   const [rMonthlyMode, setRMonthlyMode] = useState<'date' | 'dow'>('date');
@@ -150,6 +152,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
 
   // Delete confirmation for recurring tasks
   const [deleteChoice, setDeleteChoice] = useState(false);
+  // Edit scope confirmation ("this task only" vs "this + future") for recurring tasks
+  const [editChoice, setEditChoice] = useState(false);
 
   // Reset the form whenever the panel opens for a new/different task.
   useEffect(() => {
@@ -157,6 +161,12 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
     setError(null);
     setComment('');
     setDeleteChoice(false);
+    setEditChoice(false);
+    setRecurring(false);
+    setRFrequency('weekly');
+    setRMonthlyMode('date');
+    setRDaysOfWeek([]);
+    setRUntilDate('');
     if (task) {
       setTitle(task.title);
       setNotes(task.notes ?? '');
@@ -177,11 +187,6 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
       setStatus('todo');
       setLabel('');
       setLabelColor('blue');
-      setRecurring(false);
-      setRFrequency('weekly');
-      setRMonthlyMode('date');
-      setRDaysOfWeek([]);
-      setRUntilDate('');
     }
   }, [open, task, currentUser.id, currentUser.department]);
 
@@ -214,15 +219,30 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
     return generateTaskDates(dueDate, effectiveFreq, effectiveDows, rUntilDate);
   }, [recurring, dueDate, effectiveFreq, rDaysOfWeek, rUntilDate]);
 
+  // When converting an existing task into a series, it keeps its own date —
+  // only later dates in the pattern become new rows.
+  const futureOccurrenceDates = useMemo(
+    () => (task ? occurrenceDates.filter((d) => d > (dueDate || '')) : []),
+    [task, occurrenceDates, dueDate],
+  );
+
   function save() {
     if (!title.trim()) {
       setError('A title is required.');
       return;
     }
-    if (!task && recurring && (!dueDate || !rUntilDate)) {
+    if (recurring && !task?.recurrence_id && (!dueDate || !rUntilDate)) {
       setError('Recurring tasks need a due date and a "Repeat until" date — fill both in, or uncheck "Repeat this task."');
       return;
     }
+    if (task?.recurrence_id && !editChoice) {
+      setEditChoice(true);
+      return;
+    }
+    doSave('single');
+  }
+
+  function doSave(scope: 'single' | 'future') {
     const base: TaskInput = {
       title: title.trim(),
       notes: notes.trim() || null,
@@ -236,7 +256,26 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
     };
     startTransition(async () => {
       try {
-        if (task) {
+        if (task && task.recurrence_id && scope === 'future') {
+          const deltaDays =
+            dueDate && task.due_date && dueDate !== task.due_date
+              ? Math.round(
+                  (new Date(`${dueDate}T12:00:00`).getTime() - new Date(`${task.due_date}T12:00:00`).getTime()) /
+                    86_400_000,
+                )
+              : 0;
+          const { due_date: _dd, status: _st, ...fieldsOnly } = base;
+          await updateFutureRecurringTasks(task.recurrence_id, task.due_date!, fieldsOnly, deltaDays || undefined);
+          await updateTask(task.id, base);
+        } else if (task && !task.recurrence_id && recurring && futureOccurrenceDates.length > 0) {
+          // Converting an existing task into the start of a new recurring series:
+          // this task keeps its own date; only the dates after it become new rows.
+          const rid = crypto.randomUUID();
+          await updateTask(task.id, { ...base, recurrence_id: rid });
+          await Promise.all(
+            futureOccurrenceDates.map((d) => createTask({ ...base, due_date: d, recurrence_id: rid }, currentUser.id)),
+          );
+        } else if (task) {
           await updateTask(task.id, base);
         } else if (recurring && occurrenceDates.length > 1) {
           const rid = crypto.randomUUID();
@@ -309,7 +348,9 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
   const saveLabel = pending
     ? 'Saving…'
     : task
-      ? 'Save'
+      ? !task.recurrence_id && recurring && futureOccurrenceDates.length > 0
+        ? `Save + create ${futureOccurrenceDates.length} more`
+        : 'Save'
       : recurring && occurrenceDates.length > 1
         ? `Create ${occurrenceDates.length} tasks`
         : 'Create task';
@@ -537,15 +578,15 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             )}
           </div>
 
-          {/* Recurring badge for existing tasks */}
+          {/* Recurring badge for existing tasks already in a series */}
           {task?.recurrence_id && (
             <div className="mt-3 rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink">
-              Part of a recurring series — changes apply to this task only.
+              Part of a recurring series — Save will ask whether to apply your changes to just this task or to it and every later one too.
             </div>
           )}
 
-          {/* Recurring setup — new tasks only */}
-          {!task && (
+          {/* Recurring setup — new tasks, or turning an existing task into the start of a series */}
+          {!task?.recurrence_id && (
             <div className="mt-4 border-t border-sparrow-rule pt-4">
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -696,7 +737,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
         </div>
 
         <div className="flex items-center justify-between border-t border-sparrow-rule px-5 py-4">
-          {readOnly ? (
+          {readOnly || editChoice ? (
             <span />
           ) : task ? (
             deleteChoice ? (
@@ -737,6 +778,21 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             <button onClick={onClose} className="btn-primary">
               Close
             </button>
+          ) : editChoice ? (
+            <div className="flex flex-col items-end gap-1.5">
+              <span className="text-xs text-sparrow-gray">Apply this edit to:</span>
+              <div className="flex gap-2">
+                <button onClick={() => setEditChoice(false)} className="btn-ghost text-xs">
+                  Cancel
+                </button>
+                <button onClick={() => doSave('single')} disabled={pending} className="btn-ghost text-xs">
+                  This task only
+                </button>
+                <button onClick={() => doSave('future')} disabled={pending} className="btn-primary text-xs">
+                  This + future
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="flex gap-2">
               <button onClick={onClose} className="btn-ghost">

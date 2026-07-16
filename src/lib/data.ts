@@ -83,6 +83,55 @@ export async function deleteFutureRecurringTasks(recurrenceId: string, fromDate:
   if (error) throw new Error(error.message);
 }
 
+/**
+ * "This + future" edit for a recurring series: applies non-date fields to every
+ * occurrence from fromDueDate onward, then shifts each of those occurrences' own
+ * due_date by deltaDays (so the rest of the series keeps its own spacing instead
+ * of collapsing onto one date).
+ */
+export async function updateFutureRecurringTasks(
+  recurrenceId: string,
+  fromDueDate: string,
+  fields: Partial<Pick<TaskInput, 'title' | 'notes' | 'department' | 'priority' | 'assignee_id' | 'label' | 'label_color'>>,
+  deltaDays?: number,
+): Promise<void> {
+  if (Object.keys(fields).length > 0) {
+    const { error } = await supabase
+      .from('tasks')
+      .update(fields)
+      .eq('recurrence_id', recurrenceId)
+      .gte('due_date', fromDueDate);
+    if (error) throw new Error(error.message);
+  }
+
+  if (deltaDays) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('id, due_date')
+      .eq('recurrence_id', recurrenceId)
+      .gte('due_date', fromDueDate);
+    if (error) throw new Error(error.message);
+
+    const updates = (data ?? [])
+      .filter((row): row is { id: string; due_date: string } => !!row.due_date)
+      .map((row) => {
+        const d = new Date(row.due_date + 'T12:00:00');
+        d.setDate(d.getDate() + deltaDays);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return { id: row.id, due_date: `${y}-${m}-${day}` };
+      });
+
+    await Promise.all(
+      updates.map((u) =>
+        supabase.from('tasks').update({ due_date: u.due_date }).eq('id', u.id)
+          .then(({ error }) => { if (error) throw new Error(error.message); }),
+      ),
+    );
+  }
+}
+
 export async function addComment(taskId: string, body: string, authorId: string): Promise<void> {
   const { error } = await supabase
     .from('task_comments')

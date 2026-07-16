@@ -381,7 +381,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
           onClick={() => onOpenNotes(event!)}
           className="btn-primary w-full"
         >
-          Meeting Notes
+          Notes
         </button>
         {canEdit && (
           <div className="flex gap-2">

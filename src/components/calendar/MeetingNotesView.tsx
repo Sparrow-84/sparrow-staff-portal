@@ -290,7 +290,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
             onClick={onClose}
             className="rounded-xl border border-sparrow-rule px-4 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist"
           >
-            Exit meeting mode
+            Close notes
           </button>
         </div>
       </div>

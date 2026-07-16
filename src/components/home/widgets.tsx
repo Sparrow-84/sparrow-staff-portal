@@ -164,6 +164,10 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
       t.status !== 'done',
   );
 
+  const [pushBackTarget, setPushBackTarget] = useState<TaskWithPeople | null>(null);
+  const [pushBackNote, setPushBackNote] = useState('');
+  const [pushBackBusy, setPushBackBusy] = useState(false);
+
   async function accept(id: string) {
     await acceptTask(id);
     ctx.onChanged();
@@ -172,11 +176,16 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
     await deferTask(id, addDays(ctx.today, days));
     ctx.onChanged();
   }
-  async function pushBack(t: TaskWithPeople) {
-    const note = window.prompt('Send a quick note back to the assigner:');
-    if (note === null) return;
-    await pushBackTask(t, note.trim() || 'No reason given', ctx.me.id);
-    ctx.onChanged();
+  async function confirmPushBack() {
+    if (!pushBackTarget) return;
+    setPushBackBusy(true);
+    try {
+      await pushBackTask(pushBackTarget, pushBackNote.trim() || 'No reason given', ctx.me.id);
+      setPushBackTarget(null);
+      ctx.onChanged();
+    } finally {
+      setPushBackBusy(false);
+    }
   }
 
   if (pending.length === 0 && unscheduled.length === 0)
@@ -185,6 +194,7 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
   const showLabels = pending.length > 0 && unscheduled.length > 0;
 
   return (
+    <>
     <div className="space-y-3">
       {pending.length > 0 && (
         <div>
@@ -211,7 +221,10 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
                     → Next week
                   </button>
                   {t.created_by && (
-                    <button onClick={() => void pushBack(t)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
+                    <button
+                      onClick={() => { setPushBackTarget(t); setPushBackNote(''); }}
+                      className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink"
+                    >
                       Push back
                     </button>
                   )}
@@ -246,6 +259,41 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
         </div>
       )}
     </div>
+    {pushBackTarget && (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-sparrow-ink/30 p-4">
+        <div className="w-full max-w-sm rounded-xl border border-sparrow-rule bg-white p-5 shadow-card">
+          <h3 className="font-serif text-base font-semibold text-sparrow-ink">Push back "{pushBackTarget.title}"</h3>
+          <p className="mt-1 text-sm text-sparrow-gray">
+            Let {pushBackTarget.creator?.full_name ?? 'the assigner'} know why — it's added as a comment on the task.
+          </p>
+          <textarea
+            autoFocus
+            className="field-input mt-3 resize-none"
+            rows={3}
+            placeholder="Why is this being pushed back?"
+            value={pushBackNote}
+            onChange={(e) => setPushBackNote(e.target.value)}
+          />
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              onClick={() => setPushBackTarget(null)}
+              disabled={pushBackBusy}
+              className="btn-ghost text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => void confirmPushBack()}
+              disabled={pushBackBusy}
+              className="btn-primary text-sm"
+            >
+              {pushBackBusy ? 'Sending…' : 'Push back'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
