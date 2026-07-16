@@ -137,6 +137,9 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
   const [department, setDepartment] = useState<Department>('ops');
   const [priority, setPriority] = useState<Priority>('p3');
   const [assigneeId, setAssigneeId] = useState(currentUser.id);
+  // Multi-assignee selection for NEW tasks only — creates one independent task per
+  // person so completing one doesn't affect anyone else's copy.
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([currentUser.id]);
   const [status, setStatus] = useState<TaskStatus>('todo');
   const [label, setLabel] = useState('');
   const [labelColor, setLabelColor] = useState('blue');
@@ -187,8 +190,18 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
       setStatus('todo');
       setLabel('');
       setLabelColor('blue');
+      setAssigneeIds([currentUser.id]);
     }
   }, [open, task, currentUser.id, currentUser.department]);
+
+  function toggleAssignee(id: string) {
+    setAssigneeIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.length > 1 ? prev.filter((x) => x !== id) : prev;
+      }
+      return [...prev, id];
+    });
+  }
 
   const tomorrow = (() => {
     const d = new Date(today + 'T00:00:00');
@@ -278,14 +291,18 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
         } else if (task) {
           await updateTask(task.id, base);
         } else if (recurring && occurrenceDates.length > 1) {
-          const rid = crypto.randomUUID();
+          // One independent recurring series per selected assignee.
           await Promise.all(
-            occurrenceDates.map((d) =>
-              createTask({ ...base, due_date: d, recurrence_id: rid }, currentUser.id),
-            ),
+            assigneeIds.flatMap((aid) => {
+              const rid = crypto.randomUUID();
+              return occurrenceDates.map((d) =>
+                createTask({ ...base, assignee_id: aid, due_date: d, recurrence_id: rid }, currentUser.id),
+              );
+            }),
           );
         } else {
-          await createTask(base, currentUser.id);
+          // One independent task per selected assignee.
+          await Promise.all(assigneeIds.map((aid) => createTask({ ...base, assignee_id: aid }, currentUser.id)));
         }
         onChanged();
         onClose();
@@ -345,14 +362,15 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
 
   const nameById = (id: string) => profiles.find((p) => p.id === id)?.full_name ?? 'Someone';
 
+  const newTaskCount = (recurring && occurrenceDates.length > 1 ? occurrenceDates.length : 1) * assigneeIds.length;
   const saveLabel = pending
     ? 'Saving…'
     : task
       ? !task.recurrence_id && recurring && futureOccurrenceDates.length > 0
         ? `Save + create ${futureOccurrenceDates.length} more`
         : 'Save'
-      : recurring && occurrenceDates.length > 1
-        ? `Create ${occurrenceDates.length} tasks`
+      : newTaskCount > 1
+        ? `Create ${newTaskCount} tasks`
         : 'Create task';
 
   return (
@@ -492,25 +510,54 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div>
-              <label className="field-label" htmlFor="t-assignee">
-                Assignee
+          {!task && (
+            <div className="mt-4">
+              <label className="field-label">
+                Assign to <span className="font-normal text-sparrow-gray">(pick one or more — each person gets their own copy)</span>
               </label>
-              <select
-                id="t-assignee"
-                className="field-input disabled:opacity-60"
-                value={assigneeId}
-                onChange={(e) => setAssigneeId(e.target.value)}
-                disabled={readOnly}
-              >
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.id === currentUser.id ? 'Me' : p.full_name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-wrap gap-1.5">
+                {profiles.map((p) => {
+                  const active = assigneeIds.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => toggleAssignee(p.id)}
+                      className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                        active
+                          ? 'border-sparrow-green bg-sparrow-green text-white'
+                          : 'border-sparrow-rule bg-white text-sparrow-gray hover:text-sparrow-ink'
+                      }`}
+                    >
+                      {p.id === currentUser.id ? 'Me' : p.full_name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+          )}
+
+          <div className={`mt-4 ${task ? 'grid grid-cols-2 gap-3' : ''}`}>
+            {task && (
+              <div>
+                <label className="field-label" htmlFor="t-assignee">
+                  Assignee
+                </label>
+                <select
+                  id="t-assignee"
+                  className="field-input disabled:opacity-60"
+                  value={assigneeId}
+                  onChange={(e) => setAssigneeId(e.target.value)}
+                  disabled={readOnly}
+                >
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.id === currentUser.id ? 'Me' : p.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="field-label" htmlFor="t-status">
                 Status
