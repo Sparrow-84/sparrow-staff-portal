@@ -107,24 +107,18 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
     ? myRow?.status !== 'opted_out'
     : myRow?.status === 'attending';
 
-  async function toggleAttendance() {
-    if (!event) return;
+  async function setAttendance(attending: boolean) {
+    if (!event || isAttending === attending) return;
     setAttendanceLoading(true);
     try {
       if (event.department === null) {
-        // All Staff: toggle opt-out
-        if (myRow?.status === 'opted_out') {
-          await removeAttendee(event.id, currentUserId);
-        } else {
-          await setMyAttendance(event.id, currentUserId, 'opted_out');
-        }
+        // All Staff defaults to attending; only store a row when declining
+        if (attending) await removeAttendee(event.id, currentUserId);
+        else await setMyAttendance(event.id, currentUserId, 'opted_out');
       } else {
-        // Dept: toggle attending
-        if (myRow?.status === 'attending') {
-          await removeAttendee(event.id, currentUserId);
-        } else {
-          await setMyAttendance(event.id, currentUserId, 'attending');
-        }
+        // Dept events default to not attending; only store a row when accepting
+        if (attending) await setMyAttendance(event.id, currentUserId, 'attending');
+        else await removeAttendee(event.id, currentUserId);
       }
       setAttendees(await fetchEventAttendees(event.id));
       onUpdated();
@@ -539,22 +533,30 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
           {/* Attendance — hidden for personal events */}
           {!event.is_personal && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Attendance</p>
-              <div className="mt-1.5 flex items-center gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Attending?</p>
+              <div className="mt-1.5 flex items-center gap-2">
                 <button
-                  onClick={() => void toggleAttendance()}
+                  onClick={() => void setAttendance(true)}
                   disabled={attendanceLoading}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
                     isAttending
                       ? 'bg-sparrow-green text-white hover:bg-sparrow-green/90'
                       : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
                   }`}
                 >
-                  {isAttending ? '✓ Attending' : 'Not attending'}
+                  Yes
                 </button>
-                {event.department === null && (
-                  <span className="text-xs text-sparrow-gray">All Staff — attending by default</span>
-                )}
+                <button
+                  onClick={() => void setAttendance(false)}
+                  disabled={attendanceLoading}
+                  className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                    !isAttending
+                      ? 'bg-priority-p1 text-white hover:bg-priority-p1/90'
+                      : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                  }`}
+                >
+                  No
+                </button>
               </div>
               {(() => {
                 const goingIds = attendees.filter((a) => a.status === 'attending').map((a) => a.staff_id);

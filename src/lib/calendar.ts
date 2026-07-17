@@ -311,6 +311,29 @@ export async function addEventAttendees(
   }
 }
 
+/**
+ * Notify all staff (except the creator) that a new All Staff meeting/event was posted,
+ * so they can RSVP inline from the notification instead of having to open the event
+ * to opt out of the default "attending" status.
+ */
+export async function notifyNewAllStaffEvent(
+  eventId: string,
+  eventTitle: string,
+  staffIds: string[],
+  actorId: string,
+): Promise<void> {
+  const toNotify = staffIds.filter((id) => id !== actorId);
+  if (!toNotify.length) return;
+  const { error } = await supabase.rpc('notify_event_attendees', {
+    p_staff_ids: toNotify,
+    p_actor_id: actorId,
+    p_event_id: eventId,
+    p_event_title: eventTitle,
+    p_notification_type: 'event_created',
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** Creator removes a staff member from all events in a series and notifies them. */
 export async function removeEventAttendee(
   eventIds: string[],

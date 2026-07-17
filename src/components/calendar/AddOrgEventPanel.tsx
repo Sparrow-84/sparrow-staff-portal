@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { addEventAttendees, createCalendarEvents, fetchOfficeRooms, withTzOffset } from '@/lib/calendar';
+import { addEventAttendees, createCalendarEvents, fetchCalendarLabels, fetchOfficeRooms, notifyNewAllStaffEvent, withTzOffset, type CalendarLabel } from '@/lib/calendar';
 import { Drawer } from '@/components/lcp/Drawer';
 import { CalendarLabelPicker } from '@/components/calendar/CalendarLabelPicker';
 import type { Department, OfficeRoom, Profile } from '@/lib/types';
@@ -145,11 +145,13 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
   const [rooms, setRooms] = useState<OfficeRoom[]>([]);
   const [roomId, setRoomId] = useState<string>('');
   const [isPrivateMeeting, setIsPrivateMeeting] = useState(false);
+  const [labels, setLabels] = useState<CalendarLabel[]>([]);
 
   useEffect(() => { setDate(defaultDate); }, [defaultDate]);
   useEffect(() => { setDepartment(initialDept); setLabelId(null); }, [initialDept]);
   useEffect(() => { setIsPersonal(initialPersonal ?? false); setLabelId(null); }, [initialPersonal]);
   useEffect(() => { void fetchOfficeRooms().then(setRooms); }, []);
+  useEffect(() => { void fetchCalendarLabels().then(setLabels); }, []);
 
   function toggleDay(dow: number) {
     setDaysOfWeek((prev) => {
@@ -213,6 +215,15 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
       if (!isPersonal && department && createdIds.length > 0) {
         const allAttendees = Array.from(new Set([currentUserId, ...attendeeIds]));
         await addEventAttendees(createdIds, title.trim(), allAttendees, currentUserId);
+      }
+
+      // All Staff meetings/events (not the Stat Holiday label) default everyone to
+      // "attending" — notify staff so they can opt out right from the notification.
+      if (!isPersonal && !department && createdIds.length > 0) {
+        const label = labels.find((l) => l.id === labelId);
+        if (label?.name !== 'Stat Holiday') {
+          await notifyNewAllStaffEvent(createdIds[0], title.trim(), profiles.map((p) => p.id), currentUserId);
+        }
       }
 
       reset();

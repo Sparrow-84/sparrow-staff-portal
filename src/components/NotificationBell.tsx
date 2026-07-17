@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchNotifications, markAllRead, markRead, type AppNotification } from '@/lib/social';
+import { setMyAttendance } from '@/lib/calendar';
 import type { View } from './Sidebar';
 
 function timeAgo(iso: string): string {
@@ -17,18 +18,21 @@ function describe(n: AppNotification): string {
   if (n.type === 'assigned') return `${who} assigned you a task`;
   if (n.type === 'edited') return `${who} updated a task assigned to you`;
   if (n.type === 'mentioned') return `${who} mentioned you in a message`;
+  if (n.type === 'event_created') return `${who} posted a new All Staff event`;
   return `${who} commented on a task`;
 }
 
 function viewForNotification(n: AppNotification): View {
   if (n.type === 'mentioned') return 'messages';
+  if (n.type === 'event_created') return 'calendar';
   return 'tasks';
 }
 
-export function NotificationBell({ onNavigate }: { onNavigate: (v: View) => void }) {
+export function NotificationBell({ onNavigate, currentUserId }: { onNavigate: (v: View) => void; currentUserId: string }) {
   const [items, setItems] = useState<AppNotification[]>([]);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<'unread' | 'all'>('unread');
+  const [responded, setResponded] = useState<Map<string, 'attending' | 'opted_out'>>(new Map());
 
   async function load() {
     try {
@@ -64,6 +68,15 @@ export function NotificationBell({ onNavigate }: { onNavigate: (v: View) => void
   async function clearAll() {
     await markAllRead();
     void load();
+  }
+  async function respond(n: AppNotification, status: 'attending' | 'opted_out') {
+    if (!n.entity_id) return;
+    await setMyAttendance(n.entity_id, currentUserId, status);
+    setResponded((prev) => new Map(prev).set(n.id, status));
+    if (!n.read) {
+      await markRead(n.id);
+      void load();
+    }
   }
 
   return (
@@ -117,19 +130,45 @@ export function NotificationBell({ onNavigate }: { onNavigate: (v: View) => void
               )}
               {displayItems.map((n) => (
                 <li key={n.id}>
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => void onItemClick(n)}
-                    className={`block w-full px-4 py-3 text-left hover:bg-sparrow-mist ${n.read ? 'opacity-60' : ''}`}
+                    onKeyDown={(e) => { if (e.key === 'Enter') void onItemClick(n); }}
+                    className={`block w-full cursor-pointer px-4 py-3 text-left hover:bg-sparrow-mist ${n.read ? 'opacity-60' : ''}`}
                   >
                     <div className="flex items-start gap-2">
                       <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? 'bg-sparrow-gray/40' : 'bg-sparrow-green'}`} />
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-sparrow-ink">{describe(n)}</p>
                         {n.body && <p className="truncate text-xs text-sparrow-gray">{n.body}</p>}
                         <p className="mt-0.5 text-[11px] text-sparrow-gray/70">{timeAgo(n.created_at)}</p>
+                        {n.type === 'event_created' && n.entity_id && (
+                          responded.has(n.id) ? (
+                            <p className="mt-1.5 text-xs font-medium text-sparrow-green">
+                              {responded.get(n.id) === 'attending' ? "You're attending ✓" : "You said you're not attending"}
+                            </p>
+                          ) : (
+                            <div className="mt-1.5 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                              <span className="text-xs text-sparrow-gray">Attending?</span>
+                              <button
+                                onClick={() => void respond(n, 'attending')}
+                                className="rounded-md bg-sparrow-green px-2.5 py-1 text-xs font-medium text-white hover:bg-sparrow-green/90"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => void respond(n, 'opted_out')}
+                                className="rounded-md bg-sparrow-mist px-2.5 py-1 text-xs font-medium text-sparrow-gray hover:text-sparrow-ink"
+                              >
+                                No
+                              </button>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 </li>
               ))}
             </ul>
