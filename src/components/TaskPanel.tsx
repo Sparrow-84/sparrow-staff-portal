@@ -513,7 +513,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
           {!task && (
             <div className="mt-4">
               <label className="field-label">
-                Assign to <span className="font-normal text-sparrow-gray">(pick one or more — each person gets their own copy)</span>
+                Assign to <span className="font-normal text-sparrow-gray">(pick one or more)</span>
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {profiles.map((p) => {
