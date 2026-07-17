@@ -18,6 +18,10 @@ export function SettingsView() {
   const [pushEnabled, setPushEnabled] = useState(true);
   const [pushBlocked, setPushBlocked] = useState(false);
 
+  // Only re-sync from the loaded profile when it's actually a different user's data
+  // (profile.id changes) — not on every incidental refetch of the same profile
+  // (e.g. Supabase's background session/token refresh), which would otherwise
+  // silently overwrite whatever the user just toggled/typed here.
   useEffect(() => {
     if (!profile) return;
     setPushEnabled(profile.push_enabled ?? true);
@@ -25,7 +29,8 @@ export function SettingsView() {
     setBlurb(profile.blurb ?? '');
     const blocks = normalizeSchedule(profile.work_schedule);
     if (blocks.length > 0) setScheduleBlocks(blocks);
-  }, [profile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]);
 
   if (!profile) return null;
 
@@ -204,7 +209,14 @@ export function SettingsView() {
                 }
               }
               setPushEnabled(next);
-              await updateMyProfile(profile!.id, { push_enabled: next });
+              try {
+                await updateMyProfile(profile!.id, { push_enabled: next });
+              } catch {
+                // Save failed — revert instead of leaving the toggle showing a
+                // state that isn't actually saved (it would otherwise silently
+                // snap back later on the next background session refresh).
+                setPushEnabled(!next);
+              }
             }}
             className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
               pushEnabled && !pushBlocked ? 'bg-sparrow-green' : 'bg-sparrow-rule'

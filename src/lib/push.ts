@@ -49,14 +49,24 @@ export function logoutOneSignal() {
 
 export async function requestPushPermission(): Promise<boolean> {
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (granted: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(granted);
+    };
     deferred(async (os) => {
       try {
         const granted = await os.Notifications.requestPermission();
-        resolve(granted);
+        finish(granted);
       } catch {
-        resolve(false);
+        finish(false);
       }
     });
+    // Safety net: if the OneSignal SDK's queue never gets processed (seen after
+    // an installed PWA resumes from background on iOS), don't hang the toggle
+    // forever — fall back to whatever the browser's native permission already is.
+    setTimeout(() => finish(getPushPermission() === 'granted'), 8000);
   });
 }
 
