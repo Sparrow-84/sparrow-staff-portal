@@ -182,3 +182,43 @@ export async function notifyTaskCommentMentions(
   });
   if (error) throw new Error(error.message);
 }
+
+// ── Task labels — personal, reusable list feeding the label picker ──────
+// The `tasks` table itself still just stores label/label_color as plain text;
+// this is each person's own saved list (RLS-scoped to created_by = auth.uid()).
+
+export interface TaskLabel {
+  id: string;
+  name: string;
+  color: string; // matches a LABEL_COLORS id
+  created_by: string;
+}
+
+export async function fetchTaskLabels(): Promise<TaskLabel[]> {
+  const { data, error } = await supabase
+    .from('task_labels')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) return []; // table may not exist until 0073 is applied
+  return (data ?? []) as TaskLabel[];
+}
+
+export async function createTaskLabel(input: { name: string; color: string; createdBy: string }): Promise<TaskLabel> {
+  const { data, error } = await supabase
+    .from('task_labels')
+    .insert({ name: input.name, color: input.color, created_by: input.createdBy })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as TaskLabel;
+}
+
+export async function updateTaskLabel(id: string, patch: { name?: string; color?: string }): Promise<void> {
+  const { error } = await supabase.from('task_labels').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteTaskLabel(id: string): Promise<void> {
+  const { error } = await supabase.from('task_labels').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}

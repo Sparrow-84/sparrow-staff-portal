@@ -21,7 +21,8 @@ import {
 } from '@/lib/data';
 import { parseMentionIds } from '@/lib/chat';
 import { MentionInput } from '@/components/chat/MentionInput';
-import { LABEL_COLORS, LabelPill } from '@/components/LabelPill';
+import { LabelPill } from '@/components/LabelPill';
+import { TaskLabelPicker } from '@/components/tasks/TaskLabelPicker';
 
 // ── Recurrence helpers ────────────────────────────────────────────────────────
 
@@ -578,50 +579,20 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
 
           {/* Label */}
           <div className="mt-4">
-            <label className="field-label">
-              Label <span className="font-normal text-sparrow-gray">(optional)</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                className="field-input !mt-0 flex-1 disabled:opacity-60"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                placeholder="e.g. Personal, Client work…"
-                disabled={readOnly}
+            {readOnly ? (
+              <>
+                <label className="field-label">Label</label>
+                {label ? <LabelPill label={label} color={labelColor} /> : <p className="text-sm text-sparrow-gray">None</p>}
+              </>
+            ) : (
+              <TaskLabelPicker
+                value={label ? { name: label, color: labelColor } : null}
+                currentUserId={currentUser.id}
+                onChange={(l) => {
+                  setLabel(l?.name ?? '');
+                  setLabelColor(l?.color ?? 'blue');
+                }}
               />
-              {label && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLabel('');
-                    setLabelColor('blue');
-                  }}
-                  className="shrink-0 text-xs text-sparrow-gray hover:text-sparrow-ink"
-                  aria-label="Clear label"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            {label && (
-              <div className="mt-2 flex items-center gap-1.5">
-                <span className="text-[11px] text-sparrow-gray">Color:</span>
-                {LABEL_COLORS.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setLabelColor(c.id)}
-                    aria-label={c.id}
-                    className={`h-5 w-5 shrink-0 rounded-full ${c.swatch} transition ${
-                      labelColor === c.id ? 'ring-2 ring-sparrow-ink ring-offset-1' : 'opacity-60 hover:opacity-100'
-                    }`}
-                  />
-                ))}
-                <span className="ml-1">
-                  <LabelPill label={label} color={labelColor} />
-                </span>
-              </div>
             )}
           </div>
 
