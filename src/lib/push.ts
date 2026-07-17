@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 declare global {
   interface Window {
     OneSignalDeferred?: Array<(os: OneSignalSDK) => void | Promise<void>>;
+    OneSignal?: OneSignalSDK;
   }
 }
 
@@ -48,6 +49,23 @@ export function logoutOneSignal() {
 }
 
 export async function requestPushPermission(): Promise<boolean> {
+  // Safari/iOS only shows the native permission popup when requestPermission()
+  // runs synchronously inside a trusted user gesture (the click). Going through
+  // the OneSignalDeferred queue defers it to a later tick, which silently loses
+  // that trust — no popup, no error, just nothing. By the time a user can reach
+  // this Settings toggle, initOneSignal() (called at app startup) has almost
+  // certainly already finished, so window.OneSignal is the real SDK — call it
+  // directly, in-gesture, instead of queuing.
+  if (window.OneSignal?.Notifications?.requestPermission) {
+    try {
+      return await window.OneSignal.Notifications.requestPermission();
+    } catch {
+      return false;
+    }
+  }
+
+  // Fallback for the rare case OneSignal hasn't finished loading yet — the
+  // popup may not appear on strict browsers here, but this keeps the app usable.
   return new Promise((resolve) => {
     let settled = false;
     const finish = (granted: boolean) => {
@@ -63,9 +81,6 @@ export async function requestPushPermission(): Promise<boolean> {
         finish(false);
       }
     });
-    // Safety net: if the OneSignal SDK's queue never gets processed (seen after
-    // an installed PWA resumes from background on iOS), don't hang the toggle
-    // forever — fall back to whatever the browser's native permission already is.
     setTimeout(() => finish(getPushPermission() === 'granted'), 8000);
   });
 }
