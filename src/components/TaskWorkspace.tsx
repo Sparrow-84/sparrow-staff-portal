@@ -62,6 +62,24 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
     }
   }, [tasks, currentUser.id]);
 
+  // Same-view case: clicking a task notification while already on the Tasks view
+  // doesn't remount this component, so the sessionStorage handoff above never fires.
+  // The bell also dispatches this event live for that case.
+  useEffect(() => {
+    function onOpenTask(e: Event) {
+      const id = (e as CustomEvent<string>).detail;
+      const t = tasks.find((x) => x.id === id);
+      if (t) {
+        setPanelTask(t);
+        setPanelReadOnly(false);
+        setPanelOpen(true);
+        sessionStorage.removeItem('sparrow.pendingTaskOpen');
+      }
+    }
+    window.addEventListener('sparrow:openTask', onOpenTask);
+    return () => window.removeEventListener('sparrow:openTask', onOpenTask);
+  }, [tasks]);
+
   const isAdmin = currentUser.role === 'admin';
   const reports = useMemo(
     () =>

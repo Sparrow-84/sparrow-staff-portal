@@ -16,6 +16,7 @@ function timeAgo(iso: string): string {
 function describe(n: AppNotification): string {
   const who = n.actor?.full_name ?? 'Someone';
   if (n.type === 'assigned') return `${who} assigned you a task`;
+  if (n.type === 'pushed_back') return `${who} pushed back "${n.body ?? 'a task'}"`;
   if (n.type === 'edited') return `${who} updated a task assigned to you`;
   if (n.type === 'mentioned') return `${who} mentioned you in a message`;
   if (n.type === 'event_created') return `${who} posted a new All Staff event`;
@@ -57,7 +58,12 @@ export function NotificationBell({ onNavigate, currentUserId }: { onNavigate: (v
   async function onItemClick(n: AppNotification) {
     setOpen(false);
     if (n.task_id) {
+      // sessionStorage covers navigating in from another view (TaskWorkspace picks it
+      // up on mount); the event covers already being on the Tasks view, where nothing
+      // remounts to read sessionStorage — without it, clicking a task notification
+      // while already on Tasks silently did nothing.
       sessionStorage.setItem('sparrow.pendingTaskOpen', n.task_id);
+      window.dispatchEvent(new CustomEvent('sparrow:openTask', { detail: n.task_id }));
     }
     onNavigate(viewForNotification(n));
     if (!n.read) {
@@ -141,7 +147,9 @@ export function NotificationBell({ onNavigate, currentUserId }: { onNavigate: (v
                       <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? 'bg-sparrow-gray/40' : 'bg-sparrow-green'}`} />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-sparrow-ink">{describe(n)}</p>
-                        {n.body && <p className="truncate text-xs text-sparrow-gray">{n.body}</p>}
+                        {n.body && n.type !== 'pushed_back' && (
+                          <p className="truncate text-xs text-sparrow-gray">{n.body}</p>
+                        )}
                         <p className="mt-0.5 text-[11px] text-sparrow-gray/70">{timeAgo(n.created_at)}</p>
                         {n.type === 'event_created' && n.entity_id && (
                           responded.has(n.id) ? (

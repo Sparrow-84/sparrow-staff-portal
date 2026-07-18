@@ -8,7 +8,7 @@ export interface Announcement {
   created_at: string;
 }
 
-export type NotificationType = 'assigned' | 'commented' | 'edited' | 'mentioned' | 'event_invited' | 'event_removed' | 'event_created';
+export type NotificationType = 'assigned' | 'commented' | 'edited' | 'mentioned' | 'event_invited' | 'event_removed' | 'event_created' | 'pushed_back';
 
 export interface AppNotification {
   id: string;

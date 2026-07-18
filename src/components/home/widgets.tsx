@@ -180,7 +180,7 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
     if (!pushBackTarget) return;
     setPushBackBusy(true);
     try {
-      await pushBackTask(pushBackTarget, pushBackNote.trim() || 'No reason given', ctx.me.id);
+      await pushBackTask(pushBackTarget, pushBackNote.trim());
       setPushBackTarget(null);
       ctx.onChanged();
     } finally {

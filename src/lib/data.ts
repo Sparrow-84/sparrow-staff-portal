@@ -155,14 +155,15 @@ export async function deferTask(id: string, dueDate: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Bounce a task back to its creator with a note (clears it from the recipient's Incoming Tasks). */
-export async function pushBackTask(task: TaskWithPeople, note: string, byId: string): Promise<void> {
+/**
+ * Bounce a task back to its creator with a note explaining why (clears it from the
+ * recipient's Incoming Tasks, lands it in the creator's). Runs as a single server-side
+ * RPC so the reassignment doesn't depend on client-side RLS and the creator gets one
+ * clear 'pushed_back' notification instead of a generic comment + reassignment pair.
+ */
+export async function pushBackTask(task: TaskWithPeople, note: string): Promise<void> {
   if (!task.created_by) throw new Error('This task has no assigner to push back to.');
-  await addComment(task.id, `Pushed back: ${note}`, byId);
-  const { error } = await supabase
-    .from('tasks')
-    .update({ assignee_id: task.created_by })
-    .eq('id', task.id);
+  const { error } = await supabase.rpc('push_back_task', { p_task_id: task.id, p_note: note });
   if (error) throw new Error(error.message);
 }
 
