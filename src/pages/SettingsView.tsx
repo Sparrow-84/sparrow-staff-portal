@@ -132,24 +132,24 @@ export function SettingsView() {
                     ))}
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <label className="field-label" htmlFor={`sched-start-${index}`}>Start time</label>
                       <input
                         id={`sched-start-${index}`}
                         type="time"
                         value={block.start}
                         onChange={(e) => updateBlockTime(index, 'start', e.target.value)}
-                        className="field-input"
+                        className="field-input min-w-0"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="field-label" htmlFor={`sched-end-${index}`}>End time</label>
                       <input
                         id={`sched-end-${index}`}
                         type="time"
                         value={block.end}
                         onChange={(e) => updateBlockTime(index, 'end', e.target.value)}
-                        className="field-input"
+                        className="field-input min-w-0"
                       />
                     </div>
                   </div>
