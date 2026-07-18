@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 import { localDate } from '@/lib/date';
+import type { Profile } from '@/lib/types';
 import {
   createSocialPost,
   deleteSocialPost,
+  fetchRecurringSetting,
   fetchSocialPosts,
+  syncSocialPostReminder,
   updateSocialPost,
+  type PartnershipRecurringSetting,
   type PartnershipSocialPost,
   type SocialPlatform,
   type SocialStatus,
 } from '@/lib/partnerships-tabs';
+import { PartnershipRecurringSettingsPanel } from './PartnershipRecurringSettingsPanel';
 
 const PLATFORM_LABEL: Record<SocialPlatform, string> = {
   facebook: 'FB',
@@ -53,13 +58,14 @@ const EMPTY_FORM = {
   notes: '',
 };
 
-export function PartnershipSocialTab() {
+export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
   const [posts, setPosts] = useState<PartnershipSocialPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [postedOpen, setPostedOpen] = useState(false);
+  const [setting, setSetting] = useState<PartnershipRecurringSetting | null>(null);
 
   function load() {
     setLoading(true);
@@ -70,6 +76,11 @@ export function PartnershipSocialTab() {
   }
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    syncSocialPostReminder().catch(console.error);
+    fetchRecurringSetting('social_post').then(setSetting).catch(console.error);
+  }, []);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -114,9 +125,13 @@ export function PartnershipSocialTab() {
     .filter((p) => p.status === 'posted')
     .sort((a, b) => (b.planned_date ?? '').localeCompare(a.planned_date ?? ''));
 
-  // Warning: no post in the trailing 14 days AND no post planned in the next 14 days.
-  // Both sides must be true — a recent post or an already-planned upcoming post each
-  // independently satisfy the minimum-frequency rule, so this must be an AND, not an OR.
+  // Warning: no post in the trailing cadence_days AND no post planned within the next
+  // lead_time_days — mirrors emit_social_post_reminder() (migration 0080) exactly, reading
+  // the same configured cadence/lead-time instead of a hardcoded 14. Both sides must be
+  // true — a recent post or an already-planned upcoming post each independently satisfy the
+  // minimum-frequency rule, so this must be an AND, not an OR.
+  const cadenceDays = setting?.cadence_days ?? 14;
+  const leadTimeDays = setting?.lead_time_days ?? 14;
   const lastPostedDate = posted[0]?.planned_date ?? null;
   const earliestUpcomingDate = upcoming[0]?.planned_date ?? null;
   const lastPostedDaysAgo = lastPostedDate
@@ -125,14 +140,21 @@ export function PartnershipSocialTab() {
   const daysToNextPost = earliestUpcomingDate
     ? (new Date(earliestUpcomingDate).getTime() - new Date(todayISO).getTime()) / 86_400_000
     : Infinity;
-  const showFrequencyWarning = lastPostedDaysAgo > 14 && daysToNextPost > 14;
+  const showFrequencyWarning = lastPostedDaysAgo > cadenceDays && daysToNextPost > leadTimeDays;
 
   return (
     <div className="space-y-4">
+      <PartnershipRecurringSettingsPanel
+        kind="social_post"
+        title="Social posting"
+        helpText="Nags the owner below when there's been no post in the configured cadence AND nothing already planned within the lead time — either side alone satisfies the rhythm."
+        profiles={profiles}
+      />
+
       {/* Frequency warning */}
       {showFrequencyWarning && !loading && (
         <div className="rounded-xl border border-sparrow-gold/40 bg-sparrow-gold/5 px-4 py-3 text-sm text-sparrow-ink">
-          No post in the last 2 weeks and none planned in the next 2 weeks. Minimum posting frequency is every 2 weeks.
+          No post in the last {cadenceDays} days and none planned in the next {leadTimeDays} days.
         </div>
       )}
 

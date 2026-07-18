@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
 import { localDate, localDateOf } from '@/lib/date';
+import type { Profile } from '@/lib/types';
 import {
   fetchComms,
+  fetchRecurringSetting,
   seedCommsForYear,
+  syncNewsletterReminderTasks,
   updateCommStatus,
   updateCommNotes,
   type CommStatus,
   type PartnershipComm,
+  type PartnershipRecurringSetting,
 } from '@/lib/partnerships-tabs';
+import { PartnershipRecurringSettingsPanel } from './PartnershipRecurringSettingsPanel';
 
 const STATUS_LABEL: Record<CommStatus, string> = {
   not_started: 'Not started',
@@ -61,19 +66,24 @@ function needsAdvanceNotice(comm: PartnershipComm): boolean {
   return comm.comm_type === 'tsm_christmas' || comm.comm_type === 'christmas_cards' || comm.comm_type === 'annual_report';
 }
 
-function isLeadTimeWarning(comm: PartnershipComm): boolean {
+// window defaults to 14 (the historical hardcoded value) unless the configured newsletter
+// lead_time_days is loaded — matches emit_newsletter_reminder_tasks() (migration 0080) for
+// the normal case. The 60-day Christmas/annual-report advance-notice special case is kept
+// here as a UI-only nicety even though the backend deliberately simplified that away.
+function isLeadTimeWarning(comm: PartnershipComm, leadTimeDays: number): boolean {
   if (comm.status !== 'not_started') return false;
   const diff = (new Date(comm.publish_date + 'T00:00:00').getTime() - Date.now()) / 86_400_000;
-  const window = needsAdvanceNotice(comm) ? 60 : 14;
+  const window = needsAdvanceNotice(comm) ? 60 : leadTimeDays;
   return diff >= 0 && diff <= window;
 }
 
-export function PartnershipCommsTab() {
+export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
   const [year, setYear] = useState(new Date().getFullYear());
   const [comms, setComms] = useState<PartnershipComm[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notesById, setNotesById] = useState<Record<string, string>>({});
+  const [setting, setSetting] = useState<PartnershipRecurringSetting | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -89,6 +99,11 @@ export function PartnershipCommsTab() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [year]);
+
+  useEffect(() => {
+    syncNewsletterReminderTasks().catch(console.error);
+    fetchRecurringSetting('newsletter').then(setSetting).catch(console.error);
+  }, []);
 
   function handleCycleStatus(comm: PartnershipComm) {
     const next = nextStatus(comm.status);
@@ -111,9 +126,17 @@ export function PartnershipCommsTab() {
     : 'text-red-600 bg-red-100';
 
   const todayISO = localDate();
+  const leadTimeDays = setting?.lead_time_days ?? 14;
 
   return (
     <div className="space-y-4">
+      <PartnershipRecurringSettingsPanel
+        kind="newsletter"
+        title="Newsletter"
+        helpText="Lead time here nags each comms entry's owner once inside the window ahead of its own publish date. Cadence is informational only — actual due dates come from each entry's own publish_date, seeded from the annual calendar."
+        profiles={profiles}
+      />
+
       {/* Header: year nav + ask counter */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-1">
@@ -153,7 +176,7 @@ export function PartnershipCommsTab() {
         <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
           {comms.map((comm) => {
             const expanded = expandedId === comm.id;
-            const warn = isLeadTimeWarning(comm);
+            const warn = isLeadTimeWarning(comm, leadTimeDays);
             const isPast = comm.publish_date < todayISO;
 
             return (
@@ -179,7 +202,7 @@ export function PartnershipCommsTab() {
                     )}
                     {warn && (
                       <span
-                        title={needsAdvanceNotice(comm) ? 'Needs writer assignment + advance coordination — not yet started' : 'Publish date within 14 days — not yet started'}
+                        title={needsAdvanceNotice(comm) ? 'Needs writer assignment + advance coordination — not yet started' : `Publish date within ${leadTimeDays} days — not yet started`}
                         className="text-amber-500 text-sm"
                       >
                         ⚠

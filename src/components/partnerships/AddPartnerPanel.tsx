@@ -10,20 +10,27 @@ import {
 } from '@/lib/partnerships-types';
 import { Drawer } from '../lcp/Drawer';
 
-// Default stewardship cadence by type (days between touchpoints). null = no day-based cadence.
-// Donors: calendar-driven (comms tab handles it). Prayer: attendance tracking handles it.
-// Church: quarterly per role doc. Community/business: 1-2x/year. Advisory: annual.
-const DEFAULT_CADENCE: Record<PartnerType, number | null> = {
-  donor:      null,
+// Default stewardship cadence by type (days between touchpoints). Every partner now needs a
+// cadence value (migration 0080 makes partners.cadence_days NOT NULL — "a record without a
+// rhythm is the defect the room exists to surface" applies across the board now, donors
+// included). Church: quarterly per role doc. Community/business: 1-2x/year. Advisory/
+// foundation: annual grant cycle. Donor/prayer/fst: semi-annual personal check-in as a
+// starting point — always editable.
+const DEFAULT_CADENCE: Record<PartnerType, number> = {
+  donor:      182,
   church:     90,
   community:  180,
   volunteer:  180,
-  prayer:     null,
-  fst:        null,
+  prayer:     90,
+  fst:        90,
   business:   180,
-  foundation: null,
+  foundation: 365,
   advisory:   365,
 };
+
+// Universal default lead time (days of advance warning before a touchpoint is due) — matches
+// the 14-day default migration 0080 backfilled everywhere else in the reminder engine.
+const DEFAULT_LEAD_TIME = 14;
 
 export function AddPartnerPanel({
   open,
@@ -48,6 +55,7 @@ export function AddPartnerPanel({
   const [address, setAddress] = useState('');
   const [source, setSource] = useState('');
   const [cadence, setCadence] = useState<number | null>(DEFAULT_CADENCE.donor);
+  const [leadTime, setLeadTime] = useState<number | null>(DEFAULT_LEAD_TIME);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +71,7 @@ export function AddPartnerPanel({
       setAddress('');
       setSource('');
       setCadence(DEFAULT_CADENCE.donor);
+      setLeadTime(DEFAULT_LEAD_TIME);
       setError(null);
       setBusy(false);
     }
@@ -73,10 +82,16 @@ export function AddPartnerPanel({
     setCadence(DEFAULT_CADENCE[t]); // follow the type's default rhythm unless the user overrides
   }
 
-  const canSave = name.trim().length > 0 && !busy;
+  // Cadence + lead time are required (migration 0080 — NOT NULL at the DB level). Validate here
+  // so a save attempt never hits the DB constraint as its only feedback.
+  const canSave =
+    name.trim().length > 0 &&
+    cadence != null && cadence > 0 &&
+    leadTime != null && leadTime > 0 &&
+    !busy;
 
   async function save() {
-    if (!canSave) return;
+    if (!canSave || cadence == null || leadTime == null) return;
     setBusy(true);
     setError(null);
     try {
@@ -92,7 +107,8 @@ export function AddPartnerPanel({
         phone: phone.trim() || null,
         address: address.trim() || null,
         donor_tier: type === 'donor' ? 'first_time' : null,
-        cadence_days: cadence && cadence > 0 ? cadence : null,
+        cadence_days: cadence,
+        lead_time_days: leadTime,
         source: source.trim() || null,
         notes: null,
       });
@@ -175,20 +191,36 @@ export function AddPartnerPanel({
           </p>
         </div>
 
-        <div>
-          <label className="field-label" htmlFor="pa-cadence">Cadence (days between touchpoints)</label>
-          <input
-            id="pa-cadence"
-            type="number"
-            min={1}
-            className="field-input"
-            value={cadence ?? ''}
-            onChange={(e) => setCadence(e.target.value === '' ? null : Math.max(1, Number(e.target.value)))}
-          />
-          <p className="mt-1 text-xs text-sparrow-gray">
-            Defaulted from the type ({PARTNER_TYPE[type].label}). Adjust to the rhythm this relationship needs.
-          </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="field-label" htmlFor="pa-cadence">Cadence (days) *</label>
+            <input
+              id="pa-cadence"
+              type="number"
+              min={1}
+              required
+              className="field-input"
+              value={cadence ?? ''}
+              onChange={(e) => setCadence(e.target.value === '' ? null : Math.max(1, Number(e.target.value)))}
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="pa-lead-time">Lead time (days) *</label>
+            <input
+              id="pa-lead-time"
+              type="number"
+              min={1}
+              required
+              className="field-input"
+              value={leadTime ?? ''}
+              onChange={(e) => setLeadTime(e.target.value === '' ? null : Math.max(1, Number(e.target.value)))}
+            />
+          </div>
         </div>
+        <p className="-mt-2 text-xs text-sparrow-gray">
+          Cadence defaulted from the type ({PARTNER_TYPE[type].label}); lead time defaults to {DEFAULT_LEAD_TIME} days'
+          advance warning. Both required — adjust to the rhythm this relationship needs.
+        </p>
 
         <div className="grid grid-cols-2 gap-3">
           <div>

@@ -34,12 +34,21 @@ export interface PartnershipCollateral {
   item_name: string;
   qty_on_hand: string | null;
   last_updated: string | null;
+  /** Informational only as of migration 0080 — no longer drives review scheduling. */
   review_cycle: ReviewCycle;
   needs_attention: boolean;
   notes: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
+  /** Required (migration 0080). Days between reviews for this item. */
+  cadence_days: number;
+  /** Required (migration 0080). Days ahead of the review due date the owner is warned. */
+  lead_time_days: number;
+  /** Required (migration 0080). Who is responsible for this item's review. */
+  owner_id: string;
+  /** Required (migration 0080). due_date = last_reviewed_at + cadence_days. */
+  last_reviewed_at: string;
 }
 
 export interface PartnershipSocialPost {
@@ -61,6 +70,20 @@ export interface PartnershipEvent {
   attendees: string | null;
   notes: string | null;
   created_at: string;
+}
+
+// Room-wide cadence/lead-time/owner settings for the two reminders with no natural row of
+// their own (migration 0080) — social posting and the newsletter/comms calendar.
+export type RecurringSettingKind = 'social_post' | 'newsletter';
+
+export interface PartnershipRecurringSetting {
+  id: string;
+  kind: RecurringSettingKind;
+  cadence_days: number;
+  lead_time_days: number;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PartnershipConnection {
@@ -223,7 +246,16 @@ export async function fetchArchivedCollateral(): Promise<PartnershipCollateral[]
 
 export type CollateralInput = Pick<
   PartnershipCollateral,
-  'item_name' | 'qty_on_hand' | 'last_updated' | 'review_cycle' | 'needs_attention' | 'notes'
+  | 'item_name'
+  | 'qty_on_hand'
+  | 'last_updated'
+  | 'review_cycle'
+  | 'needs_attention'
+  | 'notes'
+  | 'cadence_days'
+  | 'lead_time_days'
+  | 'owner_id'
+  | 'last_reviewed_at'
 >;
 
 export async function createCollateralItem(input: CollateralInput): Promise<void> {
@@ -358,12 +390,53 @@ export async function syncOverdueConnectionFollowups(): Promise<number> {
 }
 
 /**
- * Push the "Collateral review due…" task to Bethany once we're inside the 2-week
- * drafts-due window ahead of the next March 1 / Sept 1 review (dedup-safe;
- * requires migration 0079). No-op (returns 0) outside that window.
+ * Push a "Collateral review due…" task to each item's own owner once that item is inside
+ * its own lead_time_days window ahead of its own last_reviewed_at + cadence_days due date
+ * (dedup-safe; requires migration 0080's emit_collateral_review_tasks(), which replaced the
+ * old room-wide, hardcoded-to-Bethany emit_collateral_review_task()). Returns the number of
+ * tasks emitted.
  */
-export async function syncCollateralReviewTask(): Promise<number> {
-  const { data, error } = await supabase.rpc('emit_collateral_review_task');
+export async function syncCollateralReviewTasks(): Promise<number> {
+  const { data, error } = await supabase.rpc('emit_collateral_review_tasks');
+  if (error) throw new Error(error.message);
+  return (data as number | null) ?? 0;
+}
+
+// ─── Recurring settings (social posting + newsletter) ──────────────────
+
+export async function fetchRecurringSetting(
+  kind: RecurringSettingKind,
+): Promise<PartnershipRecurringSetting | null> {
+  const { data, error } = await supabase
+    .from('partnership_recurring_settings')
+    .select('*')
+    .eq('kind', kind)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as PartnershipRecurringSetting | null;
+}
+
+export async function updateRecurringSetting(
+  kind: RecurringSettingKind,
+  patch: Partial<Pick<PartnershipRecurringSetting, 'cadence_days' | 'lead_time_days' | 'owner_id'>>,
+): Promise<void> {
+  const { error } = await supabase
+    .from('partnership_recurring_settings')
+    .update(patch)
+    .eq('kind', kind);
+  if (error) throw new Error(error.message);
+}
+
+/** Push the "No social post in N+ days" task to the social_post settings owner (dedup-safe). */
+export async function syncSocialPostReminder(): Promise<number> {
+  const { data, error } = await supabase.rpc('emit_social_post_reminder');
+  if (error) throw new Error(error.message);
+  return (data as number | null) ?? 0;
+}
+
+/** Push per-entry newsletter/comms tasks once inside the configured lead window (dedup-safe). */
+export async function syncNewsletterReminderTasks(): Promise<number> {
+  const { data, error } = await supabase.rpc('emit_newsletter_reminder_tasks');
   if (error) throw new Error(error.message);
   return (data as number | null) ?? 0;
 }

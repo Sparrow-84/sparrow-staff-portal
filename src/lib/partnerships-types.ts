@@ -79,6 +79,8 @@ export interface Partner {
   address: string | null;
   donor_tier: DonorTier | null;
   cadence_days: number | null;
+  /** Required (migration 0080). Days ahead of the cadence due date the owner is warned. */
+  lead_time_days: number;
   last_touchpoint_at: string | null;
   source: string | null;
   notes: string | null;

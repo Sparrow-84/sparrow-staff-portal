@@ -16,6 +16,8 @@ import { PartnershipsHelpModal } from './PartnershipsHelpModal';
 import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { PartnerTableView } from './PartnerTableView';
 import { PartnerTileView } from './PartnerTileView';
+import { PartnershipsHomeTab } from './PartnershipsHomeTab';
+import type { HomeNavTarget } from '@/lib/partnerships-home';
 
 // Stub imports for tabs built in the parallel terminal
 import { PartnershipCommsTab } from './PartnershipCommsTab';
@@ -65,11 +67,12 @@ const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
   },
 ];
 
-type Tab = 'directory' | 'comms' | 'collateral' | 'social' | 'events' | 'prayer' | 'calendar';
+type Tab = 'home' | 'directory' | 'comms' | 'collateral' | 'social' | 'events' | 'prayer' | 'calendar';
 type View = 'table' | 'tile';
 type Filter = 'all' | 'archived' | PartnerType;
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: 'home', label: 'Home' },
   { key: 'directory', label: 'Directory' },
   { key: 'comms', label: 'Comms' },
   { key: 'collateral', label: 'Collateral' },
@@ -103,7 +106,7 @@ export function PartnershipsRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<Tab>('directory');
+  const [activeTab, setActiveTab] = useState<Tab>('home');
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
   const [view, setView] = useState<View>(
@@ -272,9 +275,16 @@ export function PartnershipsRoom() {
       {/* Tab content */}
       {activeTab !== 'directory' && (
         <div className="mt-6">
-          {activeTab === 'comms' && <PartnershipCommsTab />}
-          {activeTab === 'collateral' && <PartnershipCollateralTab />}
-          {activeTab === 'social' && <PartnershipSocialTab />}
+          {activeTab === 'home' && (
+            <PartnershipsHomeTab
+              profiles={profiles}
+              onOpenPartner={openPartner}
+              onNavigateTab={(t: HomeNavTarget) => setActiveTab(t)}
+            />
+          )}
+          {activeTab === 'comms' && <PartnershipCommsTab profiles={profiles} />}
+          {activeTab === 'collateral' && <PartnershipCollateralTab profiles={profiles} />}
+          {activeTab === 'social' && <PartnershipSocialTab profiles={profiles} />}
           {activeTab === 'events' && <PartnershipEventsTab />}
           {activeTab === 'prayer' && <PrayerMeetingTab />}
           {activeTab === 'calendar' && (

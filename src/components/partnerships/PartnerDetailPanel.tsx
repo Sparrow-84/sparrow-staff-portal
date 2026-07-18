@@ -360,34 +360,54 @@ export function PartnerDetailPanel({
         {/* ── 5. Stewardship fields — always editable (change most often) ── */}
         <section className="space-y-3">
           <span className="field-label block">Stewardship</span>
+          <div>
+            <span className="field-label">Owner</span>
+            <select
+              value={partner.owner_id ?? ''}
+              onChange={(e) => void patch({ owner_id: e.target.value || null })}
+              disabled={busy}
+              className="field-input mt-0"
+            >
+              <option value="">Unassigned</option>
+              {ownerProfiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <span className="field-label">Owner</span>
-              <select
-                value={partner.owner_id ?? ''}
-                onChange={(e) => void patch({ owner_id: e.target.value || null })}
-                disabled={busy}
-                className="field-input mt-0"
-              >
-                <option value="">Unassigned</option>
-                {ownerProfiles.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <span className="field-label">Cadence (days)</span>
+              <span className="field-label">Cadence (days) *</span>
               <input
                 type="number"
                 min={1}
                 defaultValue={partner.cadence_days ?? ''}
                 onBlur={(e) => {
-                  const v = e.target.value ? Math.max(1, Number(e.target.value)) : null;
+                  // Required (migration 0080) — never allow clearing to empty; revert instead
+                  // of sending a save that would hit the DB's NOT NULL constraint.
+                  if (!e.target.value) { e.target.value = String(partner.cadence_days ?? ''); return; }
+                  const v = Math.max(1, Number(e.target.value));
                   if (v !== (partner.cadence_days ?? null)) void patch({ cadence_days: v });
                 }}
                 placeholder="e.g. 90"
+                disabled={busy}
+                className="field-input mt-0"
+              />
+            </div>
+            <div>
+              <span className="field-label">Lead time (days) *</span>
+              <input
+                type="number"
+                min={1}
+                defaultValue={partner.lead_time_days ?? ''}
+                onBlur={(e) => {
+                  // Required (migration 0080) — same guard as Cadence above.
+                  if (!e.target.value) { e.target.value = String(partner.lead_time_days ?? ''); return; }
+                  const v = Math.max(1, Number(e.target.value));
+                  if (v !== partner.lead_time_days) void patch({ lead_time_days: v });
+                }}
+                placeholder="e.g. 14"
                 disabled={busy}
                 className="field-input mt-0"
               />

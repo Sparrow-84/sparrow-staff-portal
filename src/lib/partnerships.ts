@@ -16,7 +16,7 @@ import type {
 // manage everything; a partner's named owner sees/stewards their own.
 
 const PARTNER_COLS =
-  'id, name, type, stage, owner_id, organization, contact_name, email, phone, address, donor_tier, cadence_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status';
+  'id, name, type, stage, owner_id, organization, contact_name, email, phone, address, donor_tier, cadence_days, lead_time_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status';
 
 // ── Partners ─────────────────────────────────────────────────────────
 export async function fetchPartners(): Promise<Partner[]> {
@@ -50,7 +50,10 @@ export interface PartnerInput {
   phone: string | null;
   address: string | null;
   donor_tier: DonorTier | null;
-  cadence_days: number | null;
+  /** Required (migration 0080) — every partner needs a stewardship rhythm. */
+  cadence_days: number;
+  /** Required (migration 0080) — days ahead of due date the owner is warned. */
+  lead_time_days: number;
   source: string | null;
   notes: string | null;
 }
@@ -76,6 +79,7 @@ export async function updatePartner(
       | 'address'
       | 'donor_tier'
       | 'cadence_days'
+      | 'lead_time_days'
       | 'source'
       | 'notes'
       | 'active'

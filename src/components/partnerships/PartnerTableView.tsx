@@ -142,9 +142,14 @@ export function PartnerTableView({
                 <SortTh label="Last gift" k="last_gift" />
               </>
             ) : (
-              <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
-                Cadence
-              </th>
+              <>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+                  Cadence
+                </th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+                  Lead time
+                </th>
+              </>
             )}
             <th className="w-8 px-3 py-2" />
           </tr>
@@ -247,20 +252,40 @@ export function PartnerTableView({
                     </>
                   );
                 })() : (
-                  <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="number"
-                      min={1}
-                      defaultValue={p.cadence_days ?? ''}
-                      onBlur={(e) => {
-                        const v = e.target.value ? Math.max(1, Number(e.target.value)) : null;
-                        if (v !== (p.cadence_days ?? null)) void patch(p.id, { cadence_days: v });
-                      }}
-                      placeholder="—"
-                      disabled={isBusy}
-                      className="field-input mt-0 w-16 py-1 text-xs"
-                    />
-                  </td>
+                  <>
+                    <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="number"
+                        min={1}
+                        defaultValue={p.cadence_days ?? ''}
+                        onBlur={(e) => {
+                          // Required (migration 0080) — revert rather than saving an empty
+                          // value that would violate the DB's NOT NULL constraint.
+                          if (!e.target.value) { e.target.value = String(p.cadence_days ?? ''); return; }
+                          const v = Math.max(1, Number(e.target.value));
+                          if (v !== (p.cadence_days ?? null)) void patch(p.id, { cadence_days: v });
+                        }}
+                        placeholder="—"
+                        disabled={isBusy}
+                        className="field-input mt-0 w-16 py-1 text-xs"
+                      />
+                    </td>
+                    <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="number"
+                        min={1}
+                        defaultValue={p.lead_time_days ?? ''}
+                        onBlur={(e) => {
+                          if (!e.target.value) { e.target.value = String(p.lead_time_days ?? ''); return; }
+                          const v = Math.max(1, Number(e.target.value));
+                          if (v !== p.lead_time_days) void patch(p.id, { lead_time_days: v });
+                        }}
+                        placeholder="—"
+                        disabled={isBusy}
+                        className="field-input mt-0 w-16 py-1 text-xs"
+                      />
+                    </td>
+                  </>
                 )}
 
                 {/* Open link */}
