@@ -114,7 +114,9 @@ export function PartnershipSocialTab() {
     .filter((p) => p.status === 'posted')
     .sort((a, b) => (b.planned_date ?? '').localeCompare(a.planned_date ?? ''));
 
-  // Warning: no upcoming post in 14 days AND last posted is more than 14 days ago (or none)
+  // Warning: no post in the trailing 14 days AND no post planned in the next 14 days.
+  // Both sides must be true — a recent post or an already-planned upcoming post each
+  // independently satisfy the minimum-frequency rule, so this must be an AND, not an OR.
   const lastPostedDate = posted[0]?.planned_date ?? null;
   const earliestUpcomingDate = upcoming[0]?.planned_date ?? null;
   const lastPostedDaysAgo = lastPostedDate
@@ -123,14 +125,14 @@ export function PartnershipSocialTab() {
   const daysToNextPost = earliestUpcomingDate
     ? (new Date(earliestUpcomingDate).getTime() - new Date(todayISO).getTime()) / 86_400_000
     : Infinity;
-  const showFrequencyWarning = lastPostedDaysAgo > 14 || daysToNextPost > 14;
+  const showFrequencyWarning = lastPostedDaysAgo > 14 && daysToNextPost > 14;
 
   return (
     <div className="space-y-4">
       {/* Frequency warning */}
       {showFrequencyWarning && !loading && (
         <div className="rounded-xl border border-sparrow-gold/40 bg-sparrow-gold/5 px-4 py-3 text-sm text-sparrow-ink">
-          No post planned in the next 14 days. Minimum posting frequency is every 2 weeks.
+          No post in the last 2 weeks and none planned in the next 2 weeks. Minimum posting frequency is every 2 weeks.
         </div>
       )}
 

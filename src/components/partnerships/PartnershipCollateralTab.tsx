@@ -4,6 +4,7 @@ import {
   createCollateralItem,
   fetchArchivedCollateral,
   fetchCollateral,
+  syncCollateralReviewTask,
   updateCollateralItem,
   type CollateralInput,
   type PartnershipCollateral,
@@ -78,6 +79,10 @@ export function PartnershipCollateralTab() {
   }
 
   useEffect(() => { load(); }, [showArchived]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    syncCollateralReviewTask().catch(console.error);
+  }, []);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();

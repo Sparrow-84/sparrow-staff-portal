@@ -39,8 +39,10 @@ export function PartnerTableView({
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [busy, setBusy] = useState<string | null>(null);
 
+  // Exec is excluded even if flagged with partnerships_access — Andrew's only role in this
+  // room is the one-time major-donor call task; he should never be a selectable standing owner.
   const ownerProfiles = profiles.filter(
-    (p) => p.department === 'partnerships' || p.partnerships_access,
+    (p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec',
   );
 
   function toggleSort(key: SortKey) {
@@ -175,7 +177,7 @@ export function PartnerTableView({
                       if (tier === 'first_time') return <span className="rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">First gift</span>;
                       return null;
                     })()}
-                    {p.mou_status === 'needed' && (
+                    {(p.type === 'community' || p.type === 'church') && p.mou_status === 'needed' && (
                       <span className="h-2 w-2 rounded-full bg-priority-p1" title="MOU needed" />
                     )}
                   </div>

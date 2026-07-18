@@ -163,7 +163,9 @@ export function AddPartnerPanel({
           <select id="pa-owner" className="field-input" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
             <option value="">Unassigned</option>
             {profiles
-              .filter((p) => p.department === 'partnerships' || p.partnerships_access)
+              // Exec is excluded even if flagged with partnerships_access — Andrew's only role
+              // here is the one-time major-donor call task, never standing ownership.
+              .filter((p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec')
               .map((p) => (
                 <option key={p.id} value={p.id}>{p.full_name}</option>
               ))}

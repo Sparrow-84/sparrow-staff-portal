@@ -40,6 +40,8 @@ export function PartnerTileView({
         const type = PARTNER_TYPE[p.type];
         const stat = donorStatMap.get(p.id);
         const tier = derivedDonorTier(p.donor_tier, stat);
+        // MOU status only applies to community/church partner types.
+        const mouNeeded = (p.type === 'community' || p.type === 'church') && p.mou_status === 'needed';
         return (
           <button
             key={p.id}
@@ -71,8 +73,8 @@ export function PartnerTileView({
               </p>
             )}
 
-            {/* Stage + donor tier + MOU badges */}
-            {(p.stage === 'prospect' || tier === 'major' || tier === 'lapsed' || tier === 'first_time' || p.mou_status === 'needed') && (
+            {/* Stage + donor tier + MOU badges — MOU applies to community/church only */}
+            {(p.stage === 'prospect' || tier === 'major' || tier === 'lapsed' || tier === 'first_time' || mouNeeded) && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {p.stage === 'prospect' && (
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${PARTNER_STAGE['prospect'].chip}`}>
@@ -94,7 +96,7 @@ export function PartnerTileView({
                     First gift
                   </span>
                 )}
-                {p.mou_status === 'needed' && (
+                {mouNeeded && (
                   <span className="rounded-full bg-priority-p1/15 px-2 py-0.5 text-[10px] font-medium text-priority-p1">
                     MOU needed
                   </span>

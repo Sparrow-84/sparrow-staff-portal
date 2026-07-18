@@ -95,7 +95,13 @@ export function PartnerDetailPanel({
   const type = PARTNER_TYPE[partner.type];
   const status = stewardshipStatus(partner);
   const loggerName = (id: string | null) => (id ? profiles.find((p) => p.id === id)?.full_name ?? '—' : '—');
-  const ownerProfiles = profiles.filter((p) => p.department === 'partnerships' || p.partnerships_access);
+  // Standing ownership map: Bethany (dept=partnerships) + anyone explicitly granted room
+  // access. Exec is excluded even if flagged with partnerships_access — Andrew's only role
+  // here is the one-time major-donor call task; he should never appear as a selectable
+  // standing owner.
+  const ownerProfiles = profiles.filter(
+    (p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec',
+  );
 
   const isDonor = partner.type === 'donor';
   const isCommunityOrChurch = partner.type === 'community' || partner.type === 'church';
@@ -118,7 +124,7 @@ export function PartnerDetailPanel({
     );
     const patches: Parameters<typeof updatePartner>[1] = {};
     if (stageUpdate !== partner.stage) patches.stage = stageUpdate;
-    if (isDonor && donorTierUpdate !== (partner.donor_tier ?? '')) {
+    if (donorTierUpdate !== (partner.donor_tier ?? '')) {
       patches.donor_tier = (donorTierUpdate || null) as DonorTier | null;
     }
     // Restore archived partner when they reach out
@@ -324,26 +330,24 @@ export function PartnerDetailPanel({
                     <p className="mt-1 text-[11px] text-sparrow-green">Stage will update when you save ✓</p>
                   )}
                 </div>
-                {isDonor && (
-                  <div>
-                    <span className="field-label">Donor tier</span>
-                    <select
-                      value={donorTierUpdate}
-                      onChange={(e) => setDonorTierUpdate(e.target.value as DonorTier | '')}
-                      className="field-input mt-0"
-                    >
-                      <option value="">— no change —</option>
-                      {TIERS.map((t) => (
-                        <option key={t} value={t}>
-                          {DONOR_TIER[t]}
-                        </option>
-                      ))}
-                    </select>
-                    {donorTierUpdate && donorTierUpdate !== (partner.donor_tier ?? '') && (
-                      <p className="mt-1 text-[11px] text-sparrow-green">Donor tier will update when you save ✓</p>
-                    )}
-                  </div>
-                )}
+                <div>
+                  <span className="field-label">Donor tier</span>
+                  <select
+                    value={donorTierUpdate}
+                    onChange={(e) => setDonorTierUpdate(e.target.value as DonorTier | '')}
+                    className="field-input mt-0"
+                  >
+                    <option value="">— no change —</option>
+                    {TIERS.map((t) => (
+                      <option key={t} value={t}>
+                        {DONOR_TIER[t]}
+                      </option>
+                    ))}
+                  </select>
+                  {donorTierUpdate && donorTierUpdate !== (partner.donor_tier ?? '') && (
+                    <p className="mt-1 text-[11px] text-sparrow-green">Donor tier will update when you save ✓</p>
+                  )}
+                </div>
               </div>
 
               <button onClick={log} disabled={busy || !occurredOn} className="btn-primary w-full">
@@ -405,33 +409,31 @@ export function PartnerDetailPanel({
             </select>
             <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">{PARTNER_STAGE_DESC[partner.stage]}</p>
           </div>
-          {isDonor && (
-            <div>
-              <span className="field-label">Donor tier</span>
-              <select
-                value={partner.donor_tier ?? ''}
-                onChange={async (e) => {
-                  const newTier = (e.target.value || null) as DonorTier | null;
-                  await patch({ donor_tier: newTier });
-                  if (newTier === 'first_time' && partner.owner_id) {
-                    void emitFirstTimeDonorTask(partner.id, partner.name, partner.owner_id).catch(() => undefined);
-                  }
-                }}
-                disabled={busy}
-                className="field-input mt-0"
-              >
-                <option value="">—</option>
-                {TIERS.map((t) => (
-                  <option key={t} value={t}>
-                    {DONOR_TIER[t]}
-                  </option>
-                ))}
-              </select>
-              {partner.donor_tier && (
-                <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">{DONOR_TIER_DESC[partner.donor_tier]}</p>
-              )}
-            </div>
-          )}
+          <div>
+            <span className="field-label">Donor tier</span>
+            <select
+              value={partner.donor_tier ?? ''}
+              onChange={async (e) => {
+                const newTier = (e.target.value || null) as DonorTier | null;
+                await patch({ donor_tier: newTier });
+                if (newTier === 'first_time' && partner.owner_id) {
+                  void emitFirstTimeDonorTask(partner.id, partner.name, partner.owner_id).catch(() => undefined);
+                }
+              }}
+              disabled={busy}
+              className="field-input mt-0"
+            >
+              <option value="">—</option>
+              {TIERS.map((t) => (
+                <option key={t} value={t}>
+                  {DONOR_TIER[t]}
+                </option>
+              ))}
+            </select>
+            {partner.donor_tier && (
+              <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">{DONOR_TIER_DESC[partner.donor_tier]}</p>
+            )}
+          </div>
         </section>
 
         {/* ── 6. Partner info — view by default, edit on request ── */}

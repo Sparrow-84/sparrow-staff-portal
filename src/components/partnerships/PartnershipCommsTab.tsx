@@ -54,10 +54,18 @@ function isTsm(comm: PartnershipComm): boolean {
   return comm.comm_type.startsWith('tsm');
 }
 
+// December's Christmas greeting (Andrew + Shelly, together) and January's leadership
+// letters (Andrew as ED, Shelly as LCP Director, separately) need writers assigned and
+// coordinated months ahead — not just flagged 2 weeks out like a normal TSM issue.
+function needsAdvanceNotice(comm: PartnershipComm): boolean {
+  return comm.comm_type === 'tsm_christmas' || comm.comm_type === 'christmas_cards' || comm.comm_type === 'annual_report';
+}
+
 function isLeadTimeWarning(comm: PartnershipComm): boolean {
   if (comm.status !== 'not_started') return false;
   const diff = (new Date(comm.publish_date + 'T00:00:00').getTime() - Date.now()) / 86_400_000;
-  return diff >= 0 && diff <= 14;
+  const window = needsAdvanceNotice(comm) ? 60 : 14;
+  return diff >= 0 && diff <= window;
 }
 
 export function PartnershipCommsTab() {
@@ -170,7 +178,10 @@ export function PartnershipCommsTab() {
                       </span>
                     )}
                     {warn && (
-                      <span title="Publish date within 14 days — not yet started" className="text-amber-500 text-sm">
+                      <span
+                        title={needsAdvanceNotice(comm) ? 'Needs writer assignment + advance coordination — not yet started' : 'Publish date within 14 days — not yet started'}
+                        className="text-amber-500 text-sm"
+                      >
                         ⚠
                       </span>
                     )}

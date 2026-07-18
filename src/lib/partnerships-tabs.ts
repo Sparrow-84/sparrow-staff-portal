@@ -72,6 +72,7 @@ export interface PartnershipConnection {
   next_action: string | null;
   followup_due: string | null;
   followup_done: boolean;
+  owner_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -330,7 +331,7 @@ export async function fetchConnections(eventId?: string): Promise<PartnershipCon
 
 export type ConnectionInput = Pick<
   PartnershipConnection,
-  'event_id' | 'name' | 'organization' | 'what_discussed' | 'next_action' | 'followup_due'
+  'event_id' | 'name' | 'organization' | 'what_discussed' | 'next_action' | 'followup_due' | 'owner_id'
 >;
 
 export async function createConnection(input: ConnectionInput): Promise<void> {
@@ -340,7 +341,7 @@ export async function createConnection(input: ConnectionInput): Promise<void> {
 
 export async function updateConnection(
   id: string,
-  patch: Partial<Pick<PartnershipConnection, 'name' | 'organization' | 'what_discussed' | 'next_action' | 'followup_due' | 'followup_done' | 'event_id'>>,
+  patch: Partial<Pick<PartnershipConnection, 'name' | 'organization' | 'what_discussed' | 'next_action' | 'followup_due' | 'followup_done' | 'event_id' | 'owner_id'>>,
 ): Promise<void> {
   const { error } = await supabase
     .from('partnership_connections')
@@ -349,9 +350,20 @@ export async function updateConnection(
   if (error) throw new Error(error.message);
 }
 
-/** Push overdue connection follow-ups onto the caller's Incoming Tasks (dedup-safe). */
+/** Push overdue connection follow-ups onto each connection's owner's Incoming Tasks (dedup-safe). Connections with no owner set are skipped. */
 export async function syncOverdueConnectionFollowups(): Promise<number> {
   const { data, error } = await supabase.rpc('emit_overdue_connection_followups');
+  if (error) throw new Error(error.message);
+  return (data as number | null) ?? 0;
+}
+
+/**
+ * Push the "Collateral review due…" task to Bethany once we're inside the 2-week
+ * drafts-due window ahead of the next March 1 / Sept 1 review (dedup-safe;
+ * requires migration 0079). No-op (returns 0) outside that window.
+ */
+export async function syncCollateralReviewTask(): Promise<number> {
+  const { data, error } = await supabase.rpc('emit_collateral_review_task');
   if (error) throw new Error(error.message);
   return (data as number | null) ?? 0;
 }

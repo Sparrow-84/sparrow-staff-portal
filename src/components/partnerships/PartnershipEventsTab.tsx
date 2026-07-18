@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/auth/AuthContext';
 import { localDate } from '@/lib/date';
+import { fetchProfiles } from '@/lib/data';
+import type { Profile } from '@/lib/types';
 import {
   createConnection,
   createEvent,
@@ -38,11 +41,14 @@ const EMPTY_CONN_FORM: ConnectionInput = {
   what_discussed: null,
   next_action: null,
   followup_due: null,
+  owner_id: null,
 };
 
 export function PartnershipEventsTab() {
+  const { profile } = useAuth();
   const [events, setEvents] = useState<PartnershipEvent[]>([]);
   const [connections, setConnections] = useState<PartnershipConnection[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showEventForm, setShowEventForm] = useState(false);
@@ -53,9 +59,15 @@ export function PartnershipEventsTab() {
   const [connForm, setConnForm] = useState<ConnectionInput>(EMPTY_CONN_FORM);
   const [savingConn, setSavingConn] = useState(false);
 
+  // Exec is excluded even if flagged with partnerships_access — same standing-owner
+  // exclusion used for partner records (AddPartnerPanel/PartnerTableView).
+  const ownerProfiles = profiles.filter(
+    (p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec',
+  );
+
   function load() {
-    Promise.all([fetchEvents(), fetchConnections()])
-      .then(([evts, conns]) => { setEvents(evts); setConnections(conns); })
+    Promise.all([fetchEvents(), fetchConnections(), fetchProfiles()])
+      .then(([evts, conns, profs]) => { setEvents(evts); setConnections(conns); setProfiles(profs); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }
@@ -82,11 +94,19 @@ export function PartnershipEventsTab() {
   }
 
   function openConnFormForEvent(event: PartnershipEvent) {
-    setConnForm({ ...EMPTY_CONN_FORM, event_id: event.id });
+    setConnForm({ ...EMPTY_CONN_FORM, event_id: event.id, owner_id: profile?.id ?? null });
     setShowConnForm(true);
     setTimeout(() => {
       document.getElementById('conn-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
+  }
+
+  function toggleConnForm() {
+    setShowConnForm((v) => {
+      const next = !v;
+      if (next) setConnForm({ ...EMPTY_CONN_FORM, owner_id: profile?.id ?? null });
+      return next;
+    });
   }
 
   async function handleAddConn(e: React.FormEvent) {
@@ -109,6 +129,11 @@ export function PartnershipEventsTab() {
     const next = !conn.followup_done;
     setConnections((prev) => prev.map((c) => (c.id === conn.id ? { ...c, followup_done: next } : c)));
     await updateConnection(conn.id, { followup_done: next }).catch(console.error);
+  }
+
+  async function handleOwnerChange(conn: PartnershipConnection, ownerId: string | null) {
+    setConnections((prev) => prev.map((c) => (c.id === conn.id ? { ...c, owner_id: ownerId } : c)));
+    await updateConnection(conn.id, { owner_id: ownerId }).catch(console.error);
   }
 
   function eventName(id: string | null): string {
@@ -236,7 +261,7 @@ export function PartnershipEventsTab() {
       <section id="conn-form">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-sparrow-ink">Meaningful connections</h3>
-          <button onClick={() => setShowConnForm((v) => !v)} className="btn-primary text-xs">
+          <button onClick={toggleConnForm} className="btn-primary text-xs">
             {showConnForm ? 'Cancel' : '+ Add connection'}
           </button>
         </div>
@@ -287,6 +312,19 @@ export function PartnershipEventsTab() {
                   onChange={(e) => setConnForm((f) => ({ ...f, followup_due: e.target.value || null }))}
                 />
               </div>
+              <div>
+                <label className="field-label">Owner</label>
+                <select
+                  className="field-input w-full"
+                  value={connForm.owner_id ?? ''}
+                  onChange={(e) => setConnForm((f) => ({ ...f, owner_id: e.target.value || null }))}
+                >
+                  <option value="">Unassigned</option>
+                  {ownerProfiles.map((op) => (
+                    <option key={op.id} value={op.id}>{op.full_name}</option>
+                  ))}
+                </select>
+              </div>
               <div className="col-span-2">
                 <label className="field-label">Linked event (optional)</label>
                 <select
@@ -329,6 +367,7 @@ export function PartnershipEventsTab() {
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Next action</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Follow-up due</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Done</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Owner</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Event</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray"></th>
                 </tr>
@@ -363,6 +402,18 @@ export function PartnershipEventsTab() {
                           onChange={() => handleToggleDone(conn)}
                           className="h-4 w-4 rounded accent-sparrow-green"
                         />
+                      </td>
+                      <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={conn.owner_id ?? ''}
+                          onChange={(e) => handleOwnerChange(conn, e.target.value || null)}
+                          className="field-input mt-0 py-1 text-xs"
+                        >
+                          <option value="">Unassigned</option>
+                          {ownerProfiles.map((op) => (
+                            <option key={op.id} value={op.id}>{op.full_name}</option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-3 py-2.5 text-xs text-sparrow-gray whitespace-nowrap">
                         {eventName(conn.event_id)}
