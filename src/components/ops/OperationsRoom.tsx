@@ -8,6 +8,7 @@ import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { StaffMemberPanel } from './StaffMemberPanel';
 import { InventoryRoom } from '@/components/inventory/InventoryRoom';
 import { DeptCalendar } from '@/components/calendar/DeptCalendar';
+import { GrantsRoom } from './GrantsRoom';
 
 const OPS_TOUR_STEPS: TourStep[] = [
   {
@@ -29,9 +30,15 @@ const OPS_TOUR_STEPS: TourStep[] = [
     tag: { icon: '📦', label: 'Inventory' },
   },
   {
+    icon: '📜',
+    title: 'Grants tab',
+    body: "Track every active grant — funder details, the annual OHCS certification deadline, and every funder notification actually sent (insurance, management, ownership, or debt changes). Grants marked \"prior consent required\" are flagged so nobody acts without sign-off first.",
+    tag: { icon: '📜', label: 'Grants' },
+  },
+  {
     icon: '✨',
     title: "You're all set",
-    body: "Check the Staff tab when you have a new team member, a review to schedule, or a check-in overdue. Inventory is your source of truth for supplies and county filing.",
+    body: "Check the Staff tab when you have a new team member, a review to schedule, or a check-in overdue. Inventory is your source of truth for supplies and county filing. Grants keeps the long-term compliance obligations from slipping.",
     tag: null,
   },
 ];
@@ -47,7 +54,7 @@ export function OperationsRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [opsTab, setOpsTab] = useState<'staff' | 'inventory' | 'calendar'>('staff');
+  const [opsTab, setOpsTab] = useState<'staff' | 'inventory' | 'calendar' | 'grants'>('staff');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -118,7 +125,7 @@ export function OperationsRoom() {
 
       {/* Tabs */}
       <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
-        {(['staff', 'inventory', 'calendar'] as const).map((t) => (
+        {(['staff', 'inventory', 'calendar', 'grants'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setOpsTab(t)}
@@ -126,7 +133,7 @@ export function OperationsRoom() {
               opsTab === t ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
             }`}
           >
-            {t === 'staff' ? 'Staff' : t === 'inventory' ? 'Inventory' : 'Calendar'}
+            {t === 'staff' ? 'Staff' : t === 'inventory' ? 'Inventory' : t === 'calendar' ? 'Calendar' : 'Grants'}
           </button>
         ))}
       </div>
@@ -138,6 +145,10 @@ export function OperationsRoom() {
       ) : opsTab === 'calendar' ? (
         <div className="mt-6" style={{ height: '70vh' }}>
           <DeptCalendar department="ops" />
+        </div>
+      ) : opsTab === 'grants' ? (
+        <div className="mt-6">
+          <GrantsRoom />
         </div>
       ) : null}
 
