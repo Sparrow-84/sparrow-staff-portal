@@ -10,6 +10,7 @@ import { OpsSubmissionsView } from './OpsSubmissionsView';
 import { FilingView } from './FilingView';
 import { ConsumablesForm } from './ConsumablesForm';
 import { HouseFlipWorkflow } from './HouseFlipWorkflow';
+import { AssetRegisterView } from './AssetRegisterView';
 
 type OpsTab = 'submissions' | 'flips' | 'filing' | 'consumables' | 'register';
 
@@ -77,9 +78,6 @@ export function InventoryRoom() {
               className={`${tabBase} whitespace-nowrap ${opsTab === 'register' ? tabActive : tabIdle}`}
             >
               Asset Register
-              <span className="ml-2 rounded-full bg-sparrow-rule/60 px-1.5 py-0.5 text-[10px] font-medium uppercase text-sparrow-gray">
-                Soon
-              </span>
             </button>
           </div>
         )}
@@ -105,9 +103,7 @@ export function InventoryRoom() {
           ) : opsTab === 'consumables' ? (
             <ConsumablesForm />
           ) : (
-            <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist p-8 text-center">
-              <p className="text-sm text-sparrow-gray">The full asset register view is coming soon.</p>
-            </div>
+            <AssetRegisterView />
           )
         ) : (
           <StaffSubmissionView month={month} year={year} />

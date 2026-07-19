@@ -152,6 +152,7 @@ export interface InvItem {
   filing_status: InvFilingStatus;
   filed_as: string | null;
   who_has_it: string | null;
+  review_flag: string | null;
   created_at: string;
   updated_at: string;
   sub_location?: InvSubLocation;

@@ -86,6 +86,39 @@ export async function fetchAllActiveItems(): Promise<InvItem[]> {
   return data ?? [];
 }
 
+// ── Full register (Asset Register tab) ──────────────────────────────────
+
+export interface RegisterItem extends InvItem {
+  location: InvLocation;
+}
+
+export async function fetchRegisterItems(): Promise<RegisterItem[]> {
+  const { data, error } = await supabase
+    .from('inv_items')
+    .select(`*, sub_location:inv_sub_locations(*), location:inv_locations(${LOC_COLS})`)
+    .order('description');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as RegisterItem[];
+}
+
+export type ItemEditPatch = Partial<{
+  description: string;
+  serial_number: string | null;
+  quantity: number;
+  unit_cost: number;
+  condition: InvItemCondition;
+  is_donated: boolean;
+  sub_location_id: string | null;
+  notes: string | null;
+  who_has_it: string | null;
+  review_flag: string | null;
+}>;
+
+export async function patchItem(id: string, patch: ItemEditPatch): Promise<void> {
+  const { error } = await supabase.from('inv_items').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // ── Monthly submissions ───────────────────────────────────────────────────
 
 export async function fetchSubmissions(locationId?: string): Promise<InvMonthlySubmission[]> {
