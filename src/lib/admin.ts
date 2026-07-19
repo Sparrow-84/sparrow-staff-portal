@@ -11,6 +11,7 @@ export interface StaffInput {
   partnerships_access: boolean;
   ops_access: boolean;
   toc_access: boolean;
+  stories_access?: boolean;
   role_description?: string | null;
 }
 

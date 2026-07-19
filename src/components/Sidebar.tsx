@@ -1,6 +1,6 @@
 import { useChat } from '@/chat/ChatContext';
 
-export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'tasks' | 'calendar' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents' | 'team';
+export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'stories' | 'tasks' | 'calendar' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents' | 'team';
 
 interface Props {
   view: View;
@@ -9,6 +9,7 @@ interface Props {
   lcpAccess: boolean;
   partnershipsAccess: boolean;
   opsAccess: boolean;
+  storiesAccess: boolean;
   hasOnboarding: boolean;
   onNavigate: (v: View) => void;
   open: boolean; // mobile drawer
@@ -40,6 +41,7 @@ function NavContent({
   lcpAccess,
   partnershipsAccess,
   opsAccess,
+  storiesAccess,
   hasOnboarding,
   onNavigate,
 }: {
@@ -49,6 +51,7 @@ function NavContent({
   lcpAccess: boolean;
   partnershipsAccess: boolean;
   opsAccess: boolean;
+  storiesAccess: boolean;
   hasOnboarding: boolean;
   onNavigate: (v: View) => void;
 }) {
@@ -142,6 +145,18 @@ function NavContent({
             Operations <LockIcon />
           </span>
         )}
+        {storiesAccess ? (
+          <button
+            onClick={() => onNavigate('stories')}
+            className={`${itemBase} ${view === 'stories' ? active : idle}`}
+          >
+            Stories &amp; Media
+          </button>
+        ) : (
+          <span className={`${itemBase} cursor-default text-sparrow-gray/50`}>
+            Stories &amp; Media <LockIcon />
+          </span>
+        )}
         {SOON_ROOMS.map((r) => (
           <span key={r} className={`${itemBase} text-sparrow-gray/70`}>
             {r} <Soon />
@@ -166,7 +181,7 @@ function NavContent({
   );
 }
 
-export function Sidebar({ view, isAdmin, tocAccess, lcpAccess, partnershipsAccess, opsAccess, hasOnboarding, onNavigate, open, onClose }: Props) {
+export function Sidebar({ view, isAdmin, tocAccess, lcpAccess, partnershipsAccess, opsAccess, storiesAccess, hasOnboarding, onNavigate, open, onClose }: Props) {
   return (
     <>
       {/* Desktop: static sidebar */}
@@ -178,6 +193,7 @@ export function Sidebar({ view, isAdmin, tocAccess, lcpAccess, partnershipsAcces
           lcpAccess={lcpAccess}
           partnershipsAccess={partnershipsAccess}
           opsAccess={opsAccess}
+          storiesAccess={storiesAccess}
           hasOnboarding={hasOnboarding}
           onNavigate={onNavigate}
         />
@@ -203,6 +219,7 @@ export function Sidebar({ view, isAdmin, tocAccess, lcpAccess, partnershipsAcces
           lcpAccess={lcpAccess}
           partnershipsAccess={partnershipsAccess}
           opsAccess={opsAccess}
+          storiesAccess={storiesAccess}
           hasOnboarding={hasOnboarding}
           onNavigate={(v) => {
             onNavigate(v);

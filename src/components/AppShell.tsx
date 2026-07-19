@@ -18,6 +18,7 @@ import { OnboardingView } from './onboarding/OnboardingView';
 import { DocumentsRoom } from './documents/DocumentsRoom';
 import { TeamView } from '@/pages/TeamView';
 import { ValuesFooter } from './ValuesFooter';
+import { StoriesRoom } from './stories/StoriesRoom';
 
 export function AppShell() {
   const { profile } = useAuth();
@@ -38,6 +39,7 @@ export function AppShell() {
   const lcpAccess = isAdmin || profile.lcp_role === 'full' || profile.lcp_role === 'extended';
   const partnershipsAccess = isAdmin || profile.partnerships_access;
   const opsAccess = isAdmin || profile.ops_access;
+  const storiesAccess = isAdmin || profile.stories_access;
 
   function handleOnboardingDone() {
     setHasOnboarding(false);
@@ -64,6 +66,7 @@ export function AppShell() {
             lcpAccess={lcpAccess}
             partnershipsAccess={partnershipsAccess}
             opsAccess={opsAccess}
+            storiesAccess={storiesAccess}
             hasOnboarding={hasOnboarding}
             onNavigate={handleNavigate}
             open={navOpen}
@@ -82,6 +85,7 @@ export function AppShell() {
             {view === 'documents' && <DocumentsRoom />}
             {view === 'team' && <TeamView />}
             {view === 'staff' && <StaffAdmin />}
+            {view === 'stories' && <StoriesRoom />}
           </main>
         </div>
         <ValuesFooter />

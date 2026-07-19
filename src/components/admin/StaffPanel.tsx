@@ -31,6 +31,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
   const [lcpFull, setLcpFull] = useState(false);
   const [partnershipsAccess, setPartnershipsAccess] = useState(false);
   const [opsAccess, setOpsAccess] = useState(false);
+  const [storiesAccess, setStoriesAccess] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -47,6 +48,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setLcpFull(staff.lcp_role === 'full');
       setPartnershipsAccess(staff.partnerships_access);
       setOpsAccess(staff.ops_access);
+      setStoriesAccess(staff.stories_access);
     } else {
       setFullName('');
       setEmail('');
@@ -59,6 +61,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setLcpFull(false);
       setPartnershipsAccess(false);
       setOpsAccess(false);
+      setStoriesAccess(false);
     }
   }, [open, staff]);
 
@@ -80,6 +83,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       lcp_role: lcpFull ? 'full' : staff?.lcp_role === 'extended' ? 'extended' : null,
       partnerships_access: partnershipsAccess,
       ops_access: opsAccess,
+      stories_access: storiesAccess,
     };
     startTransition(async () => {
       try {
@@ -289,6 +293,25 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
                   Opens the Operations Room — staff records, HR notes, issue log, 1:1 tracker, and
                   performance reviews. Grant only to people-managers. Separate from Role and
                   Department.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream px-3 py-3">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={storiesAccess}
+                onChange={(e) => setStoriesAccess(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-sparrow-green"
+              />
+              <span>
+                <span className="font-medium">Stories &amp; Media Room access</span>
+                <span className="mt-0.5 block text-xs text-sparrow-gray">
+                  Opens the Stories &amp; Media Room — story drafts, photo release tracking (all
+                  three consent layers), and community event log. Grant to communications staff and
+                  anyone who gathers or publishes participant stories.
                 </span>
               </span>
             </label>

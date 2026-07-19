@@ -49,6 +49,8 @@ export interface Profile {
   ops_access: boolean;
   /** Twin Oaks Room explicit access grant — beyond the implicit TOC dept + admin grant. */
   toc_access: boolean;
+  /** Stories & Media Room access. */
+  stories_access: boolean;
   work_schedule: WorkSchedule | null;
   blurb: string | null;
   photo_url: string | null;
