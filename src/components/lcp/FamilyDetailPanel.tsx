@@ -893,11 +893,12 @@ function ProgramFeeTab({
 }
 
 // ── General info ─────────────────────────────────────────────────────
-// At-a-glance intake summary: program timeline (onboarding start is just this
-// row's created_at; program end is auto-tracked; move-in is staff-entered since
-// only staff know the real date), home unit + address (linked to a real TOC
-// space), fee status, and household member/contact info. Mirrors the Twin Oaks
-// room's household_members pattern, scoped to LCP.
+// A single view/edit toggle for the whole tab — opens read-only (this is
+// saved, settled information) with one Edit button, not a form staff could
+// accidentally change. Household (who this family actually is) comes first;
+// program timeline, home unit/TOC link, and fee status follow. The parent
+// FamilyDetailPanel renders this with key={family.id} so switching families
+// always remounts fresh instead of carrying over stale local state.
 function GeneralInfoTab({
   family,
   tocSpaces,
@@ -913,13 +914,8 @@ function GeneralInfoTab({
   feePayments: ProgramFeePayment[];
   onChanged: () => void;
 }) {
-  const [moveInDate, setMoveInDate] = useState(family.move_in_date ?? '');
-  const [spaceBusy, setSpaceBusy] = useState(false);
+  const [mode, setMode] = useState<'view' | 'edit'>(householdAdult ? 'view' : 'edit');
   const [moveInRequest, setMoveInRequest] = useState<LcpMoveInRequest | null>(null);
-  const [householdMode, setHouseholdMode] = useState<'view' | 'edit'>(householdAdult ? 'view' : 'edit');
-
-  const space = tocSpaces.find((s) => s.id === family.toc_space_id) ?? null;
-  const overdue = isFeeOverdue(family.move_in_date, family.status, feePayments.map((p) => p.paid_date));
 
   const reloadRequest = useCallback(async () => {
     setMoveInRequest(await fetchMoveInRequestForFamily(family.id));
@@ -929,10 +925,6 @@ function GeneralInfoTab({
     void reloadRequest();
   }, [reloadRequest]);
 
-  useEffect(() => {
-    setHouseholdMode(householdAdult ? 'view' : 'edit');
-  }, [family.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // If not yet linked to a Twin Oaks resident record, this creates (or leaves
   // alone) a pending review request for TOC staff — it never writes into
   // tenants/household_members directly. If TOC staff already approved a link,
@@ -941,26 +933,120 @@ function GeneralInfoTab({
   async function attemptSync() {
     await requestOrSyncLcpToc(family.id);
     await reloadRequest();
-    onChanged();
   }
 
-  async function saveMoveInDate() {
-    if (moveInDate === (family.move_in_date ?? '')) return;
-    await updateFamily(family.id, { move_in_date: moveInDate || null });
-    onChanged();
-    await attemptSync();
-  }
+  return mode === 'view' ? (
+    <GeneralInfoView
+      family={family}
+      tocSpaces={tocSpaces}
+      adult={householdAdult}
+      kids={householdChildren}
+      feePayments={feePayments}
+      moveInRequest={moveInRequest}
+      onEdit={() => setMode('edit')}
+    />
+  ) : (
+    <GeneralInfoEdit
+      family={family}
+      tocSpaces={tocSpaces}
+      adult={householdAdult}
+      kids={householdChildren}
+      feePayments={feePayments}
+      onDone={async () => {
+        await onChanged();
+        await attemptSync();
+        setMode('view');
+      }}
+      onCancel={() => setMode('view')}
+    />
+  );
+}
 
-  async function setSpace(spaceId: string) {
-    setSpaceBusy(true);
-    await updateFamily(family.id, { toc_space_id: spaceId || null });
-    setSpaceBusy(false);
-    onChanged();
-    await attemptSync();
+function SyncStatus({ family, moveInRequest }: { family: Family; moveInRequest: LcpMoveInRequest | null }) {
+  if (family.toc_tenant_id) {
+    return (
+      <div className="mt-2 rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green">
+        ✓ Linked to Twin Oaks residents{family.toc_synced_at ? ` — last synced ${dayLabel(family.toc_synced_at)}` : ''}
+      </div>
+    );
   }
+  if (moveInRequest?.status === 'needs_info') {
+    return (
+      <div className="mt-2 rounded-lg bg-sparrow-gold/15 px-3 py-2 text-xs">
+        <p className="font-semibold text-sparrow-ink">⚑ Twin Oaks staff have a question:</p>
+        <p className="mt-0.5 text-sparrow-ink">{moveInRequest.notes || '(no note left)'}</p>
+        <p className="mt-1 text-sparrow-gray">Reply via chat or a task, then update this family's info here.</p>
+      </div>
+    );
+  }
+  if (moveInRequest?.status === 'pending') {
+    return (
+      <div className="mt-2 rounded-lg bg-sparrow-gold/15 px-3 py-2 text-xs font-medium text-sparrow-ink">
+        ✓ Move-in request sent to Twin Oaks — waiting on their review.
+      </div>
+    );
+  }
+  return (
+    <p className="mt-2 text-xs text-sparrow-gray">Set a home unit and a move-in date to send Twin Oaks a move-in request.</p>
+  );
+}
+
+function GeneralInfoView({
+  family,
+  tocSpaces,
+  adult,
+  kids,
+  feePayments,
+  moveInRequest,
+  onEdit,
+}: {
+  family: Family;
+  tocSpaces: TocSpaceSlim[];
+  adult: HouseholdAdult | null;
+  kids: HouseholdChild[];
+  feePayments: ProgramFeePayment[];
+  moveInRequest: LcpMoveInRequest | null;
+  onEdit: () => void;
+}) {
+  const space = tocSpaces.find((s) => s.id === family.toc_space_id) ?? null;
+  const overdue = isFeeOverdue(family.move_in_date, family.status, feePayments.map((p) => p.paid_date));
 
   return (
     <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Saved information</span>
+        <button onClick={onEdit} className="btn-primary">
+          Edit
+        </button>
+      </div>
+
+      <div className="rounded-xl border border-sparrow-rule p-4">
+        <span className="field-label">Household</span>
+        {adult ? (
+          <p className="mt-1 text-sm text-sparrow-ink">{adult.full_name} · {adult.phone}</p>
+        ) : (
+          <p className="mt-1 text-sm text-sparrow-gray">No adult on file.</p>
+        )}
+
+        <div className="mt-3">
+          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Children</span>
+          {kids.length === 0 ? (
+            <p className="text-sm text-sparrow-gray">None on file.</p>
+          ) : (
+            <ul className="mt-1 space-y-0.5">
+              {kids.map((c) => (
+                <li key={c.id} className="text-sm text-sparrow-ink">{c.full_name}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="mt-3">
+          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Emergency contact</span>
+          <p className="text-sm text-sparrow-ink">{family.emergency_contact_notes || '—'}</p>
+        </div>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl bg-sparrow-mist p-3">
           <span className="field-label">Onboarding start</span>
@@ -968,13 +1054,7 @@ function GeneralInfoTab({
         </div>
         <div className="rounded-xl bg-sparrow-mist p-3">
           <span className="field-label">Move-in date</span>
-          <input
-            type="date"
-            value={moveInDate}
-            onChange={(e) => setMoveInDate(e.target.value)}
-            onBlur={saveMoveInDate}
-            className="mt-0.5 w-full rounded-lg border border-sparrow-rule bg-white px-2 py-1 text-sm"
-          />
+          <p className="text-sm text-sparrow-ink">{family.move_in_date ? dayLabel(family.move_in_date) : 'Not set yet'}</p>
         </div>
         {family.program_end_date && (
           <div className="rounded-xl bg-sparrow-mist p-3 sm:col-span-2">
@@ -986,42 +1066,15 @@ function GeneralInfoTab({
 
       <div>
         <span className="field-label">Home unit</span>
-        <select
-          value={family.toc_space_id ?? ''}
-          onChange={(e) => setSpace(e.target.value)}
-          disabled={spaceBusy}
-          className="field-input"
-        >
-          <option value="">Not assigned yet</option>
-          {tocSpaces.map((s) => (
-            <option key={s.id} value={s.id}>
-              Unit {s.label}{s.designation_label ? ` | ${s.designation_label}` : ''}
-            </option>
-          ))}
-        </select>
+        <p className="text-sm text-sparrow-ink">
+          {space ? `Unit ${space.label}${space.designation_label ? ` | ${space.designation_label}` : ''}` : 'Not assigned yet'}
+        </p>
         {space && (
           <p className="mt-1 text-xs text-sparrow-gray">
             {[space.street_number, space.street_name].filter(Boolean).join(' ') || 'No address on file'}
           </p>
         )}
-
-        {family.toc_tenant_id ? (
-          <div className="mt-2 rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green">
-            ✓ Linked to Twin Oaks residents{family.toc_synced_at ? ` — last synced ${dayLabel(family.toc_synced_at)}` : ''}
-          </div>
-        ) : moveInRequest?.status === 'needs_info' ? (
-          <div className="mt-2 rounded-lg bg-sparrow-gold/15 px-3 py-2 text-xs">
-            <p className="font-semibold text-sparrow-ink">⚑ Twin Oaks staff have a question:</p>
-            <p className="mt-0.5 text-sparrow-ink">{moveInRequest.notes || '(no note left)'}</p>
-            <p className="mt-1 text-sparrow-gray">Reply via chat or a task, then update this family's info here.</p>
-          </div>
-        ) : moveInRequest?.status === 'pending' ? (
-          <div className="mt-2 rounded-lg bg-sparrow-gold/15 px-3 py-2 text-xs font-medium text-sparrow-ink">
-            ✓ Move-in request sent to Twin Oaks — waiting on their review.
-          </div>
-        ) : (
-          <p className="mt-2 text-xs text-sparrow-gray">Set a home unit and a move-in date to send Twin Oaks a move-in request.</p>
-        )}
+        <SyncStatus family={family} moveInRequest={moveInRequest} />
       </div>
 
       <div className={`flex items-center justify-between rounded-xl px-4 py-3 ${overdue ? 'bg-priority-p1/10' : 'bg-sparrow-green/10'}`}>
@@ -1030,90 +1083,24 @@ function GeneralInfoTab({
           {overdue ? 'Overdue' : 'Current'}
         </span>
       </div>
-
-      {householdMode === 'view' ? (
-        <HouseholdView
-          family={family}
-          adult={householdAdult}
-          kids={householdChildren}
-          onEdit={() => setHouseholdMode('edit')}
-        />
-      ) : (
-        <HouseholdEdit
-          family={family}
-          adult={householdAdult}
-          kids={householdChildren}
-          onDone={async () => {
-            await onChanged();
-            await attemptSync();
-            setHouseholdMode('view');
-          }}
-          onCancel={() => setHouseholdMode('view')}
-        />
-      )}
     </div>
   );
 }
 
-function HouseholdView({
+function GeneralInfoEdit({
   family,
+  tocSpaces,
   adult,
   kids,
-  onEdit,
-}: {
-  family: Family;
-  adult: HouseholdAdult | null;
-  kids: HouseholdChild[];
-  onEdit: () => void;
-}) {
-  return (
-    <div className="rounded-xl border border-sparrow-rule p-4">
-      <div className="flex items-center justify-between">
-        <span className="field-label">Household</span>
-        <button onClick={onEdit} className="text-xs font-medium text-sparrow-green">
-          Edit
-        </button>
-      </div>
-
-      {adult ? (
-        <p className="mt-1 text-sm text-sparrow-ink">
-          {adult.full_name} · {adult.phone}
-        </p>
-      ) : (
-        <p className="mt-1 text-sm text-sparrow-gray">No adult on file.</p>
-      )}
-
-      <div className="mt-3">
-        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Children</span>
-        {kids.length === 0 ? (
-          <p className="text-sm text-sparrow-gray">None on file.</p>
-        ) : (
-          <ul className="mt-1 space-y-0.5">
-            {kids.map((c) => (
-              <li key={c.id} className="text-sm text-sparrow-ink">{c.full_name}</li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="mt-3">
-        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Emergency contact</span>
-        <p className="text-sm text-sparrow-ink">{family.emergency_contact_notes || '—'}</p>
-      </div>
-    </div>
-  );
-}
-
-function HouseholdEdit({
-  family,
-  adult,
-  kids,
+  feePayments,
   onDone,
   onCancel,
 }: {
   family: Family;
+  tocSpaces: TocSpaceSlim[];
   adult: HouseholdAdult | null;
   kids: HouseholdChild[];
+  feePayments: ProgramFeePayment[];
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -1123,7 +1110,10 @@ function HouseholdEdit({
     kids.length ? kids.map((c) => ({ id: c.id, name: c.full_name })) : [{ id: null, name: '' }],
   );
   const [emergencyContact, setEmergencyContact] = useState(family.emergency_contact_notes ?? '');
+  const [moveInDate, setMoveInDate] = useState(family.move_in_date ?? '');
+  const [spaceId, setSpaceId] = useState(family.toc_space_id ?? '');
   const [busy, setBusy] = useState(false);
+  const overdue = isFeeOverdue(family.move_in_date, family.status, feePayments.map((p) => p.paid_date));
 
   function setChildName(i: number, name: string) {
     setChildRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, name } : r)));
@@ -1153,9 +1143,11 @@ function HouseholdEdit({
         else await addHouseholdChild(family.id, row.name);
       }
 
-      if (emergencyContact !== (family.emergency_contact_notes ?? '')) {
-        await updateFamily(family.id, { emergency_contact_notes: emergencyContact.trim() || null });
-      }
+      const patch: Partial<{ emergency_contact_notes: string | null; move_in_date: string | null; toc_space_id: string | null }> = {};
+      if (emergencyContact !== (family.emergency_contact_notes ?? '')) patch.emergency_contact_notes = emergencyContact.trim() || null;
+      if (moveInDate !== (family.move_in_date ?? '')) patch.move_in_date = moveInDate || null;
+      if (spaceId !== (family.toc_space_id ?? '')) patch.toc_space_id = spaceId || null;
+      if (Object.keys(patch).length > 0) await updateFamily(family.id, patch);
 
       onDone();
     } finally {
@@ -1164,53 +1156,96 @@ function HouseholdEdit({
   }
 
   return (
-    <div className="rounded-xl border border-sparrow-rule p-4">
-      <span className="field-label">Household</span>
+    <div className="space-y-5">
+      <div className="rounded-xl border border-sparrow-rule p-4">
+        <span className="field-label">Household</span>
 
-      <div className="mt-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Adult</span>
-        <input value={adultName} onChange={(e) => setAdultName(e.target.value)} placeholder="Full name" className="field-input" />
-        <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-2" />
-        <p className="mt-1 text-xs text-sparrow-gray">Her email is the sign-in email at the top of this panel — no separate email needed here.</p>
+        <div className="mt-1">
+          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Adult</span>
+          <input value={adultName} onChange={(e) => setAdultName(e.target.value)} placeholder="Full name" className="field-input" />
+          <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-2" />
+          <p className="mt-1 text-xs text-sparrow-gray">Her email is the sign-in email at the top of this panel — no separate email needed here.</p>
+        </div>
+
+        <div className="mt-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Children</span>
+            <button onClick={addChildRow} className="text-xs font-medium text-sparrow-green">
+              + Add child
+            </button>
+          </div>
+          <div className="mt-1 space-y-2">
+            {childRows.map((row, i) => (
+              <div key={i} className="flex gap-2">
+                <input
+                  className="field-input mt-0 flex-1"
+                  value={row.name}
+                  onChange={(e) => setChildName(i, e.target.value)}
+                  placeholder="Full name"
+                />
+                {childRows.length > 1 && (
+                  <button onClick={() => removeChildRow(i)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Emergency contact</span>
+          <textarea
+            value={emergencyContact}
+            onChange={(e) => setEmergencyContact(e.target.value)}
+            rows={2}
+            className="field-input"
+          />
+        </div>
       </div>
 
-      <div className="mt-4">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Children</span>
-          <button onClick={addChildRow} className="text-xs font-medium text-sparrow-green">
-            + Add child
-          </button>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl bg-sparrow-mist p-3">
+          <span className="field-label">Onboarding start</span>
+          <p className="text-sm text-sparrow-ink">{dayLabel(family.created_at)}</p>
         </div>
-        <div className="mt-1 space-y-2">
-          {childRows.map((row, i) => (
-            <div key={i} className="flex gap-2">
-              <input
-                className="field-input mt-0 flex-1"
-                value={row.name}
-                onChange={(e) => setChildName(i, e.target.value)}
-                placeholder="Full name"
-              />
-              {childRows.length > 1 && (
-                <button onClick={() => removeChildRow(i)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
-                  Remove
-                </button>
-              )}
-            </div>
+        <div className="rounded-xl bg-sparrow-mist p-3">
+          <span className="field-label">Move-in date</span>
+          <input
+            type="date"
+            value={moveInDate}
+            onChange={(e) => setMoveInDate(e.target.value)}
+            className="mt-0.5 w-full rounded-lg border border-sparrow-rule bg-white px-2 py-1 text-sm"
+          />
+        </div>
+        {family.program_end_date && (
+          <div className="rounded-xl bg-sparrow-mist p-3 sm:col-span-2">
+            <span className="field-label">Program end date</span>
+            <p className="text-sm text-sparrow-ink">{dayLabel(family.program_end_date)}</p>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <span className="field-label">Home unit</span>
+        <select value={spaceId} onChange={(e) => setSpaceId(e.target.value)} className="field-input">
+          <option value="">Not assigned yet</option>
+          {tocSpaces.map((s) => (
+            <option key={s.id} value={s.id}>
+              Unit {s.label}{s.designation_label ? ` | ${s.designation_label}` : ''}
+            </option>
           ))}
-        </div>
+        </select>
       </div>
 
-      <div className="mt-4">
-        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Emergency contact</span>
-        <textarea
-          value={emergencyContact}
-          onChange={(e) => setEmergencyContact(e.target.value)}
-          rows={2}
-          className="field-input"
-        />
+      <div className={`flex items-center justify-between rounded-xl px-4 py-3 ${overdue ? 'bg-priority-p1/10' : 'bg-sparrow-green/10'}`}>
+        <span className="text-sm text-sparrow-ink">Program fee status</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-medium ${overdue ? 'bg-priority-p1/20 text-priority-p1' : 'bg-sparrow-green/20 text-sparrow-green'}`}>
+          {overdue ? 'Overdue' : 'Current'}
+        </span>
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="flex gap-2">
         <button onClick={save} disabled={busy} className="btn-primary">
           {busy ? 'Saving…' : 'Save'}
         </button>
