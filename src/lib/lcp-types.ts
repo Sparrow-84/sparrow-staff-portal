@@ -37,7 +37,13 @@ export interface HouseholdAdult {
   full_name: string;
   phone: string;
   email: string;
-  children_names: string;
+  created_at: string;
+}
+
+export interface HouseholdChild {
+  id: string;
+  family_id: string;
+  full_name: string;
   created_at: string;
 }
 
@@ -46,6 +52,7 @@ export interface TocSpaceSlim {
   label: string;
   street_number: string | null;
   street_name: string | null;
+  designation_label: string | null;
 }
 
 export type LcpTocRequestStatus = 'pending' | 'needs_info' | 'approved';
@@ -68,7 +75,8 @@ export interface LcpMoveInRequestDetail {
   move_in_date: string | null;
   emergency_contact_notes: string | null;
   space_label: string;
-  adults: { full_name: string; phone: string; email: string; children_names: string }[];
+  adult: { full_name: string; phone: string; email: string } | null;
+  children: string[];
 }
 
 export type ProgramFeeMethod = 'cash' | 'check' | 'other';

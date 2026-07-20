@@ -19,7 +19,7 @@ export function AddFamilyPanel({
   const [adultName, setAdultName] = useState('');
   const [adultPhone, setAdultPhone] = useState('');
   const [adultEmail, setAdultEmail] = useState('');
-  const [childrenNames, setChildrenNames] = useState('');
+  const [children, setChildren] = useState<string[]>(['']);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +32,7 @@ export function AddFamilyPanel({
       setAdultName('');
       setAdultPhone('');
       setAdultEmail('');
-      setChildrenNames('');
+      setChildren(['']);
       setError(null);
       setBusy(false);
     }
@@ -47,8 +47,17 @@ export function AddFamilyPanel({
     adultName.trim().length > 0 &&
     adultPhone.trim().length > 0 &&
     adultEmailValid &&
-    childrenNames.trim().length > 0 &&
     !busy;
+
+  function setChild(i: number, value: string) {
+    setChildren((cs) => cs.map((c, idx) => (idx === i ? value : c)));
+  }
+  function addChildRow() {
+    setChildren((cs) => [...cs, '']);
+  }
+  function removeChildRow(i: number) {
+    setChildren((cs) => cs.filter((_, idx) => idx !== i));
+  }
 
   async function save() {
     if (!canSave) return;
@@ -60,7 +69,8 @@ export function AddFamilyPanel({
         login_email: email,
         current_session_number: Math.max(1, Math.min(TOTAL_SESSIONS, session)),
         emergency_contact_notes: emergencyContact,
-        adult: { full_name: adultName, phone: adultPhone, email: adultEmail, children_names: childrenNames },
+        adult: { full_name: adultName, phone: adultPhone, email: adultEmail },
+        children,
       });
       onCreated();
       onClose();
@@ -86,14 +96,14 @@ export function AddFamilyPanel({
       <div className="space-y-4">
         <div>
           <label className="field-label" htmlFor="fam-name">
-            Family name
+            Household name <span className="font-normal text-sparrow-gray">(last name)</span>
           </label>
           <input
             id="fam-name"
             className="field-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Maria R."
+            placeholder="e.g. Wenger"
           />
         </div>
 
@@ -135,7 +145,7 @@ export function AddFamilyPanel({
         </div>
 
         <div className="border-t border-sparrow-rule pt-4">
-          <span className="field-label">Adult in the home</span>
+          <span className="field-label">Mother</span>
           <input
             className="field-input"
             value={adultName}
@@ -157,15 +167,36 @@ export function AddFamilyPanel({
               placeholder="Email"
             />
           </div>
-          <input
-            className="field-input mt-2"
-            value={childrenNames}
-            onChange={(e) => setChildrenNames(e.target.value)}
-            placeholder="Children's full names"
-          />
-          <p className="mt-1 text-xs text-sparrow-gray">
-            More adults can be added later from the family's General Info tab.
-          </p>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <span className="field-label">Children</span>
+            <button type="button" onClick={addChildRow} className="text-xs font-medium text-sparrow-green">
+              + Add child
+            </button>
+          </div>
+          <div className="mt-1 space-y-2">
+            {children.map((c, i) => (
+              <div key={i} className="flex gap-2">
+                <input
+                  className="field-input mt-0 flex-1"
+                  value={c}
+                  onChange={(e) => setChild(i, e.target.value)}
+                  placeholder="Full name"
+                />
+                {children.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeChildRow(i)}
+                    className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div>

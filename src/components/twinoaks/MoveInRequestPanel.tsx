@@ -36,12 +36,14 @@ export function MoveInRequestPanel({
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [noteSaved, setNoteSaved] = useState(false);
 
   useEffect(() => {
     if (open && request) {
       setDetail(null);
       setNotes(request.notes ?? '');
       setMessage(null);
+      setNoteSaved(false);
       void fetchMoveInRequestDetail(request.id).then(setDetail);
     }
   }, [open, request]);
@@ -64,8 +66,8 @@ export function MoveInRequestPanel({
     setBusy(true);
     await updateMoveInRequestNotes(request!.id, { status: 'needs_info', notes: notes.trim() || null });
     setBusy(false);
+    setNoteSaved(true);
     onChanged();
-    onClose();
   }
 
   return (
@@ -98,17 +100,28 @@ export function MoveInRequestPanel({
             </div>
 
             <div>
-              <span className="field-label">Household adults</span>
-              <ul className="mt-1 space-y-2">
-                {detail.adults.length === 0 && <li className="text-sm text-sparrow-gray">None on file.</li>}
-                {detail.adults.map((a, i) => (
-                  <li key={i} className="rounded-xl border border-sparrow-rule/70 p-3">
-                    <p className="text-sm font-medium text-sparrow-ink">{a.full_name}</p>
-                    <p className="text-xs text-sparrow-gray">{a.phone} · {a.email}</p>
-                    <p className="text-xs text-sparrow-gray">Children: {a.children_names}</p>
-                  </li>
-                ))}
-              </ul>
+              <span className="field-label">Adult</span>
+              {detail.adult ? (
+                <div className="mt-1 rounded-xl border border-sparrow-rule/70 p-3">
+                  <p className="text-sm font-medium text-sparrow-ink">{detail.adult.full_name}</p>
+                  <p className="text-xs text-sparrow-gray">{detail.adult.phone} · {detail.adult.email}</p>
+                </div>
+              ) : (
+                <p className="mt-1 text-sm text-sparrow-gray">None on file.</p>
+              )}
+            </div>
+
+            <div>
+              <span className="field-label">Children</span>
+              {detail.children.length === 0 ? (
+                <p className="mt-1 text-sm text-sparrow-gray">None on file.</p>
+              ) : (
+                <ul className="mt-1 space-y-0.5">
+                  {detail.children.map((name, i) => (
+                    <li key={i} className="text-sm text-sparrow-ink">{name}</li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {detail.emergency_contact_notes && (
@@ -132,6 +145,11 @@ export function MoveInRequestPanel({
           <button onClick={markNeedsInfo} disabled={busy} className="btn-ghost mt-2 border border-sparrow-rule">
             Save note & mark needs info
           </button>
+          {noteSaved && (
+            <p className="mt-2 rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs font-medium text-sparrow-green">
+              ✓ Saved — this note is now visible on {request.family_display_name}'s LCP record.
+            </p>
+          )}
           <p className="mt-1 text-xs text-sparrow-gray">
             This shows up on the family's LCP record. For a real back-and-forth, message the LCP staff
             directly via chat or a task.

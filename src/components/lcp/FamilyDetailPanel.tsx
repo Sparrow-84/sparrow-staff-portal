@@ -17,6 +17,7 @@ import {
   type Homework,
   type HomeworkArea,
   type HouseholdAdult,
+  type HouseholdChild,
   type LcpMoveInRequest,
   type LcpPhaseWithUnits,
   type Message,
@@ -30,7 +31,7 @@ import {
 } from '@/lib/lcp-types';
 import { PhaseProgressBar } from './PhaseProgressBar';
 import {
-  addHouseholdAdult,
+  addHouseholdChild,
   addProgramFeePayment,
   addStaffNote,
   updateStaffNote,
@@ -41,13 +42,14 @@ import {
   deleteFamily,
   deleteGoal,
   deleteHomework,
-  deleteHouseholdAdult,
+  deleteHouseholdChild,
   deleteProgramFeePayment,
   fetchFinanceMilestones,
   fetchGoalResponsesForFamily,
   fetchGoalsForFamily,
   fetchHomeworkForFamily,
-  fetchHouseholdAdults,
+  fetchHouseholdAdult,
+  fetchHouseholdChildren,
   fetchMessages,
   fetchMilestoneProgressForFamily,
   fetchProgramFeePayments,
@@ -57,6 +59,7 @@ import {
   fulfillRedemption,
   markGoalMet,
   reopenGoal,
+  saveHouseholdAdult,
   sendStaffMessage,
   fetchMoveInRequestForFamily,
   requestOrSyncLcpToc,
@@ -64,6 +67,7 @@ import {
   setHomeworkStatus,
   uncompleteMilestone,
   updateFamily,
+  updateHouseholdChild,
 } from '@/lib/lcp';
 import { money, dayLabel, dueLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
@@ -114,13 +118,14 @@ export function FamilyDetailPanel({
   const [milestones, setMilestones] = useState<FinanceMilestone[]>([]);
   const [milestoneProgress, setMilestoneProgress] = useState<FamilyMilestoneProgress[]>([]);
   const [feePayments, setFeePayments] = useState<ProgramFeePayment[]>([]);
-  const [householdAdults, setHouseholdAdults] = useState<HouseholdAdult[]>([]);
+  const [householdAdult, setHouseholdAdult] = useState<HouseholdAdult | null>(null);
+  const [householdChildren, setHouseholdChildren] = useState<HouseholdChild[]>([]);
 
   const familyId = family?.id;
 
   const reloadDetail = useCallback(async () => {
     if (!familyId) return;
-    const [hw, msg, nt, vo, red, gl, gr, ms, mp, fp, ha] = await Promise.all([
+    const [hw, msg, nt, vo, red, gl, gr, ms, mp, fp, ha, hc] = await Promise.all([
       fetchHomeworkForFamily(familyId),
       fetchMessages(familyId),
       fetchStaffNotes(familyId),
@@ -131,7 +136,8 @@ export function FamilyDetailPanel({
       fetchFinanceMilestones(),
       fetchMilestoneProgressForFamily(familyId),
       fetchProgramFeePayments(familyId),
-      fetchHouseholdAdults(familyId),
+      fetchHouseholdAdult(familyId),
+      fetchHouseholdChildren(familyId),
     ]);
     setHomework(hw);
     setMessages(msg);
@@ -143,7 +149,8 @@ export function FamilyDetailPanel({
     setMilestones(ms);
     setMilestoneProgress(mp);
     setFeePayments(fp);
-    setHouseholdAdults(ha);
+    setHouseholdAdult(ha);
+    setHouseholdChildren(hc);
   }, [familyId]);
 
   useEffect(() => {
@@ -175,7 +182,8 @@ export function FamilyDetailPanel({
         <GeneralInfoTab
           family={family}
           tocSpaces={tocSpaces}
-          householdAdults={householdAdults}
+          householdAdult={householdAdult}
+          householdChildren={householdChildren}
           feePayments={feePayments}
           onChanged={() => {
             void reloadDetail();
@@ -892,26 +900,22 @@ function ProgramFeeTab({
 function GeneralInfoTab({
   family,
   tocSpaces,
-  householdAdults,
+  householdAdult,
+  householdChildren,
   feePayments,
   onChanged,
 }: {
   family: Family;
   tocSpaces: TocSpaceSlim[];
-  householdAdults: HouseholdAdult[];
+  householdAdult: HouseholdAdult | null;
+  householdChildren: HouseholdChild[];
   feePayments: ProgramFeePayment[];
   onChanged: () => void;
 }) {
   const [moveInDate, setMoveInDate] = useState(family.move_in_date ?? '');
-  const [emergencyContact, setEmergencyContact] = useState(family.emergency_contact_notes ?? '');
   const [spaceBusy, setSpaceBusy] = useState(false);
   const [moveInRequest, setMoveInRequest] = useState<LcpMoveInRequest | null>(null);
-  const [addingAdult, setAddingAdult] = useState(false);
-  const [adultName, setAdultName] = useState('');
-  const [adultPhone, setAdultPhone] = useState('');
-  const [adultEmail, setAdultEmail] = useState('');
-  const [childrenNames, setChildrenNames] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [householdMode, setHouseholdMode] = useState<'view' | 'edit'>(householdAdult ? 'view' : 'edit');
 
   const space = tocSpaces.find((s) => s.id === family.toc_space_id) ?? null;
   const overdue = isFeeOverdue(family.move_in_date, family.status, feePayments.map((p) => p.paid_date));
@@ -924,10 +928,15 @@ function GeneralInfoTab({
     void reloadRequest();
   }, [reloadRequest]);
 
+  useEffect(() => {
+    setHouseholdMode(householdAdult ? 'view' : 'edit');
+  }, [family.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // If not yet linked to a Twin Oaks resident record, this creates (or leaves
   // alone) a pending review request for TOC staff — it never writes into
   // tenants/household_members directly. If TOC staff already approved a link,
-  // this instead pushes the LCP-owned fields into the existing records.
+  // this instead pushes the LCP-owned fields into the existing records. Safe
+  // to call any time — it no-ops quietly if there's nothing to do yet.
   async function attemptSync() {
     await requestOrSyncLcpToc(family.id);
     await reloadRequest();
@@ -938,14 +947,7 @@ function GeneralInfoTab({
     if (moveInDate === (family.move_in_date ?? '')) return;
     await updateFamily(family.id, { move_in_date: moveInDate || null });
     onChanged();
-    if (moveInDate) await attemptSync();
-  }
-
-  async function saveEmergencyContact() {
-    if (emergencyContact === (family.emergency_contact_notes ?? '')) return;
-    await updateFamily(family.id, { emergency_contact_notes: emergencyContact.trim() || null });
-    onChanged();
-    if (family.toc_tenant_id) await attemptSync();
+    await attemptSync();
   }
 
   async function setSpace(spaceId: string) {
@@ -953,32 +955,7 @@ function GeneralInfoTab({
     await updateFamily(family.id, { toc_space_id: spaceId || null });
     setSpaceBusy(false);
     onChanged();
-    if (spaceId && family.move_in_date) await attemptSync();
-  }
-
-  async function addAdult() {
-    if (!adultName.trim() || !adultPhone.trim() || !adultEmail.trim() || !childrenNames.trim()) return;
-    setBusy(true);
-    await addHouseholdAdult(family.id, {
-      full_name: adultName,
-      phone: adultPhone,
-      email: adultEmail,
-      children_names: childrenNames,
-    });
-    setAdultName('');
-    setAdultPhone('');
-    setAdultEmail('');
-    setChildrenNames('');
-    setAddingAdult(false);
-    setBusy(false);
-    onChanged();
-    if (family.toc_tenant_id) await attemptSync();
-  }
-
-  async function removeAdult(id: string) {
-    await deleteHouseholdAdult(id);
-    onChanged();
-    if (family.toc_tenant_id) await attemptSync();
+    await attemptSync();
   }
 
   return (
@@ -1016,7 +993,9 @@ function GeneralInfoTab({
         >
           <option value="">Not assigned yet</option>
           {tocSpaces.map((s) => (
-            <option key={s.id} value={s.id}>{s.label}</option>
+            <option key={s.id} value={s.id}>
+              Unit {s.label}{s.designation_label ? ` | ${s.designation_label}` : ''}
+            </option>
           ))}
         </select>
         {space && (
@@ -1024,20 +1003,23 @@ function GeneralInfoTab({
             {[space.street_number, space.street_name].filter(Boolean).join(' ') || 'No address on file'}
           </p>
         )}
+
         {family.toc_tenant_id ? (
-          <p className="mt-1 text-xs text-sparrow-green">
+          <div className="mt-2 rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green">
             ✓ Linked to Twin Oaks residents{family.toc_synced_at ? ` — last synced ${dayLabel(family.toc_synced_at)}` : ''}
-          </p>
+          </div>
         ) : moveInRequest?.status === 'needs_info' ? (
-          <div className="mt-1 rounded-lg bg-sparrow-gold/10 px-2 py-1.5 text-xs">
-            <p className="font-medium text-sparrow-ink">Twin Oaks staff have a question:</p>
-            <p className="text-sparrow-gray">{moveInRequest.notes || '(no note left)'}</p>
+          <div className="mt-2 rounded-lg bg-sparrow-gold/15 px-3 py-2 text-xs">
+            <p className="font-semibold text-sparrow-ink">⚑ Twin Oaks staff have a question:</p>
+            <p className="mt-0.5 text-sparrow-ink">{moveInRequest.notes || '(no note left)'}</p>
             <p className="mt-1 text-sparrow-gray">Reply via chat or a task, then update this family's info here.</p>
           </div>
         ) : moveInRequest?.status === 'pending' ? (
-          <p className="mt-1 text-xs text-sparrow-gray">Move-in request sent — waiting on Twin Oaks staff to review and create the resident record.</p>
+          <div className="mt-2 rounded-lg bg-sparrow-gold/15 px-3 py-2 text-xs font-medium text-sparrow-ink">
+            ✓ Move-in request sent to Twin Oaks — waiting on their review.
+          </div>
         ) : (
-          <p className="mt-1 text-xs text-sparrow-gray">Set a home unit and a move-in date to send Twin Oaks a move-in request.</p>
+          <p className="mt-2 text-xs text-sparrow-gray">Set a home unit and a move-in date to send Twin Oaks a move-in request.</p>
         )}
       </div>
 
@@ -1048,64 +1030,195 @@ function GeneralInfoTab({
         </span>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between">
-          <span className="field-label">Household members</span>
-          {!addingAdult && (
-            <button onClick={() => setAddingAdult(true)} className="text-xs font-medium text-sparrow-green">
-              + Add adult
-            </button>
-          )}
-        </div>
+      {householdMode === 'view' ? (
+        <HouseholdView
+          family={family}
+          adult={householdAdult}
+          kids={householdChildren}
+          onEdit={() => setHouseholdMode('edit')}
+        />
+      ) : (
+        <HouseholdEdit
+          family={family}
+          adult={householdAdult}
+          kids={householdChildren}
+          onDone={async () => {
+            await onChanged();
+            await attemptSync();
+            setHouseholdMode('view');
+          }}
+          onCancel={() => setHouseholdMode('view')}
+        />
+      )}
+    </div>
+  );
+}
 
-        {addingAdult && (
-          <div className="mt-2 rounded-xl border border-sparrow-rule p-3">
-            <input value={adultName} onChange={(e) => setAdultName(e.target.value)} placeholder="Full name" className="field-input" />
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-0" />
-              <input value={adultEmail} onChange={(e) => setAdultEmail(e.target.value)} placeholder="Email" className="field-input mt-0" />
-            </div>
-            <input
-              value={childrenNames}
-              onChange={(e) => setChildrenNames(e.target.value)}
-              placeholder="Children's full names"
-              className="field-input mt-2"
-            />
-            <div className="mt-2 flex gap-2">
-              <button onClick={addAdult} disabled={busy} className="btn-primary">Save</button>
-              <button onClick={() => setAddingAdult(false)} className="btn-ghost">Cancel</button>
-            </div>
-          </div>
-        )}
-
-        <ul className="mt-2 space-y-2">
-          {householdAdults.length === 0 && !addingAdult && (
-            <li className="text-sm text-sparrow-gray">No household members on file yet.</li>
-          )}
-          {householdAdults.map((a) => (
-            <li key={a.id} className="flex items-start justify-between gap-2 rounded-xl border border-sparrow-rule/70 p-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-sparrow-ink">{a.full_name}</p>
-                <p className="text-xs text-sparrow-gray">{a.phone} · {a.email}</p>
-                <p className="text-xs text-sparrow-gray">Children: {a.children_names}</p>
-              </div>
-              <button onClick={() => removeAdult(a.id)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
+function HouseholdView({
+  family,
+  adult,
+  kids,
+  onEdit,
+}: {
+  family: Family;
+  adult: HouseholdAdult | null;
+  kids: HouseholdChild[];
+  onEdit: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-sparrow-rule p-4">
+      <div className="flex items-center justify-between">
+        <span className="field-label">Household</span>
+        <button onClick={onEdit} className="text-xs font-medium text-sparrow-green">
+          Edit
+        </button>
       </div>
 
-      <div>
-        <span className="field-label">Emergency contact</span>
+      {adult ? (
+        <p className="mt-1 text-sm text-sparrow-ink">
+          {adult.full_name} · {adult.phone} · {adult.email}
+        </p>
+      ) : (
+        <p className="mt-1 text-sm text-sparrow-gray">No adult on file.</p>
+      )}
+
+      <div className="mt-3">
+        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Children</span>
+        {kids.length === 0 ? (
+          <p className="text-sm text-sparrow-gray">None on file.</p>
+        ) : (
+          <ul className="mt-1 space-y-0.5">
+            {kids.map((c) => (
+              <li key={c.id} className="text-sm text-sparrow-ink">{c.full_name}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="mt-3">
+        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Emergency contact</span>
+        <p className="text-sm text-sparrow-ink">{family.emergency_contact_notes || '—'}</p>
+      </div>
+    </div>
+  );
+}
+
+function HouseholdEdit({
+  family,
+  adult,
+  kids,
+  onDone,
+  onCancel,
+}: {
+  family: Family;
+  adult: HouseholdAdult | null;
+  kids: HouseholdChild[];
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [adultName, setAdultName] = useState(adult?.full_name ?? '');
+  const [adultPhone, setAdultPhone] = useState(adult?.phone ?? '');
+  const [adultEmail, setAdultEmail] = useState(adult?.email ?? '');
+  const [childRows, setChildRows] = useState<{ id: string | null; name: string }[]>(
+    kids.length ? kids.map((c) => ({ id: c.id, name: c.full_name })) : [{ id: null, name: '' }],
+  );
+  const [emergencyContact, setEmergencyContact] = useState(family.emergency_contact_notes ?? '');
+  const [busy, setBusy] = useState(false);
+
+  function setChildName(i: number, name: string) {
+    setChildRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, name } : r)));
+  }
+  function addChildRow() {
+    setChildRows((rows) => [...rows, { id: null, name: '' }]);
+  }
+  function removeChildRow(i: number) {
+    setChildRows((rows) => rows.filter((_, idx) => idx !== i));
+  }
+
+  async function save() {
+    setBusy(true);
+    try {
+      if (adultName.trim() || adultPhone.trim() || adultEmail.trim()) {
+        await saveHouseholdAdult(family.id, { full_name: adultName, phone: adultPhone, email: adultEmail });
+      }
+
+      const originalIds = new Set(kids.map((c) => c.id));
+      const keptIds = new Set(childRows.filter((r) => r.id).map((r) => r.id));
+      for (const id of originalIds) {
+        if (!keptIds.has(id)) await deleteHouseholdChild(id!);
+      }
+      for (const row of childRows) {
+        if (!row.name.trim()) continue;
+        if (row.id) await updateHouseholdChild(row.id, row.name);
+        else await addHouseholdChild(family.id, row.name);
+      }
+
+      if (emergencyContact !== (family.emergency_contact_notes ?? '')) {
+        await updateFamily(family.id, { emergency_contact_notes: emergencyContact.trim() || null });
+      }
+
+      onDone();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-sparrow-rule p-4">
+      <span className="field-label">Household</span>
+
+      <div className="mt-1">
+        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Adult</span>
+        <input value={adultName} onChange={(e) => setAdultName(e.target.value)} placeholder="Full name" className="field-input" />
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-0" />
+          <input value={adultEmail} onChange={(e) => setAdultEmail(e.target.value)} placeholder="Email" className="field-input mt-0" />
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Children</span>
+          <button onClick={addChildRow} className="text-xs font-medium text-sparrow-green">
+            + Add child
+          </button>
+        </div>
+        <div className="mt-1 space-y-2">
+          {childRows.map((row, i) => (
+            <div key={i} className="flex gap-2">
+              <input
+                className="field-input mt-0 flex-1"
+                value={row.name}
+                onChange={(e) => setChildName(i, e.target.value)}
+                placeholder="Full name"
+              />
+              {childRows.length > 1 && (
+                <button onClick={() => removeChildRow(i)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Emergency contact</span>
         <textarea
           value={emergencyContact}
           onChange={(e) => setEmergencyContact(e.target.value)}
-          onBlur={saveEmergencyContact}
           rows={2}
           className="field-input"
         />
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <button onClick={save} disabled={busy} className="btn-primary">
+          {busy ? 'Saving…' : 'Save'}
+        </button>
+        <button onClick={onCancel} disabled={busy} className="btn-ghost">
+          Cancel
+        </button>
       </div>
     </div>
   );

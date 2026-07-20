@@ -20,6 +20,7 @@ import type {
   HomeworkArea,
   HomeworkStatus,
   HouseholdAdult,
+  HouseholdChild,
   LcpEvent,
   LcpMoveInRequest,
   LcpMoveInRequestDetail,
@@ -96,7 +97,8 @@ export interface FamilyInput {
   login_email: string;
   current_session_number: number;
   emergency_contact_notes: string;
-  adult: { full_name: string; phone: string; email: string; children_names: string };
+  adult: { full_name: string; phone: string; email: string };
+  children: string[];
 }
 
 /**
@@ -104,7 +106,8 @@ export interface FamilyInput {
  * AND their allowlist entry — handle_new_user() links a new sign-up only if it matches
  * a families.login_email, so creating the row is all that's needed for the mother to
  * register in the participant portal. Full LCP staff only (RLS: families_write).
- * Also creates the first household adult record from the same intake form.
+ * `display_name` is the household's last name/label (not an individual's name) —
+ * the mother's own name lives on the household adult record created here too.
  * Onboarding start date isn't collected here — it's just this row's created_at,
  * i.e. today, the day Shelly is actually adding them.
  */
@@ -125,7 +128,10 @@ export async function createFamily(input: FamilyInput): Promise<void> {
     }
     throw new Error(error.message);
   }
-  await addHouseholdAdult(data.id, input.adult);
+  await saveHouseholdAdult(data.id, input.adult);
+  for (const name of input.children) {
+    if (name.trim()) await addHouseholdChild(data.id, name);
+  }
 }
 
 /** Soft cancel: drop a family from the active roster but keep all their records. */
@@ -827,34 +833,65 @@ export async function uncompleteMilestone(familyId: string, milestoneId: number)
   if (error) throw new Error(error.message);
 }
 
-// ── Household adults (Shelly's intake) ──────────────────────────────────────────
+// ── Household — one adult (Shelly's intake), and children, per family ──────────
 
-export async function fetchHouseholdAdults(familyId: string): Promise<HouseholdAdult[]> {
+export async function fetchHouseholdAdult(familyId: string): Promise<HouseholdAdult | null> {
   const { data, error } = await supabase
     .from('lcp_household_adults')
-    .select('id, family_id, full_name, phone, email, children_names, created_at')
+    .select('id, family_id, full_name, phone, email, created_at')
     .eq('family_id', familyId)
-    .order('created_at');
+    .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data ?? []) as HouseholdAdult[];
+  return data as HouseholdAdult | null;
 }
 
-export async function addHouseholdAdult(
+/** Upserts the family's one adult record — there's only ever one per family. */
+export async function saveHouseholdAdult(
   familyId: string,
-  adult: { full_name: string; phone: string; email: string; children_names: string },
+  adult: { full_name: string; phone: string; email: string },
 ): Promise<void> {
-  const { error } = await supabase.from('lcp_household_adults').insert({
-    family_id: familyId,
+  const existing = await fetchHouseholdAdult(familyId);
+  const row = {
     full_name: adult.full_name.trim(),
     phone: adult.phone.trim(),
     email: adult.email.trim(),
-    children_names: adult.children_names.trim(),
-  });
+  };
+  if (existing) {
+    const { error } = await supabase.from('lcp_household_adults').update(row).eq('id', existing.id);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase.from('lcp_household_adults').insert({ family_id: familyId, ...row });
+    if (error) throw new Error(error.message);
+  }
+}
+
+export async function fetchHouseholdChildren(familyId: string): Promise<HouseholdChild[]> {
+  const { data, error } = await supabase
+    .from('lcp_household_children')
+    .select('id, family_id, full_name, created_at')
+    .eq('family_id', familyId)
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as HouseholdChild[];
+}
+
+export async function addHouseholdChild(familyId: string, fullName: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_household_children')
+    .insert({ family_id: familyId, full_name: fullName.trim() });
   if (error) throw new Error(error.message);
 }
 
-export async function deleteHouseholdAdult(id: string): Promise<void> {
-  const { error } = await supabase.from('lcp_household_adults').delete().eq('id', id);
+export async function updateHouseholdChild(id: string, fullName: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_household_children')
+    .update({ full_name: fullName.trim() })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteHouseholdChild(id: string): Promise<void> {
+  const { error } = await supabase.from('lcp_household_children').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 
@@ -863,7 +900,7 @@ export async function deleteHouseholdAdult(id: string): Promise<void> {
 export async function fetchLcpDesignatedSpaces(): Promise<TocSpaceSlim[]> {
   const { data, error } = await supabase
     .from('spaces')
-    .select('id, label, street_number, street_name')
+    .select('id, label, street_number, street_name, designation_label')
     .eq('designation_type', 'lcp')
     .order('label');
   if (error) throw new Error(error.message);
