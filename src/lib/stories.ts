@@ -3,20 +3,18 @@ import { supabase } from './supabase';
 // ── Domain types ──────────────────────────────────────────────────────
 
 export type GatheringMethod = 'interview' | 'google_form' | 'freewrite' | 'staff_written';
-export type StoryStatus = 'draft' | 'ready' | 'used';
 export type VerbalConsent = 'yes' | 'no' | 'not_asked';
 
 export interface Story {
   id: string;
   title: string;
   subject_name: string;
+  subject_alias: string | null;
   gathering_method: GatheringMethod;
-  written_by: string | null;
-  written_by_name: string | null; // joined from profiles
+  logged_by: string | null;
+  logged_by_name: string | null; // joined from profiles
   date_gathered: string;
-  status: StoryStatus;
   body: string;
-  layer2_photo_form: boolean | null;
   layer3_verbal_consent: VerbalConsent;
   layer3_preview_requested: boolean;
   tags: string[];
@@ -29,12 +27,11 @@ export interface Story {
 export interface StoryInput {
   title: string;
   subject_name: string;
+  subject_alias: string | null;
   gathering_method: GatheringMethod;
-  written_by: string | null;
+  logged_by: string | null;
   date_gathered: string;
-  status: StoryStatus;
   body: string;
-  layer2_photo_form: boolean | null;
   layer3_verbal_consent: VerbalConsent;
   layer3_preview_requested: boolean;
   tags: string[];
@@ -83,7 +80,7 @@ export interface StoryLayer2ConsentInput {
 // ── Stories ───────────────────────────────────────────────────────────
 
 const STORY_SELECT =
-  '*, written_by_profile:profiles!stories_written_by_fkey(full_name)';
+  '*, logged_by_profile:profiles!stories_logged_by_fkey(full_name)';
 
 /** Fetch all stories, with the writer's name joined in. */
 export async function getStories(): Promise<Story[]> {
@@ -149,18 +146,17 @@ export async function createLayer2Consent(input: StoryLayer2ConsentInput): Promi
 
 function normalizeStory(raw: unknown): Story {
   const r = raw as Record<string, unknown>;
-  const writerProfile = r['written_by_profile'] as { full_name?: string } | null;
+  const loggerProfile = r['logged_by_profile'] as { full_name?: string } | null;
   return {
     id: r['id'] as string,
     title: r['title'] as string,
     subject_name: r['subject_name'] as string,
+    subject_alias: (r['subject_alias'] as string | null) ?? null,
     gathering_method: r['gathering_method'] as GatheringMethod,
-    written_by: (r['written_by'] as string | null) ?? null,
-    written_by_name: writerProfile?.full_name ?? null,
+    logged_by: (r['logged_by'] as string | null) ?? null,
+    logged_by_name: loggerProfile?.full_name ?? null,
     date_gathered: r['date_gathered'] as string,
-    status: r['status'] as StoryStatus,
     body: (r['body'] as string) ?? '',
-    layer2_photo_form: (r['layer2_photo_form'] as boolean | null) ?? null,
     layer3_verbal_consent: (r['layer3_verbal_consent'] as VerbalConsent) ?? 'not_asked',
     layer3_preview_requested: (r['layer3_preview_requested'] as boolean) ?? false,
     tags: (r['tags'] as string[]) ?? [],

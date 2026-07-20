@@ -8,6 +8,7 @@ export function Drawer({
   subtitle,
   children,
   footer,
+  wide,
 }: {
   open: boolean;
   onClose: () => void;
@@ -15,6 +16,8 @@ export function Drawer({
   subtitle?: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** Wider panel for content-heavy views (long story bodies, multi-tab family detail). Default width otherwise. */
+  wide?: boolean;
 }) {
   return (
     <>
@@ -26,9 +29,9 @@ export function Drawer({
         aria-hidden
       />
       <aside
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-sparrow-rule bg-white shadow-xl transition-transform ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-sparrow-rule bg-white shadow-xl transition-transform ${
+          wide ? 'max-w-2xl' : 'max-w-md'
+        } ${open ? 'translate-x-0' : 'translate-x-full'}`}
         role="dialog"
         aria-modal="true"
       >

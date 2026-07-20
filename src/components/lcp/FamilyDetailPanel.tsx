@@ -156,7 +156,7 @@ export function FamilyDetailPanel({
   if (!family) return null;
 
   return (
-    <Drawer open={open} onClose={onClose} title={family.display_name} subtitle={family.login_email}>
+    <Drawer open={open} onClose={onClose} title={family.display_name} subtitle={family.login_email} wide>
       <div className="mb-4 inline-flex rounded-xl border border-sparrow-rule bg-sparrow-mist p-1 text-xs">
         {TABS.map((t) => (
           <button

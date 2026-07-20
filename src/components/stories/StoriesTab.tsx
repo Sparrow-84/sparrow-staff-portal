@@ -1,5 +1,5 @@
 import type { Profile } from '@/lib/types';
-import type { Story, StoryStatus } from '@/lib/stories';
+import type { Story } from '@/lib/stories';
 
 interface Props {
   stories: Story[];
@@ -9,34 +9,12 @@ interface Props {
   onEdit: (story: Story) => void;
 }
 
-const STATUS_CHIP: Record<StoryStatus, string> = {
-  draft: 'bg-amber-100 text-amber-800',
-  ready: 'bg-sparrow-green/10 text-sparrow-green',
-  used: 'bg-slate-100 text-slate-600',
-};
-
-const STATUS_LABEL: Record<StoryStatus, string> = {
-  draft: 'Draft',
-  ready: 'Ready',
-  used: 'Used',
-};
-
 const METHOD_LABEL: Record<string, string> = {
   interview: 'Interview',
   google_form: 'Google Form',
   freewrite: 'Freewrite',
-  staff_written: 'Staff-written',
+  staff_written: 'Staff Testimonial',
 };
-
-function ConsentIcon({ value }: { value: boolean | null | string }) {
-  if (value === null || value === 'not_asked' || value === undefined) {
-    return <span className="text-sparrow-gray/40" title="Unknown / not asked">—</span>;
-  }
-  if (value === true || value === 'yes') {
-    return <span className="text-sparrow-green" title="Yes">✓</span>;
-  }
-  return <span className="text-priority-p1" title="No">✗</span>;
-}
 
 export function StoriesTab({ stories, onAdd, onEdit }: Props) {
   return (
@@ -47,21 +25,25 @@ export function StoriesTab({ stories, onAdd, onEdit }: Props) {
         <ul className="mt-2 space-y-1 text-sparrow-gray">
           <li>
             <span className="font-medium text-sparrow-ink">Structured interview</span> — Written consent
-            before the interview. Layer 3 verbal consent required before publishing with a photo.
+            before the interview.
           </li>
           <li>
             <span className="font-medium text-sparrow-ink">Google Form</span> — Consent is built into
-            the form. Confirm Layer 2 photo form is on file before using a photo.
+            the form.
           </li>
           <li>
             <span className="font-medium text-sparrow-ink">Participant freewrite</span> — Participant
-            wrote their own story. Still needs Layer 3 verbal consent before a photo appears beside it.
+            wrote their own story.
           </li>
           <li>
-            <span className="font-medium text-sparrow-ink">Staff-written</span> — Must obtain consent
-            for the written piece itself before publishing. Layer 2 + 3 required for any photo.
+            <span className="font-medium text-sparrow-ink">Staff Testimonial</span> — The subject is a
+            staff member; get their consent for the written piece itself before publishing.
           </li>
         </ul>
+        <p className="mt-2 border-t border-sparrow-gold/30 pt-2 text-xs text-sparrow-gray">
+          Photo consent is tracked separately, per story — see the "Photo consent" section when you
+          open a story, and the Photo &amp; Media Release tab for the underlying signed forms.
+        </p>
       </div>
 
       {/* Header row */}
@@ -87,12 +69,12 @@ export function StoriesTab({ stories, onAdd, onEdit }: Props) {
               onClick={() => onEdit(s)}
               className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-sparrow-mist/50"
             >
-              {/* Title + subject */}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-sparrow-ink">{s.title}</p>
                 <p className="mt-0.5 truncate text-xs text-sparrow-gray">
-                  {s.subject_name} · {METHOD_LABEL[s.gathering_method] ?? s.gathering_method}
-                  {s.written_by_name ? ` · ${s.written_by_name}` : ''}
+                  {s.subject_name}
+                  {s.subject_alias ? ` (as "${s.subject_alias}")` : ''} · {METHOD_LABEL[s.gathering_method] ?? s.gathering_method}
+                  {s.logged_by_name ? ` · logged by ${s.logged_by_name}` : ''}
                 </p>
                 {s.tags.length > 0 && (
                   <div className="mt-1 flex flex-wrap gap-1">
@@ -107,23 +89,7 @@ export function StoriesTab({ stories, onAdd, onEdit }: Props) {
                   </div>
                 )}
               </div>
-
-              {/* Status + consent icons */}
-              <div className="flex shrink-0 flex-col items-end gap-1.5">
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_CHIP[s.status]}`}
-                >
-                  {STATUS_LABEL[s.status]}
-                </span>
-                <div className="flex items-center gap-2 text-xs text-sparrow-gray">
-                  <span title="Layer 2 photo form">
-                    📷 <ConsentIcon value={s.layer2_photo_form} />
-                  </span>
-                  <span title="Layer 3 verbal consent">
-                    🎙 <ConsentIcon value={s.layer3_verbal_consent} />
-                  </span>
-                </div>
-              </div>
+              <span className="shrink-0 text-sparrow-gray">›</span>
             </button>
           ))}
         </div>
