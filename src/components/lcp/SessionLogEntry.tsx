@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   AREA_LABEL,
   ATTENDANCE_LABEL,
+  GOAL_AREAS,
+  GOAL_AREA_LABEL,
   HOMEWORK_AREAS,
   type AttendanceStatus,
   type Family,
+  type Goal,
+  type GoalArea,
   type Homework,
   type HomeworkArea,
   type LcpPhaseWithUnits,
@@ -15,8 +19,11 @@ import {
   addStaffNote,
   assignHomework,
   awardVoucher,
+  createGoal,
   createSessionLog,
+  fetchGoalsForFamily,
   fetchHomeworkForFamily,
+  markGoalMet,
   setHomeworkStatus,
   upsertSessionAttendance,
   updateProgramPosition,
@@ -27,6 +34,12 @@ const STATUSES: AttendanceStatus[] = ['on_time', 'late', 'no_show'];
 interface AssignDraft {
   title: string;
   area: HomeworkArea;
+  due_date: string;
+}
+
+interface GoalDraft {
+  title: string;
+  area: GoalArea;
   due_date: string;
 }
 
@@ -110,19 +123,31 @@ export function SessionLogEntry({
   const [assignOpen, setAssignOpen] = useState<Record<string, boolean>>({});
   const [assignDraft, setAssignDraft] = useState<Record<string, AssignDraft>>({});
 
-  // refresh homework per family if prop changes (families added/removed)
+  // ── goals ─────────────────────────────────────────────────────────
+  const [liveGoals, setLiveGoals] = useState<Record<string, Goal[]>>({});
+  const [metGoalIds, setMetGoalIds] = useState<Set<string>>(new Set());
+  const [addGoalOpen, setAddGoalOpen] = useState<Record<string, boolean>>({});
+  const [goalDraft, setGoalDraft] = useState<Record<string, GoalDraft>>({});
+
+  // refresh homework + goals per family if prop changes (families added/removed)
   useEffect(() => {
-    async function loadHw() {
-      const updates: Record<string, Homework[]> = {};
+    async function loadData() {
+      const hwUpdates: Record<string, Homework[]> = {};
+      const goalUpdates: Record<string, Goal[]> = {};
       await Promise.all(
         families.map(async (f) => {
-          const hw = await fetchHomeworkForFamily(f.id);
-          updates[f.id] = hw.filter((h) => h.status !== 'complete');
+          const [hw, goals] = await Promise.all([
+            fetchHomeworkForFamily(f.id),
+            fetchGoalsForFamily(f.id),
+          ]);
+          hwUpdates[f.id] = hw.filter((h) => h.status !== 'complete');
+          goalUpdates[f.id] = goals.filter((g) => g.status !== 'met');
         }),
       );
-      setLiveHomework(updates);
+      setLiveHomework(hwUpdates);
+      setLiveGoals(goalUpdates);
     }
-    void loadHw();
+    void loadData();
   }, [families]);
 
   // ── filing ────────────────────────────────────────────────────────
@@ -181,6 +206,26 @@ export function SessionLogEntry({
             currentUserId,
           );
         }
+
+        // goals marked met tonight
+        for (const goalId of metGoalIds) {
+          const goal = liveGoals[family.id]?.find((g) => g.id === goalId);
+          if (goal) await markGoalMet(goalId);
+        }
+
+        // new goals set tonight
+        const gDraft = goalDraft[family.id];
+        if (addGoalOpen[family.id] && gDraft?.title.trim()) {
+          await createGoal(
+            {
+              family_id: family.id,
+              area: gDraft.area,
+              title: gDraft.title.trim(),
+              due_date: gDraft.due_date || null,
+            },
+            currentUserId,
+          );
+        }
       }
 
       if (sessionType === 'thursday_group' && nextUnit) {
@@ -228,6 +273,14 @@ export function SessionLogEntry({
     setCompletedIds((prev) => {
       const next = new Set(prev);
       if (next.has(hwId)) next.delete(hwId); else next.add(hwId);
+      return next;
+    });
+  }
+
+  function toggleGoalMet(goalId: string) {
+    setMetGoalIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(goalId)) next.delete(goalId); else next.add(goalId);
       return next;
     });
   }
@@ -391,6 +444,13 @@ export function SessionLogEntry({
           onToggleAssign={() => setAssignOpen((prev) => ({ ...prev, [f.id]: !prev[f.id] }))}
           assignDraft={assignDraft[f.id] ?? { title: '', area: 'general', due_date: '' }}
           onAssignChange={(d) => setAssignDraft((prev) => ({ ...prev, [f.id]: d }))}
+          goals={liveGoals[f.id] ?? []}
+          metGoalIds={metGoalIds}
+          onToggleGoalMet={toggleGoalMet}
+          addGoalOpen={addGoalOpen[f.id] ?? false}
+          onToggleAddGoal={() => setAddGoalOpen((prev) => ({ ...prev, [f.id]: !prev[f.id] }))}
+          goalDraft={goalDraft[f.id] ?? { title: '', area: 'relational', due_date: '' }}
+          onGoalDraftChange={(d) => setGoalDraft((prev) => ({ ...prev, [f.id]: d }))}
         />
       ))}
 
@@ -427,6 +487,13 @@ interface FamilySectionProps {
   onToggleAssign: () => void;
   assignDraft: AssignDraft;
   onAssignChange: (d: AssignDraft) => void;
+  goals: Goal[];
+  metGoalIds: Set<string>;
+  onToggleGoalMet: (id: string) => void;
+  addGoalOpen: boolean;
+  onToggleAddGoal: () => void;
+  goalDraft: GoalDraft;
+  onGoalDraftChange: (d: GoalDraft) => void;
 }
 
 function FamilySection({
@@ -441,8 +508,16 @@ function FamilySection({
   onToggleAssign,
   assignDraft,
   onAssignChange,
+  goals,
+  metGoalIds,
+  onToggleGoalMet,
+  addGoalOpen,
+  onToggleAddGoal,
+  goalDraft,
+  onGoalDraftChange,
 }: FamilySectionProps) {
   const openHw = homework.filter((h) => !completedIds.has(h.id));
+  const openGoals = goals.filter((g) => !metGoalIds.has(g.id));
 
   return (
     <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
@@ -464,6 +539,76 @@ function FamilySection({
           }
           className="field-input"
         />
+      </div>
+
+      {/* Goals */}
+      <div className="mb-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="field-label">Goals</span>
+          <button onClick={onToggleAddGoal} className="text-xs font-medium text-sparrow-green">
+            {addGoalOpen ? 'Cancel' : '+ Add goal'}
+          </button>
+        </div>
+
+        {openGoals.length === 0 && !addGoalOpen && (
+          <p className="text-xs text-sparrow-gray">No active goals.</p>
+        )}
+
+        {openGoals.length > 0 && (
+          <ul className="space-y-1.5">
+            {openGoals.map((goal) => (
+              <li key={goal.id} className="flex items-center gap-2 text-sm text-sparrow-ink">
+                <input
+                  type="checkbox"
+                  checked={metGoalIds.has(goal.id)}
+                  onChange={() => onToggleGoalMet(goal.id)}
+                  className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                />
+                <span className={metGoalIds.has(goal.id) ? 'line-through text-sparrow-gray' : ''}>
+                  {goal.title}
+                </span>
+                <span className="text-xs text-sparrow-gray">· {GOAL_AREA_LABEL[goal.area]}</span>
+                {goal.due_date && (
+                  <span className={`ml-auto shrink-0 text-xs ${isOverdue(goal.due_date) && !metGoalIds.has(goal.id) ? 'font-medium text-priority-p1' : 'text-sparrow-gray'}`}>
+                    {dueLabel(goal.due_date)}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Inline add-goal form */}
+        {addGoalOpen && (
+          <div className="mt-3 space-y-2 rounded-xl border border-sparrow-rule bg-sparrow-mist p-3">
+            <input
+              type="text"
+              value={goalDraft.title}
+              onChange={(e) => onGoalDraftChange({ ...goalDraft, title: e.target.value })}
+              placeholder="What is she working toward?"
+              className="field-input"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={goalDraft.area}
+                onChange={(e) => onGoalDraftChange({ ...goalDraft, area: e.target.value as GoalArea })}
+                className="field-input"
+              >
+                {GOAL_AREAS.map((a) => (
+                  <option key={a} value={a}>{GOAL_AREA_LABEL[a]}</option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={goalDraft.due_date}
+                onChange={(e) => onGoalDraftChange({ ...goalDraft, due_date: e.target.value })}
+                className="field-input"
+                placeholder="Due date (optional)"
+              />
+            </div>
+            <p className="text-xs text-sparrow-gray">Saved when you file the session.</p>
+          </div>
+        )}
       </div>
 
       {/* Homework */}

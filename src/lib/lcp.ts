@@ -649,7 +649,7 @@ export async function fetchGoalsForFamily(familyId: string): Promise<Goal[]> {
     .from('lcp_goals')
     .select('id, family_id, area, title, due_date, status, created_by, created_at, updated_at, met_at')
     .eq('family_id', familyId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as Goal[];
 }

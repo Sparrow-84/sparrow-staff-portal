@@ -160,7 +160,7 @@ export const FAMILY_STATUS: Record<FamilyStatus, { label: string; chip: string }
 
 export const AREA_LABEL: Record<HomeworkArea, string> = {
   relational: 'Relational',
-  physical_financial: 'Physical & Financial',
+  physical_financial: 'Physical',
   spiritual: 'Spiritual',
   emotional: 'Emotional',
   general: 'General',
@@ -196,7 +196,7 @@ export const SESSION_LOG_LABEL: Record<SessionLogType, string> = {
 
 // ── Goals ─────────────────────────────────────────────────────────────────────
 
-export type GoalArea = 'spiritual' | 'physical_financial' | 'emotional' | 'relational';
+export type GoalArea = 'spiritual' | 'physical_financial' | 'emotional' | 'relational' | 'general';
 export type GoalStatus = 'active' | 'met';
 export type GoalResponseKind = 'met' | 'needs_time';
 
@@ -222,13 +222,14 @@ export interface GoalResponse {
   created_at: string;
 }
 
-export const GOAL_AREAS: GoalArea[] = ['spiritual', 'physical_financial', 'emotional', 'relational'];
+export const GOAL_AREAS: GoalArea[] = ['spiritual', 'physical_financial', 'emotional', 'relational', 'general'];
 
 export const GOAL_AREA_LABEL: Record<GoalArea, string> = {
   spiritual:         'Spiritual',
-  physical_financial:'Physical & Financial',
+  physical_financial:'Physical',
   emotional:         'Emotional',
   relational:        'Relational',
+  general:           'General',
 };
 
 // ── Finance milestones ────────────────────────────────────────────────────────
