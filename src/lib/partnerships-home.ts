@@ -253,7 +253,7 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
       items.push({
         key: `comms:${c.id}`,
         kind: 'newsletter',
-        title: `Newsletter — ${c.title}`,
+        title: c.title,
         due_date: c.publish_date,
         owner_id: newsletterCfg.owner_id,
         navigateTab: 'comms',
