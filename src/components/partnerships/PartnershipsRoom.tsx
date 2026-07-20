@@ -418,6 +418,7 @@ export function PartnershipsRoom() {
       <PartnerDetailPanel
         open={detailOpen}
         partner={selected}
+        partners={[...partners, ...archivedPartners]}
         profiles={profiles}
         currentUserId={profile?.id ?? ''}
         onClose={() => setDetailOpen(false)}

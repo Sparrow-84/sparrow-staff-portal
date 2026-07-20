@@ -32,6 +32,8 @@ export interface Donation {
   recurring: boolean;
   received_on: string;
   created_at: string;
+  /** Set when partner_id is null and a fuzzy name match was found — waiting on review. */
+  possible_match_partner_id: string | null;
 }
 
 export interface DonorStat {

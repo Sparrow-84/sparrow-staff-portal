@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
-import { emitFirstTimeDonorTask, emitRevisitTask, fetchDonations, fetchTouchpoints, logTouchpoint, updatePartner } from '@/lib/partnerships';
+import { emitFirstTimeDonorTask, emitRevisitTask, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner } from '@/lib/partnerships';
 import {
   DONOR_TIER,
   DONOR_TIER_DESC,
@@ -35,6 +35,7 @@ const MOU_STATUSES: MouStatus[] = ['not_needed', 'needed', 'on_file'];
 export function PartnerDetailPanel({
   open,
   partner,
+  partners,
   profiles,
   currentUserId,
   onClose,
@@ -43,6 +44,7 @@ export function PartnerDetailPanel({
 }: {
   open: boolean;
   partner: Partner | null;
+  partners: Partner[];
   profiles: Profile[];
   currentUserId: string;
   onClose: () => void;
@@ -55,6 +57,9 @@ export function PartnerDetailPanel({
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [editingInfo, setEditingInfo] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [mergeTargetId, setMergeTargetId] = useState('');
+  const [confirmMerge, setConfirmMerge] = useState(false);
 
   // Log-touchpoint form
   const [method, setMethod] = useState<TouchpointMethod>('email');
@@ -86,6 +91,9 @@ export function PartnerDetailPanel({
       setConfirmArchive(false);
       setLogOpen(false);
       setEditingInfo(false);
+      setMergeOpen(false);
+      setMergeTargetId('');
+      setConfirmMerge(false);
       void reload();
     }
   }, [open, partnerId, reload]);
@@ -143,6 +151,22 @@ export function PartnerDetailPanel({
     await updatePartner(partner.id, { active: false, stage: 'inactive' });
     setBusy(false);
     setConfirmArchive(false);
+    onChanged();
+    onClose();
+  }
+
+  const mergeTarget = mergeTargetId ? partners.find((p) => p.id === mergeTargetId) ?? null : null;
+  const mergeCandidates = [...partners]
+    .filter((p) => p.id !== partner?.id)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  async function merge() {
+    if (!partner || !mergeTargetId) return;
+    setBusy(true);
+    await mergePartners(partner.id, mergeTargetId);
+    setBusy(false);
+    setConfirmMerge(false);
+    setMergeOpen(false);
     onChanged();
     onClose();
   }
@@ -722,6 +746,95 @@ export function PartnerDetailPanel({
             )}
           </section>
         )}
+
+        {/* ── Merge into another partner — for a duplicate spotted any time, not just ones the sync flags ── */}
+        <section className="border-t border-sparrow-rule pt-4">
+          <button
+            onClick={() => {
+              if (!mergeOpen) {
+                setMergeTargetId('');
+                setConfirmMerge(false);
+              }
+              setMergeOpen((v) => !v);
+            }}
+            className="text-xs font-medium text-sparrow-gray hover:text-sparrow-ink"
+          >
+            {mergeOpen ? '↑ Cancel merge' : 'Merge into another partner…'}
+          </button>
+
+          {mergeOpen && (
+            <div className="mt-3 space-y-3 rounded-xl border border-sparrow-rule p-3">
+              <p className="text-xs leading-snug text-sparrow-gray">
+                Use this when you've spotted a duplicate — e.g. this donor already has a joint
+                household record under a different name. Pick who {partner.name} should merge into.
+              </p>
+              <div>
+                <span className="field-label">Merge into</span>
+                <select
+                  value={mergeTargetId}
+                  onChange={(e) => { setMergeTargetId(e.target.value); setConfirmMerge(false); }}
+                  className="field-input mt-0"
+                >
+                  <option value="">Select a partner…</option>
+                  {mergeCandidates.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {mergeTarget && (
+                <div className="space-y-2 rounded-xl bg-sparrow-mist/50 p-3">
+                  <p className="text-xs font-medium text-sparrow-ink">
+                    This will move {touchpoints.length} touchpoint{touchpoints.length === 1 ? '' : 's'}
+                    {isDonor && `, ${donations.length} gift${donations.length === 1 ? '' : 's'}`} from{' '}
+                    <span className="font-semibold">{partner.name}</span> into{' '}
+                    <span className="font-semibold">{mergeTarget.name}</span>, then delete {partner.name}.
+                  </p>
+                  {(partner.notes || mergeTarget.notes) && (
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <p className="font-medium text-sparrow-gray">{partner.name}'s notes (will be discarded)</p>
+                        <p className="mt-0.5 whitespace-pre-wrap text-sparrow-ink">{partner.notes || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-sparrow-gray">{mergeTarget.name}'s notes (kept)</p>
+                        <p className="mt-0.5 whitespace-pre-wrap text-sparrow-ink">{mergeTarget.notes || '—'}</p>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-amber-800">
+                    Copy anything worth keeping from {partner.name}'s notes into {mergeTarget.name}'s notes before
+                    confirming — the merge does not combine them for you.
+                  </p>
+                </div>
+              )}
+
+              {mergeTargetId && !confirmMerge && (
+                <button
+                  onClick={() => setConfirmMerge(true)}
+                  className="rounded-lg border border-priority-p1/40 bg-white px-3 py-1.5 text-xs font-medium text-priority-p1 transition hover:bg-priority-p1/5"
+                >
+                  Merge {partner.name} into {mergeTarget?.name}…
+                </button>
+              )}
+              {confirmMerge && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-sparrow-ink">This can't be undone. Merge now?</span>
+                  <div className="flex shrink-0 gap-2">
+                    <button onClick={() => setConfirmMerge(false)} className="btn-ghost">Cancel</button>
+                    <button
+                      onClick={merge}
+                      disabled={busy}
+                      className="rounded-lg bg-priority-p1 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+                    >
+                      {busy ? 'Merging…' : 'Merge'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
 
         {/* ── 12. Archive / Restore ── */}
         <section className="border-t border-sparrow-rule pt-4">

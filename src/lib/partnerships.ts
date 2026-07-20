@@ -277,5 +277,78 @@ export async function emitRevisitTask(
   if (error) throw new Error(error.message);
 }
 
+// ── Givebutter sync: needs-review donations ─────────────────────────────
+
+export interface NeedsReviewDonation {
+  donation: Donation;
+  candidateName: string | null;
+}
+
+/**
+ * Donations the Givebutter webhook couldn't confidently match — the email
+ * didn't match anyone on file, but the name loosely did (see
+ * find_possible_donor_match in 0088). Waiting on a human to link or confirm.
+ */
+export async function fetchNeedsReviewDonations(): Promise<NeedsReviewDonation[]> {
+  const { data, error } = await supabase
+    .from('donations')
+    .select('*')
+    .is('partner_id', null)
+    .not('possible_match_partner_id', 'is', null)
+    .order('created_at', { ascending: false });
+  if (error) {
+    if (error.message.includes('does not exist') || error.message.includes('schema cache')) return [];
+    throw new Error(error.message);
+  }
+  const donations = (data ?? []) as Donation[];
+  if (donations.length === 0) return [];
+
+  const candidateIds = [...new Set(donations.map((d) => d.possible_match_partner_id).filter(Boolean))] as string[];
+  const { data: candidates, error: candErr } = await supabase
+    .from('partners')
+    .select('id, name')
+    .in('id', candidateIds);
+  if (candErr) throw new Error(candErr.message);
+  const nameById = new Map((candidates ?? []).map((c) => [c.id as string, c.name as string]));
+
+  return donations.map((donation) => ({
+    donation,
+    candidateName: donation.possible_match_partner_id
+      ? nameById.get(donation.possible_match_partner_id) ?? null
+      : null,
+  }));
+}
+
+/** "Link to [candidate]" — the gift belongs to an existing partner. */
+export async function resolveDonationLink(donationId: string, partnerId: string): Promise<void> {
+  const { error } = await supabase.rpc('resolve_donation_link', {
+    p_donation_id: donationId,
+    p_partner_id: partnerId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** "No, this is a new donor" — creates the partner and attaches the gift. Returns the new partner id. */
+export async function resolveDonationAsNewPartner(donationId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('resolve_donation_new_partner', {
+    p_donation_id: donationId,
+  });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
+/**
+ * Merge a duplicate partner into another — moves donations + touchpoints, then
+ * deletes the duplicate. Does not reconcile notes/tier/cadence; the caller's UI
+ * should show both records so staff can copy over anything worth keeping first.
+ */
+export async function mergePartners(duplicateId: string, targetId: string): Promise<void> {
+  const { error } = await supabase.rpc('merge_partners', {
+    p_duplicate_id: duplicateId,
+    p_target_id: targetId,
+  });
+  if (error) throw new Error(error.message);
+}
+
 // Re-export types for convenience
 export type { GivingMethod, MouStatus };
