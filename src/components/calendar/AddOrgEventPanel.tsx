@@ -147,6 +147,10 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
   const [isPrivateMeeting, setIsPrivateMeeting] = useState(false);
   const [labels, setLabels] = useState<CalendarLabel[]>([]);
 
+  // Checked synchronously so a rapid double-click (or retry before the "saving" state
+  // has committed a render) can't fire submit() twice and create two full series.
+  const submittingRef = useRef(false);
+
   useEffect(() => { setDate(defaultDate); }, [defaultDate]);
   useEffect(() => { setDepartment(initialDept); setLabelId(null); }, [initialDept]);
   useEffect(() => { setIsPersonal(initialPersonal ?? false); setLabelId(null); }, [initialPersonal]);
@@ -180,7 +184,8 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
   const canSubmit = title.trim() && date && (allDay || startTime) && occurrenceDates.length > 0 && !!labelId;
 
   async function submit() {
-    if (!canSubmit) return;
+    if (!canSubmit || submittingRef.current) return;
+    submittingRef.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -232,6 +237,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
       setError(e instanceof Error ? e.message : 'Could not save.');
     } finally {
       setSaving(false);
+      submittingRef.current = false;
     }
   }
 

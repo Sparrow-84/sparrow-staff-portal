@@ -112,6 +112,7 @@ export function CalendarView() {
   const [addDate, setAddDate] = useState(todayStr);
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
   const [notesEvent, setNotesEvent] = useState<CalendarEvent | null>(null);
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [helpOpen, setHelpOpen] = useState(false);
   const [calTooltip, setCalTooltip] = useState<CalTooltipState | null>(null);
 
@@ -486,7 +487,8 @@ export function CalendarView() {
                         const dayDeadlines = deadlinesByDay.get(dStr) ?? [];
                         const isToday = dStr === todayStr;
                         const isPast = dStr < todayStr;
-                        const shown = dayEvents.slice(0, 3);
+                        const isExpanded = expandedDays.has(dStr);
+                        const shown = isExpanded ? dayEvents : dayEvents.slice(0, 3);
                         const overflow = dayEvents.length - shown.length;
 
                         return (
@@ -524,7 +526,15 @@ export function CalendarView() {
                                   </button>
                                 );
                               })}
-                              {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
+                              {overflow > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedDays((prev) => new Set(prev).add(dStr))}
+                                  className="w-full pl-1 text-left text-[10px] font-medium text-sparrow-green hover:underline"
+                                >
+                                  +{overflow} more
+                                </button>
+                              )}
                             </div>
 
                             {/* LCP dept events (show_on_org_calendar = true) */}

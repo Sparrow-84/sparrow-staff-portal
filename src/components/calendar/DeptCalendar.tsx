@@ -64,6 +64,7 @@ export function DeptCalendar({ department }: Props) {
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
   const [notesEvent, setNotesEvent] = useState<CalendarEvent | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -244,7 +245,8 @@ export function DeptCalendar({ department }: Props) {
                       const dayEvents = singleDayByDate.get(dStr) ?? [];
                       const isToday = dStr === todayStr;
                       const isPast = dStr < todayStr;
-                      const shown = dayEvents.slice(0, 3);
+                      const isExpanded = expandedDays.has(dStr);
+                      const shown = isExpanded ? dayEvents : dayEvents.slice(0, 3);
                       const overflow = dayEvents.length - shown.length;
 
                       return (
@@ -275,7 +277,15 @@ export function DeptCalendar({ department }: Props) {
                                 {ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
                               </button>
                             ))}
-                            {overflow > 0 && <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>}
+                            {overflow > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedDays((prev) => new Set(prev).add(dStr))}
+                                className="w-full pl-1 text-left text-[10px] font-medium text-sparrow-green hover:underline"
+                              >
+                                +{overflow} more
+                              </button>
+                            )}
                           </div>
                         </div>
                       );

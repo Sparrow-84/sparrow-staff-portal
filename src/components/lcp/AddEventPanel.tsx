@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { EVENT_LABEL, type EventKind } from '@/lib/lcp-types';
 import { createEvents } from '@/lib/lcp';
 import { Drawer } from './Drawer';
@@ -89,6 +89,7 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   function toggleDay(dow: number) {
     setDaysOfWeek((prev) => {
@@ -107,7 +108,8 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
   const canSubmit = title.trim() && date && startTime && occurrenceDates.length > 0;
 
   async function submit() {
-    if (!canSubmit) return;
+    if (!canSubmit || submittingRef.current) return;
+    submittingRef.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -134,6 +136,7 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
       setError(e instanceof Error ? e.message : 'Could not save event.');
     } finally {
       setSaving(false);
+      submittingRef.current = false;
     }
   }
 

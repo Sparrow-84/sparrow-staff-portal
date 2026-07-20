@@ -521,6 +521,11 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
           <div>
             <p className="text-sm font-medium text-sparrow-ink">{dateLabel}</p>
             <p className="mt-0.5 text-sm text-sparrow-gray">{timeLabel}</p>
+            {!event.is_personal && (
+              <p className="mt-0.5 text-xs text-sparrow-gray">
+                Created by {event.creator?.full_name ?? (event.created_by ? 'a staff member' : 'system')}
+              </p>
+            )}
           </div>
 
           {event.location && (

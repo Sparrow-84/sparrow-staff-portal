@@ -160,6 +160,7 @@ export interface CalendarEvent {
   office_room: { name: string } | null;
   label_id: string | null;
   label: CalendarLabel | null;
+  creator: { id: string; full_name: string } | null;
 }
 
 export interface EventOccurrence {
@@ -493,11 +494,11 @@ async function syncStaffBirthdayEvents(): Promise<void> {
 }
 
 export async function fetchCalendar(): Promise<CalendarEvent[]> {
-  void syncStaffBirthdayEvents();
+  await syncStaffBirthdayEvents();
   try {
     const { data, error } = await supabase
       .from('calendar_events')
-      .select('*, office_room:room_id(name), label:label_id(id, name, color, scope, department, is_preset, sort_order, created_by)')
+      .select('*, office_room:room_id(name), label:label_id(id, name, color, scope, department, is_preset, sort_order, created_by), creator:profiles!calendar_events_created_by_fkey(id, full_name)')
       .order('starts_at');
     if (error) throw error;
     return (data ?? []) as unknown as CalendarEvent[];

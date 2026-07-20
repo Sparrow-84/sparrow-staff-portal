@@ -7,12 +7,32 @@ import type { ScheduleBlock } from '@/lib/types';
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const BLANK_BLOCK: ScheduleBlock = { days: [], start: '09:00', end: '17:00' };
 
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]; // Feb padded to 29 — year is a fixed placeholder, never stored/shown
+// Placeholder year for month/day-only birthdays — 2000 is a leap year, so Feb 29 always round-trips.
+const BIRTHDAY_YEAR = 2000;
+
+function splitBirthday(value: string | null): { month: string; day: string } {
+  if (!value) return { month: '', day: '' };
+  const [, m, d] = value.split('-');
+  return { month: m ?? '', day: d ?? '' };
+}
+
+function joinBirthday(month: string, day: string): string | null {
+  if (!month || !day) return null;
+  return `${BIRTHDAY_YEAR}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
 export function SettingsView() {
   const { profile } = useAuth();
 
   // Profile fields
   const [blurb, setBlurb] = useState('');
-  const [birthday, setBirthday] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay] = useState('');
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([{ ...BLANK_BLOCK, days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] }]);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
@@ -28,7 +48,9 @@ export function SettingsView() {
     setPushEnabled(profile.push_enabled ?? true);
     setPushBlocked(getPushPermission() === 'denied');
     setBlurb(profile.blurb ?? '');
-    setBirthday(profile.birthday ?? '');
+    const { month, day } = splitBirthday(profile.birthday);
+    setBirthMonth(month);
+    setBirthDay(day);
     const blocks = normalizeSchedule(profile.work_schedule);
     if (blocks.length > 0) setScheduleBlocks(blocks);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -44,7 +66,7 @@ export function SettingsView() {
       const blocks = scheduleBlocks.filter((b) => b.days.length > 0);
       await updateMyProfile(profile.id, {
         blurb: blurb.trim() || null,
-        birthday: birthday || null,
+        birthday: joinBirthday(birthMonth, birthDay),
         work_schedule: blocks.length > 0 ? { blocks } : null,
       });
       setProfileStatus('Profile saved.');
@@ -111,16 +133,38 @@ export function SettingsView() {
           </div>
 
           <div className="mb-4">
-            <label className="field-label" htmlFor="birthday">
-              Birthday <span className="font-normal text-sparrow-gray">(adds a yearly all-staff calendar event)</span>
+            <label className="field-label" htmlFor="birthday-month">
+              Birthday <span className="font-normal text-sparrow-gray">(adds a yearly all-staff calendar event — no year needed)</span>
             </label>
-            <input
-              id="birthday"
-              type="date"
-              value={birthday}
-              onChange={(e) => setBirthday(e.target.value)}
-              className="field-input"
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <select
+                id="birthday-month"
+                value={birthMonth}
+                onChange={(e) => {
+                  const m = e.target.value;
+                  setBirthMonth(m);
+                  const max = m ? DAYS_IN_MONTH[Number(m) - 1] : 31;
+                  if (Number(birthDay) > max) setBirthDay('');
+                }}
+                className="field-input"
+              >
+                <option value="">Month</option>
+                {MONTHS.map((name, i) => (
+                  <option key={name} value={String(i + 1).padStart(2, '0')}>{name}</option>
+                ))}
+              </select>
+              <select
+                id="birthday-day"
+                value={birthDay}
+                onChange={(e) => setBirthDay(e.target.value)}
+                className="field-input"
+              >
+                <option value="">Day</option>
+                {Array.from({ length: birthMonth ? DAYS_IN_MONTH[Number(birthMonth) - 1] : 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="mb-4">
