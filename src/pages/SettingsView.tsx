@@ -12,6 +12,7 @@ export function SettingsView() {
 
   // Profile fields
   const [blurb, setBlurb] = useState('');
+  const [birthday, setBirthday] = useState('');
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([{ ...BLANK_BLOCK, days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] }]);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
@@ -27,6 +28,7 @@ export function SettingsView() {
     setPushEnabled(profile.push_enabled ?? true);
     setPushBlocked(getPushPermission() === 'denied');
     setBlurb(profile.blurb ?? '');
+    setBirthday(profile.birthday ?? '');
     const blocks = normalizeSchedule(profile.work_schedule);
     if (blocks.length > 0) setScheduleBlocks(blocks);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -42,6 +44,7 @@ export function SettingsView() {
       const blocks = scheduleBlocks.filter((b) => b.days.length > 0);
       await updateMyProfile(profile.id, {
         blurb: blurb.trim() || null,
+        birthday: birthday || null,
         work_schedule: blocks.length > 0 ? { blocks } : null,
       });
       setProfileStatus('Profile saved.');
@@ -104,6 +107,19 @@ export function SettingsView() {
               onChange={(e) => setBlurb(e.target.value)}
               placeholder="e.g. Love hiking and great coffee. Ask me about…"
               className="field-input resize-none"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="field-label" htmlFor="birthday">
+              Birthday <span className="font-normal text-sparrow-gray">(adds a yearly all-staff calendar event)</span>
+            </label>
+            <input
+              id="birthday"
+              type="date"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
+              className="field-input"
             />
           </div>
 

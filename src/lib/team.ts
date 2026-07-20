@@ -33,7 +33,7 @@ export async function fetchCurrentEvents(): Promise<{ department: string | null;
 
 export async function updateMyProfile(
   id: string,
-  patch: { blurb?: string | null; work_schedule?: WorkSchedule | null; push_enabled?: boolean },
+  patch: { blurb?: string | null; birthday?: string | null; work_schedule?: WorkSchedule | null; push_enabled?: boolean },
 ): Promise<void> {
   const { error } = await supabase.from('profiles').update(patch).eq('id', id);
   if (error) throw new Error(error.message);

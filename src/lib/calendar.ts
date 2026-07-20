@@ -139,7 +139,7 @@ export function toLocalTime(iso: string): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-export type CalendarKind = 'meeting' | 'closure' | 'holiday' | 'ooo' | 'lcp_session' | 'toc' | 'other';
+export type CalendarKind = 'meeting' | 'closure' | 'holiday' | 'ooo' | 'lcp_session' | 'toc' | 'other' | 'birthday';
 
 export interface CalendarEvent {
   id: string;
@@ -175,6 +175,7 @@ export const KIND_PILL: Record<CalendarKind, string> = {
   lcp_session: 'bg-blue-600 text-white',
   toc:         'bg-teal-600 text-white',
   other:       'bg-sparrow-gold text-sparrow-ink',
+  birthday:    'bg-pink-500 text-white',
 };
 
 export const KIND_LABEL: Record<CalendarKind, string> = {
@@ -185,6 +186,7 @@ export const KIND_LABEL: Record<CalendarKind, string> = {
   lcp_session: 'LCP',
   toc:         'TOC',
   other:       'Org event',
+  birthday:    'Birthday',
 };
 
 /** Kinds available when creating an org-wide event. */
@@ -481,7 +483,17 @@ export async function checkWholeOfficeBlocked(
   });
 }
 
+/** Fire-and-forget: ensures this year's + next year's birthday events exist before reading. */
+async function syncStaffBirthdayEvents(): Promise<void> {
+  try {
+    await supabase.rpc('emit_staff_birthday_events');
+  } catch {
+    // best-effort — a failed sync just means birthdays wait for the next calendar load
+  }
+}
+
 export async function fetchCalendar(): Promise<CalendarEvent[]> {
+  void syncStaffBirthdayEvents();
   try {
     const { data, error } = await supabase
       .from('calendar_events')

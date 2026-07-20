@@ -56,6 +56,8 @@ export interface Profile {
   photo_url: string | null;
   role_description: string | null;
   push_enabled: boolean;
+  /** MM-DD-agnostic date of birth — drives the auto-generated yearly all-staff calendar event. */
+  birthday: string | null;
 }
 
 export interface Task {
