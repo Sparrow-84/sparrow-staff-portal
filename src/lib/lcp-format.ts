@@ -26,6 +26,27 @@ export function isOverdue(iso: string | null): boolean {
   return iso < todayISO;
 }
 
+/**
+ * Overdue = no program fee payment logged for last calendar month, for a family
+ * that had already moved in by then. Pure recency check, no amount/balance math
+ * — Audrey deliberately doesn't want a running-balance calculation.
+ */
+export function isFeeOverdue(
+  moveInDate: string | null,
+  status: 'onboarding' | 'on_track' | 'needs_attention' | 'graduated',
+  paidDates: string[],
+): boolean {
+  if (!moveInDate || status === 'onboarding' || status === 'graduated') return false;
+  const today = new Date();
+  const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+  const lastMonthStart = new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), 1);
+  if (new Date(moveInDate) > lastMonthEnd) return false;
+  return !paidDates.some((iso) => {
+    const d = new Date(iso);
+    return d >= lastMonthStart && d <= lastMonthEnd;
+  });
+}
+
 export function dueLabel(iso: string | null): string {
   if (!iso) return 'no due date';
   if (isOverdue(iso)) {

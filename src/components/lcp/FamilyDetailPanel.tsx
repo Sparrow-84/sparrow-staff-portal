@@ -16,14 +16,22 @@ import {
   type GoalResponse,
   type Homework,
   type HomeworkArea,
+  type HouseholdAdult,
+  type LcpMoveInRequest,
   type LcpPhaseWithUnits,
   type Message,
+  type ProgramFeeMethod,
+  type ProgramFeePayment,
+  PROGRAM_FEE_METHOD_LABEL,
   type Redemption,
   type StaffNote,
+  type TocSpaceSlim,
   type Voucher,
 } from '@/lib/lcp-types';
 import { PhaseProgressBar } from './PhaseProgressBar';
 import {
+  addHouseholdAdult,
+  addProgramFeePayment,
   addStaffNote,
   updateStaffNote,
   assignHomework,
@@ -33,12 +41,16 @@ import {
   deleteFamily,
   deleteGoal,
   deleteHomework,
+  deleteHouseholdAdult,
+  deleteProgramFeePayment,
   fetchFinanceMilestones,
   fetchGoalResponsesForFamily,
   fetchGoalsForFamily,
   fetchHomeworkForFamily,
+  fetchHouseholdAdults,
   fetchMessages,
   fetchMilestoneProgressForFamily,
+  fetchProgramFeePayments,
   fetchRedemptions,
   fetchStaffNotes,
   fetchVouchers,
@@ -46,20 +58,24 @@ import {
   markGoalMet,
   reopenGoal,
   sendStaffMessage,
+  fetchMoveInRequestForFamily,
+  requestOrSyncLcpToc,
   setFamilyActive,
   setHomeworkStatus,
   uncompleteMilestone,
   updateFamily,
 } from '@/lib/lcp';
-import { money, dayLabel, dueLabel, isOverdue } from '@/lib/lcp-format';
+import { money, dayLabel, dueLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
 import { StaffThread } from './StaffThread';
 
-type Tab = 'progress' | 'goals' | 'milestones' | 'homework' | 'messages' | 'notes' | 'rewards';
+type Tab = 'general' | 'progress' | 'goals' | 'milestones' | 'program_fee' | 'homework' | 'messages' | 'notes' | 'rewards';
 const TABS: { key: Tab; label: string }[] = [
+  { key: 'general', label: 'General Info' },
   { key: 'progress', label: 'Progress' },
   { key: 'goals', label: 'Goals' },
   { key: 'milestones', label: 'Finance' },
+  { key: 'program_fee', label: 'Program Fee' },
   { key: 'homework', label: 'Homework' },
   { key: 'messages', label: 'Messages' },
   { key: 'notes', label: 'Notes' },
@@ -72,6 +88,7 @@ export function FamilyDetailPanel({
   sessions,
   phases,
   programUnitId,
+  tocSpaces,
   currentUserId,
   onClose,
   onChanged,
@@ -81,11 +98,12 @@ export function FamilyDetailPanel({
   sessions: CurriculumSession[];
   phases: LcpPhaseWithUnits[];
   programUnitId: number | null;
+  tocSpaces: TocSpaceSlim[];
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>('progress');
+  const [tab, setTab] = useState<Tab>('general');
   const [homework, setHomework] = useState<Homework[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [notes, setNotes] = useState<StaffNote[]>([]);
@@ -95,12 +113,14 @@ export function FamilyDetailPanel({
   const [goalResponses, setGoalResponses] = useState<GoalResponse[]>([]);
   const [milestones, setMilestones] = useState<FinanceMilestone[]>([]);
   const [milestoneProgress, setMilestoneProgress] = useState<FamilyMilestoneProgress[]>([]);
+  const [feePayments, setFeePayments] = useState<ProgramFeePayment[]>([]);
+  const [householdAdults, setHouseholdAdults] = useState<HouseholdAdult[]>([]);
 
   const familyId = family?.id;
 
   const reloadDetail = useCallback(async () => {
     if (!familyId) return;
-    const [hw, msg, nt, vo, red, gl, gr, ms, mp] = await Promise.all([
+    const [hw, msg, nt, vo, red, gl, gr, ms, mp, fp, ha] = await Promise.all([
       fetchHomeworkForFamily(familyId),
       fetchMessages(familyId),
       fetchStaffNotes(familyId),
@@ -110,6 +130,8 @@ export function FamilyDetailPanel({
       fetchGoalResponsesForFamily(familyId),
       fetchFinanceMilestones(),
       fetchMilestoneProgressForFamily(familyId),
+      fetchProgramFeePayments(familyId),
+      fetchHouseholdAdults(familyId),
     ]);
     setHomework(hw);
     setMessages(msg);
@@ -120,11 +142,13 @@ export function FamilyDetailPanel({
     setGoalResponses(gr);
     setMilestones(ms);
     setMilestoneProgress(mp);
+    setFeePayments(fp);
+    setHouseholdAdults(ha);
   }, [familyId]);
 
   useEffect(() => {
     if (open && familyId) {
-      setTab('progress');
+      setTab('general');
       void reloadDetail();
     }
   }, [open, familyId, reloadDetail]);
@@ -147,6 +171,18 @@ export function FamilyDetailPanel({
         ))}
       </div>
 
+      {tab === 'general' && (
+        <GeneralInfoTab
+          family={family}
+          tocSpaces={tocSpaces}
+          householdAdults={householdAdults}
+          feePayments={feePayments}
+          onChanged={() => {
+            void reloadDetail();
+            onChanged();
+          }}
+        />
+      )}
       {tab === 'progress' && (
         <ProgressTab
           family={family}
@@ -176,6 +212,17 @@ export function FamilyDetailPanel({
           progress={milestoneProgress}
           currentUserId={currentUserId}
           onChanged={() => void reloadDetail()}
+        />
+      )}
+      {tab === 'program_fee' && (
+        <ProgramFeeTab
+          family={family}
+          payments={feePayments}
+          currentUserId={currentUserId}
+          onChanged={() => {
+            void reloadDetail();
+            onChanged();
+          }}
         />
       )}
       {tab === 'homework' && (
@@ -400,7 +447,8 @@ function ProgressTab({
       <div className="border-t border-sparrow-rule pt-4">
         <span className="field-label">Participation</span>
         <p className="mt-1 text-xs text-sparrow-gray">
-          Cancelling removes {family.display_name} from the active roster but keeps their records.
+          Marks {family.display_name} as having left the program before graduating — sets their
+          program end date, removes them from the active roster, but keeps their records.
           Deleting erases everything permanently.
         </p>
 
@@ -414,13 +462,13 @@ function ProgressTab({
               }}
               className="btn-ghost border border-sparrow-rule"
             >
-              Cancel participation
+              Left the program
             </button>
           ) : (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-sparrow-ink">Remove from the active roster?</span>
+              <span className="text-sparrow-ink">Mark as having left the program before graduating?</span>
               <button disabled={busy} onClick={cancelParticipation} className="btn-primary">
-                {busy ? 'Working…' : 'Yes, cancel'}
+                {busy ? 'Working…' : 'Yes, they left'}
               </button>
               <button disabled={busy} onClick={() => setConfirmCancel(false)} className="btn-ghost">
                 Keep active
@@ -730,6 +778,335 @@ function MilestonesTab({
       <p className="text-xs text-sparrow-gray">
         Circle back with Andrew and Shelly on these milestones — this list will be refined.
       </p>
+    </div>
+  );
+}
+
+// ── Program fee ──────────────────────────────────────────────────────
+// Digitizes Audrey's paper log: a running payment log (date, amount, method,
+// comment). Deliberately no totals or balance-owed math — Audrey wants a
+// plain record, not calculations. Home/program-date fields live on General Info.
+function ProgramFeeTab({
+  family,
+  payments,
+  currentUserId,
+  onChanged,
+}: {
+  family: Family;
+  payments: ProgramFeePayment[];
+  currentUserId: string;
+  onChanged: () => void;
+}) {
+  const [paidDate, setPaidDate] = useState(localDate());
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState<ProgramFeeMethod>('cash');
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function addPayment() {
+    const dollars = parseFloat(amount);
+    if (!paidDate || !dollars || dollars <= 0) return;
+    setBusy(true);
+    await addProgramFeePayment(
+      {
+        family_id: family.id,
+        paid_date: paidDate,
+        amount_cents: Math.round(dollars * 100),
+        method,
+        comment: comment.trim() || null,
+      },
+      currentUserId,
+    );
+    setAmount('');
+    setComment('');
+    setMethod('cash');
+    setBusy(false);
+    onChanged();
+  }
+
+  async function remove(id: string) {
+    await deleteProgramFeePayment(id);
+    onChanged();
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-sparrow-rule p-3">
+        <span className="field-label">Log a payment</span>
+        <div className="mt-2 grid gap-2 sm:grid-cols-4">
+          <input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="field-input mt-0" />
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Amount"
+            className="field-input mt-0"
+          />
+          <select value={method} onChange={(e) => setMethod(e.target.value as ProgramFeeMethod)} className="field-input mt-0">
+            {(Object.keys(PROGRAM_FEE_METHOD_LABEL) as ProgramFeeMethod[]).map((m) => (
+              <option key={m} value={m}>{PROGRAM_FEE_METHOD_LABEL[m]}</option>
+            ))}
+          </select>
+          <button onClick={addPayment} disabled={busy || !amount} className="btn-primary">
+            Add
+          </button>
+        </div>
+        <input
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Comment (optional)"
+          className="field-input mt-2"
+        />
+      </div>
+
+      {payments.length === 0 && <p className="text-sm text-sparrow-gray">No payments logged yet.</p>}
+
+      <ul className="space-y-2">
+        {payments.map((p) => (
+          <li key={p.id} className="flex items-start justify-between gap-2 rounded-xl border border-sparrow-rule/70 p-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-sparrow-ink">
+                {money(p.amount_cents)} · {dayLabel(p.paid_date)} · {PROGRAM_FEE_METHOD_LABEL[p.method]}
+              </p>
+              {p.comment && <p className="mt-0.5 text-xs text-sparrow-gray">{p.comment}</p>}
+              {p.author_name && <p className="mt-0.5 text-xs text-sparrow-gray">Logged by {p.author_name}</p>}
+            </div>
+            <button onClick={() => remove(p.id)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
+              Delete
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ── General info ─────────────────────────────────────────────────────
+// At-a-glance intake summary: program timeline (onboarding start is just this
+// row's created_at; program end is auto-tracked; move-in is staff-entered since
+// only staff know the real date), home unit + address (linked to a real TOC
+// space), fee status, and household member/contact info. Mirrors the Twin Oaks
+// room's household_members pattern, scoped to LCP.
+function GeneralInfoTab({
+  family,
+  tocSpaces,
+  householdAdults,
+  feePayments,
+  onChanged,
+}: {
+  family: Family;
+  tocSpaces: TocSpaceSlim[];
+  householdAdults: HouseholdAdult[];
+  feePayments: ProgramFeePayment[];
+  onChanged: () => void;
+}) {
+  const [moveInDate, setMoveInDate] = useState(family.move_in_date ?? '');
+  const [emergencyContact, setEmergencyContact] = useState(family.emergency_contact_notes ?? '');
+  const [spaceBusy, setSpaceBusy] = useState(false);
+  const [moveInRequest, setMoveInRequest] = useState<LcpMoveInRequest | null>(null);
+  const [addingAdult, setAddingAdult] = useState(false);
+  const [adultName, setAdultName] = useState('');
+  const [adultPhone, setAdultPhone] = useState('');
+  const [adultEmail, setAdultEmail] = useState('');
+  const [childrenNames, setChildrenNames] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const space = tocSpaces.find((s) => s.id === family.toc_space_id) ?? null;
+  const overdue = isFeeOverdue(family.move_in_date, family.status, feePayments.map((p) => p.paid_date));
+
+  const reloadRequest = useCallback(async () => {
+    setMoveInRequest(await fetchMoveInRequestForFamily(family.id));
+  }, [family.id]);
+
+  useEffect(() => {
+    void reloadRequest();
+  }, [reloadRequest]);
+
+  // If not yet linked to a Twin Oaks resident record, this creates (or leaves
+  // alone) a pending review request for TOC staff — it never writes into
+  // tenants/household_members directly. If TOC staff already approved a link,
+  // this instead pushes the LCP-owned fields into the existing records.
+  async function attemptSync() {
+    await requestOrSyncLcpToc(family.id);
+    await reloadRequest();
+    onChanged();
+  }
+
+  async function saveMoveInDate() {
+    if (moveInDate === (family.move_in_date ?? '')) return;
+    await updateFamily(family.id, { move_in_date: moveInDate || null });
+    onChanged();
+    if (moveInDate) await attemptSync();
+  }
+
+  async function saveEmergencyContact() {
+    if (emergencyContact === (family.emergency_contact_notes ?? '')) return;
+    await updateFamily(family.id, { emergency_contact_notes: emergencyContact.trim() || null });
+    onChanged();
+    if (family.toc_tenant_id) await attemptSync();
+  }
+
+  async function setSpace(spaceId: string) {
+    setSpaceBusy(true);
+    await updateFamily(family.id, { toc_space_id: spaceId || null });
+    setSpaceBusy(false);
+    onChanged();
+    if (spaceId && family.move_in_date) await attemptSync();
+  }
+
+  async function addAdult() {
+    if (!adultName.trim() || !adultPhone.trim() || !adultEmail.trim() || !childrenNames.trim()) return;
+    setBusy(true);
+    await addHouseholdAdult(family.id, {
+      full_name: adultName,
+      phone: adultPhone,
+      email: adultEmail,
+      children_names: childrenNames,
+    });
+    setAdultName('');
+    setAdultPhone('');
+    setAdultEmail('');
+    setChildrenNames('');
+    setAddingAdult(false);
+    setBusy(false);
+    onChanged();
+    if (family.toc_tenant_id) await attemptSync();
+  }
+
+  async function removeAdult(id: string) {
+    await deleteHouseholdAdult(id);
+    onChanged();
+    if (family.toc_tenant_id) await attemptSync();
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl bg-sparrow-mist p-3">
+          <span className="field-label">Onboarding start</span>
+          <p className="text-sm text-sparrow-ink">{dayLabel(family.created_at)}</p>
+        </div>
+        <div className="rounded-xl bg-sparrow-mist p-3">
+          <span className="field-label">Move-in date</span>
+          <input
+            type="date"
+            value={moveInDate}
+            onChange={(e) => setMoveInDate(e.target.value)}
+            onBlur={saveMoveInDate}
+            className="mt-0.5 w-full rounded-lg border border-sparrow-rule bg-white px-2 py-1 text-sm"
+          />
+        </div>
+        {family.program_end_date && (
+          <div className="rounded-xl bg-sparrow-mist p-3 sm:col-span-2">
+            <span className="field-label">Program end date</span>
+            <p className="text-sm text-sparrow-ink">{dayLabel(family.program_end_date)}</p>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <span className="field-label">Home unit</span>
+        <select
+          value={family.toc_space_id ?? ''}
+          onChange={(e) => setSpace(e.target.value)}
+          disabled={spaceBusy}
+          className="field-input"
+        >
+          <option value="">Not assigned yet</option>
+          {tocSpaces.map((s) => (
+            <option key={s.id} value={s.id}>{s.label}</option>
+          ))}
+        </select>
+        {space && (
+          <p className="mt-1 text-xs text-sparrow-gray">
+            {[space.street_number, space.street_name].filter(Boolean).join(' ') || 'No address on file'}
+          </p>
+        )}
+        {family.toc_tenant_id ? (
+          <p className="mt-1 text-xs text-sparrow-green">
+            ✓ Linked to Twin Oaks residents{family.toc_synced_at ? ` — last synced ${dayLabel(family.toc_synced_at)}` : ''}
+          </p>
+        ) : moveInRequest?.status === 'needs_info' ? (
+          <div className="mt-1 rounded-lg bg-sparrow-gold/10 px-2 py-1.5 text-xs">
+            <p className="font-medium text-sparrow-ink">Twin Oaks staff have a question:</p>
+            <p className="text-sparrow-gray">{moveInRequest.notes || '(no note left)'}</p>
+            <p className="mt-1 text-sparrow-gray">Reply via chat or a task, then update this family's info here.</p>
+          </div>
+        ) : moveInRequest?.status === 'pending' ? (
+          <p className="mt-1 text-xs text-sparrow-gray">Move-in request sent — waiting on Twin Oaks staff to review and create the resident record.</p>
+        ) : (
+          <p className="mt-1 text-xs text-sparrow-gray">Set a home unit and a move-in date to send Twin Oaks a move-in request.</p>
+        )}
+      </div>
+
+      <div className={`flex items-center justify-between rounded-xl px-4 py-3 ${overdue ? 'bg-priority-p1/10' : 'bg-sparrow-green/10'}`}>
+        <span className="text-sm text-sparrow-ink">Program fee status</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-medium ${overdue ? 'bg-priority-p1/20 text-priority-p1' : 'bg-sparrow-green/20 text-sparrow-green'}`}>
+          {overdue ? 'Overdue' : 'Current'}
+        </span>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between">
+          <span className="field-label">Household members</span>
+          {!addingAdult && (
+            <button onClick={() => setAddingAdult(true)} className="text-xs font-medium text-sparrow-green">
+              + Add adult
+            </button>
+          )}
+        </div>
+
+        {addingAdult && (
+          <div className="mt-2 rounded-xl border border-sparrow-rule p-3">
+            <input value={adultName} onChange={(e) => setAdultName(e.target.value)} placeholder="Full name" className="field-input" />
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-0" />
+              <input value={adultEmail} onChange={(e) => setAdultEmail(e.target.value)} placeholder="Email" className="field-input mt-0" />
+            </div>
+            <input
+              value={childrenNames}
+              onChange={(e) => setChildrenNames(e.target.value)}
+              placeholder="Children's full names"
+              className="field-input mt-2"
+            />
+            <div className="mt-2 flex gap-2">
+              <button onClick={addAdult} disabled={busy} className="btn-primary">Save</button>
+              <button onClick={() => setAddingAdult(false)} className="btn-ghost">Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <ul className="mt-2 space-y-2">
+          {householdAdults.length === 0 && !addingAdult && (
+            <li className="text-sm text-sparrow-gray">No household members on file yet.</li>
+          )}
+          {householdAdults.map((a) => (
+            <li key={a.id} className="flex items-start justify-between gap-2 rounded-xl border border-sparrow-rule/70 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-sparrow-ink">{a.full_name}</p>
+                <p className="text-xs text-sparrow-gray">{a.phone} · {a.email}</p>
+                <p className="text-xs text-sparrow-gray">Children: {a.children_names}</p>
+              </div>
+              <button onClick={() => removeAdult(a.id)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <span className="field-label">Emergency contact</span>
+        <textarea
+          value={emergencyContact}
+          onChange={(e) => setEmergencyContact(e.target.value)}
+          onBlur={saveEmergencyContact}
+          rows={2}
+          className="field-input"
+        />
+      </div>
     </div>
   );
 }

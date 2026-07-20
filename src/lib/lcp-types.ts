@@ -22,6 +22,73 @@ export interface Family {
   joined_unit_id: number | null;
   housing_savings_cents: number;
   active: boolean;
+  created_at: string;
+  toc_space_id: string | null;
+  toc_tenant_id: string | null;
+  move_in_date: string | null;
+  program_end_date: string | null;
+  emergency_contact_notes: string | null;
+  toc_synced_at: string | null;
+}
+
+export interface HouseholdAdult {
+  id: string;
+  family_id: string;
+  full_name: string;
+  phone: string;
+  email: string;
+  children_names: string;
+  created_at: string;
+}
+
+export interface TocSpaceSlim {
+  id: string;
+  label: string;
+  street_number: string | null;
+  street_name: string | null;
+}
+
+export type LcpTocRequestStatus = 'pending' | 'needs_info' | 'approved';
+
+export interface LcpMoveInRequest {
+  id: string;
+  family_id: string;
+  toc_space_id: string;
+  family_display_name: string;
+  space_label: string;
+  status: LcpTocRequestStatus;
+  notes: string | null;
+  requested_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+}
+
+export interface LcpMoveInRequestDetail {
+  family_display_name: string;
+  move_in_date: string | null;
+  emergency_contact_notes: string | null;
+  space_label: string;
+  adults: { full_name: string; phone: string; email: string; children_names: string }[];
+}
+
+export type ProgramFeeMethod = 'cash' | 'check' | 'other';
+
+export const PROGRAM_FEE_METHOD_LABEL: Record<ProgramFeeMethod, string> = {
+  cash: 'Cash',
+  check: 'Check',
+  other: 'Other',
+};
+
+export interface ProgramFeePayment {
+  id: string;
+  family_id: string;
+  paid_date: string;
+  amount_cents: number;
+  method: ProgramFeeMethod;
+  comment: string | null;
+  created_by: string | null;
+  created_at: string;
+  author_name: string | null;
 }
 
 export interface LcpPhaseWithUnits {

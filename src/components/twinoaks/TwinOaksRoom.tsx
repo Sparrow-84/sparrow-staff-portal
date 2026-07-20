@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchProfiles } from '@/lib/data';
 import { fetchAllNotices, fetchSpaces, fetchTenants, fetchWorkOrders, type WorkOrderWithAssignee } from '@/lib/housing';
+import { fetchOpenLcpMoveInRequests } from '@/lib/lcp';
+import type { LcpMoveInRequest } from '@/lib/lcp-types';
 import {
   LOT_LEGEND,
   OPEN_WO_STATUSES,
@@ -22,6 +24,7 @@ import { IncidentLogTab } from './IncidentLogTab';
 import { ResidentsTab } from './ResidentsTab';
 import { NoticesTab } from './NoticesTab';
 import { ArchiveTab } from './ArchiveTab';
+import { MoveInRequestPanel } from './MoveInRequestPanel';
 import { DeptCalendar } from '@/components/calendar/DeptCalendar';
 
 const PRIORITY_RANK: Record<WoPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
@@ -72,6 +75,8 @@ export function TwinOaksRoom() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrderWithAssignee[]>([]);
   const [staff, setStaff] = useState<Profile[]>([]);
+  const [moveInRequests, setMoveInRequests] = useState<LcpMoveInRequest[]>([]);
+  const [reviewRequest, setReviewRequest] = useState<LcpMoveInRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,16 +108,18 @@ export function TwinOaksRoom() {
 
   const load = useCallback(async () => {
     try {
-      const [sp, tn, wo, st] = await Promise.all([
+      const [sp, tn, wo, st, mir] = await Promise.all([
         fetchSpaces(),
         fetchTenants(),
         fetchWorkOrders(),
         fetchProfiles(),
+        fetchOpenLcpMoveInRequests().catch(() => []),
       ]);
       setSpaces(sp);
       setTenants(tn);
       setWorkOrders(wo);
       setStaff(st);
+      setMoveInRequests(mir);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load Twin Oaks data.');
     } finally {
@@ -194,6 +201,24 @@ export function TwinOaksRoom() {
           )}
         </div>
       </div>
+
+      {canManage && moveInRequests.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {moveInRequests.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setReviewRequest(r)}
+              className="flex w-full items-center justify-between rounded-xl border border-sparrow-gold/40 bg-sparrow-cream px-4 py-3 text-left text-sm"
+            >
+              <span>
+                🏡 <strong>{r.family_display_name}</strong> from LCP is moving into <strong>{r.space_label}</strong>
+                {r.status === 'needs_info' && <span className="ml-2 text-xs text-sparrow-gray">(you flagged a question)</span>}
+              </span>
+              <span className="font-medium text-sparrow-green">Review →</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="mt-6 flex flex-wrap gap-1 rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
@@ -311,6 +336,13 @@ export function TwinOaksRoom() {
         spaces={spaces}
         staff={staff}
         onClose={() => setWoOpen(false)}
+        onChanged={load}
+      />
+
+      <MoveInRequestPanel
+        open={reviewRequest !== null}
+        request={reviewRequest}
+        onClose={() => setReviewRequest(null)}
         onChanged={load}
       />
 

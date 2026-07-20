@@ -19,10 +19,15 @@ import type {
   Homework,
   HomeworkArea,
   HomeworkStatus,
+  HouseholdAdult,
   LcpEvent,
+  LcpMoveInRequest,
+  LcpMoveInRequestDetail,
   LcpPhaseWithUnits,
   LcpUnitSlim,
   Message,
+  ProgramFeeMethod,
+  ProgramFeePayment,
   ProgramPosition,
   Redemption,
   Resource,
@@ -32,6 +37,7 @@ import type {
   SessionLog,
   SessionLogType,
   StaffNote,
+  TocSpaceSlim,
   Voucher,
 } from './lcp-types';
 
@@ -42,25 +48,44 @@ import type {
 export async function fetchFamilies(): Promise<Family[]> {
   const { data, error } = await supabase
     .from('families')
-    .select('id, display_name, login_email, status, current_session_number, joined_unit_id, housing_savings_cents, active')
+    .select(
+      'id, display_name, login_email, status, current_session_number, joined_unit_id, housing_savings_cents, active, created_at, toc_space_id, toc_tenant_id, move_in_date, program_end_date, emergency_contact_notes, toc_synced_at',
+    )
     .eq('active', true)
     .order('display_name');
   if (error) {
     // joined_unit_id column missing (migration 0034 not yet applied) — fall back
     const { data: d2, error: e2 } = await supabase
       .from('families')
-      .select('id, display_name, login_email, status, current_session_number, housing_savings_cents, active')
+      .select('id, display_name, login_email, status, current_session_number, housing_savings_cents, active, created_at')
       .eq('active', true)
       .order('display_name');
     if (e2) throw new Error(e2.message);
-    return ((d2 ?? []) as Omit<Family, 'joined_unit_id'>[]).map((f) => ({ ...f, joined_unit_id: null }));
+    return ((d2 ?? []) as Omit<
+      Family,
+      'joined_unit_id' | 'toc_space_id' | 'toc_tenant_id' | 'move_in_date' | 'program_end_date' | 'emergency_contact_notes' | 'toc_synced_at'
+    >[]).map((f) => ({
+      ...f,
+      joined_unit_id: null,
+      toc_space_id: null,
+      toc_tenant_id: null,
+      move_in_date: null,
+      program_end_date: null,
+      emergency_contact_notes: null,
+      toc_synced_at: null,
+    }));
   }
   return (data ?? []) as Family[];
 }
 
 export async function updateFamily(
   id: string,
-  patch: Partial<Pick<Family, 'status' | 'current_session_number' | 'joined_unit_id' | 'housing_savings_cents'>>,
+  patch: Partial<
+    Pick<
+      Family,
+      'status' | 'current_session_number' | 'joined_unit_id' | 'housing_savings_cents' | 'toc_space_id' | 'emergency_contact_notes' | 'move_in_date'
+    >
+  >,
 ): Promise<void> {
   const { error } = await supabase.from('families').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
@@ -70,6 +95,8 @@ export interface FamilyInput {
   display_name: string;
   login_email: string;
   current_session_number: number;
+  emergency_contact_notes: string;
+  adult: { full_name: string; phone: string; email: string; children_names: string };
 }
 
 /**
@@ -77,19 +104,28 @@ export interface FamilyInput {
  * AND their allowlist entry — handle_new_user() links a new sign-up only if it matches
  * a families.login_email, so creating the row is all that's needed for the mother to
  * register in the participant portal. Full LCP staff only (RLS: families_write).
+ * Also creates the first household adult record from the same intake form.
+ * Onboarding start date isn't collected here — it's just this row's created_at,
+ * i.e. today, the day Shelly is actually adding them.
  */
 export async function createFamily(input: FamilyInput): Promise<void> {
-  const { error } = await supabase.from('families').insert({
-    display_name: input.display_name.trim(),
-    login_email: input.login_email.trim().toLowerCase(),
-    current_session_number: input.current_session_number,
-  });
+  const { data, error } = await supabase
+    .from('families')
+    .insert({
+      display_name: input.display_name.trim(),
+      login_email: input.login_email.trim().toLowerCase(),
+      current_session_number: input.current_session_number,
+      emergency_contact_notes: input.emergency_contact_notes.trim(),
+    })
+    .select('id')
+    .single();
   if (error) {
     if ((error as { code?: string }).code === '23505') {
       throw new Error('That email is already registered to another family.');
     }
     throw new Error(error.message);
   }
+  await addHouseholdAdult(data.id, input.adult);
 }
 
 /** Soft cancel: drop a family from the active roster but keep all their records. */
@@ -788,5 +824,156 @@ export async function uncompleteMilestone(familyId: string, milestoneId: number)
     .delete()
     .eq('family_id', familyId)
     .eq('milestone_id', milestoneId);
+  if (error) throw new Error(error.message);
+}
+
+// ── Household adults (Shelly's intake) ──────────────────────────────────────────
+
+export async function fetchHouseholdAdults(familyId: string): Promise<HouseholdAdult[]> {
+  const { data, error } = await supabase
+    .from('lcp_household_adults')
+    .select('id, family_id, full_name, phone, email, children_names, created_at')
+    .eq('family_id', familyId)
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as HouseholdAdult[];
+}
+
+export async function addHouseholdAdult(
+  familyId: string,
+  adult: { full_name: string; phone: string; email: string; children_names: string },
+): Promise<void> {
+  const { error } = await supabase.from('lcp_household_adults').insert({
+    family_id: familyId,
+    full_name: adult.full_name.trim(),
+    phone: adult.phone.trim(),
+    email: adult.email.trim(),
+    children_names: adult.children_names.trim(),
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteHouseholdAdult(id: string): Promise<void> {
+  const { error } = await supabase.from('lcp_household_adults').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── TOC space lookup (for linking a family's home) ──────────────────────────────
+
+export async function fetchLcpDesignatedSpaces(): Promise<TocSpaceSlim[]> {
+  const { data, error } = await supabase
+    .from('spaces')
+    .select('id, label, street_number, street_name')
+    .eq('designation_type', 'lcp')
+    .order('label');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TocSpaceSlim[];
+}
+
+export type LcpTocSyncResult = 'synced' | 'request_created' | 'already_requested' | 'incomplete' | 'not_found';
+
+/**
+ * Called after saving a move-in date, home unit, or household member edit.
+ * If the family isn't linked to a Twin Oaks resident yet, this creates (or
+ * leaves alone, if one's already open) a pending review request for TOC staff
+ * — it never writes into tenants/household_members directly. If TOC staff have
+ * already approved a link for this family, it instead pushes the LCP-owned
+ * fields (contact info, move-in date, emergency contact, kids' names) into the
+ * existing tenant + household_members records — no re-approval needed for
+ * routine updates. Safe to call speculatively; no-ops with a status instead of
+ * erroring.
+ */
+export async function requestOrSyncLcpToc(familyId: string): Promise<LcpTocSyncResult> {
+  const { data, error } = await supabase.rpc('request_or_sync_lcp_toc', { p_family_id: familyId });
+  if (error) throw new Error(error.message);
+  return data as LcpTocSyncResult;
+}
+
+const MOVE_IN_REQUEST_COLUMNS =
+  'id, family_id, toc_space_id, family_display_name, space_label, status, notes, requested_at, reviewed_by, reviewed_at';
+
+/** The open (or most recent) move-in request for a family, for the LCP side to show its status. */
+export async function fetchMoveInRequestForFamily(familyId: string): Promise<LcpMoveInRequest | null> {
+  const { data, error } = await supabase
+    .from('lcp_toc_move_in_requests')
+    .select(MOVE_IN_REQUEST_COLUMNS)
+    .eq('family_id', familyId)
+    .order('requested_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as LcpMoveInRequest | null;
+}
+
+/** All open requests, for the Twin Oaks side to triage. */
+export async function fetchOpenLcpMoveInRequests(): Promise<LcpMoveInRequest[]> {
+  const { data, error } = await supabase
+    .from('lcp_toc_move_in_requests')
+    .select(MOVE_IN_REQUEST_COLUMNS)
+    .neq('status', 'approved')
+    .order('requested_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as LcpMoveInRequest[];
+}
+
+/** Live resident-info preview for the review drawer — household adults, emergency contact, move-in date. */
+export async function fetchMoveInRequestDetail(requestId: string): Promise<LcpMoveInRequestDetail | null> {
+  const { data, error } = await supabase.rpc('fetch_lcp_move_in_request_detail', { p_request_id: requestId });
+  if (error) throw new Error(error.message);
+  return data as LcpMoveInRequestDetail | null;
+}
+
+/** TOC staff mark a request as needing more info from LCP, or leave a note. */
+export async function updateMoveInRequestNotes(
+  id: string,
+  patch: { status?: 'pending' | 'needs_info'; notes?: string | null },
+): Promise<void> {
+  const { error } = await supabase.from('lcp_toc_move_in_requests').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export type ApproveMoveInResult = 'approved' | 'already_approved' | 'skipped_existing_tenant' | 'not_found';
+
+/** TOC staff only — creates the real tenant + household_members records and links the family. */
+export async function approveLcpMoveInRequest(requestId: string): Promise<ApproveMoveInResult> {
+  const { data, error } = await supabase.rpc('approve_lcp_toc_move_in', { p_request_id: requestId });
+  if (error) throw new Error(error.message);
+  return data as ApproveMoveInResult;
+}
+
+// ── Program fee payments (Audrey's log) ─────────────────────────────────────────
+
+export async function fetchAllProgramFeePayments(): Promise<Pick<ProgramFeePayment, 'family_id' | 'paid_date'>[]> {
+  const { data, error } = await supabase.from('lcp_program_fee_payments').select('family_id, paid_date');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Pick<ProgramFeePayment, 'family_id' | 'paid_date'>[];
+}
+
+export async function fetchProgramFeePayments(familyId: string): Promise<ProgramFeePayment[]> {
+  const { data, error } = await supabase
+    .from('lcp_program_fee_payments')
+    .select('id, family_id, paid_date, amount_cents, method, comment, created_by, created_at, author:profiles(full_name)')
+    .eq('family_id', familyId)
+    .order('paid_date', { ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown[]).map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      ...row,
+      author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
+    } as ProgramFeePayment;
+  });
+}
+
+export async function addProgramFeePayment(
+  payment: { family_id: string; paid_date: string; amount_cents: number; method: ProgramFeeMethod; comment: string | null },
+  createdBy: string,
+): Promise<void> {
+  const { error } = await supabase.from('lcp_program_fee_payments').insert({ ...payment, created_by: createdBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteProgramFeePayment(id: string): Promise<void> {
+  const { error } = await supabase.from('lcp_program_fee_payments').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }

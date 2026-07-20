@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import {
+  fetchAllProgramFeePayments,
   fetchEvents,
   fetchAllHomework,
   fetchFamilies,
+  fetchLcpDesignatedSpaces,
   fetchPhasesWithUnits,
   fetchProgramPosition,
   fetchRedemptions,
@@ -17,11 +19,13 @@ import {
   type Homework,
   type LcpEvent,
   type LcpPhaseWithUnits,
+  type ProgramFeePayment,
   type ProgramPosition,
   type Redemption,
   type SessionLog as SessionLogRecord,
+  type TocSpaceSlim,
 } from '@/lib/lcp-types';
-import { isOverdue } from '@/lib/lcp-format';
+import { isFeeOverdue, isOverdue } from '@/lib/lcp-format';
 import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { FamilyDetailPanel } from './FamilyDetailPanel';
 import { SessionBriefPanel } from './SessionBriefPanel';
@@ -87,6 +91,8 @@ export function LcpRoom() {
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [phases, setPhases] = useState<LcpPhaseWithUnits[]>([]);
   const [programPosition, setProgramPosition] = useState<ProgramPosition | null>(null);
+  const [tocSpaces, setTocSpaces] = useState<TocSpaceSlim[]>([]);
+  const [feePayments, setFeePayments] = useState<Pick<ProgramFeePayment, 'family_id' | 'paid_date'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +108,7 @@ export function LcpRoom() {
 
   const load = useCallback(async () => {
     try {
-      const [fam, hw, ev, logs, se, red, ph, pos] = await Promise.all([
+      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees] = await Promise.all([
         fetchFamilies(),
         fetchAllHomework(),
         fetchEvents(),
@@ -111,6 +117,8 @@ export function LcpRoom() {
         fetchRedemptions(),
         fetchPhasesWithUnits(),
         fetchProgramPosition(),
+        fetchLcpDesignatedSpaces(),
+        fetchAllProgramFeePayments(),
       ]);
       setFamilies(fam);
       setHomework(hw);
@@ -120,6 +128,8 @@ export function LcpRoom() {
       setRedemptions(red);
       setPhases(ph);
       setProgramPosition(pos);
+      setTocSpaces(spaces);
+      setFeePayments(fees);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load LifeChange data.');
     } finally {
@@ -144,11 +154,23 @@ export function LcpRoom() {
   const pendingRedemptions = redemptions.filter((r) => r.status === 'requested');
   const familyName = (id: string) => families.find((f) => f.id === id)?.display_name ?? 'Family';
 
+  const feeDatesByFamily = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const p of feePayments) {
+      const list = map.get(p.family_id) ?? [];
+      list.push(p.paid_date);
+      map.set(p.family_id, list);
+    }
+    return map;
+  }, [feePayments]);
+  const feeOverdue = (f: Family) => isFeeOverdue(f.move_in_date, f.status, feeDatesByFamily.get(f.id) ?? []);
+
   const stats = {
     active: families.length,
     onTrack: families.filter((f) => f.status === 'on_track').length,
     needs: families.filter((f) => f.status === 'needs_attention').length,
     onboarding: families.filter((f) => f.status === 'onboarding').length,
+    feeOverdue: families.filter(feeOverdue).length,
   };
 
   function openFamily(id: string) {
@@ -172,6 +194,7 @@ export function LcpRoom() {
           <h1 className="font-serif text-2xl font-semibold">LifeChange</h1>
           <p className="mt-1 text-sm text-sparrow-gray">
             {stats.active} families · {stats.onTrack} on track · {stats.needs} need attention · {stats.onboarding} onboarding
+            {stats.feeOverdue > 0 && <span className="text-priority-p1"> · {stats.feeOverdue} program fee overdue</span>}
           </p>
         </div>
         <button onClick={() => setAddOpen(true)} className="btn-primary shrink-0">
@@ -251,6 +274,11 @@ export function LcpRoom() {
                     />
                   </div>
                 </div>
+                {feeOverdue(f) && (
+                  <span className="shrink-0 rounded-full bg-priority-p1/10 px-2 py-0.5 text-[10px] font-medium text-priority-p1">
+                    Program fee overdue
+                  </span>
+                )}
                 <span className="shrink-0 text-sparrow-gray">›</span>
               </button>
             );
@@ -330,6 +358,7 @@ export function LcpRoom() {
         sessions={sessions}
         phases={phases}
         programUnitId={programPosition?.unit_id ?? null}
+        tocSpaces={tocSpaces}
         currentUserId={profile?.id ?? ''}
         onClose={() => setFamilyOpen(false)}
         onChanged={load}
