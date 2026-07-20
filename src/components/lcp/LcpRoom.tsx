@@ -334,6 +334,7 @@ export function LcpRoom() {
         <div className="mt-6">
           {calendarLog ? (
             <SessionLogViewer
+              key={calendarLog.id}
               log={calendarLog}
               families={families}
               currentUserId={profile?.id ?? ''}

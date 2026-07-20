@@ -128,6 +128,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
   if (viewing) {
     return (
       <SessionLogViewer
+        key={viewing.id}
         log={viewing}
         families={families}
         currentUserId={currentUserId}
