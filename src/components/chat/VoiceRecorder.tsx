@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Mp3Recorder } from '@/lib/mp3Recorder';
 
 type Phase = 'recording' | 'preview' | 'sending';
 
@@ -19,10 +20,8 @@ export function VoiceRecorder({
   const [seconds, setSeconds] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewPlaying, setPreviewPlaying] = useState(false);
-  const mediaRef = useRef<MediaRecorder | null>(null);
+  const recorderRef = useRef<Mp3Recorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const mimeTypeRef = useRef<string>('audio/webm');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const durationRef = useRef(0);
   const blobRef = useRef<Blob | null>(null);
@@ -59,19 +58,7 @@ export function VoiceRecorder({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : '';
-      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      mimeTypeRef.current = mr.mimeType;
-      chunksRef.current = [];
-      mr.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      mr.start();
-      mediaRef.current = mr;
+      recorderRef.current = new Mp3Recorder(stream);
       timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
     } catch {
       onClose();
@@ -82,22 +69,16 @@ export function VoiceRecorder({
     clearTimer();
     audioRef.current?.pause();
     streamRef.current?.getTracks().forEach((t) => t.stop());
-    if (mediaRef.current && mediaRef.current.state !== 'inactive') {
-      mediaRef.current.stop();
-    }
+    recorderRef.current?.stop();
     onClose();
   }
 
   async function stopRecording() {
-    if (!mediaRef.current || phase !== 'recording') return;
+    if (!recorderRef.current || phase !== 'recording') return;
     clearTimer();
     durationRef.current = seconds;
     streamRef.current?.getTracks().forEach((t) => t.stop());
-    await new Promise<void>((resolve) => {
-      mediaRef.current!.onstop = () => resolve();
-      mediaRef.current!.stop();
-    });
-    const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current || 'audio/webm' });
+    const blob = recorderRef.current.stop();
     blobRef.current = blob;
     const url = URL.createObjectURL(blob);
     setPreviewUrl(url);

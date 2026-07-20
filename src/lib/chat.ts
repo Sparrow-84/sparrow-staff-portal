@@ -124,7 +124,11 @@ export async function uploadVoiceBlob(
   channelId: string,
   userId: string,
 ): Promise<{ url: string }> {
-  const ext = blob.type.includes('mp4') || blob.type.includes('aac') ? 'm4a' : 'webm';
+  const ext = blob.type.includes('mpeg')
+    ? 'mp3'
+    : blob.type.includes('mp4') || blob.type.includes('aac')
+      ? 'm4a'
+      : 'webm';
   const path = `${channelId}/${userId}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage
     .from('voice-messages')
