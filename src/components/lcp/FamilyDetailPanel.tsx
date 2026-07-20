@@ -180,6 +180,7 @@ export function FamilyDetailPanel({
 
       {tab === 'general' && (
         <GeneralInfoTab
+          key={family.id}
           family={family}
           tocSpaces={tocSpaces}
           householdAdult={householdAdult}
@@ -1076,7 +1077,7 @@ function HouseholdView({
 
       {adult ? (
         <p className="mt-1 text-sm text-sparrow-ink">
-          {adult.full_name} · {adult.phone} · {adult.email}
+          {adult.full_name} · {adult.phone}
         </p>
       ) : (
         <p className="mt-1 text-sm text-sparrow-gray">No adult on file.</p>
@@ -1118,7 +1119,6 @@ function HouseholdEdit({
 }) {
   const [adultName, setAdultName] = useState(adult?.full_name ?? '');
   const [adultPhone, setAdultPhone] = useState(adult?.phone ?? '');
-  const [adultEmail, setAdultEmail] = useState(adult?.email ?? '');
   const [childRows, setChildRows] = useState<{ id: string | null; name: string }[]>(
     kids.length ? kids.map((c) => ({ id: c.id, name: c.full_name })) : [{ id: null, name: '' }],
   );
@@ -1138,8 +1138,8 @@ function HouseholdEdit({
   async function save() {
     setBusy(true);
     try {
-      if (adultName.trim() || adultPhone.trim() || adultEmail.trim()) {
-        await saveHouseholdAdult(family.id, { full_name: adultName, phone: adultPhone, email: adultEmail });
+      if (adultName.trim() || adultPhone.trim()) {
+        await saveHouseholdAdult(family.id, { full_name: adultName, phone: adultPhone });
       }
 
       const originalIds = new Set(kids.map((c) => c.id));
@@ -1170,10 +1170,8 @@ function HouseholdEdit({
       <div className="mt-1">
         <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Adult</span>
         <input value={adultName} onChange={(e) => setAdultName(e.target.value)} placeholder="Full name" className="field-input" />
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-0" />
-          <input value={adultEmail} onChange={(e) => setAdultEmail(e.target.value)} placeholder="Email" className="field-input mt-0" />
-        </div>
+        <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-2" />
+        <p className="mt-1 text-xs text-sparrow-gray">Her email is the sign-in email at the top of this panel — no separate email needed here.</p>
       </div>
 
       <div className="mt-4">

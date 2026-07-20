@@ -18,7 +18,6 @@ export function AddFamilyPanel({
   const [emergencyContact, setEmergencyContact] = useState('');
   const [adultName, setAdultName] = useState('');
   const [adultPhone, setAdultPhone] = useState('');
-  const [adultEmail, setAdultEmail] = useState('');
   const [children, setChildren] = useState<string[]>(['']);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +30,6 @@ export function AddFamilyPanel({
       setEmergencyContact('');
       setAdultName('');
       setAdultPhone('');
-      setAdultEmail('');
       setChildren(['']);
       setError(null);
       setBusy(false);
@@ -39,14 +37,12 @@ export function AddFamilyPanel({
   }, [open]);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const adultEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adultEmail.trim());
   const canSave =
     name.trim().length > 0 &&
     emailValid &&
     emergencyContact.trim().length > 0 &&
     adultName.trim().length > 0 &&
     adultPhone.trim().length > 0 &&
-    adultEmailValid &&
     !busy;
 
   function setChild(i: number, value: string) {
@@ -69,7 +65,7 @@ export function AddFamilyPanel({
         login_email: email,
         current_session_number: Math.max(1, Math.min(TOTAL_SESSIONS, session)),
         emergency_contact_notes: emergencyContact,
-        adult: { full_name: adultName, phone: adultPhone, email: adultEmail },
+        adult: { full_name: adultName, phone: adultPhone },
         children,
       });
       onCreated();
@@ -120,8 +116,9 @@ export function AddFamilyPanel({
             placeholder="mother@example.com"
           />
           <p className="mt-1 text-xs text-sparrow-gray">
-            The mother signs in to the participant portal with this email. It's also the
-            allowlist — only this address can register for this family. One login per family.
+            The mother signs in to the participant portal with this email, and it's also her
+            contact email — no separate email needed below. It's also the allowlist — only
+            this address can register for this family. One login per family.
           </p>
         </div>
 
@@ -152,21 +149,12 @@ export function AddFamilyPanel({
             onChange={(e) => setAdultName(e.target.value)}
             placeholder="Full name"
           />
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <input
-              className="field-input mt-0"
-              value={adultPhone}
-              onChange={(e) => setAdultPhone(e.target.value)}
-              placeholder="Phone"
-            />
-            <input
-              type="email"
-              className="field-input mt-0"
-              value={adultEmail}
-              onChange={(e) => setAdultEmail(e.target.value)}
-              placeholder="Email"
-            />
-          </div>
+          <input
+            className="field-input mt-2"
+            value={adultPhone}
+            onChange={(e) => setAdultPhone(e.target.value)}
+            placeholder="Phone"
+          />
         </div>
 
         <div>

@@ -36,7 +36,6 @@ export interface HouseholdAdult {
   family_id: string;
   full_name: string;
   phone: string;
-  email: string;
   created_at: string;
 }
 

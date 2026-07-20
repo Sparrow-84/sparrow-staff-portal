@@ -97,7 +97,7 @@ export interface FamilyInput {
   login_email: string;
   current_session_number: number;
   emergency_contact_notes: string;
-  adult: { full_name: string; phone: string; email: string };
+  adult: { full_name: string; phone: string };
   children: string[];
 }
 
@@ -838,23 +838,26 @@ export async function uncompleteMilestone(familyId: string, milestoneId: number)
 export async function fetchHouseholdAdult(familyId: string): Promise<HouseholdAdult | null> {
   const { data, error } = await supabase
     .from('lcp_household_adults')
-    .select('id, family_id, full_name, phone, email, created_at')
+    .select('id, family_id, full_name, phone, created_at')
     .eq('family_id', familyId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data as HouseholdAdult | null;
 }
 
-/** Upserts the family's one adult record — there's only ever one per family. */
+/**
+ * Upserts the family's one adult record — there's only ever one per family.
+ * No email here: the adult is always the one who signs in, so her email is
+ * families.login_email, not a separate value to keep in sync.
+ */
 export async function saveHouseholdAdult(
   familyId: string,
-  adult: { full_name: string; phone: string; email: string },
+  adult: { full_name: string; phone: string },
 ): Promise<void> {
   const existing = await fetchHouseholdAdult(familyId);
   const row = {
     full_name: adult.full_name.trim(),
     phone: adult.phone.trim(),
-    email: adult.email.trim(),
   };
   if (existing) {
     const { error } = await supabase.from('lcp_household_adults').update(row).eq('id', existing.id);
