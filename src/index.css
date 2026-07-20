@@ -29,4 +29,54 @@
   .field-input {
     @apply mt-1 block w-full rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-sm text-sparrow-ink shadow-sm focus:border-sparrow-green focus:outline-none focus:ring-1 focus:ring-sparrow-green;
   }
+
+  /* Pasted curriculum content (Teacher Guide, devotionals, mentor content) —
+     structure from the paste (bold/headings/tables/quotes) is kept, but styled
+     consistently here rather than with whatever exact fonts/colors the source
+     (Google Docs, a Claude reply) carried in. */
+  .rich-text {
+    @apply text-sm leading-relaxed text-sparrow-ink;
+  }
+  .rich-text h1,
+  .rich-text h2,
+  .rich-text h3,
+  .rich-text h4 {
+    @apply mb-1.5 mt-4 font-serif font-semibold text-sparrow-green first:mt-0;
+  }
+  .rich-text h1 { @apply text-xl; }
+  .rich-text h2 { @apply text-lg; }
+  .rich-text h3 { @apply text-base; }
+  .rich-text h4 { @apply text-sm; }
+  .rich-text p { @apply mb-2.5; }
+  .rich-text strong,
+  .rich-text b {
+    @apply font-semibold text-sparrow-green;
+  }
+  .rich-text em,
+  .rich-text i {
+    @apply italic;
+  }
+  .rich-text ul { @apply mb-2.5 list-disc space-y-1 pl-5; }
+  .rich-text ol { @apply mb-2.5 list-decimal space-y-1 pl-5; }
+  .rich-text blockquote {
+    @apply my-3 border-l-2 border-sparrow-gold pl-3 italic text-sparrow-green-dark;
+  }
+  .rich-text a { @apply text-sparrow-green underline; }
+  .rich-text table {
+    @apply my-3 w-full border-collapse overflow-hidden rounded-lg border border-sparrow-rule text-xs;
+  }
+  .rich-text th {
+    @apply border border-sparrow-rule bg-sparrow-mist px-2 py-1.5 text-left font-semibold text-sparrow-gray;
+  }
+  .rich-text td {
+    @apply border border-sparrow-rule px-2 py-1.5 align-top;
+  }
+
+  .rich-text-editor {
+    @apply mt-1 min-h-[8rem] w-full rounded-lg border border-sparrow-rule bg-white px-3 py-2 shadow-sm focus:border-sparrow-green focus:outline-none focus:ring-1 focus:ring-sparrow-green;
+  }
+  .rich-text-editor:empty::before {
+    content: attr(data-placeholder);
+    @apply text-sparrow-gray;
+  }
 }

@@ -8,11 +8,11 @@ import {
   type SessionLog,
   type SessionLogType,
 } from '@/lib/lcp-types';
-import { fetchRecentSessionLogs, fetchTodayEvents } from '@/lib/lcp';
+import { fetchRecentSessionLogs, fetchSessionMentorContent, fetchTodayEvents } from '@/lib/lcp';
 import { timeLabel } from '@/lib/lcp-format';
 import { SessionLogEntry } from './SessionLogEntry';
 import { SessionLogViewer } from './SessionLogViewer';
-import { SessionSplitLayout } from './SessionSplitLayout';
+import { SessionSplitLayout, type MondayMentorContent } from './SessionSplitLayout';
 
 interface Props {
   families: Family[];
@@ -21,6 +21,7 @@ interface Props {
   currentUserName: string;
   phases: LcpPhaseWithUnits[];
   programUnitId: number | null;
+  programSessionId: number | null;
   onChanged: () => void;
 }
 
@@ -42,7 +43,7 @@ function formatDate(iso: string) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-export function SessionLog({ families, homeworkByFamily, currentUserId, currentUserName, phases, programUnitId, onChanged }: Props) {
+export function SessionLog({ families, homeworkByFamily, currentUserId, currentUserName, phases, programUnitId, programSessionId, onChanged }: Props) {
   const [logs, setLogs] = useState<SessionLog[]>([]);
   const [todayEvents, setTodayEvents] = useState<LcpEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +52,9 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [manualDate, setManualDate] = useState(todayISO());
   const [manualType, setManualType] = useState<SessionLogType>('monday_mentoring');
+
+  const [mondayContent, setMondayContent] = useState<MondayMentorContent | null>(null);
+  const [mondayLoading, setMondayLoading] = useState(false);
 
   async function load() {
     try {
@@ -64,6 +68,32 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
   useEffect(() => { void load(); }, []);
 
+  // Monday Mentoring reads whatever the group most recently covered in
+  // Thursday Group — the same session_id Thursday's filing just advanced.
+  useEffect(() => {
+    if (!entry || entry.sessionType !== 'monday_mentoring') return;
+    if (programSessionId == null) {
+      setMondayContent(null);
+      return;
+    }
+    setMondayLoading(true);
+    fetchSessionMentorContent(programSessionId)
+      .then((s) => {
+        setMondayContent(
+          s
+            ? {
+                sessionNumber: s.session_number,
+                sessionTitle: s.title,
+                brief: s.mentor_brief,
+                handoutEcho: s.mentor_handout_echo,
+                goingDeeper: s.mentor_going_deeper,
+              }
+            : null,
+        );
+      })
+      .finally(() => setMondayLoading(false));
+  }, [entry, programSessionId]);
+
   function handleFiled() {
     setEntry(null);
     void load();
@@ -72,7 +102,13 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
   if (entry) {
     return (
-      <SessionSplitLayout sessionLabel={entry.label} sessionDate={entry.sessionDate}>
+      <SessionSplitLayout
+        sessionLabel={entry.label}
+        sessionDate={entry.sessionDate}
+        sessionType={entry.sessionType}
+        mondayContent={mondayContent}
+        mondayLoading={mondayLoading}
+      >
         <SessionLogEntry
           {...entry}
           families={families}
@@ -81,6 +117,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
           currentUserName={currentUserName}
           phases={phases}
           programUnitId={programUnitId}
+          programSessionId={programSessionId}
           onBack={() => setEntry(null)}
           onFiled={handleFiled}
         />

@@ -17,6 +17,7 @@ import {
 import { dueLabel, isOverdue } from '@/lib/lcp-format';
 import {
   addStaffNote,
+  advanceProgramPosition,
   assignHomework,
   awardVoucher,
   createGoal,
@@ -26,7 +27,6 @@ import {
   markGoalMet,
   setHomeworkStatus,
   upsertSessionAttendance,
-  updateProgramPosition,
 } from '@/lib/lcp';
 
 const STATUSES: AttendanceStatus[] = ['on_time', 'late', 'no_show'];
@@ -54,6 +54,7 @@ interface Props {
   currentUserName: string;
   phases: LcpPhaseWithUnits[];
   programUnitId: number | null;
+  programSessionId: number | null;
   onBack: () => void;
   onFiled: () => void;
 }
@@ -76,16 +77,27 @@ export function SessionLogEntry({
   currentUserName,
   phases,
   programUnitId,
+  programSessionId,
   onBack,
   onFiled,
 }: Props) {
-  // ── curriculum advance (thursday only) ───────────────────────────
+  // ── curriculum advance (thursday only) ────────────────────────────
+  // The group moves together, so "the session to teach tonight" is simply
+  // whatever comes right after the last one filed (programSessionId). Filing
+  // tonight's session advances the pointer to it — that same pointer is what
+  // Monday Mentoring reads afterward as "the session she recently attended."
   const allUnits = useMemo(
     () => phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order),
     [phases],
   );
-  const currentUnitIndex = programUnitId != null ? allUnits.findIndex((u) => u.id === programUnitId) : -1;
-  const nextUnit = currentUnitIndex === -1 ? allUnits[0] : allUnits[currentUnitIndex + 1];
+  const allSessions = useMemo(
+    () => allUnits.flatMap((u) => u.sessions).sort((a, b) => a.session_number - b.session_number),
+    [allUnits],
+  );
+  const lastCompletedIndex = programSessionId != null ? allSessions.findIndex((s) => s.id === programSessionId) : -1;
+  const sessionToTeach = allSessions[lastCompletedIndex + 1] ?? null;
+  const willCrossUnit = programUnitId != null && sessionToTeach != null && sessionToTeach.unit_id !== programUnitId;
+  const nextUnit = willCrossUnit ? allUnits.find((u) => u.id === sessionToTeach!.unit_id) ?? null : null;
 
   const [filed, setFiled] = useState(false);
   const [advancing, setAdvancing] = useState(false);
@@ -228,8 +240,14 @@ export function SessionLogEntry({
         }
       }
 
-      if (sessionType === 'thursday_group' && nextUnit) {
-        setFiled(true);
+      if (sessionType === 'thursday_group' && sessionToTeach) {
+        if (willCrossUnit) {
+          // Crossing into a new unit is a bigger milestone — confirm before advancing.
+          setFiled(true);
+        } else {
+          await advanceProgramPosition(sessionToTeach.id, sessionToTeach.unit_id, currentUserId);
+          onFiled();
+        }
       } else {
         onFiled();
       }
@@ -241,11 +259,11 @@ export function SessionLogEntry({
   }
 
   async function advanceCurriculum() {
-    if (!nextUnit) return;
+    if (!sessionToTeach) return;
     setAdvancing(true);
     setAdvanceErr(null);
     try {
-      await updateProgramPosition(nextUnit.id, currentUserId);
+      await advanceProgramPosition(sessionToTeach.id, sessionToTeach.unit_id, currentUserId);
       onFiled();
     } catch (e) {
       setAdvanceErr(e instanceof Error ? e.message : 'Could not advance curriculum.');
@@ -410,6 +428,28 @@ export function SessionLogEntry({
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* Thursday: which session tonight covers */}
+      {isThursday && (
+        <section className="rounded-2xl border border-sparrow-green/30 bg-sparrow-sage/20 p-4 shadow-card">
+          {sessionToTeach ? (
+            <>
+              <p className="field-label">Tonight</p>
+              <p className="mt-1 text-sm font-medium text-sparrow-ink">
+                Session {sessionToTeach.session_number} · {sessionToTeach.title}
+              </p>
+              <p className="mt-0.5 text-xs text-sparrow-gray">
+                Filing this session will set it as the group's current position — what Monday
+                Mentoring reads afterward.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-sparrow-gray">
+              No more sessions left in the curriculum to advance to.
+            </p>
+          )}
         </section>
       )}
 

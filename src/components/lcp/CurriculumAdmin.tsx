@@ -1,12 +1,46 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
-import { fetchCurriculum, updateCurriculumUnit } from '@/lib/lcp';
+import { fetchAllResources, fetchCurriculum, updateCurriculumUnit } from '@/lib/lcp';
 import type {
   CurriculumPhase,
   CurriculumSessionDetail,
   CurriculumUnit,
+  Resource,
 } from '@/lib/lcp-types';
 import { SessionEditPanel } from './SessionEditPanel';
+
+interface SessionCompletion {
+  monday: boolean;
+  teacherGuide: boolean;
+  slideshow: boolean;
+  studentHandout: boolean;
+  devotionalCount: number;
+}
+
+function buildCompletionMap(sessions: CurriculumSessionDetail[], resources: Resource[]): Map<number, SessionCompletion> {
+  const bySession = new Map<number, Resource[]>();
+  for (const r of resources) {
+    if (r.session_id == null) continue;
+    const list = bySession.get(r.session_id) ?? [];
+    list.push(r);
+    bySession.set(r.session_id, list);
+  }
+  const map = new Map<number, SessionCompletion>();
+  for (const s of sessions) {
+    const rs = bySession.get(s.id) ?? [];
+    const teacherGuide = rs.find((r) => r.kind === 'teacher_guide');
+    const slideshow = rs.find((r) => r.kind === 'ppt');
+    const studentHandout = rs.find((r) => r.kind === 'handout');
+    map.set(s.id, {
+      monday: !!s.mentor_brief?.trim() && !!s.mentor_handout_echo?.trim() && !!s.mentor_going_deeper?.trim(),
+      teacherGuide: !!teacherGuide && (!!teacherGuide.content || !!teacherGuide.drive_url),
+      slideshow: !!slideshow && !!slideshow.drive_url,
+      studentHandout: !!studentHandout && !!studentHandout.drive_url,
+      devotionalCount: rs.filter((r) => r.kind === 'devotional' && r.audience === 'participant').length,
+    });
+  }
+  return map;
+}
 
 const PHASE_COLORS = [
   // Phase 1 — Groundwork: Sparrow brand green
@@ -58,6 +92,7 @@ type PhaseColor = (typeof PHASE_COLORS)[number];
 export function CurriculumAdmin() {
   const { profile } = useAuth();
   const [phases, setPhases] = useState<CurriculumPhase[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +103,9 @@ export function CurriculumAdmin() {
 
   const load = useCallback(async () => {
     try {
-      setPhases(await fetchCurriculum());
+      const [ph, res] = await Promise.all([fetchCurriculum(), fetchAllResources()]);
+      setPhases(ph);
+      setResources(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load curriculum.');
     } finally {
@@ -79,6 +116,9 @@ export function CurriculumAdmin() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const allSessions = useMemo(() => phases.flatMap((p) => p.units).flatMap((u) => u.sessions), [phases]);
+  const completion = useMemo(() => buildCompletionMap(allSessions, resources), [allSessions, resources]);
 
   function handleSessionSaved(updated: CurriculumSessionDetail) {
     setPhases((prev) =>
@@ -91,6 +131,9 @@ export function CurriculumAdmin() {
       })),
     );
     setEditSession(updated);
+    // Materials aren't touched by session save, but refresh keeps completion badges
+    // in sync if a resource was added/removed while the drawer was open.
+    void fetchAllResources().then(setResources);
   }
 
   async function handleUnitSave(
@@ -138,6 +181,7 @@ export function CurriculumAdmin() {
                   key={unit.id}
                   unit={unit}
                   phaseColor={color}
+                  completion={completion}
                   isEditing={editingUnitId === unit.id}
                   selectedSessionId={editSession?.id ?? null}
                   onToggleEdit={() =>
@@ -173,6 +217,7 @@ export function CurriculumAdmin() {
 function UnitSection({
   unit,
   phaseColor,
+  completion,
   isEditing,
   selectedSessionId,
   onToggleEdit,
@@ -181,6 +226,7 @@ function UnitSection({
 }: {
   unit: CurriculumUnit;
   phaseColor: PhaseColor;
+  completion: Map<number, SessionCompletion>;
   isEditing: boolean;
   selectedSessionId: number | null;
   onToggleEdit: () => void;
@@ -312,7 +358,9 @@ function UnitSection({
 
       {/* Session rows */}
       <ul className="divide-y divide-sparrow-rule border-t border-sparrow-rule">
-        {unit.sessions.map((s) => (
+        {unit.sessions.map((s) => {
+          const c = completion.get(s.id);
+          return (
           <li key={s.id}>
             <button
               onClick={() => onSelectSession(s)}
@@ -331,11 +379,33 @@ function UnitSection({
                   </p>
                 )}
               </div>
+              <div className="mt-0.5 flex shrink-0 items-center gap-1.5" title="Monday · Teacher Guide · Slideshow · Student Handout · Devotionals">
+                <CompletionDot ready={!!c?.monday} label="Monday Mentoring" />
+                <CompletionDot ready={!!c?.teacherGuide} label="Teacher Guide" />
+                <CompletionDot ready={!!c?.slideshow} label="Slideshow" />
+                <CompletionDot ready={!!c?.studentHandout} label="Student Handout" />
+                <span
+                  className={`text-[10px] tabular-nums ${(c?.devotionalCount ?? 0) >= 5 ? 'text-sparrow-green' : 'text-sparrow-gray'}`}
+                  title="Participant devotionals added, out of 5"
+                >
+                  {c?.devotionalCount ?? 0}/5
+                </span>
+              </div>
               <span className="mt-px shrink-0 text-xs text-sparrow-gray">›</span>
             </button>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
+  );
+}
+
+function CompletionDot({ ready, label }: { ready: boolean; label: string }) {
+  return (
+    <span
+      title={`${label}: ${ready ? 'ready' : 'missing'}`}
+      className={`h-1.5 w-1.5 shrink-0 rounded-full ${ready ? 'bg-sparrow-green' : 'bg-sparrow-rule'}`}
+    />
   );
 }

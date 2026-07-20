@@ -36,6 +36,15 @@ export interface LcpUnitSlim {
   id: number;
   name: string;
   sort_order: number;
+  sessions: LcpSessionSlim[];
+}
+
+export interface LcpSessionSlim {
+  id: number;
+  unit_id: number;
+  session_number: number;
+  title: string;
+  sort_order: number;
 }
 
 export interface ProgramPosition {
@@ -45,6 +54,9 @@ export interface ProgramPosition {
   phase_id: number;
   phase_number: number;
   phase_name: string;
+  session_id: number | null;
+  session_number: number | null;
+  session_title: string | null;
 }
 
 export interface Homework {
@@ -292,7 +304,16 @@ export interface CurriculumSessionDetail {
   title: string;
   focus: string | null;
   scripture: string | null;
+  mentor_brief: string | null;
+  mentor_handout_echo: string | null;
+  mentor_going_deeper: string | null;
 }
+
+// Shelly's fixed instructions — identical for every Monday Mentoring session,
+// shown once above that week's specific mentor content.
+export const MONDAY_GUIDE_INSTRUCTIONS = `This guide is for individual Monday mentoring conversations. Each session entry corresponds to one group session the participant has recently attended. It includes a brief context for you as mentor, the questions from her handout so you can follow up naturally, a space for your notes, and a Going Deeper section for when she is ready to go further than the group context allowed.
+
+You do not need to cover every question. Let her lead. Ask which question from her handout stayed with her most. Then follow that thread. The handout questions are a starting point, not a script.`;
 
 export const RESOURCE_KIND_LABEL: Record<ResourceKind, string> = {
   handout:       'Handout',

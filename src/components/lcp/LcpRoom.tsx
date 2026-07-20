@@ -218,6 +218,7 @@ export function LcpRoom() {
             currentUserName={profile?.full_name ?? 'Staff'}
             phases={phases}
             programUnitId={programPosition?.unit_id ?? null}
+            programSessionId={programPosition?.session_id ?? null}
             onChanged={load}
           />
         </div>

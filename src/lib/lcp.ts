@@ -121,25 +121,33 @@ export async function fetchSessions(): Promise<CurriculumSession[]> {
 export async function fetchPhasesWithUnits(): Promise<LcpPhaseWithUnits[]> {
   const { data, error } = await supabase
     .from('lcp_phases')
-    .select('id, number, name, sort_order, units:lcp_units(id, name, sort_order)')
+    .select('id, number, name, sort_order, units:lcp_units(id, name, sort_order, sessions:lcp_sessions(id, session_number, title, sort_order))')
     .order('sort_order');
   if (error) throw new Error(error.message);
   return ((data ?? []) as LcpPhaseWithUnits[]).map((p) => ({
     ...p,
-    units: [...p.units].sort((a: LcpUnitSlim, b: LcpUnitSlim) => a.sort_order - b.sort_order),
+    units: [...p.units]
+      .sort((a: LcpUnitSlim, b: LcpUnitSlim) => a.sort_order - b.sort_order)
+      .map((u) => ({
+        ...u,
+        sessions: [...u.sessions]
+          .map((s) => ({ ...s, unit_id: u.id }))
+          .sort((a, b) => a.session_number - b.session_number),
+      })),
   }));
 }
 
 export async function fetchProgramPosition(): Promise<ProgramPosition | null> {
   const { data, error } = await supabase
     .from('lcp_program_position')
-    .select('unit_id, unit:lcp_units(id, name, sort_order, phase:lcp_phases(id, number, name))')
+    .select('unit_id, session_id, unit:lcp_units(id, name, sort_order, phase:lcp_phases(id, number, name)), session:lcp_sessions(id, session_number, title)')
     .eq('id', 1)
     .maybeSingle();
   // Table doesn't exist yet (migration 0034 not applied) — degrade gracefully
   if (error) return null;
   if (!data) return null;
   const unit = data.unit as unknown as { id: number; name: string; sort_order: number; phase: { id: number; number: number; name: string } };
+  const session = data.session as unknown as { id: number; session_number: number; title: string } | null;
   if (!unit) return null;
   return {
     unit_id: data.unit_id,
@@ -148,13 +156,28 @@ export async function fetchProgramPosition(): Promise<ProgramPosition | null> {
     phase_id: unit.phase.id,
     phase_number: unit.phase.number,
     phase_name: unit.phase.name,
+    session_id: session?.id ?? null,
+    session_number: session?.session_number ?? null,
+    session_title: session?.title ?? null,
   };
 }
 
+// Manual unit-level override (LcpProgress "set position manually"/"complete unit").
+// Clears session_id since a manual jump doesn't specify which session — the next
+// Thursday filing will set it correctly via advanceProgramPosition below.
 export async function updateProgramPosition(unitId: number, updatedBy?: string): Promise<void> {
   const { error } = await supabase
     .from('lcp_program_position')
-    .upsert({ id: 1, unit_id: unitId, updated_at: new Date().toISOString(), updated_by: updatedBy ?? null });
+    .upsert({ id: 1, unit_id: unitId, session_id: null, updated_at: new Date().toISOString(), updated_by: updatedBy ?? null });
+  if (error) throw new Error(error.message);
+}
+
+// Session-level advance, called when filing a Thursday Group session — records
+// exactly which session the group just covered (what Monday Mentoring reads).
+export async function advanceProgramPosition(sessionId: number, unitId: number, updatedBy?: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_program_position')
+    .upsert({ id: 1, unit_id: unitId, session_id: sessionId, updated_at: new Date().toISOString(), updated_by: updatedBy ?? null });
   if (error) throw new Error(error.message);
 }
 
@@ -558,7 +581,7 @@ export async function fetchCurriculum(): Promise<CurriculumPhase[]> {
       id, number, name,
       units:lcp_units(
         id, name, month_label, artifact, supplement, encouragement_text,
-        sessions:lcp_sessions(id, session_number, title, focus, scripture)
+        sessions:lcp_sessions(id, session_number, title, focus, scripture, mentor_brief, mentor_handout_echo, mentor_going_deeper)
       )
     `)
     .order('number');
@@ -574,10 +597,34 @@ export async function fetchCurriculum(): Promise<CurriculumPhase[]> {
 
 export async function updateCurriculumSession(
   id: number,
-  patch: Partial<Pick<CurriculumSessionDetail, 'title' | 'focus' | 'scripture'>>,
+  patch: Partial<Pick<CurriculumSessionDetail, 'title' | 'focus' | 'scripture' | 'mentor_brief' | 'mentor_handout_echo' | 'mentor_going_deeper'>>,
 ): Promise<void> {
   const { error } = await supabase.from('lcp_sessions').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+// Every resource across every session, for the Curriculum Admin completion
+// badges — cheap enough in one query (a few hundred rows at most across 48
+// sessions) that per-session round trips aren't worth it.
+export async function fetchAllResources(): Promise<Resource[]> {
+  const { data, error } = await supabase
+    .from('lcp_resources')
+    .select('id, session_id, kind, audience, title, drive_url, content, response_prompt, due_date, locked, sort_order, created_at')
+    .not('session_id', 'is', null);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Resource[];
+}
+
+// The one session Monday Mentoring needs — whatever the group most recently
+// covered in Thursday Group (lcp_program_position.session_id).
+export async function fetchSessionMentorContent(sessionId: number): Promise<CurriculumSessionDetail | null> {
+  const { data, error } = await supabase
+    .from('lcp_sessions')
+    .select('id, session_number, title, focus, scripture, mentor_brief, mentor_handout_echo, mentor_going_deeper')
+    .eq('id', sessionId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as CurriculumSessionDetail) ?? null;
 }
 
 export async function updateCurriculumUnit(
