@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TabHelpModal } from '@/components/TabHelpModal';
 
 const CALENDAR_HELP_SECTIONS = [
@@ -166,6 +166,35 @@ export function CalendarView() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  // When arriving here from an event notification (invited/removed/created), open that
+  // event's detail panel directly — mirrors TaskWorkspace's pendingTaskOpen handoff.
+  const pendingOpenId = useRef<string | null>(
+    typeof window !== 'undefined' ? sessionStorage.getItem('sparrow.pendingEventOpen') : null,
+  );
+  useEffect(() => {
+    if (!pendingOpenId.current || events.length === 0) return;
+    const id = pendingOpenId.current;
+    pendingOpenId.current = null;
+    sessionStorage.removeItem('sparrow.pendingEventOpen');
+    const ev = events.find((x) => x.id === id);
+    if (ev) setDetailEvent(ev);
+  }, [events]);
+
+  // Same-view case: clicking an event notification while already on Calendar doesn't
+  // remount this component, so the sessionStorage handoff above never fires.
+  useEffect(() => {
+    function onOpenEvent(e: Event) {
+      const id = (e as CustomEvent<string>).detail;
+      const ev = events.find((x) => x.id === id);
+      if (ev) {
+        setDetailEvent(ev);
+        sessionStorage.removeItem('sparrow.pendingEventOpen');
+      }
+    }
+    window.addEventListener('sparrow:openEvent', onOpenEvent);
+    return () => window.removeEventListener('sparrow:openEvent', onOpenEvent);
+  }, [events]);
 
   useEffect(() => {
     if (!showDeadlines || !profile?.id) { setDeadlineTasks([]); return; }

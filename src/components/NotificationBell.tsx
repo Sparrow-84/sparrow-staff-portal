@@ -20,12 +20,15 @@ function describe(n: AppNotification): string {
   if (n.type === 'edited') return `${who} updated a task assigned to you`;
   if (n.type === 'mentioned') return `${who} mentioned you in a message`;
   if (n.type === 'event_created') return `${who} posted a new All Staff event`;
+  if (n.type === 'event_invited') return `${who} added you to an event`;
+  if (n.type === 'event_removed') return `${who} removed you from an event`;
+  if (n.type === 'commented') return `${who} commented on a task`;
   return `${who} commented on a task`;
 }
 
 function viewForNotification(n: AppNotification): View {
   if (n.type === 'mentioned') return 'messages';
-  if (n.type === 'event_created') return 'calendar';
+  if (n.type === 'event_created' || n.type === 'event_invited' || n.type === 'event_removed') return 'calendar';
   return 'tasks';
 }
 
@@ -64,6 +67,9 @@ export function NotificationBell({ onNavigate, currentUserId }: { onNavigate: (v
       // while already on Tasks silently did nothing.
       sessionStorage.setItem('sparrow.pendingTaskOpen', n.task_id);
       window.dispatchEvent(new CustomEvent('sparrow:openTask', { detail: n.task_id }));
+    } else if (n.entity === 'calendar_event' && n.entity_id) {
+      sessionStorage.setItem('sparrow.pendingEventOpen', n.entity_id);
+      window.dispatchEvent(new CustomEvent('sparrow:openEvent', { detail: n.entity_id }));
     }
     onNavigate(viewForNotification(n));
     if (!n.read) {
