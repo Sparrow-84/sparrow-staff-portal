@@ -2,9 +2,16 @@ import { useState, useTransition } from 'react';
 import {
   createLayer2Consent,
   createMediaEvent,
+  type ChildrenPhotoConsent,
   type StoryLayer2Consent,
   type StoryMediaEvent,
 } from '@/lib/stories';
+
+const CHILDREN_CONSENT_LABEL: Record<ChildrenPhotoConsent, string> = {
+  'n/a': 'No children in program',
+  yes: 'Yes, consented',
+  no: 'No, declined',
+};
 
 interface Props {
   events: StoryMediaEvent[];
@@ -26,9 +33,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
   // Layer 2 inline form state
   const [showConsentForm, setShowConsentForm] = useState(false);
   const [participantName, setParticipantName] = useState('');
-  const [formSigned, setFormSigned] = useState(true);
+  const [photoConsent, setPhotoConsent] = useState(false);
   const [dateSigned, setDateSigned] = useState('');
-  const [coversChildren, setCoversChildren] = useState(false);
+  const [childrenPhotoConsent, setChildrenPhotoConsent] = useState<ChildrenPhotoConsent>('n/a');
   const [consentNotes, setConsentNotes] = useState('');
   const [consentPending, startConsentTransition] = useTransition();
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -44,9 +51,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
 
   function resetConsentForm() {
     setParticipantName('');
-    setFormSigned(true);
+    setPhotoConsent(false);
     setDateSigned('');
-    setCoversChildren(false);
+    setChildrenPhotoConsent('n/a');
     setConsentNotes('');
     setConsentError(null);
     setShowConsentForm(false);
@@ -83,9 +90,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
       try {
         await createLayer2Consent({
           participant_name: participantName.trim(),
-          form_signed: formSigned,
+          photo_consent: photoConsent,
           date_signed: dateSigned || null,
-          covers_children: coversChildren,
+          children_photo_consent: childrenPhotoConsent,
           notes: consentNotes.trim() || null,
           logged_by: currentUserId,
         });
@@ -116,8 +123,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
           </li>
           <li>
             <span className="font-medium text-sparrow-ink">Layer 2 — Participant photo form</span> —
-            Optional form for participants who want explicit photo consent on record. Covers children
-            if noted. Documented here.
+            Everyone signs the release, but the photo/video sections (participant and children) are
+            separate optional checkboxes — a signed form does not by itself mean photos are allowed.
+            Documented here.
           </li>
           <li>
             <span className="font-medium text-sparrow-ink">Layer 3 — Story-level verbal consent</span> —
@@ -278,26 +286,44 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 />
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap gap-4 text-sm">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formSigned}
-                  onChange={(e) => setFormSigned(e.target.checked)}
-                  className="h-4 w-4 accent-sparrow-green"
-                />
-                Form signed
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={coversChildren}
-                  onChange={(e) => setCoversChildren(e.target.checked)}
-                  className="h-4 w-4 accent-sparrow-green"
-                />
-                Covers children
-              </label>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <label className="field-label" htmlFor="mr-p-photo">
+                  Photos/video of participant <span className="font-normal text-sparrow-gray">(Section 2 of the form)</span>
+                </label>
+                <select
+                  id="mr-p-photo"
+                  className="field-input"
+                  value={photoConsent ? 'yes' : 'no'}
+                  onChange={(e) => setPhotoConsent(e.target.value === 'yes')}
+                >
+                  <option value="no">No, declined</option>
+                  <option value="yes">Yes, consented</option>
+                </select>
+              </div>
+              <div>
+                <label className="field-label" htmlFor="mr-p-children-photo">
+                  Photos/video of children <span className="font-normal text-sparrow-gray">(Section 3)</span>
+                </label>
+                <select
+                  id="mr-p-children-photo"
+                  className="field-input"
+                  value={childrenPhotoConsent}
+                  onChange={(e) => setChildrenPhotoConsent(e.target.value as ChildrenPhotoConsent)}
+                >
+                  {(Object.entries(CHILDREN_CONSENT_LABEL) as [ChildrenPhotoConsent, string][]).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
+            <p className="mt-2 text-xs text-sparrow-gray">
+              Signing the release form is separate from consenting to photos — Sections 2 and 3 are optional
+              checkboxes on the form, so a signed form can still have either left unchecked. Log exactly what
+              the form says, not whether it was signed.
+            </p>
             <div className="mt-3">
               <label className="field-label" htmlFor="mr-p-notes">
                 Notes <span className="font-normal text-sparrow-gray">(optional)</span>
@@ -330,9 +356,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
               <thead>
                 <tr className="border-b border-sparrow-rule bg-sparrow-mist/40">
                   <th className="px-4 py-2 text-left font-semibold text-sparrow-gray">Participant</th>
-                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray">Signed</th>
                   <th className="px-4 py-2 text-left font-semibold text-sparrow-gray">Date signed</th>
-                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray">Covers children</th>
+                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray">Photos — participant</th>
+                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray">Photos — children</th>
                   <th className="px-4 py-2 text-left font-semibold text-sparrow-gray">Notes</th>
                 </tr>
               </thead>
@@ -340,19 +366,21 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 {consents.map((c) => (
                   <tr key={c.id}>
                     <td className="px-4 py-2.5 font-medium text-sparrow-ink">{c.participant_name}</td>
-                    <td className="px-4 py-2.5 text-center">
-                      {c.form_signed ? (
-                        <span className="text-sparrow-green">✓</span>
-                      ) : (
-                        <span className="text-priority-p1">✗</span>
-                      )}
-                    </td>
                     <td className="px-4 py-2.5 text-sparrow-gray">
                       {c.date_signed ? formatDate(c.date_signed) : '—'}
                     </td>
                     <td className="px-4 py-2.5 text-center">
-                      {c.covers_children ? (
-                        <span className="text-sparrow-green">✓</span>
+                      {c.photo_consent ? (
+                        <span className="font-medium text-sparrow-green">Yes</span>
+                      ) : (
+                        <span className="font-medium text-priority-p1">No</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
+                      {c.children_photo_consent === 'yes' ? (
+                        <span className="font-medium text-sparrow-green">Yes</span>
+                      ) : c.children_photo_consent === 'no' ? (
+                        <span className="font-medium text-priority-p1">No</span>
                       ) : (
                         <span className="text-sparrow-gray">—</span>
                       )}

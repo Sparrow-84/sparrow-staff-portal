@@ -4,6 +4,7 @@ import { supabase } from './supabase';
 
 export type GatheringMethod = 'interview' | 'google_form' | 'freewrite' | 'staff_written';
 export type VerbalConsent = 'yes' | 'no' | 'not_asked';
+export type ChildrenPhotoConsent = 'n/a' | 'yes' | 'no';
 
 export interface Story {
   id: string;
@@ -60,9 +61,9 @@ export interface StoryMediaEventInput {
 export interface StoryLayer2Consent {
   id: string;
   participant_name: string;
-  form_signed: boolean;
+  photo_consent: boolean;
   date_signed: string | null;
-  covers_children: boolean;
+  children_photo_consent: ChildrenPhotoConsent;
   notes: string | null;
   logged_by: string | null;
   created_at: string;
@@ -70,9 +71,9 @@ export interface StoryLayer2Consent {
 
 export interface StoryLayer2ConsentInput {
   participant_name: string;
-  form_signed: boolean;
+  photo_consent: boolean;
   date_signed: string | null;
-  covers_children: boolean;
+  children_photo_consent: ChildrenPhotoConsent;
   notes: string | null;
   logged_by: string | null;
 }
