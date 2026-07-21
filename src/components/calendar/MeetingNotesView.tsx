@@ -66,6 +66,8 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   const [initialContent, setInitialContent] = useState<{ prep: string; live: string; shared: string } | null>(null);
   const [privateStatus, setPrivateStatus] = useState<SaveStatus>('idle');
   const [sharedStatus, setSharedStatus] = useState<SaveStatus>('idle');
+  const [closing, setClosing] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
 
   const prepRef = useRef<HTMLDivElement>(null);
   const liveRef = useRef<HTMLDivElement>(null);
@@ -201,6 +203,57 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
     }, 1000);
   }, [event.id, userId]);
 
+  // Close is the one path that must never silently drop content: cancel any
+  // pending debounce timers and save directly, awaited, so a failure is
+  // actually shown instead of discarded when the panel unmounts.
+  async function flushAndClose() {
+    if (!loadSucceeded.current) {
+      onClose();
+      return;
+    }
+    setClosing(true);
+    setCloseError(null);
+    if (privateTimer.current) clearTimeout(privateTimer.current);
+    if (sharedTimer.current) clearTimeout(sharedTimer.current);
+
+    const [{ error: privError }, { error: sharedError }] = await Promise.all([
+      supabase.from('meeting_notes').upsert(
+        {
+          event_id: event.id,
+          user_id: userId,
+          prep_notes: latestPrep.current,
+          live_notes: latestLive.current,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'event_id,user_id' },
+      ),
+      supabase.from('event_shared_notes').upsert(
+        {
+          event_id: event.id,
+          notes: sanitize(latestShared.current),
+          updated_at: new Date().toISOString(),
+          updated_by: userId,
+        },
+        { onConflict: 'event_id' },
+      ),
+    ]);
+
+    setClosing(false);
+    if (privError || sharedError) {
+      setPrivateStatus(privError ? 'error' : privateStatus);
+      setSharedStatus(sharedError ? 'error' : sharedStatus);
+      setCloseError(
+        privError && sharedError
+          ? 'Could not save your private or shared notes. Nothing is lost yet — try again, or close without saving.'
+          : privError
+            ? 'Could not save your private notes. Nothing is lost yet — try again, or close without saving.'
+            : 'Could not save your shared notes. Nothing is lost yet — try again, or close without saving.',
+      );
+      return;
+    }
+    onClose();
+  }
+
   function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
     e.preventDefault();
     const html = e.nativeEvent.clipboardData?.getData('text/html');
@@ -283,17 +336,38 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
           <p className="mt-0.5 text-sm text-sparrow-gray">{dateLabel} · {timeLabel}</p>
         </div>
         <div className="flex items-center gap-4">
-          {displayStatus === 'saving' && <span className="text-xs text-sparrow-gray">Saving…</span>}
-          {displayStatus === 'saved' && <span className="text-xs text-sparrow-gray">Saved</span>}
-          {displayStatus === 'error' && <span className="text-xs text-priority-p1">Error saving</span>}
+          {!closing && displayStatus === 'saving' && <span className="text-xs text-sparrow-gray">Saving…</span>}
+          {!closing && displayStatus === 'saved' && <span className="text-xs text-sparrow-gray">Saved</span>}
+          {!closing && displayStatus === 'error' && <span className="text-xs text-priority-p1">Error saving</span>}
           <button
-            onClick={onClose}
-            className="rounded-xl border border-sparrow-rule px-4 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist"
+            onClick={flushAndClose}
+            disabled={closing}
+            className="rounded-xl border border-sparrow-rule px-4 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist disabled:opacity-60"
           >
-            Close notes
+            {closing ? 'Saving…' : 'Close notes'}
           </button>
         </div>
       </div>
+
+      {closeError && (
+        <div className="flex items-center justify-between gap-4 border-b border-priority-p1/30 bg-priority-p1/5 px-6 py-3">
+          <p className="text-sm text-priority-p1">{closeError}</p>
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={flushAndClose}
+              className="rounded-lg border border-priority-p1/40 px-3 py-1.5 text-xs font-medium text-priority-p1 hover:bg-priority-p1/10"
+            >
+              Try again
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-sparrow-gray hover:bg-sparrow-mist"
+            >
+              Close without saving
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Formatting toolbar */}
       <Toolbar />
