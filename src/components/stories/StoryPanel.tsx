@@ -67,6 +67,11 @@ export function StoryPanel({ open, story, profiles, currentUserId, onClose, onCh
   const [body, setBody] = useState('');
   const [layer3Verbal, setLayer3Verbal] = useState<VerbalConsent>('not_asked');
   const [layer3Preview, setLayer3Preview] = useState(false);
+  // RichTextEditor only seeds its contentEditable DOM on mount and relies on its `key`
+  // changing to reset — story?.id already gives each existing story a unique key, but
+  // every "Add story" session shares the same null id, so this bumps the key each time
+  // a fresh add session starts (see the else branch below).
+  const [newBodySeed, setNewBodySeed] = useState(0);
 
   // Anyone who can actually get into this room — same rule the room itself uses
   // (admins, plus whoever's been individually granted access) — so this list
@@ -103,6 +108,7 @@ export function StoryPanel({ open, story, profiles, currentUserId, onClose, onCh
       setBody('');
       setLayer3Verbal('not_asked');
       setLayer3Preview(false);
+      setNewBodySeed((n) => n + 1);
     }
   }, [open, story, currentUserId]);
 
@@ -408,7 +414,7 @@ export function StoryPanel({ open, story, profiles, currentUserId, onClose, onCh
       <div className="mt-4">
         <label className="field-label">Story body</label>
         <RichTextEditor
-          key={story?.id ?? 'new'}
+          key={story?.id ?? `new-${newBodySeed}`}
           value={body}
           onChange={setBody}
           placeholder="Write the story here…"
