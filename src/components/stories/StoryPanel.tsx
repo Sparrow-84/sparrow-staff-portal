@@ -1,23 +1,28 @@
 import { useEffect, useState, useTransition } from 'react';
 import { Drawer } from '@/components/lcp/Drawer';
 import { RichTextEditor } from './RichTextEditor';
+import { StoryTagPicker } from './StoryTagPicker';
 import {
   createStory,
   deleteStory,
   updateStory,
   type GatheringMethod,
   type Story,
+  type StoryTag,
   type VerbalConsent,
 } from '@/lib/stories';
 import type { Profile } from '@/lib/types';
+import { LABEL_COLORS } from '@/components/LabelPill';
 
 interface Props {
   open: boolean;
   story: Story | null; // null = add mode
   profiles: Profile[];
+  storyTags: StoryTag[];
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
+  onTagsChanged: () => void;
 }
 
 const GATHERING_METHODS: { value: GatheringMethod; label: string }[] = [
@@ -49,7 +54,7 @@ const BODY_DISPLAY_CLASSES =
   '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 ' +
   '[&_li]:mb-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2';
 
-export function StoryPanel({ open, story, profiles, currentUserId, onClose, onChanged }: Props) {
+export function StoryPanel({ open, story, profiles, storyTags, currentUserId, onClose, onChanged, onTagsChanged }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -62,7 +67,7 @@ export function StoryPanel({ open, story, profiles, currentUserId, onClose, onCh
   const [dateGathered, setDateGathered] = useState('');
   const [gatheringMethod, setGatheringMethod] = useState<GatheringMethod>('interview');
   const [loggedBy, setLoggedBy] = useState('');
-  const [tagsRaw, setTagsRaw] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [usedIn, setUsedIn] = useState('');
   const [body, setBody] = useState('');
   const [layer3Verbal, setLayer3Verbal] = useState<VerbalConsent>('not_asked');
@@ -91,7 +96,7 @@ export function StoryPanel({ open, story, profiles, currentUserId, onClose, onCh
       setDateGathered(story.date_gathered);
       setGatheringMethod(story.gathering_method);
       setLoggedBy(story.logged_by ?? '');
-      setTagsRaw(story.tags.join(', '));
+      setTags(story.tags);
       setUsedIn(story.used_in ?? '');
       setBody(story.body);
       setLayer3Verbal(story.layer3_verbal_consent);
@@ -103,7 +108,7 @@ export function StoryPanel({ open, story, profiles, currentUserId, onClose, onCh
       setDateGathered('');
       setGatheringMethod('interview');
       setLoggedBy(currentUserId);
-      setTagsRaw('');
+      setTags([]);
       setUsedIn('');
       setBody('');
       setLayer3Verbal('not_asked');
@@ -120,10 +125,7 @@ export function StoryPanel({ open, story, profiles, currentUserId, onClose, onCh
       date_gathered: dateGathered,
       gathering_method: gatheringMethod,
       logged_by: loggedBy || null,
-      tags: tagsRaw
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags,
       used_in: usedIn.trim() || null,
       body,
       layer3_verbal_consent: layer3Verbal,
@@ -229,11 +231,15 @@ export function StoryPanel({ open, story, profiles, currentUserId, onClose, onCh
 
         {story.tags.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1">
-            {story.tags.map((tag) => (
-              <span key={tag} className="rounded-full bg-sparrow-sage px-2 py-0.5 text-[10px] font-medium text-sparrow-green">
-                {tag}
-              </span>
-            ))}
+            {story.tags.map((tag) => {
+              const color = storyTags.find((t) => t.name === tag)?.color;
+              const pill = LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-sparrow-sage text-sparrow-green';
+              return (
+                <span key={tag} className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${pill}`}>
+                  {tag}
+                </span>
+              );
+            })}
           </div>
         )}
 
@@ -382,32 +388,29 @@ export function StoryPanel({ open, story, profiles, currentUserId, onClose, onCh
         </div>
       </div>
 
-      {/* Tags + Used in */}
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <div>
-          <label className="field-label" htmlFor="sp-tags">
-            Tags <span className="font-normal text-sparrow-gray">(comma-separated)</span>
-          </label>
-          <input
-            id="sp-tags"
-            className="field-input"
-            value={tagsRaw}
-            onChange={(e) => setTagsRaw(e.target.value)}
-            placeholder="lcp, housing, newsletter"
-          />
-        </div>
-        <div>
-          <label className="field-label" htmlFor="sp-used-in">
-            Used in <span className="font-normal text-sparrow-gray">(optional)</span>
-          </label>
-          <input
-            id="sp-used-in"
-            className="field-input"
-            value={usedIn}
-            onChange={(e) => setUsedIn(e.target.value)}
-            placeholder="e.g. Aug 2026 newsletter"
-          />
-        </div>
+      {/* Tags */}
+      <div className="mt-4">
+        <StoryTagPicker
+          value={tags}
+          allTags={storyTags}
+          currentUserId={currentUserId}
+          onChange={setTags}
+          onTagsChanged={onTagsChanged}
+        />
+      </div>
+
+      {/* Used in */}
+      <div className="mt-4">
+        <label className="field-label" htmlFor="sp-used-in">
+          Used in <span className="font-normal text-sparrow-gray">(optional)</span>
+        </label>
+        <input
+          id="sp-used-in"
+          className="field-input"
+          value={usedIn}
+          onChange={(e) => setUsedIn(e.target.value)}
+          placeholder="e.g. Aug 2026 newsletter"
+        />
       </div>
 
       {/* Story body */}

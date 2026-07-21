@@ -58,6 +58,14 @@ export interface StoryMediaEventInput {
   logged_by: string | null;
 }
 
+export interface StoryTag {
+  id: string;
+  name: string;
+  color: string; // matches a LABEL_COLORS id
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface StoryLayer2Consent {
   id: string;
   participant_name: string;
@@ -108,6 +116,33 @@ export async function updateStory(id: string, patch: Partial<StoryInput>): Promi
 
 export async function deleteStory(id: string): Promise<void> {
   const { error } = await supabase.from('stories').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Story tags ────────────────────────────────────────────────────────
+
+export async function getStoryTags(): Promise<StoryTag[]> {
+  const { data, error } = await supabase
+    .from('story_tags')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) return []; // table may not exist until 0098 is applied
+  return (data ?? []) as StoryTag[];
+}
+
+export async function createStoryTag(input: { name: string; color: string; created_by: string }): Promise<StoryTag> {
+  const { data, error } = await supabase.from('story_tags').insert(input).select().single();
+  if (error) throw new Error(error.message);
+  return data as StoryTag;
+}
+
+export async function updateStoryTag(id: string, patch: { name?: string; color?: string }): Promise<void> {
+  const { error } = await supabase.from('story_tags').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteStoryTag(id: string): Promise<void> {
+  const { error } = await supabase.from('story_tags').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 

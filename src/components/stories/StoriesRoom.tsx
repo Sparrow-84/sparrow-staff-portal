@@ -5,9 +5,11 @@ import {
   getLayer2Consents,
   getMediaEvents,
   getStories,
+  getStoryTags,
   type Story,
   type StoryLayer2Consent,
   type StoryMediaEvent,
+  type StoryTag,
 } from '@/lib/stories';
 import type { Profile } from '@/lib/types';
 import { StoriesTab } from './StoriesTab';
@@ -31,22 +33,25 @@ export function StoriesRoom() {
   const [events, setEvents] = useState<StoryMediaEvent[]>([]);
   const [consents, setConsents] = useState<StoryLayer2Consent[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [storyTags, setStoryTags] = useState<StoryTag[]>([]);
 
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [ss, ev, co, pp] = await Promise.all([
+      const [ss, ev, co, pp, tg] = await Promise.all([
         getStories(),
         getMediaEvents(),
         getLayer2Consents(),
         fetchProfiles(),
+        getStoryTags(),
       ]);
       setStories(ss);
       setEvents(ev);
       setConsents(co);
       setProfiles(pp);
+      setStoryTags(tg);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load Stories & Media room.');
     } finally {
@@ -112,6 +117,7 @@ export function StoriesRoom() {
           <StoriesTab
             stories={stories}
             profiles={profiles}
+            storyTags={storyTags}
             currentUserId={profile?.id ?? ''}
             onAdd={openAdd}
             onEdit={openEdit}
@@ -132,9 +138,11 @@ export function StoriesRoom() {
         open={panelOpen}
         story={selectedStory}
         profiles={profiles}
+        storyTags={storyTags}
         currentUserId={profile?.id ?? ''}
         onClose={closePanel}
         onChanged={load}
+        onTagsChanged={load}
       />
     </div>
   );

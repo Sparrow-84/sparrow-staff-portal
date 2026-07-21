@@ -1,9 +1,11 @@
 import type { Profile } from '@/lib/types';
-import type { Story } from '@/lib/stories';
+import type { Story, StoryTag } from '@/lib/stories';
+import { LABEL_COLORS } from '@/components/LabelPill';
 
 interface Props {
   stories: Story[];
   profiles: Profile[];
+  storyTags: StoryTag[];
   currentUserId: string;
   onAdd: () => void;
   onEdit: (story: Story) => void;
@@ -16,7 +18,12 @@ const METHOD_LABEL: Record<string, string> = {
   staff_written: 'Staff Testimonial',
 };
 
-export function StoriesTab({ stories, onAdd, onEdit }: Props) {
+function tagPillClass(tags: StoryTag[], name: string): string {
+  const color = tags.find((t) => t.name === name)?.color;
+  return LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-sparrow-sage text-sparrow-green';
+}
+
+export function StoriesTab({ stories, storyTags, onAdd, onEdit }: Props) {
   return (
     <div>
       {/* Rules box */}
@@ -81,7 +88,7 @@ export function StoriesTab({ stories, onAdd, onEdit }: Props) {
                     {s.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-sparrow-sage px-2 py-0.5 text-[10px] font-medium text-sparrow-green"
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tagPillClass(storyTags, tag)}`}
                       >
                         {tag}
                       </span>
