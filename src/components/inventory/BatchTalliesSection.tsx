@@ -6,6 +6,7 @@ import {
   BATCH_CATEGORIES, BENTON_SCHEDULE_SHORT, formatCost,
   type InvBatchTally,
 } from '@/lib/inventory-types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 // ── Info button ───────────────────────────────────────────────────────────
 
@@ -60,12 +61,17 @@ function TallyRow({
   const filed = tally.filed_value;
   const gap = filed != null ? registerValue - filed : null;
 
+  const valueId = `tally-value-${tally.category.replace(/[^a-z0-9]+/gi, '-')}`;
+  const parsedDraft = parseFloat(draftValue);
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: valueId, label: 'Filed value', valid: draftValue.trim() !== '' && !isNaN(parsedDraft) && parsedDraft >= 0 },
+  ]);
+
   async function saveValue() {
-    const parsed = parseFloat(draftValue);
-    if (isNaN(parsed) || parsed < 0) return;
+    if (!validate()) return;
     setSaving(true);
     try {
-      await onSave({ filed_value: parsed });
+      await onSave({ filed_value: parsedDraft });
       setEditingValue(false);
     } finally {
       setSaving(false);
@@ -107,38 +113,46 @@ function TallyRow({
       {/* Filed value */}
       <td className="py-2.5 pr-3 text-right whitespace-nowrap">
         {editingValue ? (
-          <span className="inline-flex items-center gap-1.5">
-            <span className="text-xs text-sparrow-gray">$</span>
-            <input
-              type="number"
-              min={0}
-              step={1}
-              value={draftValue}
-              onChange={(e) => setDraftValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') void saveValue(); if (e.key === 'Escape') setEditingValue(false); }}
-              className="w-20 rounded border border-sparrow-green px-1.5 py-0.5 text-sm text-sparrow-ink focus:outline-none"
-              autoFocus
-            />
-            <button
-              type="button"
-              onClick={() => void saveValue()}
-              disabled={saving}
-              className="text-xs text-sparrow-green font-medium disabled:opacity-40"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditingValue(false)}
-              className="text-xs text-sparrow-gray"
-            >
-              ✕
-            </button>
+          <span className="inline-flex flex-col items-end gap-1">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="text-xs text-sparrow-gray">$</span>
+              <input
+                id={valueId}
+                type="number"
+                min={0}
+                step={1}
+                value={draftValue}
+                onChange={(e) => { setDraftValue(e.target.value); clear(valueId); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') void saveValue(); if (e.key === 'Escape') setEditingValue(false); }}
+                className={`w-20 rounded border px-1.5 py-0.5 text-sm text-sparrow-ink focus:outline-none ${
+                  fieldClass(valueId, '').includes('field-input-error')
+                    ? 'border-priority-p1 focus:border-priority-p1'
+                    : 'border-sparrow-green'
+                }`}
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => void saveValue()}
+                disabled={saving}
+                className="text-xs text-sparrow-green font-medium disabled:opacity-40"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingValue(false)}
+                className="text-xs text-sparrow-gray"
+              >
+                ✕
+              </button>
+            </span>
+            {missingMessage && <span className="text-[11px] text-priority-p1">{missingMessage}</span>}
           </span>
         ) : (
           <button
             type="button"
-            onClick={() => { setDraftValue(String(tally.filed_value ?? '')); setEditingValue(true); }}
+            onClick={() => { setDraftValue(String(tally.filed_value ?? '')); setEditingValue(true); resetValidation(); }}
             className={`text-sm font-medium hover:underline transition ${
               filed == null ? 'text-sparrow-gold italic' : 'text-sparrow-ink'
             }`}

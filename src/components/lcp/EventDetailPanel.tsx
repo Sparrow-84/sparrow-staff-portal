@@ -6,6 +6,7 @@ import { dayLabel, timeLabel } from '@/lib/lcp-format';
 import { useAuth } from '@/auth/AuthContext';
 import { sendPush, sendLcpFamilyPush } from '@/lib/push';
 import { Drawer } from './Drawer';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 const KIND_COLOR: Record<string, string> = {
   curriculum: 'bg-sparrow-green/10 text-sparrow-green',
@@ -43,6 +44,12 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
   const [editLocation, setEditLocation] = useState('');
   const [editMandatory, setEditMandatory] = useState(false);
 
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'lcp-edit-title', label: 'Title', valid: editTitle.trim().length > 0 },
+    { key: 'lcp-edit-date', label: 'Date', valid: !!editDate },
+    { key: 'lcp-edit-start-time', label: 'Start time', valid: !!editStartTime },
+  ]);
+
   function handleClose() {
     setMode('view');
     setConfirmStep('idle');
@@ -60,16 +67,18 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
     setEditLocation(event.location ?? '');
     setEditMandatory(event.mandatory);
     setError(null);
+    resetValidation();
     setMode('edit');
   }
 
   function cancelEdit() {
     setMode('view');
     setError(null);
+    resetValidation();
   }
 
   async function handleSave(saveMode: 'single' | 'future') {
-    if (!event) return;
+    if (!event || !validate()) return;
     setSaving(saveMode);
     setError(null);
     try {
@@ -156,25 +165,24 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
     ? `${timeLabel(event.starts_at)} – ${timeLabel(event.ends_at!)}`
     : timeLabel(event.starts_at);
   const isRecurring = !!event.recurrence_id;
-  const canSave = editTitle.trim().length > 0 && editDate && editStartTime;
 
   function renderFooter() {
     if (mode === 'edit') {
       return (
         <div className="space-y-2">
-          {error && <p className="text-xs text-priority-p1">{error}</p>}
+          {(error || missingMessage) && <p className="text-xs text-priority-p1">{error ?? missingMessage}</p>}
           {isRecurring ? (
             <>
               <button
                 onClick={() => handleSave('single')}
-                disabled={!canSave || !!saving}
+                disabled={!!saving}
                 className="btn-primary w-full"
               >
                 {saving === 'single' ? 'Saving…' : 'Save this event'}
               </button>
               <button
                 onClick={() => handleSave('future')}
-                disabled={!canSave || !!saving}
+                disabled={!!saving}
                 className="w-full rounded-xl border border-sparrow-green py-2 text-sm font-medium text-sparrow-green hover:bg-sparrow-green/5"
               >
                 {saving === 'future' ? 'Saving…' : 'Save this + all future'}
@@ -183,7 +191,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
           ) : (
             <button
               onClick={() => handleSave('single')}
-              disabled={!canSave || !!saving}
+              disabled={!!saving}
               className="btn-primary w-full"
             >
               {saving === 'single' ? 'Saving…' : 'Save changes'}
@@ -270,12 +278,13 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
       {mode === 'edit' ? (
         <div className="space-y-5">
           <div>
-            <label className="field-label">Title</label>
+            <label className="field-label" htmlFor="lcp-edit-title">Title</label>
             <input
+              id="lcp-edit-title"
               type="text"
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="field-input"
+              onChange={(e) => { setEditTitle(e.target.value); clear('lcp-edit-title'); }}
+              className={fieldClass('lcp-edit-title')}
             />
           </div>
 
@@ -290,21 +299,23 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="field-label">Date</label>
+              <label className="field-label" htmlFor="lcp-edit-date">Date</label>
               <input
+                id="lcp-edit-date"
                 type="date"
                 value={editDate}
-                onChange={(e) => setEditDate(e.target.value)}
-                className="field-input"
+                onChange={(e) => { setEditDate(e.target.value); clear('lcp-edit-date'); }}
+                className={fieldClass('lcp-edit-date')}
               />
             </div>
             <div>
-              <label className="field-label">Start time</label>
+              <label className="field-label" htmlFor="lcp-edit-start-time">Start time</label>
               <input
+                id="lcp-edit-start-time"
                 type="time"
                 value={editStartTime}
-                onChange={(e) => setEditStartTime(e.target.value)}
-                className="field-input"
+                onChange={(e) => { setEditStartTime(e.target.value); clear('lcp-edit-start-time'); }}
+                className={fieldClass('lcp-edit-start-time')}
               />
             </div>
             <div>

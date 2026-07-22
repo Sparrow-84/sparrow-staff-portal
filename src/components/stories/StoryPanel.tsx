@@ -13,6 +13,7 @@ import {
 } from '@/lib/stories';
 import type { Profile } from '@/lib/types';
 import { LABEL_COLORS } from '@/components/LabelPill';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 interface Props {
   open: boolean;
@@ -115,7 +116,15 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
       setLayer3Preview(false);
       setNewBodySeed((n) => n + 1);
     }
+    resetValidation();
   }, [open, story, currentUserId]);
+
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'sp-title', label: 'Title', valid: title.trim().length > 0 },
+    { key: 'sp-subject', label: 'Real name', valid: subjectName.trim().length > 0 },
+    { key: 'sp-alias', label: 'Alias', valid: subjectAlias.trim().length > 0 },
+    { key: 'sp-date', label: 'Date gathered', valid: !!dateGathered },
+  ]);
 
   function buildPayload() {
     return {
@@ -134,10 +143,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
   }
 
   function save() {
-    if (!title.trim() || !subjectName.trim() || !subjectAlias.trim() || !dateGathered) {
-      setError('Title, real name, alias, and date gathered are required.');
-      return;
-    }
+    if (!validate()) return;
     startTransition(async () => {
       try {
         if (story) {
@@ -301,9 +307,9 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
       </label>
       <input
         id="sp-title"
-        className="field-input"
+        className={fieldClass('sp-title')}
         value={title}
-        onChange={(e) => setTitle(e.target.value)}
+        onChange={(e) => { setTitle(e.target.value); clear('sp-title'); }}
         placeholder="e.g. From Survival to Stability"
       />
 
@@ -315,9 +321,9 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
           </label>
           <input
             id="sp-subject"
-            className="field-input"
+            className={fieldClass('sp-subject')}
             value={subjectName}
-            onChange={(e) => setSubjectName(e.target.value)}
+            onChange={(e) => { setSubjectName(e.target.value); clear('sp-subject'); }}
             placeholder="e.g. Maria R."
           />
         </div>
@@ -327,9 +333,9 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
           </label>
           <input
             id="sp-alias"
-            className="field-input"
+            className={fieldClass('sp-alias')}
             value={subjectAlias}
-            onChange={(e) => setSubjectAlias(e.target.value)}
+            onChange={(e) => { setSubjectAlias(e.target.value); clear('sp-alias'); }}
             placeholder="e.g. Grace"
           />
         </div>
@@ -343,9 +349,9 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
         <input
           id="sp-date"
           type="date"
-          className="field-input"
+          className={fieldClass('sp-date')}
           value={dateGathered}
-          onChange={(e) => setDateGathered(e.target.value)}
+          onChange={(e) => { setDateGathered(e.target.value); clear('sp-date'); }}
         />
       </div>
 
@@ -462,7 +468,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
         )}
       </div>
 
-      {error && <p className="mt-4 text-sm text-priority-p1">{error}</p>}
+      {(error || missingMessage) && <p className="mt-4 text-sm text-priority-p1">{error ?? missingMessage}</p>}
     </Drawer>
   );
 }

@@ -22,6 +22,7 @@ import {
   type InvHouseFlip, type InvFlipItemCheck,
   type InvFlipLeaveBehind, type InvFlipNewItem, type InvSubLocation,
 } from '@/lib/inventory-types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -578,20 +579,24 @@ function LeaveBehindScreen({
 }) {
   const [showForm, setShowForm] = useState(false);
   const [nothingLeft, setNothingLeft] = useState(false);
+  const [desc, setDesc] = useState('');
   const [formErr, setFormErr] = useState('');
   const [formSaving, setFormSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'lb-desc', label: 'Description', valid: desc.trim().length > 0 },
+  ]);
+
   async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!validate()) return;
     const fd = new FormData(e.currentTarget);
-    const desc = (fd.get('description') as string).trim();
-    if (!desc) { setFormErr('Description is required.'); return; }
     setFormSaving(true);
     setFormErr('');
     try {
       const lb = await addLeaveBehind(flip.id, {
-        description:     desc,
+        description:     desc.trim(),
         condition:       fd.get('condition') as string,
         estimated_value: fd.get('estimated_value') ? Number(fd.get('estimated_value')) : null,
         sub_location_id: (fd.get('sub_location_id') as string) || null,
@@ -600,6 +605,8 @@ function LeaveBehindScreen({
       });
       setLeaveBehinds((prev) => [...prev, lb]);
       setShowForm(false);
+      setDesc('');
+      resetValidation();
       formRef.current?.reset();
     } catch (err) {
       setFormErr(err instanceof Error ? err.message : 'Could not save.');
@@ -664,12 +671,18 @@ function LeaveBehindScreen({
           className="rounded-xl border border-sparrow-rule bg-white p-4 space-y-3"
         >
           <p className="text-sm font-medium text-sparrow-ink">Add leave-behind</p>
-          {formErr && <p className="text-xs text-priority-p1">{formErr}</p>}
+          {(formErr || missingMessage) && <p className="text-xs text-priority-p1">{formErr || missingMessage}</p>}
 
           <input
-            name="description"
+            id="lb-desc"
+            value={desc}
+            onChange={(e) => { setDesc(e.target.value); clear('lb-desc'); }}
             placeholder="Description (required)"
-            className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+            className={
+              fieldClass('lb-desc', '').includes('field-input-error')
+                ? 'w-full rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
+                : 'w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green'
+            }
           />
 
           <div className="grid grid-cols-2 gap-3">
@@ -724,7 +737,7 @@ function LeaveBehindScreen({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={() => { setShowForm(false); setDesc(''); resetValidation(); }}
               className="flex-1 rounded-lg border border-sparrow-rule px-3 py-2 text-sm text-sparrow-gray hover:bg-sparrow-mist transition"
             >
               Cancel
@@ -742,7 +755,7 @@ function LeaveBehindScreen({
 
       {!showForm && (
         <button
-          onClick={() => { setNothingLeft(false); setShowForm(true); }}
+          onClick={() => { setNothingLeft(false); setShowForm(true); resetValidation(); }}
           className="w-full rounded-lg border border-dashed border-sparrow-rule px-4 py-2.5 text-sm text-sparrow-gray hover:border-sparrow-green/50 hover:text-sparrow-green transition"
         >
           + Add leave-behind
@@ -952,29 +965,41 @@ function NewItemsScreen({
   const [showForm,   setShowForm]   = useState(false);
   const [isBatch,    setIsBatch]    = useState(false);
   const [nothingNew, setNothingNew] = useState(false);
+  const [desc,       setDesc]       = useState('');
+  const [cost,       setCost]       = useState('');
   const [formErr,    setFormErr]    = useState('');
   const [formSaving, setFormSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
+  const parsedCost = Number(cost);
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'ni-desc', label: 'Description', valid: desc.trim().length > 0 },
+    { key: 'ni-cost', label: 'Cost', valid: cost.trim().length > 0 && !isNaN(parsedCost) && parsedCost >= 0 },
+  ]);
+
+  function resetForm() {
+    setDesc('');
+    setCost('');
+    setIsBatch(false);
+    resetValidation();
+  }
+
   async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!validate()) return;
     const fd = new FormData(e.currentTarget);
-    const desc = (fd.get('description') as string).trim();
-    if (!desc) { setFormErr('Description is required.'); return; }
-    const cost = Number(fd.get('cost'));
-    if (isNaN(cost) || cost < 0) { setFormErr('Enter a valid cost.'); return; }
     setFormSaving(true);
     setFormErr('');
     try {
       const entry = await addFlipNewItem(flip.id, {
-        description:     desc,
+        description:     desc.trim(),
         serial_number:   (fd.get('serial_number') as string).trim() || null,
         is_batch:        isBatch,
         batch_category:  isBatch ? (fd.get('batch_category') as string) : null,
         condition:       fd.get('condition') as string,
         is_donated:      fd.get('is_donated') === 'true',
         quantity:        Number(fd.get('quantity')) || 1,
-        cost,
+        cost: parsedCost,
         cost_basis:      fd.get('cost_basis') as string,
         cost_source:     fd.get('cost_source') as string,
         sub_location_id: (fd.get('sub_location_id') as string) || null,
@@ -982,7 +1007,7 @@ function NewItemsScreen({
       });
       setNewItems((prev) => [...prev, entry]);
       setShowForm(false);
-      setIsBatch(false);
+      resetForm();
       formRef.current?.reset();
     } catch (err) {
       setFormErr(err instanceof Error ? err.message : 'Could not save.');
@@ -1046,7 +1071,7 @@ function NewItemsScreen({
           className="rounded-xl border border-sparrow-rule bg-white p-4 space-y-3"
         >
           <p className="text-sm font-medium text-sparrow-ink">Add item</p>
-          {formErr && <p className="text-xs text-priority-p1">{formErr}</p>}
+          {(formErr || missingMessage) && <p className="text-xs text-priority-p1">{formErr || missingMessage}</p>}
 
           <div className="flex gap-3">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -1080,17 +1105,29 @@ function NewItemsScreen({
             </select>
           ) : (
             <input
-              name="description"
+              id="ni-desc"
+              value={desc}
+              onChange={(e) => { setDesc(e.target.value); clear('ni-desc'); }}
               placeholder="Description (required)"
-              className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className={
+                fieldClass('ni-desc', '').includes('field-input-error')
+                  ? 'w-full rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
+                  : 'w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green'
+              }
             />
           )}
 
           {isBatch && (
             <input
-              name="description"
+              id="ni-desc"
+              value={desc}
+              onChange={(e) => { setDesc(e.target.value); clear('ni-desc'); }}
               placeholder="Description (e.g. 'assorted kitchen supplies')"
-              className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className={
+                fieldClass('ni-desc', '').includes('field-input-error')
+                  ? 'w-full rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
+                  : 'w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green'
+              }
             />
           )}
 
@@ -1131,12 +1168,18 @@ function NewItemsScreen({
               className="rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
             />
             <input
-              name="cost"
+              id="ni-cost"
+              value={cost}
+              onChange={(e) => { setCost(e.target.value); clear('ni-cost'); }}
               type="number"
               min="0"
               step="0.01"
               placeholder="Cost ($)"
-              className="rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className={
+                fieldClass('ni-cost', '').includes('field-input-error')
+                  ? 'rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
+                  : 'rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green'
+              }
             />
             <select
               name="cost_basis"
@@ -1172,7 +1215,7 @@ function NewItemsScreen({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => { setShowForm(false); setIsBatch(false); }}
+              onClick={() => { setShowForm(false); resetForm(); }}
               className="flex-1 rounded-lg border border-sparrow-rule px-3 py-2 text-sm text-sparrow-gray hover:bg-sparrow-mist transition"
             >
               Cancel
@@ -1190,7 +1233,7 @@ function NewItemsScreen({
 
       {!showForm && (
         <button
-          onClick={() => { setNothingNew(false); setShowForm(true); }}
+          onClick={() => { setNothingNew(false); setShowForm(true); resetValidation(); }}
           className="w-full rounded-lg border border-dashed border-sparrow-rule px-4 py-2.5 text-sm text-sparrow-gray hover:border-sparrow-green/50 hover:text-sparrow-green transition"
         >
           + Add item

@@ -29,6 +29,9 @@
   .field-input {
     @apply mt-1 block w-full rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-sm text-sparrow-ink shadow-sm focus:border-sparrow-green focus:outline-none focus:ring-1 focus:ring-sparrow-green;
   }
+  .field-input-error {
+    @apply border-priority-p1 focus:border-priority-p1 focus:ring-priority-p1;
+  }
 
   /* Pasted curriculum content (Teacher Guide, devotionals, mentor content) —
      structure from the paste (bold/headings/tables/quotes) is kept, but styled

@@ -6,6 +6,7 @@ import {
   type StoryLayer2Consent,
   type StoryMediaEvent,
 } from '@/lib/stories';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 const CHILDREN_CONSENT_LABEL: Record<ChildrenPhotoConsent, string> = {
   'n/a': 'No children in program',
@@ -29,6 +30,16 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
   const [eventNotes, setEventNotes] = useState('');
   const [eventPending, startEventTransition] = useTransition();
   const [eventError, setEventError] = useState<string | null>(null);
+  const {
+    missingMessage: eventMissingMessage,
+    validate: validateEvent,
+    fieldClass: eventFieldClass,
+    clear: clearEvent,
+    reset: resetEventValidation,
+  } = useRequiredFields([
+    { key: 'mr-event-name', label: 'Event name', valid: eventName.trim().length > 0 },
+    { key: 'mr-event-date', label: 'Date', valid: !!eventDate },
+  ]);
 
   // Layer 2 inline form state
   const [showConsentForm, setShowConsentForm] = useState(false);
@@ -39,6 +50,15 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
   const [consentNotes, setConsentNotes] = useState('');
   const [consentPending, startConsentTransition] = useTransition();
   const [consentError, setConsentError] = useState<string | null>(null);
+  const {
+    missingMessage: consentMissingMessage,
+    validate: validateConsent,
+    fieldClass: consentFieldClass,
+    clear: clearConsent,
+    reset: resetConsentValidation,
+  } = useRequiredFields([
+    { key: 'mr-p-name', label: 'Participant name', valid: participantName.trim().length > 0 },
+  ]);
 
   function resetEventForm() {
     setEventName('');
@@ -46,6 +66,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
     setSandwichBoard(true);
     setEventNotes('');
     setEventError(null);
+    resetEventValidation();
     setShowEventForm(false);
   }
 
@@ -56,14 +77,12 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
     setChildrenPhotoConsent('n/a');
     setConsentNotes('');
     setConsentError(null);
+    resetConsentValidation();
     setShowConsentForm(false);
   }
 
   function saveEvent() {
-    if (!eventName.trim() || !eventDate) {
-      setEventError('Event name and date are required.');
-      return;
-    }
+    if (!validateEvent()) return;
     startEventTransition(async () => {
       try {
         await createMediaEvent({
@@ -82,10 +101,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
   }
 
   function saveConsent() {
-    if (!participantName.trim()) {
-      setConsentError('Participant name is required.');
-      return;
-    }
+    if (!validateConsent()) return;
     startConsentTransition(async () => {
       try {
         await createLayer2Consent({
@@ -158,9 +174,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 </label>
                 <input
                   id="mr-event-name"
-                  className="field-input"
+                  className={eventFieldClass('mr-event-name')}
                   value={eventName}
-                  onChange={(e) => setEventName(e.target.value)}
+                  onChange={(e) => { setEventName(e.target.value); clearEvent('mr-event-name'); }}
                   placeholder="e.g. Monthly Community Dinner"
                 />
               </div>
@@ -171,9 +187,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 <input
                   id="mr-event-date"
                   type="date"
-                  className="field-input"
+                  className={eventFieldClass('mr-event-date')}
                   value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
+                  onChange={(e) => { setEventDate(e.target.value); clearEvent('mr-event-date'); }}
                 />
               </div>
             </div>
@@ -198,7 +214,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 placeholder="Any additional context…"
               />
             </div>
-            {eventError && <p className="mt-2 text-sm text-priority-p1">{eventError}</p>}
+            {(eventError || eventMissingMessage) && (
+              <p className="mt-2 text-sm text-priority-p1">{eventError ?? eventMissingMessage}</p>
+            )}
             <div className="mt-3 flex items-center justify-end gap-2">
               <button onClick={resetEventForm} className="btn-ghost">
                 Cancel
@@ -267,9 +285,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 </label>
                 <input
                   id="mr-p-name"
-                  className="field-input"
+                  className={consentFieldClass('mr-p-name')}
                   value={participantName}
-                  onChange={(e) => setParticipantName(e.target.value)}
+                  onChange={(e) => { setParticipantName(e.target.value); clearConsent('mr-p-name'); }}
                   placeholder="First name or initials"
                 />
               </div>
@@ -336,7 +354,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 placeholder="Any additional context…"
               />
             </div>
-            {consentError && <p className="mt-2 text-sm text-priority-p1">{consentError}</p>}
+            {(consentError || consentMissingMessage) && (
+              <p className="mt-2 text-sm text-priority-p1">{consentError ?? consentMissingMessage}</p>
+            )}
             <div className="mt-3 flex items-center justify-end gap-2">
               <button onClick={resetConsentForm} className="btn-ghost">
                 Cancel

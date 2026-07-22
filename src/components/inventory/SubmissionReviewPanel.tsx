@@ -9,6 +9,7 @@ import {
   monthName, displayAdditionCost,
   type InvMonthlySubmission, type InvAddition, type InvRemoval,
 } from '@/lib/inventory-types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 // ── Inline edit for an addition ───────────────────────────────────────────
 
@@ -27,7 +28,12 @@ function AdditionEditRow({
   const [costSource, setCostSource] = useState(entry.cost_source);
   const [busy, setBusy] = useState(false);
 
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: `add-edit-desc-${entry.id}`, label: 'Description', valid: desc.trim().length > 0 },
+  ]);
+
   async function save() {
+    if (!validate()) return;
     setBusy(true);
     try {
       await updateAddition(entry.id, {
@@ -64,7 +70,7 @@ function AdditionEditRow({
           </div>
         </div>
         <div className="flex gap-1 shrink-0">
-          <button onClick={() => setEditing(true)} className="text-xs text-sparrow-gray hover:text-sparrow-green transition px-1">
+          <button onClick={() => { resetValidation(); setEditing(true); }} className="text-xs text-sparrow-gray hover:text-sparrow-green transition px-1">
             Edit
           </button>
           <button onClick={remove} className="text-xs text-sparrow-gray hover:text-priority-p1 transition px-1">
@@ -75,12 +81,18 @@ function AdditionEditRow({
     );
   }
 
+  const descId = `add-edit-desc-${entry.id}`;
   return (
     <div className="rounded-lg border border-sparrow-gold/30 bg-sparrow-gold/5 p-3 space-y-2">
       <p className="text-xs font-medium text-sparrow-gold uppercase tracking-wide">Editing</p>
       <div>
-        <label className="field-label">Description</label>
-        <input value={desc} onChange={(e) => setDesc(e.target.value)} className="field-input" />
+        <label className="field-label" htmlFor={descId}>Description</label>
+        <input
+          id={descId}
+          value={desc}
+          onChange={(e) => { setDesc(e.target.value); clear(descId); }}
+          className={fieldClass(descId)}
+        />
       </div>
       <div className="flex gap-2">
         <div className="flex-1">
@@ -95,6 +107,7 @@ function AdditionEditRow({
           </select>
         </div>
       </div>
+      {missingMessage && <p className="text-xs text-priority-p1">{missingMessage}</p>}
       <div className="flex gap-2 justify-end">
         <button onClick={() => setEditing(false)} className="btn-ghost text-xs">Cancel</button>
         <button onClick={save} disabled={busy} className="btn-primary text-xs disabled:opacity-40">
@@ -121,7 +134,12 @@ function RemovalEditRow({
   const [howItLeft, setHowItLeft] = useState(entry.how_it_left);
   const [busy, setBusy] = useState(false);
 
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: `rm-edit-desc-${entry.id}`, label: 'Description', valid: desc.trim().length > 0 },
+  ]);
+
   async function save() {
+    if (!validate()) return;
     setBusy(true);
     try {
       await updateRemoval(entry.id, { description: desc.trim(), how_it_left: howItLeft });
@@ -150,7 +168,7 @@ function RemovalEditRow({
           </div>
         </div>
         <div className="flex gap-1 shrink-0">
-          <button onClick={() => setEditing(true)} className="text-xs text-sparrow-gray hover:text-sparrow-green transition px-1">
+          <button onClick={() => { resetValidation(); setEditing(true); }} className="text-xs text-sparrow-gray hover:text-sparrow-green transition px-1">
             Edit
           </button>
           <button onClick={remove} className="text-xs text-sparrow-gray hover:text-priority-p1 transition px-1">
@@ -161,12 +179,18 @@ function RemovalEditRow({
     );
   }
 
+  const descId = `rm-edit-desc-${entry.id}`;
   return (
     <div className="rounded-lg border border-sparrow-gold/30 bg-sparrow-gold/5 p-3 space-y-2">
       <p className="text-xs font-medium text-sparrow-gold uppercase tracking-wide">Editing</p>
       <div>
-        <label className="field-label">Description</label>
-        <input value={desc} onChange={(e) => setDesc(e.target.value)} className="field-input" />
+        <label className="field-label" htmlFor={descId}>Description</label>
+        <input
+          id={descId}
+          value={desc}
+          onChange={(e) => { setDesc(e.target.value); clear(descId); }}
+          className={fieldClass(descId)}
+        />
       </div>
       <div>
         <label className="field-label">How it left</label>
@@ -176,6 +200,7 @@ function RemovalEditRow({
           )}
         </select>
       </div>
+      {missingMessage && <p className="text-xs text-priority-p1">{missingMessage}</p>}
       <div className="flex gap-2 justify-end">
         <button onClick={() => setEditing(false)} className="btn-ghost text-xs">Cancel</button>
         <button onClick={save} disabled={busy} className="btn-primary text-xs disabled:opacity-40">

@@ -22,6 +22,7 @@ import {
   type GrantNotificationCategory,
 } from '@/lib/grants-types';
 import { Drawer } from '@/components/lcp/Drawer';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 type Tab = 'details' | 'notifications' | 'documents';
 const TABS: { key: Tab; label: string }[] = [
@@ -109,13 +110,18 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
   const [busy, setBusy] = useState(false);
   const [certBusy, setCertBusy] = useState(false);
 
-  useEffect(() => setForm(toInput(grant)), [grant]);
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'grant-funder-name', label: 'Funder name', valid: form.funder_name.trim().length > 0 },
+  ]);
+
+  useEffect(() => { setForm(toInput(grant)); resetValidation(); }, [grant]);
 
   function set<K extends keyof GrantInput>(key: K, value: GrantInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
   async function save() {
+    if (!validate() || busy) return;
     setBusy(true);
     try {
       await updateGrant(grant.id, form);
@@ -161,9 +167,14 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
         </div>
       </div>
 
-      <label className="block">
+      <label className="block" htmlFor="grant-funder-name">
         <span className="text-xs font-medium text-sparrow-gray">Funder name</span>
-        <input value={form.funder_name} onChange={(e) => set('funder_name', e.target.value)} className="field-input" />
+        <input
+          id="grant-funder-name"
+          value={form.funder_name}
+          onChange={(e) => { set('funder_name', e.target.value); clear('grant-funder-name'); }}
+          className={fieldClass('grant-funder-name')}
+        />
       </label>
 
       <label className="block">
@@ -236,7 +247,8 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
         <textarea value={form.notes ?? ''} onChange={(e) => set('notes', e.target.value || null)} rows={3} className="field-input" />
       </label>
 
-      <button onClick={save} disabled={busy || !form.funder_name.trim()} className="btn-primary w-full">
+      {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
+      <button onClick={save} disabled={busy} className="btn-primary w-full">
         Save changes
       </button>
     </div>
@@ -336,18 +348,26 @@ function DocumentsTab({
   onChanged: () => void;
 }) {
   const [label, setLabel] = useState('');
+  const [fileName, setFileName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const { missingMessage, validate, fieldClass, clear } = useRequiredFields([
+    { key: 'grant-doc-label', label: 'Label', valid: label.trim().length > 0 },
+    { key: 'grant-doc-file', label: 'File', valid: !!fileName },
+  ]);
+
   async function upload() {
+    if (!validate()) return;
     const file = fileRef.current?.files?.[0];
-    if (!file || !label.trim()) return;
+    if (!file) return;
     setBusy(true);
     setError(null);
     try {
       await uploadGrantDocument(grantId, label.trim(), file, currentUserId);
       setLabel('');
+      setFileName(null);
       if (fileRef.current) fileRef.current.value = '';
       onChanged();
     } catch (e) {
@@ -366,12 +386,24 @@ function DocumentsTab({
     <div className="space-y-3">
       <p className="text-xs text-sparrow-gray">Grant agreements and correspondence — stored privately, ops tier only.</p>
       <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Signed grant agreement)" className="field-input mt-0" />
-        <input ref={fileRef} type="file" className="field-input mt-0" />
-        <button onClick={upload} disabled={busy || !label.trim()} className="btn-primary w-full">
+        <input
+          id="grant-doc-label"
+          value={label}
+          onChange={(e) => { setLabel(e.target.value); clear('grant-doc-label'); }}
+          placeholder="Label (e.g. Signed grant agreement)"
+          className={fieldClass('grant-doc-label', 'field-input mt-0')}
+        />
+        <input
+          id="grant-doc-file"
+          ref={fileRef}
+          type="file"
+          onChange={(e) => { setFileName(e.target.files?.[0]?.name ?? null); clear('grant-doc-file'); }}
+          className={fieldClass('grant-doc-file', 'field-input mt-0')}
+        />
+        <button onClick={upload} disabled={busy} className="btn-primary w-full">
           Upload
         </button>
-        {error && <p className="text-xs text-priority-p1">{error}</p>}
+        {(error || missingMessage) && <p className="text-xs text-priority-p1">{error || missingMessage}</p>}
       </div>
       <ul className="divide-y divide-sparrow-rule/70 rounded-xl border border-sparrow-rule">
         {docs.length === 0 && <li className="p-3 text-sm text-sparrow-gray">No documents yet.</li>}

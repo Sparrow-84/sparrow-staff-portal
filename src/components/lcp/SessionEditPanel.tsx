@@ -15,6 +15,7 @@ import {
 } from '@/lib/lcp';
 import { Drawer } from './Drawer';
 import { RichTextField } from './RichText';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 interface Props {
   open: boolean;
@@ -64,6 +65,26 @@ export function SessionEditPanel({
   const [resSaving, setResSaving] = useState(false);
   const [resError, setResError] = useState<string | null>(null);
 
+  const {
+    missingMessage: saveMissing,
+    validate: validateSession,
+    fieldClass: sessionFieldClass,
+    clear: clearSessionField,
+    reset: resetSessionValidation,
+  } = useRequiredFields([
+    { key: 'ses-title', label: 'Title', valid: title.trim().length > 0 },
+  ]);
+
+  const {
+    missingMessage: resMissing,
+    validate: validateResource,
+    fieldClass: resFieldClass,
+    clear: clearResField,
+    reset: resetResValidation,
+  } = useRequiredFields([
+    { key: 'res-title', label: 'Title', valid: resTitle.trim().length > 0 },
+  ]);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!session) return;
@@ -76,6 +97,8 @@ export function SessionEditPanel({
     setSaveError(null);
     setEditMode({ kind: 'none' });
     setResError(null);
+    resetSessionValidation();
+    resetResValidation();
     loadResources(session.id);
   }, [session?.id]);
 
@@ -89,7 +112,7 @@ export function SessionEditPanel({
   }
 
   async function saveSession() {
-    if (!session || !title.trim()) return;
+    if (!session || !validateSession()) return;
     setSaving(true);
     setSaveError(null);
     try {
@@ -123,6 +146,7 @@ export function SessionEditPanel({
     setResContent('');
     setResSortOverride(defaults.sortOrder ?? null);
     setResError(null);
+    resetResValidation();
     setEditMode({ kind: 'add' });
   }
 
@@ -134,11 +158,12 @@ export function SessionEditPanel({
     setResContent(r.content ?? '');
     setResSortOverride(null);
     setResError(null);
+    resetResValidation();
     setEditMode({ kind: 'edit', resource: r });
   }
 
   async function handleSaveResource() {
-    if (!session || !resTitle.trim()) return;
+    if (!session || !validateResource()) return;
     setResSaving(true);
     setResError(null);
     try {
@@ -199,10 +224,10 @@ export function SessionEditPanel({
       subtitle={session ? `${unitName} · ${phaseName}` : undefined}
       footer={
         <div className="space-y-2">
-          {saveError && <p className="text-sm text-priority-p1">{saveError}</p>}
+          {(saveError || saveMissing) && <p className="text-sm text-priority-p1">{saveError ?? saveMissing}</p>}
           <button
             onClick={saveSession}
-            disabled={!dirty || saving || !title.trim()}
+            disabled={!dirty || saving}
             className="btn-primary w-full"
           >
             {saving ? 'Saving…' : 'Save session'}
@@ -224,12 +249,13 @@ export function SessionEditPanel({
           {/* Session identity */}
           <div className="space-y-4">
             <div>
-              <label className="field-label">Title</label>
+              <label className="field-label" htmlFor="ses-title">Title</label>
               <input
+                id="ses-title"
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="field-input"
+                onChange={(e) => { setTitle(e.target.value); clearSessionField('ses-title'); }}
+                className={sessionFieldClass('ses-title')}
               />
             </div>
 
@@ -400,12 +426,13 @@ export function SessionEditPanel({
               </p>
 
               <div>
-                <label className="field-label">Title</label>
+                <label className="field-label" htmlFor="res-title">Title</label>
                 <input
+                  id="res-title"
                   type="text"
                   value={resTitle}
-                  onChange={(e) => setResTitle(e.target.value)}
-                  className="field-input"
+                  onChange={(e) => { setResTitle(e.target.value); clearResField('res-title'); }}
+                  className={resFieldClass('res-title')}
                 />
               </div>
 
@@ -475,17 +502,17 @@ export function SessionEditPanel({
                 />
               </div>
 
-              {resError && <p className="text-sm text-priority-p1">{resError}</p>}
+              {(resError || resMissing) && <p className="text-sm text-priority-p1">{resError ?? resMissing}</p>}
               <div className="flex gap-2">
                 <button
                   onClick={handleSaveResource}
-                  disabled={resSaving || !resTitle.trim()}
+                  disabled={resSaving}
                   className="btn-primary flex-1"
                 >
                   {resSaving ? 'Saving…' : editMode.kind === 'add' ? 'Add' : 'Save changes'}
                 </button>
                 <button
-                  onClick={() => { setEditMode({ kind: 'none' }); setResError(null); }}
+                  onClick={() => { setEditMode({ kind: 'none' }); setResError(null); resetResValidation(); }}
                   className="btn-ghost"
                 >
                   Cancel

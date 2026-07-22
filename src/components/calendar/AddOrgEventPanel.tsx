@@ -4,6 +4,7 @@ import { Drawer } from '@/components/lcp/Drawer';
 import { CalendarLabelPicker } from '@/components/calendar/CalendarLabelPicker';
 import type { Department, OfficeRoom, Profile } from '@/lib/types';
 import { DEPARTMENTS } from '@/lib/types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 const DOW_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -181,10 +182,16 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
     return generateDates(date, frequency, [...daysOfWeek], effectiveUntil);
   })();
 
-  const canSubmit = title.trim() && date && (allDay || startTime) && occurrenceDates.length > 0 && !!labelId;
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'event-title', label: 'Title', valid: title.trim().length > 0 },
+    { key: 'event-date', label: 'Date', valid: !!date },
+    { key: 'event-start-time', label: 'Start time', valid: allDay || !!startTime },
+    { key: 'event-label', label: 'Label', valid: !!labelId },
+    { key: 'event-recurrence', label: 'Repeat settings (no matching dates)', valid: occurrenceDates.length > 0 },
+  ]);
 
   async function submit() {
-    if (!canSubmit || submittingRef.current) return;
+    if (!validate() || submittingRef.current) return;
     submittingRef.current = true;
     setSaving(true);
     setError(null);
@@ -263,6 +270,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
     setRoomId('');
     setIsPrivateMeeting(false);
     setError(null);
+    resetValidation();
   }
 
   function handleClose() {
@@ -289,10 +297,10 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
       title="Add Event"
       footer={
         <div className="space-y-2">
-          {error && <p className="text-sm text-priority-p1">{error}</p>}
+          {(error || missingMessage) && <p className="text-sm text-priority-p1">{error ?? missingMessage}</p>}
           <button
             onClick={submit}
-            disabled={!canSubmit || saving}
+            disabled={saving}
             className="btn-primary w-full"
           >
             {submitLabel}
@@ -302,13 +310,14 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
     >
       <div className="space-y-5">
         <div>
-          <label className="field-label">Title</label>
+          <label className="field-label" htmlFor="event-title">Title</label>
           <input
+            id="event-title"
             type="text"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => { setTitle(e.target.value); clear('event-title'); }}
             placeholder="e.g. Community BBQ"
-            className="field-input"
+            className={fieldClass('event-title')}
           />
         </div>
 
@@ -362,12 +371,13 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
 
         <div className="grid grid-cols-2 gap-3">
           <div className={allDay ? 'col-span-1' : 'col-span-2'}>
-            <label className="field-label">{recurring ? 'Start date' : allDay && !recurring ? 'Start date' : 'Date'}</label>
+            <label className="field-label" htmlFor="event-date">{recurring ? 'Start date' : allDay && !recurring ? 'Start date' : 'Date'}</label>
             <input
+              id="event-date"
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="field-input"
+              onChange={(e) => { setDate(e.target.value); clear('event-date'); }}
+              className={fieldClass('event-date')}
             />
           </div>
 
@@ -390,12 +400,13 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
           {!allDay && (
             <>
               <div>
-                <label className="field-label">Start time</label>
+                <label className="field-label" htmlFor="event-start-time">Start time</label>
                 <input
+                  id="event-start-time"
                   type="time"
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="field-input"
+                  onChange={(e) => { setStartTime(e.target.value); clear('event-start-time'); }}
+                  className={fieldClass('event-start-time')}
                 />
               </div>
               <div>

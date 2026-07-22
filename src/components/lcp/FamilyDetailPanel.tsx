@@ -72,6 +72,7 @@ import {
 import { money, dayLabel, dueLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
 import { StaffThread } from './StaffThread';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 type Tab = 'general' | 'progress' | 'goals' | 'milestones' | 'program_fee' | 'homework' | 'messages' | 'notes' | 'rewards';
 const TABS: { key: Tab; label: string }[] = [
@@ -812,9 +813,14 @@ function ProgramFeeTab({
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const dollars = parseFloat(amount);
+  const { missingMessage, validate, fieldClass, clear, reset: resetFeeValidation } = useRequiredFields([
+    { key: 'fee-date', label: 'Date', valid: !!paidDate },
+    { key: 'fee-amount', label: 'Amount', valid: !isNaN(dollars) && dollars > 0 },
+  ]);
+
   async function addPayment() {
-    const dollars = parseFloat(amount);
-    if (!paidDate || !dollars || dollars <= 0) return;
+    if (!validate()) return;
     setBusy(true);
     await addProgramFeePayment(
       {
@@ -830,6 +836,7 @@ function ProgramFeeTab({
     setComment('');
     setMethod('cash');
     setBusy(false);
+    resetFeeValidation();
     onChanged();
   }
 
@@ -843,22 +850,29 @@ function ProgramFeeTab({
       <div className="rounded-xl border border-sparrow-rule p-3">
         <span className="field-label">Log a payment</span>
         <div className="mt-2 grid gap-2 sm:grid-cols-4">
-          <input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="field-input mt-0" />
           <input
+            id="fee-date"
+            type="date"
+            value={paidDate}
+            onChange={(e) => { setPaidDate(e.target.value); clear('fee-date'); }}
+            className={fieldClass('fee-date', 'field-input mt-0')}
+          />
+          <input
+            id="fee-amount"
             type="number"
             step="0.01"
             min="0"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => { setAmount(e.target.value); clear('fee-amount'); }}
             placeholder="Amount"
-            className="field-input mt-0"
+            className={fieldClass('fee-amount', 'field-input mt-0')}
           />
           <select value={method} onChange={(e) => setMethod(e.target.value as ProgramFeeMethod)} className="field-input mt-0">
             {(Object.keys(PROGRAM_FEE_METHOD_LABEL) as ProgramFeeMethod[]).map((m) => (
               <option key={m} value={m}>{PROGRAM_FEE_METHOD_LABEL[m]}</option>
             ))}
           </select>
-          <button onClick={addPayment} disabled={busy || !amount} className="btn-primary">
+          <button onClick={addPayment} disabled={busy} className="btn-primary">
             Add
           </button>
         </div>
@@ -868,6 +882,7 @@ function ProgramFeeTab({
           placeholder="Comment (optional)"
           className="field-input mt-2"
         />
+        {missingMessage && <p className="mt-2 text-sm text-priority-p1">{missingMessage}</p>}
       </div>
 
       {payments.length === 0 && <p className="text-sm text-sparrow-gray">No payments logged yet.</p>}

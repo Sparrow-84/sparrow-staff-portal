@@ -45,6 +45,7 @@ import {
   type WorkOrderWithAssignee,
 } from '@/lib/housing';
 import type { HouseholdMember } from '@/lib/housing-types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 interface Props {
   open: boolean;
@@ -192,7 +193,8 @@ export function LotDetailPanel({
     setLotError(null);
     setShowMoveOut(false);
     setShowNoticeForm(false);
-  }, [space?.id, loadRelated]);
+    resetNoticeValidation();
+  }, [space?.id, loadRelated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Designation & ownership ──────────────────────────────────────
   const [hasDesignation, setHasDesignation] = useState(false);
@@ -230,6 +232,17 @@ export function LotDetailPanel({
   const [noticeDelivery, setNoticeDelivery] = useState<NoticeDelivery>('in_person');
   const [noticeDeliveryNotes, setNoticeDeliveryNotes] = useState('');
   const [noticeError, setNoticeError] = useState<string | null>(null);
+
+  const {
+    missingMessage: noticeMissingMessage,
+    validate: validateNotice,
+    fieldClass: noticeFieldClass,
+    clear: clearNoticeField,
+    reset: resetNoticeValidation,
+  } = useRequiredFields([
+    { key: 'lot-notice-date', label: 'Date given', valid: !!noticeDate },
+    { key: 'lot-notice-desc', label: 'Notice description', valid: noticeDesc.trim().length > 0 },
+  ]);
 
   const isLcp = hasDesignation && designation === 'lcp';
   const isProgramHome = ownership === 'sparrow_owned' || ownership === 'donated_use';
@@ -439,7 +452,8 @@ export function LotDetailPanel({
 
   // ── Add notice ───────────────────────────────────────────────────
   function submitNotice() {
-    if (!space || !profile || !noticeDate || !noticeDesc.trim()) return;
+    if (!space || !profile) return;
+    if (!validateNotice()) return;
     startNoticeTransition(async () => {
       setNoticeError(null);
       try {
@@ -456,6 +470,7 @@ export function LotDetailPanel({
         setNoticeDesc('');
         setNoticeDeliveryNotes('');
         setShowNoticeForm(false);
+        resetNoticeValidation();
         await loadRelated(space.id);
         onNoticeChange?.();
       } catch (e) {
@@ -525,6 +540,9 @@ export function LotDetailPanel({
                   noticeDelivery={noticeDelivery}
                   noticeDeliveryNotes={noticeDeliveryNotes}
                   noticeError={noticeError}
+                  noticeMissingMessage={noticeMissingMessage}
+                  noticeFieldClass={noticeFieldClass}
+                  onClearNoticeField={clearNoticeField}
                   noticePending={noticePending}
                   photoUploading={photoUploading}
                   photoError={photoError}
@@ -535,7 +553,7 @@ export function LotDetailPanel({
                   onSetNoticeDesc={setNoticeDesc}
                   onSetNoticeDelivery={setNoticeDelivery}
                   onSetNoticeDeliveryNotes={setNoticeDeliveryNotes}
-                  onToggleNoticeForm={() => setShowNoticeForm((p) => !p)}
+                  onToggleNoticeForm={() => { setShowNoticeForm((p) => !p); resetNoticeValidation(); }}
                   onSubmitNotice={submitNotice}
                   onDeleteNotice={async (id) => { await deleteNotice(id); await loadRelated(space.id); onNoticeChange?.(); }}
                   onNewWorkOrder={onNewWorkOrder}
@@ -871,7 +889,8 @@ function ViewBody({
   space, tenant, members, pets, notices, workOrders, canManage,
   residentLabel, isProgramHome,
   showNoticeForm, noticeType, noticeDate, noticeDesc, noticeDelivery,
-  noticeDeliveryNotes, noticeError, noticePending,
+  noticeDeliveryNotes, noticeError, noticeMissingMessage, noticeFieldClass,
+  onClearNoticeField, noticePending,
   photoUploading, photoError, onPhotoUpload: _onPhotoUpload, onPhotoInputClick,
   onSetNoticeType, onSetNoticeDate, onSetNoticeDesc, onSetNoticeDelivery,
   onSetNoticeDeliveryNotes, onToggleNoticeForm, onSubmitNotice, onDeleteNotice,
@@ -882,7 +901,10 @@ function ViewBody({
   canManage: boolean; residentLabel: string; isProgramHome: boolean;
   showNoticeForm: boolean; noticeType: NoticeType; noticeDate: string;
   noticeDesc: string; noticeDelivery: NoticeDelivery; noticeDeliveryNotes: string;
-  noticeError: string | null; noticePending: boolean;
+  noticeError: string | null; noticeMissingMessage: string | null;
+  noticeFieldClass: (key: string, base?: string) => string;
+  onClearNoticeField: (key: string) => void;
+  noticePending: boolean;
   photoUploading: boolean; photoError: string | null;
   onPhotoUpload: (file: File) => void; onPhotoInputClick: () => void;
   onSetNoticeType: (v: NoticeType) => void; onSetNoticeDate: (v: string) => void;
@@ -1043,12 +1065,25 @@ function ViewBody({
               </div>
             </div>
             <div>
-              <p className="field-label mb-1">Date given</p>
-              <input type="date" className="field-input" value={noticeDate} onChange={(e) => onSetNoticeDate(e.target.value)} />
+              <label className="field-label mb-1" htmlFor="lot-notice-date">Date given</label>
+              <input
+                id="lot-notice-date"
+                type="date"
+                className={noticeFieldClass('lot-notice-date')}
+                value={noticeDate}
+                onChange={(e) => { onSetNoticeDate(e.target.value); onClearNoticeField('lot-notice-date'); }}
+              />
             </div>
             <div>
-              <p className="field-label mb-1">What was the notice for?</p>
-              <textarea className="field-input" rows={2} value={noticeDesc} onChange={(e) => onSetNoticeDesc(e.target.value)} placeholder="Describe the violation or reason" />
+              <label className="field-label mb-1" htmlFor="lot-notice-desc">What was the notice for?</label>
+              <textarea
+                id="lot-notice-desc"
+                className={noticeFieldClass('lot-notice-desc')}
+                rows={2}
+                value={noticeDesc}
+                onChange={(e) => { onSetNoticeDesc(e.target.value); onClearNoticeField('lot-notice-desc'); }}
+                placeholder="Describe the violation or reason"
+              />
             </div>
             <div>
               <p className="field-label mb-1">How was it delivered?</p>
@@ -1057,7 +1092,7 @@ function ViewBody({
               </select>
             </div>
             <input className="field-input" value={noticeDeliveryNotes} onChange={(e) => onSetNoticeDeliveryNotes(e.target.value)} placeholder="Delivery notes (optional)" />
-            {noticeError && <p className="text-xs text-priority-p1">{noticeError}</p>}
+            {(noticeError || noticeMissingMessage) && <p className="text-xs text-priority-p1">{noticeError ?? noticeMissingMessage}</p>}
             <button onClick={onSubmitNotice} disabled={noticePending} className="btn-primary w-full">
               {noticePending ? 'Saving…' : 'Save notice'}
             </button>

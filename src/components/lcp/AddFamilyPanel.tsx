@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { TOTAL_SESSIONS } from '@/lib/lcp-types';
 import { createFamily } from '@/lib/lcp';
 import { Drawer } from './Drawer';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 export function AddFamilyPanel({
   open,
@@ -33,17 +34,18 @@ export function AddFamilyPanel({
       setChildren(['']);
       setError(null);
       setBusy(false);
+      resetValidation();
     }
   }, [open]);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const canSave =
-    name.trim().length > 0 &&
-    emailValid &&
-    emergencyContact.trim().length > 0 &&
-    adultName.trim().length > 0 &&
-    adultPhone.trim().length > 0 &&
-    !busy;
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'fam-name', label: 'Household name', valid: name.trim().length > 0 },
+    { key: 'fam-email', label: 'Sign-in email', valid: emailValid },
+    { key: 'fam-adult-name', label: "Mother's name", valid: adultName.trim().length > 0 },
+    { key: 'fam-adult-phone', label: "Mother's phone", valid: adultPhone.trim().length > 0 },
+    { key: 'fam-emergency', label: 'Emergency contact', valid: emergencyContact.trim().length > 0 },
+  ]);
 
   function setChild(i: number, value: string) {
     setChildren((cs) => cs.map((c, idx) => (idx === i ? value : c)));
@@ -56,7 +58,7 @@ export function AddFamilyPanel({
   }
 
   async function save() {
-    if (!canSave) return;
+    if (!validate() || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -84,9 +86,12 @@ export function AddFamilyPanel({
       title="Add family"
       subtitle="Creates their LifeChange record and sign-in"
       footer={
-        <button onClick={save} disabled={!canSave} className="btn-primary w-full">
-          {busy ? 'Adding…' : 'Add family'}
-        </button>
+        <div className="space-y-2">
+          {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
+          <button onClick={save} disabled={busy} className="btn-primary w-full">
+            {busy ? 'Adding…' : 'Add family'}
+          </button>
+        </div>
       }
     >
       <div className="space-y-4">
@@ -96,9 +101,9 @@ export function AddFamilyPanel({
           </label>
           <input
             id="fam-name"
-            className="field-input"
+            className={fieldClass('fam-name')}
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); clear('fam-name'); }}
             placeholder="e.g. Wenger"
           />
         </div>
@@ -110,9 +115,9 @@ export function AddFamilyPanel({
           <input
             id="fam-email"
             type="email"
-            className="field-input"
+            className={fieldClass('fam-email')}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); clear('fam-email'); }}
             placeholder="mother@example.com"
           />
           <p className="mt-1 text-xs text-sparrow-gray">
@@ -144,15 +149,17 @@ export function AddFamilyPanel({
         <div className="border-t border-sparrow-rule pt-4">
           <span className="field-label">Mother</span>
           <input
-            className="field-input"
+            id="fam-adult-name"
+            className={fieldClass('fam-adult-name')}
             value={adultName}
-            onChange={(e) => setAdultName(e.target.value)}
+            onChange={(e) => { setAdultName(e.target.value); clear('fam-adult-name'); }}
             placeholder="Full name"
           />
           <input
-            className="field-input mt-2"
+            id="fam-adult-phone"
+            className={fieldClass('fam-adult-phone', 'field-input mt-2')}
             value={adultPhone}
-            onChange={(e) => setAdultPhone(e.target.value)}
+            onChange={(e) => { setAdultPhone(e.target.value); clear('fam-adult-phone'); }}
             placeholder="Phone"
           />
         </div>
@@ -194,9 +201,9 @@ export function AddFamilyPanel({
           <textarea
             id="fam-emergency"
             rows={2}
-            className="field-input"
+            className={fieldClass('fam-emergency')}
             value={emergencyContact}
-            onChange={(e) => setEmergencyContact(e.target.value)}
+            onChange={(e) => { setEmergencyContact(e.target.value); clear('fam-emergency'); }}
             placeholder="Name, relationship, phone number"
           />
         </div>

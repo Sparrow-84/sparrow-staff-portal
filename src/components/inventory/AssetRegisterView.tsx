@@ -7,6 +7,7 @@ import {
   formatCost, FILING_STATUS_META,
   type InvSubLocation, type InvItemCondition,
 } from '@/lib/inventory-types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 // ── Inline edit panel ────────────────────────────────────────────────────
 
@@ -32,11 +33,16 @@ function ItemEditPanel({
   const [subLocations, setSubLocations] = useState<InvSubLocation[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const { missingMessage, validate, fieldClass, clear } = useRequiredFields([
+    { key: `reg-item-desc-${item.id}`, label: 'Description', valid: description.trim().length > 0 },
+  ]);
+
   useEffect(() => {
     fetchSubLocations(item.location_id).then(setSubLocations).catch(() => setSubLocations([]));
   }, [item.location_id]);
 
   async function handleSave() {
+    if (!validate()) return;
     setSaving(true);
     try {
       await onSave({
@@ -63,8 +69,13 @@ function ItemEditPanel({
     <div className="border-t border-sparrow-rule bg-sparrow-mist/30 px-4 py-4 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="sm:col-span-2">
-          <label className={labelCls}>Description</label>
-          <input className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} />
+          <label className={labelCls} htmlFor={`reg-item-desc-${item.id}`}>Description</label>
+          <input
+            id={`reg-item-desc-${item.id}`}
+            className={fieldClass(`reg-item-desc-${item.id}`)}
+            value={description}
+            onChange={(e) => { setDescription(e.target.value); clear(`reg-item-desc-${item.id}`); }}
+          />
         </div>
         <div>
           <label className={labelCls}>Serial / model #</label>
@@ -113,6 +124,7 @@ function ItemEditPanel({
           <textarea className={inputCls} rows={2} value={reviewFlag} onChange={(e) => setReviewFlag(e.target.value)} placeholder="Leave blank once resolved" />
         </div>
       </div>
+      {missingMessage && <p className="text-xs text-priority-p1">{missingMessage}</p>}
       <div className="flex items-center gap-2 pt-1">
         <button
           onClick={() => void handleSave()}

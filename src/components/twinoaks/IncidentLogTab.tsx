@@ -14,6 +14,7 @@ import {
   updateIncident,
 } from '@/lib/incidents';
 import type { Space } from '@/lib/housing-types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 function nowLocal(): string {
   const d = new Date();
@@ -54,9 +55,14 @@ function IncidentPanel({ open, incident, spaces, onClose, onChanged }: PanelProp
   const [followUp, setFollowUp] = useState('');
   const [status, setStatus] = useState<IncidentStatus>('open');
 
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'i-desc', label: 'Description', valid: description.trim().length > 0 },
+  ]);
+
   useEffect(() => {
     if (!open) return;
     setError(null);
+    resetValidation();
     if (incident) {
       const local = new Date(incident.incident_date);
       const pad = (n: number) => String(n).padStart(2, '0');
@@ -78,16 +84,13 @@ function IncidentPanel({ open, incident, spaces, onClose, onChanged }: PanelProp
       setFollowUp('');
       setStatus('open');
     }
-  }, [open, incident]);
+  }, [open, incident]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canEdit = !incident || profile?.role === 'admin' || incident.logged_by === profile?.id;
   const canDelete = profile?.role === 'admin';
 
   function save() {
-    if (!description.trim()) {
-      setError('A description is required.');
-      return;
-    }
+    if (!validate()) return;
     const selectedSpace = spaces.find((s) => s.id === lotId);
     const iso = new Date(incidentDate).toISOString();
     startTransition(async () => {
@@ -244,10 +247,10 @@ function IncidentPanel({ open, incident, spaces, onClose, onChanged }: PanelProp
             </label>
             <textarea
               id="i-desc"
-              className="field-input"
+              className={fieldClass('i-desc')}
               rows={4}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => { setDescription(e.target.value); clear('i-desc'); }}
               placeholder="What happened?"
               disabled={!canEdit}
             />
@@ -292,7 +295,7 @@ function IncidentPanel({ open, incident, spaces, onClose, onChanged }: PanelProp
             </p>
           )}
 
-          {error && <p className="text-sm text-priority-p1">{error}</p>}
+          {(error || missingMessage) && <p className="text-sm text-priority-p1">{error ?? missingMessage}</p>}
         </div>
 
         <div className="flex items-center justify-between border-t border-sparrow-rule px-5 py-4">

@@ -26,6 +26,7 @@ import { MentionInput } from '@/components/chat/MentionInput';
 import { CalendarLabelPicker } from '@/components/calendar/CalendarLabelPicker';
 import { LABEL_COLORS } from '@/components/LabelPill';
 import type { Profile } from '@/lib/types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 interface Props {
   event: CalendarEvent | null;
@@ -60,6 +61,12 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
   const [editLocation, setEditLocation] = useState('');
+
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'org-edit-title', label: 'Title', valid: editTitle.trim().length > 0 },
+    { key: 'org-edit-date', label: 'Date', valid: !!editDate },
+    { key: 'org-edit-start-time', label: 'Start time', valid: editAllDay || !!editStartTime },
+  ]);
 
   useEffect(() => {
     if (!event) { setNotesPreview(null); return; }
@@ -169,16 +176,18 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
     setEditEndTime(!event.all_day && event.ends_at ? toLocalTime(event.ends_at) : '');
     setEditLocation(event.location ?? '');
     setError(null);
+    resetValidation();
     setMode('edit');
   }
 
   function cancelEdit() {
     setMode('view');
     setError(null);
+    resetValidation();
   }
 
   async function handleSave(saveMode: 'single' | 'future') {
-    if (!event) return;
+    if (!event || !validate()) return;
     setSaving(saveMode);
     setError(null);
     try {
@@ -258,7 +267,6 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
   const canEdit = isAdmin || event.created_by === currentUserId;
   const isRecurring = !!event.recurrence_id;
-  const canSave = editTitle.trim().length > 0 && editDate && (editAllDay || editStartTime);
 
   // For all-day events use the ISO date component directly (avoids UTC-midnight timezone shift).
   // Use noon local time for Date objects so toLocaleDateString() never returns the wrong day.
@@ -285,19 +293,19 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
     if (mode === 'edit') {
       return (
         <div className="space-y-2">
-          {error && <p className="text-xs text-priority-p1">{error}</p>}
+          {(error || missingMessage) && <p className="text-xs text-priority-p1">{error ?? missingMessage}</p>}
           {isRecurring ? (
             <>
               <button
                 onClick={() => handleSave('single')}
-                disabled={!canSave || !!saving}
+                disabled={!!saving}
                 className="btn-primary w-full"
               >
                 {saving === 'single' ? 'Saving…' : 'Save this event'}
               </button>
               <button
                 onClick={() => handleSave('future')}
-                disabled={!canSave || !!saving}
+                disabled={!!saving}
                 className="w-full rounded-xl border border-sparrow-green py-2 text-sm font-medium text-sparrow-green hover:bg-sparrow-green/5"
               >
                 {saving === 'future' ? 'Saving…' : 'Save this + all future'}
@@ -306,7 +314,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
           ) : (
             <button
               onClick={() => handleSave('single')}
-              disabled={!canSave || !!saving}
+              disabled={!!saving}
               className="btn-primary w-full"
             >
               {saving === 'single' ? 'Saving…' : 'Save changes'}
@@ -405,12 +413,13 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
       {mode === 'edit' ? (
         <div className="space-y-5">
           <div>
-            <label className="field-label">Title</label>
+            <label className="field-label" htmlFor="org-edit-title">Title</label>
             <input
+              id="org-edit-title"
               type="text"
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="field-input"
+              onChange={(e) => { setEditTitle(e.target.value); clear('org-edit-title'); }}
+              className={fieldClass('org-edit-title')}
             />
           </div>
 
@@ -435,16 +444,18 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
           <div className="grid grid-cols-2 gap-3">
             <div className={editAllDay ? 'col-span-1' : 'col-span-2'}>
-              <label className="field-label">{editAllDay ? 'Start date' : 'Date'}</label>
+              <label className="field-label" htmlFor="org-edit-date">{editAllDay ? 'Start date' : 'Date'}</label>
               <input
+                id="org-edit-date"
                 type="date"
                 value={editDate}
                 onChange={(e) => {
                   setEditDate(e.target.value);
+                  clear('org-edit-date');
                   // Clear end date if start moves to or past it
                   if (editEndDate && e.target.value >= editEndDate) setEditEndDate('');
                 }}
-                className="field-input"
+                className={fieldClass('org-edit-date')}
               />
             </div>
             {editAllDay && (
@@ -464,12 +475,13 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
             {!editAllDay && (
               <>
                 <div>
-                  <label className="field-label">Start time</label>
+                  <label className="field-label" htmlFor="org-edit-start-time">Start time</label>
                   <input
+                    id="org-edit-start-time"
                     type="time"
                     value={editStartTime}
-                    onChange={(e) => setEditStartTime(e.target.value)}
-                    className="field-input"
+                    onChange={(e) => { setEditStartTime(e.target.value); clear('org-edit-start-time'); }}
+                    className={fieldClass('org-edit-start-time')}
                   />
                 </div>
                 <div>

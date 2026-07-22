@@ -16,6 +16,7 @@ import {
   type WorkOrderWithAssignee,
 } from '@/lib/housing';
 import type { Profile } from '@/lib/types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 interface Props {
   open: boolean;
@@ -67,17 +68,16 @@ export function WorkOrderPanel({
       setStatus('open');
       setAssignedTo('');
     }
+    resetValidation();
   }, [open, workOrder, prefillSpaceId, spaces]);
 
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'w-desc', label: 'Description', valid: description.trim().length > 0 },
+    { key: 'w-loc', label: 'Lot or location', valid: !!spaceId || location.trim().length > 0 },
+  ]);
+
   function save() {
-    if (!description.trim()) {
-      setError('A description is required.');
-      return;
-    }
-    if (!spaceId && !location.trim()) {
-      setError('Pick a lot, or enter a location for common-area work.');
-      return;
-    }
+    if (!validate()) return;
     const input: WorkOrderInput = {
       space_id: spaceId || null,
       location: location.trim(),
@@ -145,7 +145,7 @@ export function WorkOrderPanel({
                 id="w-space"
                 className="field-input"
                 value={spaceId}
-                onChange={(e) => setSpaceId(e.target.value)}
+                onChange={(e) => { setSpaceId(e.target.value); clear('w-loc'); }}
               >
                 <option value="">Common area / none</option>
                 {spaces.map((s) => (
@@ -161,9 +161,9 @@ export function WorkOrderPanel({
               </label>
               <input
                 id="w-loc"
-                className="field-input"
+                className={fieldClass('w-loc')}
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={(e) => { setLocation(e.target.value); clear('w-loc'); }}
                 placeholder="e.g. front porch — or where, if no lot"
               />
             </div>
@@ -175,10 +175,10 @@ export function WorkOrderPanel({
             </label>
             <textarea
               id="w-desc"
-              className="field-input"
+              className={fieldClass('w-desc')}
               rows={3}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => { setDescription(e.target.value); clear('w-desc'); }}
             />
           </div>
 
@@ -257,7 +257,7 @@ export function WorkOrderPanel({
             </div>
           </div>
 
-          {error && <p className="mt-4 text-sm text-priority-p1">{error}</p>}
+          {(error || missingMessage) && <p className="mt-4 text-sm text-priority-p1">{error ?? missingMessage}</p>}
         </div>
 
         <div className="flex items-center justify-between border-t border-sparrow-rule px-5 py-4">

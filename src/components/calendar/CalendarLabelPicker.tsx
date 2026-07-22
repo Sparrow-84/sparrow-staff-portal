@@ -9,6 +9,7 @@ import {
 } from '@/lib/calendar';
 import { LABEL_COLORS } from '@/components/LabelPill';
 import type { Department } from '@/lib/types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 interface Props {
   value: string | null;              // selected label_id
@@ -47,6 +48,26 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  const {
+    missingMessage: createMissingMessage,
+    validate: validateCreate,
+    fieldClass: createFieldClass,
+    clear: clearCreate,
+    reset: resetCreateValidation,
+  } = useRequiredFields([
+    { key: 'label-create-name', label: 'Label name', valid: createName.trim().length > 0 },
+  ]);
+
+  const {
+    missingMessage: editMissingMessage,
+    validate: validateEdit,
+    fieldClass: editFieldClass,
+    clear: clearEdit,
+    reset: resetEditValidation,
+  } = useRequiredFields([
+    { key: 'label-edit-name', label: 'Label name', valid: editName.trim().length > 0 },
+  ]);
 
   function loadLabels() {
     void fetchCalendarLabels().then(setAllLabels);
@@ -101,6 +122,8 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
     setCreateName('');
     setCreateColor('blue');
     setEditingId(null);
+    resetCreateValidation();
+    resetEditValidation();
   }
 
   function select(label: CalendarLabel) {
@@ -116,7 +139,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
   }
 
   async function handleCreate() {
-    if (!createName.trim() || creating) return;
+    if (!validateCreate() || creating) return;
     setCreating(true);
     try {
       const label = await createCalendarLabel({
@@ -139,10 +162,11 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
     setEditingId(label.id);
     setEditName(label.name);
     setEditColor(label.color);
+    resetEditValidation();
   }
 
   async function handleSaveEdit(id: string) {
-    if (!editName.trim() || savingEdit) return;
+    if (!validateEdit() || savingEdit) return;
     setSavingEdit(true);
     try {
       await updateCalendarLabel(id, { name: editName.trim(), color: editColor });
@@ -262,14 +286,16 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                 <span className="text-xs font-semibold text-sparrow-ink">New label</span>
               </div>
               <input
+                id="label-create-name"
                 type="text"
                 value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
+                onChange={(e) => { setCreateName(e.target.value); clearCreate('label-create-name'); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate(); }}
                 placeholder="Label name…"
-                className="field-input"
+                className={createFieldClass('label-create-name')}
                 autoFocus
               />
+              {createMissingMessage && <p className="text-xs text-priority-p1">{createMissingMessage}</p>}
               <div>
                 <p className="mb-1.5 text-xs text-sparrow-gray">Color</p>
                 <div className="flex flex-wrap gap-2">
@@ -287,7 +313,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
               <button
                 type="button"
                 onClick={() => void handleCreate()}
-                disabled={!createName.trim() || creating}
+                disabled={creating}
                 className="btn-primary w-full text-sm"
               >
                 {creating ? 'Saving…' : 'Save label'}
@@ -301,7 +327,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => { setView('list'); setEditingId(null); }}
+                  onClick={() => { setView('list'); setEditingId(null); resetEditValidation(); }}
                   className="text-xs text-sparrow-gray hover:text-sparrow-ink"
                 >
                   ← Back
@@ -328,29 +354,31 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                       </div>
                       <div className="flex items-center gap-2">
                         <input
+                          id="label-edit-name"
                           type="text"
                           value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') void handleSaveEdit(label.id); if (e.key === 'Escape') setEditingId(null); }}
-                          className="field-input flex-1 py-1 text-xs"
+                          onChange={(e) => { setEditName(e.target.value); clearEdit('label-edit-name'); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') void handleSaveEdit(label.id); if (e.key === 'Escape') { setEditingId(null); resetEditValidation(); } }}
+                          className={editFieldClass('label-edit-name', 'field-input flex-1 py-1 text-xs')}
                           autoFocus
                         />
                         <button
                           type="button"
                           onClick={() => void handleSaveEdit(label.id)}
-                          disabled={!editName.trim() || savingEdit}
+                          disabled={savingEdit}
                           className="text-xs font-medium text-sparrow-green hover:opacity-70"
                         >
                           Save
                         </button>
                         <button
                           type="button"
-                          onClick={() => setEditingId(null)}
+                          onClick={() => { setEditingId(null); resetEditValidation(); }}
                           className="text-xs text-sparrow-gray hover:text-sparrow-ink"
                         >
                           ✕
                         </button>
                       </div>
+                      {editMissingMessage && <p className="text-xs text-priority-p1">{editMissingMessage}</p>}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">

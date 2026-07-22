@@ -28,6 +28,7 @@ import {
   setHomeworkStatus,
   upsertSessionAttendance,
 } from '@/lib/lcp';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 const STATUSES: AttendanceStatus[] = ['on_time', 'late', 'no_show'];
 
@@ -166,11 +167,12 @@ export function SessionLogEntry({
   const [filing, setFiling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { missingMessage, validate, fieldClass, clear } = useRequiredFields([
+    { key: 'sle-family-picker', label: 'At least one family present', valid: sessionType !== 'ad_hoc' || selectedIds.size > 0 },
+  ]);
+
   async function fileSession() {
-    if (sessionType === 'ad_hoc' && selectedIds.size === 0) {
-      setError('Select at least one family before filing.');
-      return;
-    }
+    if (!validate()) return;
     setFiling(true);
     setError(null);
     try {
@@ -358,7 +360,7 @@ export function SessionLogEntry({
 
       {/* Ad-hoc: family picker */}
       {isAdHoc && (
-        <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+        <section id="sle-family-picker" className={fieldClass('sle-family-picker', 'rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card')}>
           <p className="mb-3 field-label">Who was present?</p>
           <div className="space-y-2">
             {families.map((f) => (
@@ -372,6 +374,7 @@ export function SessionLogEntry({
                       if (next.has(f.id)) next.delete(f.id); else next.add(f.id);
                       return next;
                     });
+                    clear('sle-family-picker');
                   }}
                   className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
                 />
@@ -499,7 +502,7 @@ export function SessionLogEntry({
       )}
 
       {/* Error + file button */}
-      {error && <p className="text-sm text-priority-p1">{error}</p>}
+      {(error || missingMessage) && <p className="text-sm text-priority-p1">{error ?? missingMessage}</p>}
 
       <button
         onClick={fileSession}

@@ -9,6 +9,7 @@ import {
   type PartnerType,
 } from '@/lib/partnerships-types';
 import { Drawer } from '../lcp/Drawer';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 // Default stewardship cadence by type (days between touchpoints). Every partner now needs a
 // cadence value (migration 0080 makes partners.cadence_days NOT NULL — "a record without a
@@ -74,24 +75,26 @@ export function AddPartnerPanel({
       setLeadTime(DEFAULT_LEAD_TIME);
       setError(null);
       setBusy(false);
+      resetValidation();
     }
   }, [open, defaultOwnerId]);
+
+  // Cadence + lead time are required (migration 0080 — NOT NULL at the DB level). Validate here
+  // so a save attempt never hits the DB constraint as its only feedback.
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'pa-name', label: 'Name', valid: name.trim().length > 0 },
+    { key: 'pa-cadence', label: 'Cadence (days)', valid: cadence != null && cadence > 0 },
+    { key: 'pa-lead-time', label: 'Lead time (days)', valid: leadTime != null && leadTime > 0 },
+  ]);
 
   function pickType(t: PartnerType) {
     setType(t);
     setCadence(DEFAULT_CADENCE[t]); // follow the type's default rhythm unless the user overrides
+    clear('pa-cadence');
   }
 
-  // Cadence + lead time are required (migration 0080 — NOT NULL at the DB level). Validate here
-  // so a save attempt never hits the DB constraint as its only feedback.
-  const canSave =
-    name.trim().length > 0 &&
-    cadence != null && cadence > 0 &&
-    leadTime != null && leadTime > 0 &&
-    !busy;
-
   async function save() {
-    if (!canSave || cadence == null || leadTime == null) return;
+    if (!validate() || cadence == null || leadTime == null) return;
     setBusy(true);
     setError(null);
     try {
@@ -138,9 +141,12 @@ export function AddPartnerPanel({
       title="Add partner"
       subtitle="Name the owner and a cadence — that's what makes it stewarded"
       footer={
-        <button onClick={save} disabled={!canSave} className="btn-primary w-full">
-          {busy ? 'Adding…' : 'Add partner'}
-        </button>
+        <div className="space-y-2">
+          {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
+          <button onClick={save} disabled={busy} className="btn-primary w-full">
+            {busy ? 'Adding…' : 'Add partner'}
+          </button>
+        </div>
       }
     >
       <div className="space-y-4">
@@ -148,9 +154,9 @@ export function AddPartnerPanel({
           <label className="field-label" htmlFor="pa-name">Name</label>
           <input
             id="pa-name"
-            className="field-input"
+            className={fieldClass('pa-name')}
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); clear('pa-name'); }}
             placeholder="Person, church, or organization"
           />
         </div>
@@ -199,9 +205,12 @@ export function AddPartnerPanel({
               type="number"
               min={1}
               required
-              className="field-input"
+              className={fieldClass('pa-cadence')}
               value={cadence ?? ''}
-              onChange={(e) => setCadence(e.target.value === '' ? null : Math.max(1, Number(e.target.value)))}
+              onChange={(e) => {
+                setCadence(e.target.value === '' ? null : Math.max(1, Number(e.target.value)));
+                clear('pa-cadence');
+              }}
             />
           </div>
           <div>
@@ -211,9 +220,12 @@ export function AddPartnerPanel({
               type="number"
               min={1}
               required
-              className="field-input"
+              className={fieldClass('pa-lead-time')}
               value={leadTime ?? ''}
-              onChange={(e) => setLeadTime(e.target.value === '' ? null : Math.max(1, Number(e.target.value)))}
+              onChange={(e) => {
+                setLeadTime(e.target.value === '' ? null : Math.max(1, Number(e.target.value)));
+                clear('pa-lead-time');
+              }}
             />
           </div>
         </div>

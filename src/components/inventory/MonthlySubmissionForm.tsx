@@ -12,6 +12,7 @@ import {
   type InvMonthlySubmission, type InvSubLocation, type InvItem,
   type InvAddition, type InvRemoval,
 } from '@/lib/inventory-types';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 // ── Addition entry form ───────────────────────────────────────────────────
 
@@ -37,12 +38,18 @@ function AdditionForm({
 
   const set = (patch: Partial<NewAddition>) => setForm((f) => ({ ...f, ...patch }));
 
-  const canSave =
-    (form.is_batch ? !!form.batch_category : form.description.trim().length > 0) &&
-    form.cost > 0 &&
-    !!form.sub_location_id;
+  const { missingMessage, validate, fieldClass, clear } = useRequiredFields([
+    {
+      key: 'add-desc',
+      label: form.is_batch ? 'Batch category' : 'Description',
+      valid: form.is_batch ? !!form.batch_category : form.description.trim().length > 0,
+    },
+    { key: 'add-cost', label: 'Cost', valid: form.cost > 0 },
+    { key: 'add-location', label: 'Location', valid: !!form.sub_location_id },
+  ]);
 
   async function save() {
+    if (!validate() || busy) return;
     setBusy(true);
     setErr('');
     try {
@@ -91,11 +98,12 @@ function AdditionForm({
 
       {form.is_batch ? (
         <div>
-          <label className="field-label">Batch category *</label>
+          <label className="field-label" htmlFor="add-desc">Batch category *</label>
           <select
+            id="add-desc"
             value={form.batch_category ?? ''}
-            onChange={(e) => set({ batch_category: e.target.value || null })}
-            className="field-input"
+            onChange={(e) => { set({ batch_category: e.target.value || null }); clear('add-desc'); }}
+            className={fieldClass('add-desc')}
           >
             <option value="">Select category…</option>
             {BATCH_CATEGORIES.map((c) => (
@@ -110,12 +118,13 @@ function AdditionForm({
         </div>
       ) : (
         <div>
-          <label className="field-label">Description *</label>
+          <label className="field-label" htmlFor="add-desc">Description *</label>
           <input
+            id="add-desc"
             value={form.description}
-            onChange={(e) => set({ description: e.target.value })}
+            onChange={(e) => { set({ description: e.target.value }); clear('add-desc'); }}
             placeholder='e.g. "Ryobi cordless drill, serial #12345" — be specific'
-            className="field-input"
+            className={fieldClass('add-desc')}
           />
           <p className="mt-1 text-xs text-sparrow-gray">
             Include brand, model, and serial # for electronics, power tools, and appliances.
@@ -168,17 +177,18 @@ function AdditionForm({
       </div>
 
       <div>
-        <label className="field-label">Cost *</label>
+        <label className="field-label" htmlFor="add-cost">Cost *</label>
         <div className="flex gap-2 items-center">
           <span className="text-sparrow-gray text-sm">$</span>
           <input
+            id="add-cost"
             type="number"
             min={0}
             step={1}
             value={form.cost || ''}
-            onChange={(e) => set({ cost: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => { set({ cost: parseFloat(e.target.value) || 0 }); clear('add-cost'); }}
             placeholder="0"
-            className="field-input flex-1"
+            className={fieldClass('add-cost', 'field-input flex-1')}
           />
           {form.quantity > 1 && (
             <div className="flex gap-1">
@@ -229,11 +239,12 @@ function AdditionForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="field-label">Location *</label>
+          <label className="field-label" htmlFor="add-location">Location *</label>
           <select
+            id="add-location"
             value={form.sub_location_id ?? ''}
-            onChange={(e) => set({ sub_location_id: e.target.value || null })}
-            className="field-input"
+            onChange={(e) => { set({ sub_location_id: e.target.value || null }); clear('add-location'); }}
+            className={fieldClass('add-location')}
           >
             <option value="">Select room / area…</option>
             {subLocations.map((sl) => (
@@ -267,13 +278,13 @@ function AdditionForm({
         </div>
       )}
 
-      {err && <p className="text-sm text-priority-p1">{err}</p>}
+      {(err || missingMessage) && <p className="text-sm text-priority-p1">{err || missingMessage}</p>}
 
       <div className="flex gap-2 justify-end pt-1">
         <button onClick={onCancel} className="btn-ghost text-sm">Cancel</button>
         <button
           onClick={save}
-          disabled={!canSave || busy}
+          disabled={busy}
           className="btn-primary text-sm disabled:opacity-40"
         >
           {busy ? 'Saving…' : 'Add item'}
@@ -306,12 +317,13 @@ function RemovalForm({
   const description = selectedItem ? selectedItem.description : freeText;
   const maxQty = selectedItem ? selectedItem.quantity : undefined;
 
-  const canSave =
-    (selectedItemId || freeText.trim()) &&
-    qtyRemoved >= 1 &&
-    !!howItLeft;
+  const { missingMessage, validate, fieldClass, clear } = useRequiredFields([
+    { key: 'rm-what', label: 'What left', valid: !!(selectedItemId || freeText.trim()) },
+    { key: 'rm-how', label: 'How it left', valid: !!howItLeft },
+  ]);
 
   async function save() {
+    if (!validate() || busy) return;
     setBusy(true);
     setErr('');
     try {
@@ -334,11 +346,12 @@ function RemovalForm({
     <div className="rounded-xl border border-priority-p1/30 bg-priority-p1/5 p-4 space-y-4">
       {items.length > 0 ? (
         <div>
-          <label className="field-label">What left? *</label>
+          <label className="field-label" htmlFor="rm-what">What left? *</label>
           <select
+            id="rm-what"
             value={selectedItemId}
-            onChange={(e) => { setSelectedItemId(e.target.value); setFreeText(''); }}
-            className="field-input"
+            onChange={(e) => { setSelectedItemId(e.target.value); setFreeText(''); clear('rm-what'); }}
+            className={fieldClass('rm-what')}
           >
             <option value="">Select item from register…</option>
             {items.map((item) => (
@@ -352,7 +365,7 @@ function RemovalForm({
           {selectedItemId === '__freetext__' && (
             <input
               value={freeText}
-              onChange={(e) => { setFreeText(e.target.value); setSelectedItemId(''); }}
+              onChange={(e) => { setFreeText(e.target.value); setSelectedItemId(''); clear('rm-what'); }}
               placeholder='e.g. "Large brown leather couch"'
               className="field-input mt-2"
             />
@@ -360,12 +373,13 @@ function RemovalForm({
         </div>
       ) : (
         <div>
-          <label className="field-label">What left? *</label>
+          <label className="field-label" htmlFor="rm-what">What left? *</label>
           <input
+            id="rm-what"
             value={freeText}
-            onChange={(e) => setFreeText(e.target.value)}
+            onChange={(e) => { setFreeText(e.target.value); clear('rm-what'); }}
             placeholder='e.g. "Large brown leather couch" — be specific'
-            className="field-input"
+            className={fieldClass('rm-what')}
           />
           <p className="mt-1 text-xs text-sparrow-gray">
             Only list items physically off the property. Broken items still on site are not gone yet.
@@ -392,11 +406,12 @@ function RemovalForm({
         </div>
 
         <div>
-          <label className="field-label">How did it leave? *</label>
+          <label className="field-label" htmlFor="rm-how">How did it leave? *</label>
           <select
+            id="rm-how"
             value={howItLeft}
-            onChange={(e) => setHowItLeft(e.target.value as NewRemoval['how_it_left'])}
-            className="field-input"
+            onChange={(e) => { setHowItLeft(e.target.value as NewRemoval['how_it_left']); clear('rm-how'); }}
+            className={fieldClass('rm-how')}
           >
             <option value="">Select…</option>
             {(Object.entries(EXIT_METHOD_LABELS) as [NewRemoval['how_it_left'], string][]).map(
@@ -416,13 +431,13 @@ function RemovalForm({
         />
       </div>
 
-      {err && <p className="text-sm text-priority-p1">{err}</p>}
+      {(err || missingMessage) && <p className="text-sm text-priority-p1">{err || missingMessage}</p>}
 
       <div className="flex gap-2 justify-end pt-1">
         <button onClick={onCancel} className="btn-ghost text-sm">Cancel</button>
         <button
           onClick={save}
-          disabled={!canSave || busy}
+          disabled={busy}
           className="btn-primary text-sm disabled:opacity-40"
         >
           {busy ? 'Saving…' : 'Log removal'}

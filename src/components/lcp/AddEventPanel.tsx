@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { EVENT_LABEL, type EventKind } from '@/lib/lcp-types';
 import { createEvents } from '@/lib/lcp';
 import { Drawer } from './Drawer';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 const EVENT_KINDS: EventKind[] = ['curriculum', 'one_on_one', 'dinner', 'volunteer', 'other'];
 const DOW_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -105,10 +106,15 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
     ? generateDates(date, frequency, [...daysOfWeek], effectiveUntil)
     : [date];
 
-  const canSubmit = title.trim() && date && startTime && occurrenceDates.length > 0;
+  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+    { key: 'lcp-event-title', label: 'Title', valid: title.trim().length > 0 },
+    { key: 'lcp-event-date', label: 'Date', valid: !!date },
+    { key: 'lcp-event-start-time', label: 'Start time', valid: !!startTime },
+    { key: 'lcp-event-recurrence', label: 'Repeat settings (no matching dates)', valid: occurrenceDates.length > 0 },
+  ]);
 
   async function submit() {
-    if (!canSubmit || submittingRef.current) return;
+    if (!validate() || submittingRef.current) return;
     submittingRef.current = true;
     setSaving(true);
     setError(null);
@@ -154,6 +160,7 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
     setUntilMode('date');
     setUntilDate(addMonths(todayISO(), 3));
     setError(null);
+    resetValidation();
   }
 
   function handleClose() {
@@ -174,10 +181,10 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
       title="Add Event"
       footer={
         <div className="space-y-2">
-          {error && <p className="text-sm text-priority-p1">{error}</p>}
+          {(error || missingMessage) && <p className="text-sm text-priority-p1">{error ?? missingMessage}</p>}
           <button
             onClick={submit}
-            disabled={!canSubmit || saving}
+            disabled={saving}
             className="btn-primary w-full"
           >
             {submitLabel}
@@ -189,13 +196,14 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
 
         {/* Title */}
         <div>
-          <label className="field-label">Title</label>
+          <label className="field-label" htmlFor="lcp-event-title">Title</label>
           <input
+            id="lcp-event-title"
             type="text"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => { setTitle(e.target.value); clear('lcp-event-title'); }}
             placeholder="e.g. Monday Mentoring"
-            className="field-input"
+            className={fieldClass('lcp-event-title')}
           />
         </div>
 
@@ -212,21 +220,23 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
         {/* Date + Times */}
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className="field-label">{recurring ? 'Start date' : 'Date'}</label>
+            <label className="field-label" htmlFor="lcp-event-date">{recurring ? 'Start date' : 'Date'}</label>
             <input
+              id="lcp-event-date"
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="field-input"
+              onChange={(e) => { setDate(e.target.value); clear('lcp-event-date'); }}
+              className={fieldClass('lcp-event-date')}
             />
           </div>
           <div>
-            <label className="field-label">Start time</label>
+            <label className="field-label" htmlFor="lcp-event-start-time">Start time</label>
             <input
+              id="lcp-event-start-time"
               type="time"
               value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="field-input"
+              onChange={(e) => { setStartTime(e.target.value); clear('lcp-event-start-time'); }}
+              className={fieldClass('lcp-event-start-time')}
             />
           </div>
           <div>
