@@ -101,12 +101,19 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
 
   function complete(t: TaskWithPeople) {
     setFading((s) => new Set(s).add(t.id));
-    const tid = window.setTimeout(async () => {
+    const write = setTaskStatus(t.id, 'done');
+    const tid = window.setTimeout(() => {
       pendingTimeouts.current.delete(t.id);
-      await setTaskStatus(t.id, 'done');
       ctx.onChanged();
     }, 450);
     pendingTimeouts.current.set(t.id, tid);
+    write.catch(() => {
+      setFading((s) => {
+        const next = new Set(s);
+        next.delete(t.id);
+        return next;
+      });
+    });
   }
 
   if (due.length === 0) {
