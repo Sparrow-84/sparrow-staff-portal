@@ -227,15 +227,17 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         },
         { onConflict: 'event_id,user_id' },
       ),
-      supabase.from('event_shared_notes').upsert(
-        {
-          event_id: event.id,
-          notes: sanitize(latestShared.current),
-          updated_at: new Date().toISOString(),
-          updated_by: userId,
-        },
-        { onConflict: 'event_id' },
-      ),
+      latestShared.current
+        ? supabase.from('event_shared_notes').upsert(
+            {
+              event_id: event.id,
+              notes: sanitize(latestShared.current),
+              updated_at: new Date().toISOString(),
+              updated_by: userId,
+            },
+            { onConflict: 'event_id' },
+          )
+        : Promise.resolve({ error: null }),
     ]);
 
     setClosing(false);

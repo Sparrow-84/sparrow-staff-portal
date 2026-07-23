@@ -231,10 +231,16 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
 
       // All Staff meetings/events (not the Stat Holiday label) default everyone to
       // "attending" — notify staff so they can opt out right from the notification.
+      // The event itself is already saved at this point, so a notification failure
+      // must not be reported as a failed save (and must not block the drawer closing).
       if (!isPersonal && !department && createdIds.length > 0) {
         const label = labels.find((l) => l.id === labelId);
         if (label?.name !== 'Stat Holiday') {
-          await notifyNewAllStaffEvent(createdIds[0], title.trim(), profiles.map((p) => p.id), currentUserId);
+          try {
+            await notifyNewAllStaffEvent(createdIds[0], title.trim(), profiles.map((p) => p.id), currentUserId);
+          } catch (notifyError) {
+            console.error('Could not send All Staff event notifications:', notifyError);
+          }
         }
       }
 
@@ -321,15 +327,6 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
           />
         </div>
 
-        <CalendarLabelPicker
-          value={labelId}
-          isPersonal={isPersonal}
-          department={isPersonal ? null : department}
-          currentUserId={currentUserId}
-          isAdmin={isAdmin}
-          onChange={(id) => setLabelId(id)}
-        />
-
         <div>
           <label className="field-label">Post to</label>
           <select
@@ -358,6 +355,15 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
             <p className="mt-1 text-xs text-sparrow-gray">Only visible to you — no other staff can see this event.</p>
           )}
         </div>
+
+        <CalendarLabelPicker
+          value={labelId}
+          isPersonal={isPersonal}
+          department={isPersonal ? null : department}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onChange={(id) => setLabelId(id)}
+        />
 
         <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
           <input
