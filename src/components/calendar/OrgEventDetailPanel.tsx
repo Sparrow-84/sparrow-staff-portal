@@ -9,6 +9,7 @@ import {
   notifyEventCommentMentions,
   removeAttendee,
   setMyAttendance,
+  setMyAttendanceForSeries,
   updateCalendarEvent,
   updateCalendarEventAndFuture,
   withTzOffset,
@@ -48,6 +49,9 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
   const [error, setError] = useState<string | null>(null);
   const [attendees, setAttendees] = useState<EventAttendee[]>([]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
+  // When a recurring event's attendance is changed, ask whether it applies to
+  // just this occurrence or this + all future ones (mirrors edit/delete).
+  const [attendancePrompt, setAttendancePrompt] = useState<boolean | null>(null);
   const [eventComments, setEventComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [commentPending, setCommentPending] = useState(false);
@@ -95,6 +99,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
   // Load attendees whenever the event changes (skip personal events — they have no attendees)
   useEffect(() => {
+    setAttendancePrompt(null);
     if (!event || event.is_personal) { setAttendees([]); return; }
     setAttendanceLoading(true);
     void fetchEventAttendees(event.id)
@@ -114,11 +119,24 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
     ? myRow?.status !== 'opted_out'
     : myRow?.status === 'attending';
 
-  async function setAttendance(attending: boolean) {
+  function setAttendance(attending: boolean) {
     if (!event || isAttending === attending) return;
+    // Recurring events ask whether this applies to just this occurrence or
+    // this + all future ones, instead of forcing a click per occurrence.
+    if (event.recurrence_id) {
+      setAttendancePrompt(attending);
+      return;
+    }
+    void applyAttendance(attending, 'single');
+  }
+
+  async function applyAttendance(attending: boolean, scope: 'single' | 'future') {
+    if (!event) return;
     setAttendanceLoading(true);
     try {
-      if (event.department === null) {
+      if (scope === 'future' && event.recurrence_id) {
+        await setMyAttendanceForSeries(event.recurrence_id, event.starts_at, currentUserId, attending, event.department === null);
+      } else if (event.department === null) {
         // All Staff defaults to attending; only store a row when declining
         if (attending) await removeAttendee(event.id, currentUserId);
         else await setMyAttendance(event.id, currentUserId, 'opted_out');
@@ -128,6 +146,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
         else await removeAttendee(event.id, currentUserId);
       }
       setAttendees(await fetchEventAttendees(event.id));
+      setAttendancePrompt(null);
       onUpdated();
     } finally {
       setAttendanceLoading(false);
@@ -137,6 +156,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
   function handleClose() {
     setMode('view');
     setConfirm(false);
+    setAttendancePrompt(null);
     setError(null);
     onClose();
   }
@@ -553,7 +573,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
               <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Attending?</p>
               <div className="mt-1.5 flex items-center gap-2">
                 <button
-                  onClick={() => void setAttendance(true)}
+                  onClick={() => setAttendance(true)}
                   disabled={attendanceLoading}
                   className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
                     isAttending
@@ -564,7 +584,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                   Yes
                 </button>
                 <button
-                  onClick={() => void setAttendance(false)}
+                  onClick={() => setAttendance(false)}
                   disabled={attendanceLoading}
                   className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
                     !isAttending
@@ -575,6 +595,36 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                   No
                 </button>
               </div>
+              {attendancePrompt !== null && (
+                <div className="mt-2 rounded-lg border border-sparrow-rule bg-sparrow-mist/50 p-2.5">
+                  <p className="text-xs text-sparrow-gray">
+                    Apply to just this occurrence, or this and every future one in the series?
+                  </p>
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    <button
+                      onClick={() => void applyAttendance(attendancePrompt, 'single')}
+                      disabled={attendanceLoading}
+                      className="w-full rounded-lg border border-sparrow-rule bg-white py-1.5 text-xs font-medium text-sparrow-ink hover:bg-sparrow-mist"
+                    >
+                      Just this one
+                    </button>
+                    <button
+                      onClick={() => void applyAttendance(attendancePrompt, 'future')}
+                      disabled={attendanceLoading}
+                      className="w-full rounded-lg bg-sparrow-green py-1.5 text-xs font-medium text-white hover:bg-sparrow-green/90"
+                    >
+                      This and all future occurrences
+                    </button>
+                    <button
+                      onClick={() => setAttendancePrompt(null)}
+                      disabled={attendanceLoading}
+                      className="w-full py-1 text-xs font-medium text-sparrow-gray hover:text-sparrow-ink"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               {(() => {
                 const goingIds = attendees.filter((a) => a.status === 'attending').map((a) => a.staff_id);
                 const names = goingIds

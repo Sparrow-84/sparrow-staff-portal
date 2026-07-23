@@ -287,6 +287,50 @@ export async function removeAttendee(eventId: string, staffId: string): Promise<
 }
 
 /**
+ * Set the current user's own attendance across every occurrence in a recurring
+ * series from this one forward (mirrors the "this event / this + all future"
+ * pattern used for editing and deleting recurring events).
+ */
+export async function setMyAttendanceForSeries(
+  recurrenceId: string,
+  fromStartsAt: string,
+  userId: string,
+  attending: boolean,
+  isAllStaff: boolean,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('calendar_events')
+    .select('id')
+    .eq('recurrence_id', recurrenceId)
+    .gte('starts_at', fromStartsAt);
+  if (error) throw new Error(error.message);
+  const ids = (data ?? []).map((r) => r.id as string);
+  if (!ids.length) return;
+
+  // All Staff defaults to attending (row only needed to decline); dept events
+  // default to not attending (row only needed to accept) — same rule as setMyAttendance.
+  const needsRow = isAllStaff ? !attending : attending;
+  if (needsRow) {
+    const { error: upsertErr } = await supabase.from('event_attendees').upsert(
+      ids.map((id) => ({
+        event_id: id,
+        staff_id: userId,
+        status: (isAllStaff ? 'opted_out' : 'attending') as 'attending' | 'opted_out',
+        added_by: userId,
+      })),
+    );
+    if (upsertErr) throw new Error(upsertErr.message);
+  } else {
+    const { error: delErr } = await supabase
+      .from('event_attendees')
+      .delete()
+      .eq('staff_id', userId)
+      .in('event_id', ids);
+    if (delErr) throw new Error(delErr.message);
+  }
+}
+
+/**
  * Creator adds a list of staff as attendees across all event IDs in a series.
  * Sends one notification per attendee (not per occurrence).
  */
