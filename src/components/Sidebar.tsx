@@ -1,6 +1,6 @@
 import { useChat } from '@/chat/ChatContext';
 
-export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'stories' | 'tasks' | 'calendar' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents' | 'team';
+export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'stories' | 'tasks' | 'calendar' | 'notes' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents' | 'team';
 
 interface Props {
   view: View;
@@ -82,6 +82,9 @@ function NavContent({
         </button>
         <button onClick={() => onNavigate('calendar')} className={`${itemBase} ${view === 'calendar' ? active : idle}`}>
           Calendar
+        </button>
+        <button onClick={() => onNavigate('notes')} className={`${itemBase} ${view === 'notes' ? active : idle}`}>
+          Notes
         </button>
         <button onClick={() => onNavigate('messages')} className={`${itemBase} ${view === 'messages' ? active : idle}`}>
           Messages
