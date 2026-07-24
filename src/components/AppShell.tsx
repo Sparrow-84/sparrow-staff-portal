@@ -20,6 +20,7 @@ import { DocumentsRoom } from './documents/DocumentsRoom';
 import { TeamView } from '@/pages/TeamView';
 import { ValuesFooter } from './ValuesFooter';
 import { StoriesRoom } from './stories/StoriesRoom';
+import { MyInventoryView } from '@/pages/MyInventoryView';
 
 export function AppShell() {
   const { profile } = useAuth();
@@ -88,6 +89,7 @@ export function AppShell() {
             {view === 'team' && <TeamView />}
             {view === 'staff' && <StaffAdmin />}
             {view === 'stories' && <StoriesRoom />}
+            {view === 'inventory' && <MyInventoryView />}
           </main>
         </div>
         <ValuesFooter />

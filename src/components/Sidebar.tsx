@@ -1,6 +1,6 @@
 import { useChat } from '@/chat/ChatContext';
 
-export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'stories' | 'tasks' | 'calendar' | 'notes' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents' | 'team';
+export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'stories' | 'tasks' | 'calendar' | 'notes' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents' | 'team' | 'inventory';
 
 interface Props {
   view: View;
@@ -96,6 +96,9 @@ function NavContent({
         </button>
         <button onClick={() => onNavigate('documents')} className={`${itemBase} ${view === 'documents' ? active : idle}`}>
           Resource Library
+        </button>
+        <button onClick={() => onNavigate('inventory')} className={`${itemBase} ${view === 'inventory' ? active : idle}`}>
+          My Inventory
         </button>
         <button onClick={() => onNavigate('team')} className={`${itemBase} ${view === 'team' ? active : idle}`}>
           Team

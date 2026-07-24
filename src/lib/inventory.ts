@@ -53,6 +53,42 @@ export async function fetchMyLocations(): Promise<InvLocation[]> {
   return locs.sort((a, b) => a.sort_order - b.sort_order);
 }
 
+// ── Location assignments ──────────────────────────────────────────────────
+
+export type LocationAssignees = Record<string, { id: string; full_name: string }[]>;
+
+export async function fetchAllLocationAssignments(): Promise<LocationAssignees> {
+  const { data, error } = await supabase
+    .from('inv_location_assignments')
+    .select('location_id, user:profiles!user_id(id, full_name)');
+  if (error) throw new Error(error.message);
+  const result: LocationAssignees = {};
+  for (const row of data ?? []) {
+    const u = (row as any).user as { id: string; full_name: string } | null;
+    if (!u) continue;
+    const lid = (row as any).location_id as string;
+    if (!result[lid]) result[lid] = [];
+    result[lid].push(u);
+  }
+  return result;
+}
+
+export async function addLocationAssignment(locationId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('inv_location_assignments')
+    .insert({ location_id: locationId, user_id: userId });
+  if (error) throw new Error(error.message);
+}
+
+export async function removeLocationAssignment(locationId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('inv_location_assignments')
+    .delete()
+    .eq('location_id', locationId)
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
 export async function fetchSubLocations(locationId: string): Promise<InvSubLocation[]> {
   const { data, error } = await supabase
     .from('inv_sub_locations')
