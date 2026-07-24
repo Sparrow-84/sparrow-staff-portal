@@ -537,8 +537,18 @@ async function syncStaffBirthdayEvents(): Promise<void> {
   }
 }
 
+/** Fire-and-forget: ensures this year's + next year's stat holidays exist before reading. */
+async function syncStatHolidayEvents(): Promise<void> {
+  try {
+    await supabase.rpc('emit_stat_holiday_events');
+  } catch {
+    // best-effort — a failed sync just means holidays wait for the next calendar load
+  }
+}
+
 export async function fetchCalendar(): Promise<CalendarEvent[]> {
   await syncStaffBirthdayEvents();
+  await syncStatHolidayEvents();
   try {
     const { data, error } = await supabase
       .from('calendar_events')
