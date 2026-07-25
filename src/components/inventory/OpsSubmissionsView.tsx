@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   fetchAllLocations, fetchAllCurrentPeriodSubmissions,
   fetchAllLocationAssignments, addLocationAssignment, removeLocationAssignment,
-  type LocationAssignees,
+  setLocationOwner,
+  type LocationAssignees, type LocationAssignee,
 } from '@/lib/inventory';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
@@ -62,7 +63,7 @@ export function OpsSubmissionsView({ month, year }: { month: number; year: numbe
       if (!person) return prev;
       return {
         ...prev,
-        [locationId]: [...(prev[locationId] ?? []), { id: person.id, full_name: person.full_name }],
+        [locationId]: [...(prev[locationId] ?? []), { id: person.id, full_name: person.full_name, is_owner: false }],
       };
     });
   }
@@ -72,6 +73,14 @@ export function OpsSubmissionsView({ month, year }: { month: number; year: numbe
     setAssignees((prev) => ({
       ...prev,
       [locationId]: (prev[locationId] ?? []).filter((u) => u.id !== userId),
+    }));
+  }
+
+  async function handleSetOwner(locationId: string, userId: string) {
+    await setLocationOwner(locationId, userId);
+    setAssignees((prev) => ({
+      ...prev,
+      [locationId]: (prev[locationId] ?? []).map((u) => ({ ...u, is_owner: u.id === userId })),
     }));
   }
 
@@ -153,6 +162,7 @@ export function OpsSubmissionsView({ month, year }: { month: number; year: numbe
         onRowClick={handleRowClick}
         onAdd={handleAdd}
         onRemove={handleRemove}
+        onSetOwner={handleSetOwner}
       />
 
       {/* Remote staff */}
@@ -172,6 +182,7 @@ export function OpsSubmissionsView({ month, year }: { month: number; year: numbe
             onRowClick={handleRowClick}
             onAdd={handleAdd}
             onRemove={handleRemove}
+            onSetOwner={handleSetOwner}
           />
         </div>
       )}
@@ -196,6 +207,7 @@ function LocationSection({
   onRowClick,
   onAdd,
   onRemove,
+  onSetOwner,
 }: {
   locations: InvLocation[];
   submissions: InvMonthlySubmission[];
@@ -204,6 +216,7 @@ function LocationSection({
   onRowClick: (loc: InvLocation) => void;
   onAdd: (locationId: string, userId: string) => Promise<void>;
   onRemove: (locationId: string, userId: string) => Promise<void>;
+  onSetOwner: (locationId: string, userId: string) => Promise<void>;
 }) {
   return (
     <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden divide-y divide-sparrow-rule">
@@ -217,6 +230,7 @@ function LocationSection({
           onRowClick={onRowClick}
           onAdd={(userId) => onAdd(loc.id, userId)}
           onRemove={(userId) => onRemove(loc.id, userId)}
+          onSetOwner={(userId) => onSetOwner(loc.id, userId)}
         />
       ))}
     </div>
@@ -233,18 +247,21 @@ function LocationRow({
   onRowClick,
   onAdd,
   onRemove,
+  onSetOwner,
 }: {
   loc: InvLocation;
   sub: InvMonthlySubmission | undefined;
-  assigned: { id: string; full_name: string }[];
+  assigned: LocationAssignee[];
   allProfiles: Profile[];
   onRowClick: (loc: InvLocation) => void;
   onAdd: (userId: string) => Promise<void>;
   onRemove: (userId: string) => Promise<void>;
+  onSetOwner: (userId: string) => Promise<void>;
 }) {
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [adding,     setAdding]     = useState(false);
-  const [removing,   setRemoving]   = useState<string | null>(null);
+  const [assignOpen,   setAssignOpen]   = useState(false);
+  const [adding,       setAdding]       = useState(false);
+  const [removing,     setRemoving]     = useState<string | null>(null);
+  const [settingOwner, setSettingOwner] = useState(false);
 
   const assignedIds  = new Set(assigned.map((u) => u.id));
   const unassigned   = allProfiles.filter((p) => !assignedIds.has(p.id));
@@ -258,6 +275,11 @@ function LocationRow({
   async function handleRemove(userId: string) {
     setRemoving(userId);
     try { await onRemove(userId); } finally { setRemoving(null); }
+  }
+
+  async function handleSetOwner(userId: string) {
+    setSettingOwner(true);
+    try { await onSetOwner(userId); } finally { setSettingOwner(false); }
   }
 
   return (
@@ -274,7 +296,10 @@ function LocationRow({
             {/* Assignee names */}
             {assigned.length > 0 ? (
               <p className="text-xs text-sparrow-gray mt-0.5">
-                {assigned.map((u) => u.full_name.split(' ')[0]).join(' · ')}
+                {assigned.map((u) => u.is_owner
+                  ? `${u.full_name.split(' ')[0]} (submits)`
+                  : u.full_name.split(' ')[0]
+                ).join(' · ')}
               </p>
             ) : (
               <p className="text-xs text-priority-p1 mt-0.5">No one assigned</p>
@@ -322,25 +347,44 @@ function LocationRow({
       {/* Inline assignment editor */}
       {assignOpen && (
         <div className="border-t border-sparrow-rule bg-sparrow-mist/30 px-4 py-3 space-y-2">
-          {/* Current assignees */}
+          {/* Current assignees with owner radio */}
           {assigned.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="space-y-1.5">
               {assigned.map((u) => (
-                <span
-                  key={u.id}
-                  className="inline-flex items-center gap-1 rounded-full bg-sparrow-sage px-2.5 py-1 text-xs font-medium text-sparrow-green"
-                >
-                  {u.full_name.split(' ')[0]}
+                <div key={u.id} className="flex items-center gap-2">
+                  {/* Owner radio */}
                   <button
-                    onClick={() => void handleRemove(u.id)}
-                    disabled={removing === u.id}
-                    className="ml-0.5 hover:text-priority-p1 transition disabled:opacity-50"
-                    aria-label={`Remove ${u.full_name}`}
+                    onClick={() => void handleSetOwner(u.id)}
+                    disabled={settingOwner || u.is_owner}
+                    title={u.is_owner ? 'Designated submitter' : 'Make designated submitter'}
+                    className={`shrink-0 h-4 w-4 rounded-full border-2 flex items-center justify-center transition ${
+                      u.is_owner
+                        ? 'border-sparrow-green bg-sparrow-green'
+                        : 'border-sparrow-rule hover:border-sparrow-green'
+                    } disabled:opacity-60`}
                   >
-                    ×
+                    {u.is_owner && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                   </button>
-                </span>
+                  {/* Name chip */}
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
+                    u.is_owner ? 'bg-sparrow-sage text-sparrow-green' : 'bg-sparrow-mist text-sparrow-gray'
+                  }`}>
+                    {u.full_name.split(' ')[0]}
+                    {u.is_owner && <span className="text-[10px] opacity-70">submits</span>}
+                    <button
+                      onClick={() => void handleRemove(u.id)}
+                      disabled={removing === u.id}
+                      className="ml-0.5 hover:text-priority-p1 transition disabled:opacity-50"
+                      aria-label={`Remove ${u.full_name}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                </div>
               ))}
+              {assigned.length > 1 && !assigned.some((u) => u.is_owner) && (
+                <p className="text-[11px] text-sparrow-gray/70 italic">Click a radio to set the designated submitter</p>
+              )}
             </div>
           ) : (
             <p className="text-xs text-sparrow-gray italic">Nobody assigned yet</p>

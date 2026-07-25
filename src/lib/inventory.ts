@@ -44,23 +44,28 @@ export async function fetchAllLocations(): Promise<InvLocation[]> {
   return data ?? [];
 }
 
-export async function fetchMyLocations(): Promise<InvLocation[]> {
+export type MyLocationAssignment = { location: InvLocation; is_owner: boolean };
+
+export async function fetchMyLocations(): Promise<MyLocationAssignment[]> {
   const { data, error } = await supabase
     .from('inv_location_assignments')
-    .select(`location:inv_locations(${LOC_COLS})`);
+    .select(`is_owner, location:inv_locations(${LOC_COLS})`);
   if (error) throw new Error(error.message);
-  const locs = (data ?? []).map((d: any) => d.location).filter(Boolean) as InvLocation[];
-  return locs.sort((a, b) => a.sort_order - b.sort_order);
+  return (data ?? [])
+    .filter((d: any) => d.location)
+    .map((d: any) => ({ location: d.location as InvLocation, is_owner: d.is_owner as boolean }))
+    .sort((a, b) => a.location.sort_order - b.location.sort_order);
 }
 
 // ── Location assignments ──────────────────────────────────────────────────
 
-export type LocationAssignees = Record<string, { id: string; full_name: string }[]>;
+export type LocationAssignee = { id: string; full_name: string; is_owner: boolean };
+export type LocationAssignees = Record<string, LocationAssignee[]>;
 
 export async function fetchAllLocationAssignments(): Promise<LocationAssignees> {
   const { data, error } = await supabase
     .from('inv_location_assignments')
-    .select('location_id, user:profiles!user_id(id, full_name)');
+    .select('location_id, is_owner, user:profiles!user_id(id, full_name)');
   if (error) throw new Error(error.message);
   const result: LocationAssignees = {};
   for (const row of data ?? []) {
@@ -68,9 +73,41 @@ export async function fetchAllLocationAssignments(): Promise<LocationAssignees> 
     if (!u) continue;
     const lid = (row as any).location_id as string;
     if (!result[lid]) result[lid] = [];
-    result[lid].push(u);
+    result[lid].push({ id: u.id, full_name: u.full_name, is_owner: (row as any).is_owner as boolean });
   }
   return result;
+}
+
+export async function fetchLocationOwners(
+  locationIds: string[],
+): Promise<Record<string, { id: string; full_name: string } | null>> {
+  if (locationIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from('inv_location_assignments')
+    .select('location_id, user:profiles!user_id(id, full_name)')
+    .in('location_id', locationIds)
+    .eq('is_owner', true);
+  if (error) throw new Error(error.message);
+  const result: Record<string, { id: string; full_name: string } | null> = {};
+  for (const row of data ?? []) {
+    result[(row as any).location_id] = (row as any).user ?? null;
+  }
+  return result;
+}
+
+export async function setLocationOwner(locationId: string, userId: string): Promise<void> {
+  // Clear any existing owner for this location, then set the new one
+  const { error: e1 } = await supabase
+    .from('inv_location_assignments')
+    .update({ is_owner: false })
+    .eq('location_id', locationId);
+  if (e1) throw new Error(e1.message);
+  const { error: e2 } = await supabase
+    .from('inv_location_assignments')
+    .update({ is_owner: true })
+    .eq('location_id', locationId)
+    .eq('user_id', userId);
+  if (e2) throw new Error(e2.message);
 }
 
 export async function addLocationAssignment(locationId: string, userId: string): Promise<void> {

@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchMyLocations, fetchSubmissions, fetchActiveFlipForLocation } from '@/lib/inventory';
+import { useAuth } from '@/auth/AuthContext';
+import {
+  fetchMyLocations, fetchSubmissions, fetchActiveFlipForLocation, fetchLocationOwners,
+  type MyLocationAssignment,
+} from '@/lib/inventory';
 import {
   SUBMISSION_STATUS_META, FLIP_STATUS_LABELS, monthName,
   type InvLocation, type InvMonthlySubmission, type InvHouseFlip,
@@ -15,31 +19,37 @@ interface ActiveForm {
 }
 
 export function StaffSubmissionView({ month, year }: { month: number; year: number }) {
-  const [locations,   setLocations]   = useState<InvLocation[]>([]);
-  const [submissions, setSubmissions] = useState<InvMonthlySubmission[]>([]);
-  const [activeFlips, setActiveFlips] = useState<Record<string, InvHouseFlip | null>>({});
-  const [loading,     setLoading]     = useState(true);
-  const [err,         setErr]         = useState('');
-  const [activeForm,  setActiveForm]  = useState<ActiveForm | null>(null);
-  const [flipLocId,   setFlipLocId]   = useState<string | null>(null);
+  const { profile } = useAuth();
+  const [assignments,  setAssignments]  = useState<MyLocationAssignment[]>([]);
+  const [submissions,  setSubmissions]  = useState<InvMonthlySubmission[]>([]);
+  const [activeFlips,  setActiveFlips]  = useState<Record<string, InvHouseFlip | null>>({});
+  const [ownerMap,     setOwnerMap]     = useState<Record<string, { id: string; full_name: string } | null>>({});
+  const [loading,      setLoading]      = useState(true);
+  const [err,          setErr]          = useState('');
+  const [activeForm,   setActiveForm]   = useState<ActiveForm | null>(null);
+  const [flipLocId,    setFlipLocId]    = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const locs = await fetchMyLocations();
-      if (locs.length === 0) {
-        setLocations([]);
+      const myAssignments = await fetchMyLocations();
+      if (myAssignments.length === 0) {
+        setAssignments([]);
         setLoading(false);
         return;
       }
-      const [allSubs, ...flipResults] = await Promise.all([
+      const locs = myAssignments.map((a) => a.location);
+      const locIds = locs.map((l) => l.id);
+      const [allSubs, owners, ...flipResults] = await Promise.all([
         Promise.all(locs.map((l) => fetchSubmissions(l.id))).then((r) => r.flat()),
+        fetchLocationOwners(locIds),
         ...locs
           .filter((l) => l.is_lcp_house)
           .map((l) => fetchActiveFlipForLocation(l.id).then((f) => ({ locationId: l.id, flip: f }))),
       ]);
-      setLocations(locs);
+      setAssignments(myAssignments);
       setSubmissions(allSubs);
+      setOwnerMap(owners);
       const flipMap: Record<string, InvHouseFlip | null> = {};
       (flipResults as { locationId: string; flip: InvHouseFlip | null }[]).forEach(
         ({ locationId, flip }) => { flipMap[locationId] = flip; },
@@ -67,7 +77,7 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
   }
 
   if (flipLocId) {
-    const loc = locations.find((l) => l.id === flipLocId);
+    const loc = assignments.find((a) => a.location.id === flipLocId)?.location;
     return (
       <HouseFlipWorkflow
         locationId={flipLocId}
@@ -102,7 +112,7 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
     return <p className="p-4 text-sm text-priority-p1">{err}</p>;
   }
 
-  if (locations.length === 0) {
+  if (assignments.length === 0) {
     return (
       <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist p-6 text-center">
         <p className="text-sm text-sparrow-gray">
@@ -112,32 +122,38 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
     );
   }
 
-  const physicalLocations = locations.filter((l) => !l.is_remote);
-  const remoteLocations   = locations.filter((l) => l.is_remote);
+  const physicalAssignments = assignments.filter((a) => !a.location.is_remote);
+  const remoteAssignments   = assignments.filter((a) => a.location.is_remote);
+  const myId = profile?.id ?? '';
 
   return (
     <div className="space-y-8">
       {/* Physical locations */}
-      {physicalLocations.length > 0 && (
+      {physicalAssignments.length > 0 && (
         <div className="space-y-6">
-          {physicalLocations.map((loc) => (
-            <LocationCard
-              key={loc.id}
-              loc={loc}
-              currentSub={getCurrentSub(loc.id)}
-              recentSubs={getRecentSubs(loc.id)}
-              activeFlip={activeFlips[loc.id] ?? null}
-              month={month}
-              year={year}
-              onOpenForm={() => setActiveForm({ locationId: loc.id, locationName: loc.name, month, year })}
-              onOpenFlip={() => setFlipLocId(loc.id)}
-            />
-          ))}
+          {physicalAssignments.map(({ location: loc, is_owner }) => {
+            const owner = ownerMap[loc.id] ?? null;
+            return (
+              <LocationCard
+                key={loc.id}
+                loc={loc}
+                currentSub={getCurrentSub(loc.id)}
+                recentSubs={getRecentSubs(loc.id)}
+                activeFlip={activeFlips[loc.id] ?? null}
+                month={month}
+                year={year}
+                isOwner={is_owner}
+                ownerName={owner && owner.id !== myId ? owner.full_name.split(' ')[0] : null}
+                onOpenForm={() => setActiveForm({ locationId: loc.id, locationName: loc.name, month, year })}
+                onOpenFlip={() => setFlipLocId(loc.id)}
+              />
+            );
+          })}
         </div>
       )}
 
       {/* Remote items */}
-      {remoteLocations.length > 0 && (
+      {remoteAssignments.length > 0 && (
         <div>
           <div className="mb-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
@@ -148,7 +164,7 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
             </p>
           </div>
           <div className="space-y-4">
-            {remoteLocations.map((loc) => (
+            {remoteAssignments.map(({ location: loc, is_owner }) => (
               <LocationCard
                 key={loc.id}
                 loc={loc}
@@ -157,6 +173,8 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
                 activeFlip={null}
                 month={month}
                 year={year}
+                isOwner={is_owner}
+                ownerName={null}
                 onOpenForm={() => setActiveForm({ locationId: loc.id, locationName: loc.name, month, year })}
                 onOpenFlip={() => {}}
               />
@@ -175,6 +193,8 @@ function LocationCard({
   activeFlip,
   month,
   year,
+  isOwner,
+  ownerName,
   onOpenForm,
   onOpenFlip,
 }: {
@@ -184,6 +204,8 @@ function LocationCard({
   activeFlip: InvHouseFlip | null;
   month: number;
   year: number;
+  isOwner: boolean;
+  ownerName: string | null;
   onOpenForm: () => void;
   onOpenFlip: () => void;
 }) {
@@ -191,12 +213,26 @@ function LocationCard({
     <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
       {/* Location header */}
       <div className="border-b border-sparrow-rule px-4 py-3 flex items-center justify-between">
-        <h2 className="font-medium text-sparrow-ink text-sm">{loc.name}</h2>
-        {loc.is_remote && (
-          <span className="text-xs text-sparrow-gray bg-sparrow-mist rounded-full px-2 py-0.5">
-            Remote
-          </span>
-        )}
+        <div>
+          <h2 className="font-medium text-sparrow-ink text-sm">{loc.name}</h2>
+          {ownerName && (
+            <p className="text-xs text-sparrow-gray mt-0.5">
+              Submitter: {ownerName}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {isOwner && ownerName === null && (
+            <span className="text-xs text-sparrow-green bg-sparrow-sage rounded-full px-2 py-0.5 font-medium">
+              You submit
+            </span>
+          )}
+          {loc.is_remote && (
+            <span className="text-xs text-sparrow-gray bg-sparrow-mist rounded-full px-2 py-0.5">
+              Remote
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Monthly submission */}
