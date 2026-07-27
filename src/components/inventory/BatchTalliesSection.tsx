@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  fetchBatchTallies, upsertBatchTally, ensureBatchTalliesExist,
+  fetchBatchTallies, upsertBatchTally, fetchBatchActivity, fetchBatchRegisterValues,
 } from '@/lib/inventory';
 import {
-  BATCH_CATEGORIES, BENTON_SCHEDULE_SHORT, formatCost,
+  BENTON_SCHEDULE_SHORT, formatCost,
   type InvBatchTally,
 } from '@/lib/inventory-types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
@@ -43,25 +43,27 @@ function InfoButton({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Row ───────────────────────────────────────────────────────────────────
+// ── Tally row ─────────────────────────────────────────────────────────────
 
 function TallyRow({
   tally,
+  addedValue,
   registerValue,
   onSave,
 }: {
   tally: InvBatchTally;
+  addedValue: number;
   registerValue: number;
-  onSave: (patch: { filed_value?: number | null; decision?: 'keep' | 'update' | 'assess' | null; notes?: string | null }) => Promise<void>;
+  onSave: (patch: { filed_value?: number | null; decision?: 'keep' | 'update' | 'assess' | null }) => Promise<void>;
 }) {
   const [editingValue, setEditingValue] = useState(false);
   const [draftValue, setDraftValue] = useState(String(tally.filed_value ?? ''));
   const [saving, setSaving] = useState(false);
 
   const filed = tally.filed_value;
-  const gap = filed != null ? registerValue - filed : null;
+  const net = filed != null ? registerValue - filed : null;
 
-  const valueId = `tally-value-${tally.category.replace(/[^a-z0-9]+/gi, '-')}`;
+  const valueId = `tally-value-${tally.id}`;
   const parsedDraft = parseFloat(draftValue);
   const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
     { key: valueId, label: 'Filed value', valid: draftValue.trim() !== '' && !isNaN(parsedDraft) && parsedDraft >= 0 },
@@ -78,10 +80,10 @@ function TallyRow({
     }
   }
 
-  async function setDecision(d: 'keep' | 'update' | 'assess' | null) {
+  async function setDecision(d: 'keep' | 'update' | 'assess') {
     setSaving(true);
     try {
-      await onSave({ decision: d });
+      await onSave({ decision: tally.decision === d ? null : d });
     } finally {
       setSaving(false);
     }
@@ -91,7 +93,7 @@ function TallyRow({
     <button
       type="button"
       disabled={saving}
-      onClick={() => void setDecision(tally.decision === value ? null : value)}
+      onClick={() => void setDecision(value)}
       className={`rounded px-2 py-1 text-xs font-medium transition disabled:opacity-40 ${
         tally.decision === value
           ? color
@@ -104,13 +106,13 @@ function TallyRow({
 
   return (
     <tr className="border-b border-sparrow-rule last:border-0 hover:bg-sparrow-mist/30 transition-colors">
-      {/* Category + schedule */}
+      {/* Category */}
       <td className="py-2.5 pl-4 pr-3">
         <p className="text-sm text-sparrow-ink">{tally.category}</p>
         <p className="text-xs text-sparrow-gray">{BENTON_SCHEDULE_SHORT[tally.schedule]}</p>
       </td>
 
-      {/* Filed value */}
+      {/* Filed Last Year */}
       <td className="py-2.5 pr-3 text-right whitespace-nowrap">
         {editingValue ? (
           <span className="inline-flex flex-col items-end gap-1">
@@ -123,10 +125,13 @@ function TallyRow({
                 step={1}
                 value={draftValue}
                 onChange={(e) => { setDraftValue(e.target.value); clear(valueId); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') void saveValue(); if (e.key === 'Escape') setEditingValue(false); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void saveValue();
+                  if (e.key === 'Escape') setEditingValue(false);
+                }}
                 className={`w-20 rounded border px-1.5 py-0.5 text-sm text-sparrow-ink focus:outline-none ${
                   fieldClass(valueId, '').includes('field-input-error')
-                    ? 'border-priority-p1 focus:border-priority-p1'
+                    ? 'border-priority-p1'
                     : 'border-sparrow-green'
                 }`}
                 autoFocus
@@ -163,22 +168,30 @@ function TallyRow({
         )}
       </td>
 
-      {/* Register value */}
+      {/* Added This Year */}
+      <td className="py-2.5 pr-3 text-right text-sm whitespace-nowrap">
+        {addedValue > 0
+          ? <span className="text-sparrow-green font-medium">+{formatCost(addedValue)}</span>
+          : <span className="text-sparrow-gray">—</span>
+        }
+      </td>
+
+      {/* Register Total */}
       <td className="py-2.5 pr-3 text-right text-sm text-sparrow-ink whitespace-nowrap">
         {registerValue > 0 ? formatCost(registerValue) : <span className="text-sparrow-gray">—</span>}
       </td>
 
-      {/* Gap */}
+      {/* Net (register - filed) */}
       <td className="py-2.5 pr-3 text-right whitespace-nowrap">
-        {gap != null ? (
+        {net != null ? (
           <span className={`text-sm font-medium ${
-            Math.abs(gap) < 25
+            Math.abs(net) < 25
               ? 'text-sparrow-gray'
-              : gap > 0
+              : net > 0
                 ? 'text-sparrow-green'
                 : 'text-priority-p1'
           }`}>
-            {gap > 0 ? '+' : ''}{formatCost(gap)}
+            {net > 0 ? '+' : ''}{formatCost(net)}
           </span>
         ) : (
           <span className="text-sparrow-gray text-sm">—</span>
@@ -197,16 +210,67 @@ function TallyRow({
   );
 }
 
+// ── Location group ─────────────────────────────────────────────────────────
+
+function LocationGroup({
+  locationName,
+  tallies,
+  activity,
+  register,
+  onSave,
+}: {
+  locationName: string;
+  tallies: InvBatchTally[];
+  activity: Record<string, number>;
+  register: Record<string, number>;
+  onSave: (locationId: string, category: string, patch: { filed_value?: number | null; decision?: 'keep' | 'update' | 'assess' | null }) => Promise<void>;
+}) {
+  const sorted = [...tallies].sort((a, b) => a.category.localeCompare(b.category));
+  const totalFiled = tallies.reduce((s, t) => s + (t.filed_value ?? 0), 0);
+
+  return (
+    <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden mb-4">
+      <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-green/10">
+        <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">
+          {locationName}
+        </span>
+        <span className="text-xs text-sparrow-green/70">
+          {tallies.length} {tallies.length === 1 ? 'category' : 'categories'} · {formatCost(totalFiled)} filed
+        </span>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-sparrow-rule">
+            <th className="py-2 pl-4 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Category</th>
+            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Filed</th>
+            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Added</th>
+            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Register</th>
+            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Net</th>
+            <th className="py-2 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Jan Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((tally) => (
+            <TallyRow
+              key={tally.id}
+              tally={tally}
+              addedValue={activity[tally.category] ?? 0}
+              registerValue={register[tally.category] ?? 0}
+              onSave={(patch) => onSave(tally.location_id, tally.category, patch)}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Main section ──────────────────────────────────────────────────────────
 
-export function BatchTalliesSection({
-  year,
-  batchValuesByCategory,
-}: {
-  year: number;
-  batchValuesByCategory: Record<string, number>;
-}) {
+export function BatchTalliesSection({ year }: { year: number }) {
   const [tallies, setTallies] = useState<InvBatchTally[]>([]);
+  const [activity, setActivity] = useState<Record<string, Record<string, number>>>({});
+  const [register, setRegister] = useState<Record<string, Record<string, number>>>({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
 
@@ -214,16 +278,14 @@ export function BatchTalliesSection({
     setLoading(true);
     setErr('');
     try {
-      await ensureBatchTalliesExist(year, BATCH_CATEGORIES);
-      const data = await fetchBatchTallies(year);
-      // Show all 10 categories, fill in any missing with defaults
-      const byCategory = Object.fromEntries(data.map((t) => [t.category, t]));
-      const full = BATCH_CATEGORIES.map((cat) => byCategory[cat] ?? {
-        id: '', category: cat, year, schedule: 'schedule_5a' as const,
-        filed_value: null, decision: null, notes: null,
-        updated_at: '', updated_by: null,
-      });
-      setTallies(full);
+      const [t, a, r] = await Promise.all([
+        fetchBatchTallies(year),
+        fetchBatchActivity(year),
+        fetchBatchRegisterValues(),
+      ]);
+      setTallies(t);
+      setActivity(a);
+      setRegister(r);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not load batch tallies.');
     } finally {
@@ -234,109 +296,101 @@ export function BatchTalliesSection({
   useEffect(() => { void load(); }, [load]);
 
   async function handleSave(
+    locationId: string,
     category: string,
-    patch: { filed_value?: number | null; decision?: 'keep' | 'update' | 'assess' | null; notes?: string | null },
+    patch: { filed_value?: number | null; decision?: 'keep' | 'update' | 'assess' | null },
   ) {
     setTallies((prev) =>
-      prev.map((t) => t.category === category ? { ...t, ...patch } : t),
+      prev.map((t) => t.location_id === locationId && t.category === category ? { ...t, ...patch } : t),
     );
     try {
-      await upsertBatchTally(year, category, patch);
+      await upsertBatchTally(year, locationId, category, patch);
     } catch {
       void load();
     }
   }
 
-  const pendingCount = tallies.filter((t) => t.decision === null && t.filed_value != null).length;
+  // Group by location, sorted by sort_order
+  const byLocation = new Map<string, { name: string; sort_order: number; tallies: InvBatchTally[] }>();
+  for (const t of tallies) {
+    if (!byLocation.has(t.location_id)) {
+      byLocation.set(t.location_id, { name: t.location.name, sort_order: t.location.sort_order, tallies: [] });
+    }
+    byLocation.get(t.location_id)!.tallies.push(t);
+  }
+  const locations = [...byLocation.entries()]
+    .sort(([, a], [, b]) => a.sort_order - b.sort_order);
+
   const assessCount  = tallies.filter((t) => t.decision === 'assess').length;
   const updateCount  = tallies.filter((t) => t.decision === 'update').length;
   const missingCount = tallies.filter((t) => t.filed_value == null).length;
 
   return (
-    <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-mist/40">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
-            Batch Category Tallies
-          </span>
-          <InfoButton>
-            <p>
-              These categories are groups of similar small items (each under $50) that get reported
-              to Benton County as a single dollar total per category — not item by item.
-            </p>
-            <p>
-              <strong>Filed value</strong> is what you reported to the county in your most recent
-              filing. Click it to edit. Enter the value from your last Benton County return if it
-              shows "Enter filed amount."
-            </p>
-            <p>
-              <strong>Register</strong> is what your inventory system currently shows for that
-              category (all locations combined).
-            </p>
-            <p>
-              <strong>In January:</strong> compare the two. If the gap is significant, click Update.
-              If losses roughly offset gains or the amount is too small to matter, click Keep. If
-              you're not sure yet, click Assess.
-            </p>
-            <p className="text-sparrow-gray/80">
-              Filed values are intentionally conservative — when audited, you can always account for
-              what's present.
-            </p>
-          </InfoButton>
-        </div>
-        <div className="flex items-center gap-3 text-xs shrink-0">
-          {missingCount > 0 && (
-            <span className="text-sparrow-gold font-medium">{missingCount} need filed amounts</span>
-          )}
-          {assessCount > 0 && (
-            <span className="text-sparrow-gold font-medium">{assessCount} to assess</span>
-          )}
-          {updateCount > 0 && (
-            <span className="text-sparrow-green font-medium">{updateCount} to update</span>
-          )}
-          {pendingCount > 0 && missingCount === 0 && assessCount === 0 && updateCount === 0 && (
-            <span className="text-sparrow-gray">{pendingCount} need a decision</span>
-          )}
+    <div>
+      {/* Section heading */}
+      <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden mb-4">
+        <div className="flex items-center justify-between gap-4 border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-mist/40">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+              Batch Category Tallies
+            </span>
+            <InfoButton>
+              <p>
+                These are groups of similar small items (each under $50) that get reported
+                to Benton County as a single dollar total per category, not item by item.
+              </p>
+              <p>
+                <strong>Filed</strong> is what you reported to the county last year. Click to edit.
+              </p>
+              <p>
+                <strong>Added</strong> is the value of batch items approved this year via monthly submissions.
+              </p>
+              <p>
+                <strong>Register</strong> is the current total of active batch items in the inventory register.
+              </p>
+              <p>
+                <strong>Net</strong> is the difference between the register and what was filed. Positive = you have more than you reported.
+              </p>
+              <p>
+                <strong>In January:</strong> compare. If the gap is small, click Keep. If significant, click Update. If you're unsure, click Assess.
+              </p>
+            </InfoButton>
+          </div>
+          <div className="flex items-center gap-3 text-xs shrink-0">
+            {missingCount > 0 && (
+              <span className="text-sparrow-gold font-medium">{missingCount} need filed amounts</span>
+            )}
+            {assessCount > 0 && (
+              <span className="text-sparrow-gold font-medium">{assessCount} to assess</span>
+            )}
+            {updateCount > 0 && (
+              <span className="text-sparrow-green font-medium">{updateCount} to update</span>
+            )}
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-24 text-sparrow-gray text-sm">Loading…</div>
+        <div className="flex items-center justify-center h-24 text-sparrow-gray text-sm rounded-xl border border-sparrow-rule bg-white">Loading…</div>
       ) : err ? (
-        <p className="p-4 text-sm text-priority-p1">{err}</p>
+        <p className="rounded-xl border border-sparrow-rule bg-white p-4 text-sm text-priority-p1">{err}</p>
+      ) : locations.length === 0 ? (
+        <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist p-8 text-center">
+          <p className="text-sm text-sparrow-gray">
+            No batch items recorded yet. Batch categories appear here after monthly submissions are approved.
+          </p>
+        </div>
       ) : (
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-sparrow-rule">
-              <th className="py-2 pl-4 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
-                Category
-              </th>
-              <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
-                Filed
-              </th>
-              <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
-                Register
-              </th>
-              <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
-                Gap
-              </th>
-              <th className="py-2 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
-                January Decision
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {tallies.map((tally) => (
-              <TallyRow
-                key={tally.category}
-                tally={tally}
-                registerValue={batchValuesByCategory[tally.category] ?? 0}
-                onSave={(patch) => handleSave(tally.category, patch)}
-              />
-            ))}
-          </tbody>
-        </table>
+        locations.map(([locationId, { name, tallies: locTallies }]) => (
+          <LocationGroup
+            key={locationId}
+            locationName={name}
+            tallies={locTallies}
+            activity={activity[locationId] ?? {}}
+            register={register[locationId] ?? {}}
+            onSave={handleSave}
+          />
+        ))
       )}
     </div>
   );

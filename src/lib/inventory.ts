@@ -185,6 +185,10 @@ export type ItemEditPatch = Partial<{
   notes: string | null;
   who_has_it: string | null;
   review_flag: string | null;
+  filing_status: import('./inventory-types').InvFilingStatus;
+  status: import('./inventory-types').InvItemStatus;
+  benton_schedule: InvBentonSchedule;
+  removed_date: string | null;
 }>;
 
 export async function patchItem(id: string, patch: ItemEditPatch): Promise<void> {
@@ -468,8 +472,9 @@ export async function upsertConsumablesSnapshot(
 export async function fetchBatchTallies(year: number): Promise<InvBatchTally[]> {
   const { data, error } = await supabase
     .from('inv_batch_tallies')
-    .select('*')
+    .select('*, location:inv_locations(id, name, sort_order)')
     .eq('year', year)
+    .order('location_id')
     .order('category');
   if (error) throw new Error(error.message);
   return (data ?? []) as InvBatchTally[];
@@ -477,27 +482,60 @@ export async function fetchBatchTallies(year: number): Promise<InvBatchTally[]> 
 
 export async function upsertBatchTally(
   year: number,
+  locationId: string,
   category: string,
   patch: { filed_value?: number | null; decision?: 'keep' | 'update' | 'assess' | null; notes?: string | null },
 ): Promise<void> {
   const { error } = await supabase
     .from('inv_batch_tallies')
     .upsert(
-      { year, category, ...patch, updated_at: new Date().toISOString() },
-      { onConflict: 'category,year' },
+      { year, location_id: locationId, category, ...patch, updated_at: new Date().toISOString() },
+      { onConflict: 'location_id,category,year' },
     );
   if (error) throw new Error(error.message);
 }
 
-export async function ensureBatchTalliesExist(year: number, categories: readonly string[]): Promise<void> {
-  const existing = await fetchBatchTallies(year);
-  const existingCats = new Set(existing.map((t) => t.category));
-  const missing = categories.filter((c) => !existingCats.has(c));
-  if (missing.length === 0) return;
-  const { error } = await supabase.from('inv_batch_tallies').insert(
-    missing.map((category) => ({ category, year })),
-  );
+// Computes how much was added to each batch category per location this year,
+// from approved monthly submissions. Returns location_id -> category -> total value.
+export async function fetchBatchActivity(
+  year: number,
+): Promise<Record<string, Record<string, number>>> {
+  const { data, error } = await supabase
+    .from('inv_monthly_submissions')
+    .select('location_id, additions:inv_additions(is_batch, batch_category, cost, cost_basis, quantity)')
+    .eq('period_year', year)
+    .eq('status', 'approved');
   if (error) throw new Error(error.message);
+  const result: Record<string, Record<string, number>> = {};
+  for (const sub of (data ?? []) as any[]) {
+    const locId = sub.location_id as string;
+    if (!result[locId]) result[locId] = {};
+    for (const add of (sub.additions ?? []) as any[]) {
+      if (!add.is_batch || !add.batch_category) continue;
+      const value = add.cost_basis === 'per_item' ? add.cost * add.quantity : add.cost;
+      result[locId][add.batch_category] = (result[locId][add.batch_category] ?? 0) + value;
+    }
+  }
+  return result;
+}
+
+// Computes current register value for each batch category per location,
+// from active inv_items rows. Returns location_id -> category -> total value.
+export async function fetchBatchRegisterValues(): Promise<Record<string, Record<string, number>>> {
+  const { data, error } = await supabase
+    .from('inv_items')
+    .select('location_id, batch_category, unit_cost, quantity')
+    .eq('is_batch', true)
+    .eq('status', 'active');
+  if (error) throw new Error(error.message);
+  const result: Record<string, Record<string, number>> = {};
+  for (const item of (data ?? []) as any[]) {
+    if (!item.batch_category) continue;
+    if (!result[item.location_id]) result[item.location_id] = {};
+    result[item.location_id][item.batch_category] =
+      (result[item.location_id][item.batch_category] ?? 0) + item.unit_cost * item.quantity;
+  }
+  return result;
 }
 
 // ── House Flip ────────────────────────────────────────────────────────────

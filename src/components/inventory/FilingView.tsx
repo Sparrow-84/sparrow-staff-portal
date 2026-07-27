@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  fetchFilingData, markFiled, patchItemFiling,
+  fetchFilingData, markFiled,
   type FilingItem,
 } from '@/lib/inventory';
 import {
-  BENTON_SCHEDULE_LABELS, BENTON_SCHEDULE_SHORT, FILING_STATUS_META, formatCost,
+  BENTON_SCHEDULE_LABELS, FILING_STATUS_META, formatCost,
   type InvBentonSchedule, type InvFilingStatus,
 } from '@/lib/inventory-types';
 import { BatchTalliesSection } from './BatchTalliesSection';
@@ -97,13 +97,7 @@ const SCHEDULE_INFO: Partial<Record<InvBentonSchedule, React.ReactNode>> = {
 
 // ── Item row ──────────────────────────────────────────────────────────────
 
-function FilingItemRow({
-  item,
-  onScheduleChange,
-}: {
-  item: FilingItem;
-  onScheduleChange: (id: string, s: InvBentonSchedule) => void;
-}) {
+function FilingItemRow({ item }: { item: FilingItem }) {
   const meta = FILING_STATUS_META[item.filing_status];
   const yearAcquired = item.acquired_date ? item.acquired_date.slice(0, 4) : null;
   const totalValue = item.unit_cost * item.quantity;
@@ -125,6 +119,9 @@ function FilingItemRow({
             {item.who_has_it && (
               <p className="text-xs text-sparrow-gray">off-site: {item.who_has_it}</p>
             )}
+            {item.review_flag && (
+              <p className="text-xs text-sparrow-gold mt-0.5">⚠ {item.review_flag}</p>
+            )}
           </div>
         </div>
       </td>
@@ -144,49 +141,37 @@ function FilingItemRow({
         )}
       </td>
 
-      <td className="py-2.5 pr-3 text-xs text-sparrow-gray whitespace-nowrap">
+      <td className="py-2.5 pr-4 text-xs text-sparrow-gray whitespace-nowrap">
         {yearAcquired ?? '—'}
-      </td>
-
-      <td className="py-2.5 pr-4">
-        <select
-          value={item.benton_schedule}
-          onChange={(e) => onScheduleChange(item.id, e.target.value as InvBentonSchedule)}
-          className="text-xs rounded border border-sparrow-rule bg-white px-1.5 py-1 text-sparrow-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green"
-        >
-          {TAXABLE_SCHEDULES.map((s) => (
-            <option key={s} value={s}>{BENTON_SCHEDULE_SHORT[s]}</option>
-          ))}
-        </select>
       </td>
     </tr>
   );
 }
 
+const SCHEDULE_HEADING: Record<InvBentonSchedule, { bg: string; text: string; count: string }> = {
+  schedule_2:  { bg: 'bg-sparrow-mist',       text: 'text-sparrow-gray',  count: 'text-sparrow-gray' },
+  schedule_4:  { bg: 'bg-priority-p1/10',      text: 'text-priority-p1',   count: 'text-priority-p1/70' },
+  schedule_5a: { bg: 'bg-sparrow-gold/10',     text: 'text-sparrow-gold',  count: 'text-sparrow-gold/70' },
+  schedule_5b: { bg: 'bg-sparrow-mist',        text: 'text-sparrow-ink',   count: 'text-sparrow-gray' },
+};
+
 // ── Schedule section ──────────────────────────────────────────────────────
 
-function ScheduleSection({
-  schedule,
-  items,
-  onScheduleChange,
-}: {
-  schedule: InvBentonSchedule;
-  items: FilingItem[];
-  onScheduleChange: (id: string, s: InvBentonSchedule) => void;
-}) {
+function ScheduleSection({ schedule, items }: { schedule: InvBentonSchedule; items: FilingItem[] }) {
   const sorted = sortItems(items);
   const totalValue = items.reduce((sum, i) => sum + i.unit_cost * i.quantity, 0);
-  const addedCount = items.filter(i => i.filing_status === 'added').length;
+  const addedCount   = items.filter(i => i.filing_status === 'added').length;
   const updatedCount = items.filter(i => i.filing_status === 'updated').length;
+  const h = SCHEDULE_HEADING[schedule];
 
   return (
     <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden mb-4">
-      <div className="flex items-center justify-between gap-4 border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-mist/40">
+      <div className={`flex items-center justify-between gap-4 border-b border-sparrow-rule px-4 py-2.5 ${h.bg}`}>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+          <span className={`text-xs font-semibold uppercase tracking-wide ${h.text}`}>
             {BENTON_SCHEDULE_LABELS[schedule]}
           </span>
-          <span className="text-xs text-sparrow-gray">({items.length})</span>
+          <span className={`text-xs ${h.count}`}>({items.length})</span>
           {SCHEDULE_INFO[schedule] && (
             <InfoButton>{SCHEDULE_INFO[schedule]}</InfoButton>
           )}
@@ -208,13 +193,12 @@ function ScheduleSection({
             <th className="py-2 pl-4 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Item</th>
             <th className="py-2 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Location</th>
             <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Value</th>
-            <th className="py-2 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Year</th>
-            <th className="py-2 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Schedule</th>
+            <th className="py-2 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Year</th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((item) => (
-            <FilingItemRow key={item.id} item={item} onScheduleChange={onScheduleChange} />
+            <FilingItemRow key={item.id} item={item} />
           ))}
         </tbody>
       </table>
@@ -293,15 +277,6 @@ export function FilingView() {
 
   useEffect(() => { void load(); }, [load]);
 
-  async function handleScheduleChange(id: string, schedule: InvBentonSchedule) {
-    setItems(prev => prev.map(i => i.id === id ? { ...i, benton_schedule: schedule } : i));
-    try {
-      await patchItemFiling(id, { benton_schedule: schedule });
-    } catch {
-      void load();
-    }
-  }
-
   async function handleMarkFiled() {
     setMarking(true);
     try {
@@ -325,21 +300,13 @@ export function FilingView() {
   const totalActive   = items.length;
   const needsAction   = addedCount + updatedCount + notFiledCount;
 
-  // Group by schedule (batch items appear in their schedule section as register records)
+  // Individual items only (batch items tracked in BatchTalliesSection)
   const bySchedule: Partial<Record<InvBentonSchedule, FilingItem[]>> = {};
   for (const item of items) {
     if (item.benton_schedule === 'schedule_2') continue;
+    if (item.is_batch) continue;
     if (!bySchedule[item.benton_schedule]) bySchedule[item.benton_schedule] = [];
     bySchedule[item.benton_schedule]!.push(item);
-  }
-
-  // Batch register values (sum across all locations per category)
-  const batchValuesByCategory: Record<string, number> = {};
-  for (const item of items) {
-    if (item.is_batch && item.batch_category) {
-      batchValuesByCategory[item.batch_category] =
-        (batchValuesByCategory[item.batch_category] ?? 0) + item.unit_cost * item.quantity;
-    }
   }
 
   // March 15 deadline indicator
@@ -481,19 +448,14 @@ export function FilingView() {
       )}
 
       {/* Batch category tallies */}
-      <BatchTalliesSection year={filingYear} batchValuesByCategory={batchValuesByCategory} />
+      <BatchTalliesSection year={filingYear} />
 
       {/* Individual item schedule sections */}
       {TAXABLE_SCHEDULES.map((sched) => {
         const group = bySchedule[sched];
         if (!group || group.length === 0) return null;
         return (
-          <ScheduleSection
-            key={sched}
-            schedule={sched}
-            items={group}
-            onScheduleChange={handleScheduleChange}
-          />
+          <ScheduleSection key={sched} schedule={sched} items={group} />
         );
       })}
 

@@ -4,8 +4,8 @@ import {
   type RegisterItem, type ItemEditPatch,
 } from '@/lib/inventory';
 import {
-  formatCost, FILING_STATUS_META,
-  type InvSubLocation, type InvItemCondition,
+  formatCost, FILING_STATUS_META, BENTON_SCHEDULE_LABELS,
+  type InvSubLocation, type InvItemCondition, type InvFilingStatus, type InvBentonSchedule, type InvItemStatus,
 } from '@/lib/inventory-types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 
@@ -30,6 +30,9 @@ function ItemEditPanel({
   const [whoHasIt, setWhoHasIt] = useState(item.who_has_it ?? '');
   const [notes, setNotes] = useState(item.notes ?? '');
   const [reviewFlag, setReviewFlag] = useState(item.review_flag ?? '');
+  const [filingStatus, setFilingStatus] = useState<InvFilingStatus>(item.filing_status);
+  const [bentonSchedule, setBentonSchedule] = useState<InvBentonSchedule>(item.benton_schedule);
+  const [itemStatus, setItemStatus] = useState<InvItemStatus>(item.status);
   const [subLocations, setSubLocations] = useState<InvSubLocation[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -56,6 +59,12 @@ function ItemEditPanel({
         who_has_it: whoHasIt.trim() || null,
         notes: notes.trim() || null,
         review_flag: reviewFlag.trim() || null,
+        filing_status: filingStatus,
+        benton_schedule: bentonSchedule,
+        status: itemStatus,
+        removed_date: itemStatus === 'removed' && item.status !== 'removed'
+          ? new Date().toISOString().slice(0, 10)
+          : itemStatus === 'active' ? null : item.removed_date ?? null,
       });
     } finally {
       setSaving(false);
@@ -110,6 +119,34 @@ function ItemEditPanel({
             <input type="checkbox" checked={isDonated} onChange={(e) => setIsDonated(e.target.checked)} />
             Donated
           </label>
+        </div>
+        <div>
+          <label className={labelCls}>Filing status</label>
+          <select className={inputCls} value={filingStatus} onChange={(e) => setFilingStatus(e.target.value as InvFilingStatus)}>
+            <option value="carried_over">On File (carried over)</option>
+            <option value="added">New this year</option>
+            <option value="updated">Updated this year</option>
+            <option value="not_filed">Not filed</option>
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>Benton County schedule</label>
+          <select className={inputCls} value={bentonSchedule} onChange={(e) => setBentonSchedule(e.target.value as InvBentonSchedule)}>
+            <option value="schedule_5a">{BENTON_SCHEDULE_LABELS.schedule_5a}</option>
+            <option value="schedule_5b">{BENTON_SCHEDULE_LABELS.schedule_5b}</option>
+            <option value="schedule_4">{BENTON_SCHEDULE_LABELS.schedule_4}</option>
+            <option value="schedule_2">{BENTON_SCHEDULE_LABELS.schedule_2}</option>
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>Item status</label>
+          <select className={inputCls} value={itemStatus} onChange={(e) => setItemStatus(e.target.value as InvItemStatus)}>
+            <option value="active">Active</option>
+            <option value="removed">Removed</option>
+          </select>
+          {itemStatus === 'removed' && item.status !== 'removed' && (
+            <p className="text-xs text-sparrow-gold mt-1">Removed date will be set to today.</p>
+          )}
         </div>
         <div className="sm:col-span-2">
           <label className={labelCls}>Who has it (if off-site)</label>
@@ -208,6 +245,7 @@ export function AssetRegisterView() {
   const [reviewOnly, setReviewOnly] = useState(false);
   const [showRemoved, setShowRemoved] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'all' | 'individual' | 'batch'>('all');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -242,6 +280,8 @@ export function AssetRegisterView() {
     if (reviewOnly && !i.review_flag) return false;
     if (locationFilter && i.location.id !== locationFilter) return false;
     if (search.trim() && !i.description.toLowerCase().includes(search.trim().toLowerCase())) return false;
+    if (viewMode === 'individual' && i.is_batch) return false;
+    if (viewMode === 'batch' && !i.is_batch) return false;
     return true;
   });
 
@@ -301,6 +341,24 @@ export function AssetRegisterView() {
             <option key={l.id} value={l.id}>{l.name}</option>
           ))}
         </select>
+
+        {/* View mode toggle */}
+        <div className="flex rounded-lg border border-sparrow-rule overflow-hidden text-xs font-medium">
+          {(['all', 'individual', 'batch'] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`px-3 py-1.5 transition ${
+                viewMode === mode
+                  ? 'bg-sparrow-green text-white'
+                  : 'bg-white text-sparrow-gray hover:bg-sparrow-mist'
+              }`}
+            >
+              {mode === 'all' ? 'All' : mode === 'individual' ? 'Individual' : 'Batch'}
+            </button>
+          ))}
+        </div>
+
         <label className="flex items-center gap-1.5 text-xs text-sparrow-gray">
           <input type="checkbox" checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} />
           Show removed
@@ -314,9 +372,9 @@ export function AssetRegisterView() {
           const locItems = grouped.get(loc.id)!.sort((a, b) => a.description.localeCompare(b.description));
           return (
             <div key={loc.id} className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
-              <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-mist/40">
-                <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">{loc.name}</span>
-                <span className="text-xs text-sparrow-gray">({locItems.length})</span>
+              <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-green/10">
+                <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">{loc.name}</span>
+                <span className="text-xs text-sparrow-green/70">({locItems.length})</span>
               </div>
               {locItems.map((item) => (
                 <RegisterItemRow

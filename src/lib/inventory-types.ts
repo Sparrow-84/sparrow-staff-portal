@@ -84,6 +84,8 @@ export function getBatchSchedule(category: string): InvBentonSchedule {
 
 export interface InvBatchTally {
   id: string;
+  location_id: string;
+  location: { id: string; name: string; sort_order: number };
   category: string;
   year: number;
   schedule: InvBentonSchedule;
