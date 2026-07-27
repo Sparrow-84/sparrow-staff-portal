@@ -361,6 +361,17 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
     });
   }
 
+  // Guard against silently discarding a typed-but-unsaved task: clicking the
+  // backdrop or the ✕ used to close the panel with no warning, so a title
+  // typed in and then dismissed (intentionally or by stray click) vanished
+  // with no trace — exactly what Bethany reported as tasks "not saving."
+  function requestClose() {
+    if (!readOnly && title.trim() && (!task || title.trim() !== task.title)) {
+      if (!window.confirm('Discard this unsaved task?')) return;
+    }
+    onClose();
+  }
+
   const nameById = (id: string) => profiles.find((p) => p.id === id)?.full_name ?? 'Someone';
 
   const newTaskCount = (recurring && occurrenceDates.length > 1 ? occurrenceDates.length : 1) * assigneeIds.length;
@@ -377,7 +388,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
   return (
     <>
       <div
-        onClick={onClose}
+        onClick={requestClose}
         className={`fixed inset-0 z-40 bg-sparrow-ink/30 transition-opacity ${
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
@@ -394,7 +405,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
           <h2 className="font-serif text-lg font-semibold">
             {task ? (readOnly ? 'View task' : 'Edit task') : 'New task'}
           </h2>
-          <button onClick={onClose} className="btn-ghost" aria-label="Close">
+          <button onClick={requestClose} className="btn-ghost" aria-label="Close">
             ✕
           </button>
         </div>
@@ -813,7 +824,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             </div>
           ) : (
             <div className="flex gap-2">
-              <button onClick={onClose} className="btn-ghost">
+              <button onClick={requestClose} className="btn-ghost">
                 Cancel
               </button>
               <button onClick={save} disabled={pending} className="btn-primary">
