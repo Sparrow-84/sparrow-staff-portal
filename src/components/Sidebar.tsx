@@ -61,7 +61,7 @@ function NavContent({
   const idle = 'text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink';
 
   const section = 'flex flex-col gap-1 rounded-xl bg-sparrow-mist/50 p-2';
-  const sectionLabel = 'px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-sparrow-gray/80';
+  const sectionLabel = 'px-2 pb-1 text-xs font-bold uppercase tracking-wider text-sparrow-green';
 
   return (
     <>
