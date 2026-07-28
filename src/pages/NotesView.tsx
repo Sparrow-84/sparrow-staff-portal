@@ -145,6 +145,7 @@ function IdeasTab({ userId }: { userId: string }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     void fetchMyIdeas(userId).then(setIdeas).finally(() => setLoading(false));
@@ -154,11 +155,14 @@ function IdeasTab({ userId }: { userId: string }) {
     e.preventDefault();
     if (!title.trim() || saving) return;
     setSaving(true);
+    setSubmitError(null);
     try {
       const created = await createIdea(userId, title.trim(), description.trim());
       setIdeas((prev) => [created, ...prev]);
       setTitle('');
       setDescription('');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Could not save this idea. Try again.');
     } finally {
       setSaving(false);
     }
@@ -233,13 +237,20 @@ function IdeasTab({ userId }: { userId: string }) {
           rows={2}
           className="w-full resize-none border-none p-1 text-sm text-sparrow-gray outline-none placeholder:text-sparrow-gray/60"
         />
-        <div className="mt-1 flex justify-end border-t border-dashed border-sparrow-rule pt-2">
+        <div className="mt-1 flex items-center justify-between gap-3 border-t border-dashed border-sparrow-rule pt-2">
+          {!title.trim() ? (
+            <p className="text-xs text-sparrow-gray/70">Add a title to save this idea.</p>
+          ) : submitError ? (
+            <p className="text-xs text-priority-p1">{submitError}</p>
+          ) : (
+            <span />
+          )}
           <button
             type="submit"
             disabled={!title.trim() || saving}
-            className="rounded-lg bg-sparrow-green px-3.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-sparrow-green px-3.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
           >
-            Add idea
+            {saving ? 'Saving…' : 'Add idea'}
           </button>
         </div>
       </form>
