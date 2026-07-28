@@ -5,12 +5,18 @@ const EVENT_SELECT =
   '*, office_room:room_id(name), label:label_id(id, name, color, scope, department, is_preset, sort_order, created_by), creator:profiles!calendar_events_created_by_fkey(id, full_name)';
 
 export interface MyNoteEntry {
-  event: CalendarEvent;
+  noteId: string;
+  event: CalendarEvent | null; // null once the meeting has been deleted
+  title: string;
+  startsAt: string;
   updated_at: string;
 }
 
 export interface SharedNoteEntry {
-  event: CalendarEvent;
+  noteId: string;
+  event: CalendarEvent | null; // null once the meeting has been deleted
+  title: string;
+  startsAt: string;
   updated_at: string;
   updatedByName: string | null;
 }
@@ -27,15 +33,16 @@ function isAttendingEvent(ev: CalendarEvent, attendance: Map<string, EventAttend
   return row ? row.status === 'attending' : false;
 }
 
-function sortByEventDate<T extends { event: CalendarEvent }>(rows: T[]): T[] {
-  return [...rows].sort((a, b) => new Date(a.event.starts_at).getTime() - new Date(b.event.starts_at).getTime());
+function sortByEventDate<T extends { startsAt: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 }
 
-/** Every event where the current user has written private prep/live notes — past, present, or future. */
+/** Every event where the current user has written private prep/live notes — past, present, or future.
+ * Notes whose meeting has since been deleted still show up, labeled with the meeting's last-known title/date. */
 export async function fetchMyNotesIndex(userId: string): Promise<MyNoteEntry[]> {
   const { data, error } = await supabase
     .from('meeting_notes')
-    .select(`prep_notes, live_notes, updated_at, event:calendar_events(${EVENT_SELECT})`)
+    .select(`id, prep_notes, live_notes, updated_at, event_title, event_starts_at, event:calendar_events(${EVENT_SELECT})`)
     .eq('user_id', userId);
   if (error) return []; // table may not exist yet — degrade gracefully
 
@@ -43,18 +50,27 @@ export async function fetchMyNotesIndex(userId: string): Promise<MyNoteEntry[]> 
   const rows = (data ?? []) as any[];
   return sortByEventDate(
     rows
-      .filter((r) => r.event && (r.prep_notes?.trim() || r.live_notes?.trim()))
-      .map((r) => ({ event: r.event as CalendarEvent, updated_at: r.updated_at as string })),
+      .filter((r) => r.prep_notes?.trim() || r.live_notes?.trim())
+      .map((r) => {
+        const event = (r.event as CalendarEvent | null) ?? null;
+        return {
+          noteId: r.id as string,
+          event,
+          title: event?.title ?? (r.event_title as string | null) ?? 'Deleted meeting',
+          startsAt: event?.starts_at ?? (r.event_starts_at as string | null) ?? (r.updated_at as string),
+          updated_at: r.updated_at as string,
+        };
+      }),
   );
 }
 
-/** Shared notes on events the user has attended or will attend. */
+/** Shared notes on events the user has attended or will attend, plus any whose meeting has since been deleted. */
 export async function fetchSharedNotesIndex(userId: string): Promise<SharedNoteEntry[]> {
   const [{ data, error }, attendanceRows] = await Promise.all([
     supabase
       .from('event_shared_notes')
       .select(
-        `updated_at, updated_by, event:calendar_events(${EVENT_SELECT}), updater:profiles!event_shared_notes_updated_by_fkey(full_name)`,
+        `id, updated_at, updated_by, event_title, event_starts_at, event:calendar_events(${EVENT_SELECT}), updater:profiles!event_shared_notes_updated_by_fkey(full_name)`,
       )
       .neq('notes', ''),
     fetchMyAttendance(userId),
@@ -66,11 +82,17 @@ export async function fetchSharedNotesIndex(userId: string): Promise<SharedNoteE
   const rows = (data ?? []) as any[];
   return sortByEventDate(
     rows
-      .filter((r) => r.event && isAttendingEvent(r.event as CalendarEvent, attendance))
-      .map((r) => ({
-        event: r.event as CalendarEvent,
-        updated_at: r.updated_at as string,
-        updatedByName: r.updater?.full_name ?? null,
-      })),
+      .filter((r) => (r.event ? isAttendingEvent(r.event as CalendarEvent, attendance) : true))
+      .map((r) => {
+        const event = (r.event as CalendarEvent | null) ?? null;
+        return {
+          noteId: r.id as string,
+          event,
+          title: event?.title ?? (r.event_title as string | null) ?? 'Deleted meeting',
+          startsAt: event?.starts_at ?? (r.event_starts_at as string | null) ?? (r.updated_at as string),
+          updated_at: r.updated_at as string,
+          updatedByName: r.updater?.full_name ?? null,
+        };
+      }),
   );
 }

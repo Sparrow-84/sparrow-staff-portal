@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { MeetingNotesView } from '@/components/calendar/MeetingNotesView';
+import { OrphanedNoteView } from '@/components/calendar/OrphanedNoteView';
 import { fetchMyNotesIndex, fetchSharedNotesIndex, type MyNoteEntry, type SharedNoteEntry } from '@/lib/notesHub';
 import { fetchMyIdeas, createIdea, setIdeaCompleted, deleteIdea, type Idea } from '@/lib/ideas';
 import type { CalendarEvent } from '@/lib/calendar';
@@ -30,7 +31,11 @@ function formatDate(iso: string): string {
 }
 
 interface NoteRow {
-  event: CalendarEvent;
+  noteId: string;
+  event: CalendarEvent | null;
+  title: string;
+  startsAt: string;
+  scope: 'private' | 'shared';
   badge: 'Your notes' | 'Shared';
   sub: string;
 }
@@ -49,21 +54,21 @@ function NoteList({
   onSearch: (v: string) => void;
   showAll: boolean;
   onShowAll: () => void;
-  onOpen: (event: CalendarEvent) => void;
+  onOpen: (row: NoteRow) => void;
   emptyLabel: string;
 }) {
   const cutoff = monthsAgo(3);
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
-      if (!showAll && new Date(r.event.starts_at) < cutoff) return false;
-      if (search.trim() && !r.event.title.toLowerCase().includes(search.trim().toLowerCase())) return false;
+      if (!showAll && new Date(r.startsAt) < cutoff) return false;
+      if (search.trim() && !r.title.toLowerCase().includes(search.trim().toLowerCase())) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, search, showAll]);
 
-  const hiddenOlder = !showAll && rows.some((r) => new Date(r.event.starts_at) < cutoff && !filtered.includes(r));
+  const hiddenOlder = !showAll && rows.some((r) => new Date(r.startsAt) < cutoff && !filtered.includes(r));
 
   let lastMonth = '';
 
@@ -89,17 +94,17 @@ function NoteList({
         <p className="py-8 text-center text-sm text-sparrow-gray">{search.trim() ? 'No notes match your search.' : emptyLabel}</p>
       ) : (
         filtered.map((r) => {
-          const mk = monthKey(r.event.starts_at);
+          const mk = monthKey(r.startsAt);
           const showMonth = mk !== lastMonth;
           lastMonth = mk;
-          const { day, weekday } = dayBadge(r.event.starts_at);
+          const { day, weekday } = dayBadge(r.startsAt);
           return (
-            <div key={r.event.id}>
+            <div key={r.noteId}>
               {showMonth && (
                 <p className="px-1 pb-1.5 pt-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray/70 first:pt-0">{mk}</p>
               )}
               <button
-                onClick={() => onOpen(r.event)}
+                onClick={() => onOpen(r)}
                 className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left hover:border-sparrow-rule hover:bg-sparrow-mist"
               >
                 <div className="w-10 shrink-0 font-mono text-xs text-sparrow-gray/70">
@@ -107,7 +112,7 @@ function NoteList({
                   {weekday}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-sparrow-ink">{r.event.title}</p>
+                  <p className="truncate text-sm font-medium text-sparrow-ink">{r.title}</p>
                   <p className="truncate text-xs text-sparrow-gray">{r.sub}</p>
                 </div>
                 <span
@@ -278,7 +283,7 @@ export function NotesView() {
   const [sharedSearch, setSharedSearch] = useState('');
   const [myShowAll, setMyShowAll] = useState(false);
   const [sharedShowAll, setSharedShowAll] = useState(false);
-  const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null);
+  const [openRow, setOpenRow] = useState<NoteRow | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -293,12 +298,20 @@ export function NotesView() {
   if (!profile) return null;
 
   const myRows: NoteRow[] = myNotes.map((n) => ({
+    noteId: n.noteId,
     event: n.event,
+    title: n.title,
+    startsAt: n.startsAt,
+    scope: 'private',
     badge: 'Your notes',
     sub: `Updated ${formatDate(n.updated_at)}`,
   }));
   const sharedRows: NoteRow[] = sharedNotes.map((n) => ({
+    noteId: n.noteId,
     event: n.event,
+    title: n.title,
+    startsAt: n.startsAt,
+    scope: 'shared',
     badge: 'Shared',
     sub: n.updatedByName ? `Last updated by ${n.updatedByName}` : `Updated ${formatDate(n.updated_at)}`,
   }));
@@ -339,7 +352,7 @@ export function NotesView() {
           onSearch={setMySearch}
           showAll={myShowAll}
           onShowAll={() => setMyShowAll(true)}
-          onOpen={setOpenEvent}
+          onOpen={setOpenRow}
           emptyLabel="You haven't written any notes yet — open an event from the calendar and click Notes to start one."
         />
       ) : tab === 'shared' ? (
@@ -349,15 +362,24 @@ export function NotesView() {
           onSearch={setSharedSearch}
           showAll={sharedShowAll}
           onShowAll={() => setSharedShowAll(true)}
-          onOpen={setOpenEvent}
+          onOpen={setOpenRow}
           emptyLabel="No shared notes yet on events you're attending."
         />
       ) : (
         <IdeasTab userId={profile.id} />
       )}
 
-      {openEvent && (
-        <MeetingNotesView event={openEvent} userId={profile.id} onClose={() => setOpenEvent(null)} />
+      {openRow?.event && (
+        <MeetingNotesView event={openRow.event} userId={profile.id} onClose={() => setOpenRow(null)} />
+      )}
+      {openRow && !openRow.event && (
+        <OrphanedNoteView
+          noteId={openRow.noteId}
+          scope={openRow.scope}
+          title={openRow.title}
+          startsAt={openRow.startsAt}
+          onClose={() => setOpenRow(null)}
+        />
       )}
     </div>
   );
