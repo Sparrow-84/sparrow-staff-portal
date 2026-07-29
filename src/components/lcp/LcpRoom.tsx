@@ -327,7 +327,7 @@ export function LcpRoom() {
       ) : tab === 'curriculum' ? (
         <CurriculumAdmin />
       ) : tab === 'team-cal' ? (
-        <div className="mt-6" style={{ height: '70vh' }}>
+        <div className="mt-6">
           <DeptCalendar department="lcp" />
         </div>
       ) : (

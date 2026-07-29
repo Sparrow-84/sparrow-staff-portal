@@ -289,7 +289,7 @@ export function PartnershipsRoom() {
           {activeTab === 'events' && <PartnershipEventsTab />}
           {activeTab === 'prayer' && <PrayerMeetingTab />}
           {activeTab === 'calendar' && (
-            <div style={{ height: '70vh' }}>
+            <div>
               <DeptCalendar department="partnerships" />
             </div>
           )}

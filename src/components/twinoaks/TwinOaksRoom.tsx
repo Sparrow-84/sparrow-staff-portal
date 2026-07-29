@@ -245,7 +245,7 @@ export function TwinOaksRoom() {
       </div>
 
       {tab === 'calendar' ? (
-        <div className="mt-6" style={{ height: '70vh' }}>
+        <div className="mt-6">
           <DeptCalendar department="toc" />
         </div>
       ) : tab === 'archive' ? (

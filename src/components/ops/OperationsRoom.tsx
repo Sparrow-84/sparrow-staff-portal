@@ -143,7 +143,7 @@ export function OperationsRoom() {
           <InventoryRoom />
         </div>
       ) : opsTab === 'calendar' ? (
-        <div className="mt-6" style={{ height: '70vh' }}>
+        <div className="mt-6">
           <DeptCalendar department="ops" />
         </div>
       ) : opsTab === 'grants' ? (
