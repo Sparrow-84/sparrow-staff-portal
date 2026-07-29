@@ -151,6 +151,17 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
   // Checked synchronously so a rapid double-click (or retry before the "saving" state
   // has committed a render) can't fire submit() twice and create two full series.
   const submittingRef = useRef(false);
+  const daysOfWeekTouchedRef = useRef(false);
+
+  // Keep the day-of-week picker in sync with the chosen start date until the
+  // staff member manually picks a day — otherwise today's weekday (whatever day
+  // the form happened to be opened) stays checked even after the date changes,
+  // silently creating extra recurring events on the wrong day.
+  useEffect(() => {
+    if (!daysOfWeekTouchedRef.current) {
+      setDaysOfWeek(new Set([new Date(date + 'T12:00:00').getDay()]));
+    }
+  }, [date]);
 
   useEffect(() => { setDate(defaultDate); }, [defaultDate]);
   useEffect(() => { setDepartment(initialDept); setLabelId(null); }, [initialDept]);
@@ -159,6 +170,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
   useEffect(() => { void fetchCalendarLabels().then(setLabels); }, []);
 
   function toggleDay(dow: number) {
+    daysOfWeekTouchedRef.current = true;
     setDaysOfWeek((prev) => {
       const next = new Set(prev);
       if (next.has(dow)) { if (next.size > 1) next.delete(dow); }
@@ -276,6 +288,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
     setRoomId('');
     setIsPrivateMeeting(false);
     setError(null);
+    daysOfWeekTouchedRef.current = false;
     resetValidation();
   }
 

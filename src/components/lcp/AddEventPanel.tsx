@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EVENT_LABEL, type EventKind } from '@/lib/lcp-types';
 import { createEvents } from '@/lib/lcp';
 import { Drawer } from './Drawer';
@@ -91,8 +91,20 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submittingRef = useRef(false);
+  const daysOfWeekTouchedRef = useRef(false);
+
+  // Keep the day-of-week picker in sync with the chosen start date until the
+  // staff member manually picks a day — otherwise today's weekday (whatever day
+  // the form happened to be opened) stays checked even after the date changes,
+  // silently creating extra recurring events on the wrong day.
+  useEffect(() => {
+    if (!daysOfWeekTouchedRef.current) {
+      setDaysOfWeek(new Set([new Date(date + 'T12:00:00').getDay()]));
+    }
+  }, [date]);
 
   function toggleDay(dow: number) {
+    daysOfWeekTouchedRef.current = true;
     setDaysOfWeek((prev) => {
       const next = new Set(prev);
       if (next.has(dow)) { if (next.size > 1) next.delete(dow); }
@@ -160,6 +172,7 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
     setUntilMode('date');
     setUntilDate(addMonths(todayISO(), 3));
     setError(null);
+    daysOfWeekTouchedRef.current = false;
     resetValidation();
   }
 
