@@ -10,6 +10,7 @@ import {
   PARTNER_STAGE,
   PARTNER_STAGE_DESC,
   PARTNER_TYPE,
+  PARTNER_TYPES,
   STEWARDSHIP,
   TOUCHPOINT_METHOD,
   TOUCHPOINT_METHODS,
@@ -23,10 +24,13 @@ import {
   type MouStatus,
   type Partner,
   type PartnerStage,
+  type PartnerType,
   type Touchpoint,
   type TouchpointMethod,
 } from '@/lib/partnerships-types';
 import { Drawer } from '../lcp/Drawer';
+import { LEAD_TIME_PRESETS } from '@/lib/cadence';
+import { CadenceInput } from './CadenceInput';
 
 const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'inactive'];
 const TIERS: DonorTier[] = ['first_time', 'recurring', 'major', 'lapsed'];
@@ -121,6 +125,14 @@ export function PartnerDetailPanel({
     await updatePartner(partner.id, p);
     setBusy(false);
     onChanged();
+  }
+
+  function toggleSecondaryType(t: PartnerType) {
+    if (!partner || t === partner.type) return; // can't tag the primary type as a secondary one too
+    const next = partner.secondary_types.includes(t)
+      ? partner.secondary_types.filter((s) => s !== t)
+      : [...partner.secondary_types, t];
+    void patch({ secondary_types: next });
   }
 
   async function log() {
@@ -385,6 +397,34 @@ export function PartnerDetailPanel({
         <section className="space-y-3">
           <span className="field-label block">Stewardship</span>
           <div>
+            <span className="field-label">Also involved as</span>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {PARTNER_TYPES.filter((t) => t !== partner.type).map((t) => (
+                <label
+                  key={t}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
+                    partner.secondary_types.includes(t)
+                      ? 'border-sparrow-green bg-sparrow-green/10 text-sparrow-ink'
+                      : 'border-sparrow-rule text-sparrow-gray'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={partner.secondary_types.includes(t)}
+                    disabled={busy}
+                    onChange={() => toggleSecondaryType(t)}
+                  />
+                  {PARTNER_TYPE[t].icon} {PARTNER_TYPE[t].label}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">
+              Tags {partner.name} onto those Directory tabs too. The main Type above still
+              drives cadence and which fields show below.
+            </p>
+          </div>
+          <div>
             <span className="field-label">Owner</span>
             <select
               value={partner.owner_id ?? ''}
@@ -402,38 +442,20 @@ export function PartnerDetailPanel({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <span className="field-label">Cadence (days) *</span>
-              <input
-                type="number"
-                min={1}
-                defaultValue={partner.cadence_days ?? ''}
-                onBlur={(e) => {
-                  // Required (migration 0080) — never allow clearing to empty; revert instead
-                  // of sending a save that would hit the DB's NOT NULL constraint.
-                  if (!e.target.value) { e.target.value = String(partner.cadence_days ?? ''); return; }
-                  const v = Math.max(1, Number(e.target.value));
-                  if (v !== (partner.cadence_days ?? null)) void patch({ cadence_days: v });
-                }}
-                placeholder="e.g. 90"
+              <span className="field-label">Cadence *</span>
+              <CadenceInput
+                value={partner.cadence_days}
+                onCommit={(v) => void patch({ cadence_days: v })}
                 disabled={busy}
-                className="field-input mt-0"
               />
             </div>
             <div>
-              <span className="field-label">Lead time (days) *</span>
-              <input
-                type="number"
-                min={1}
-                defaultValue={partner.lead_time_days ?? ''}
-                onBlur={(e) => {
-                  // Required (migration 0080) — same guard as Cadence above.
-                  if (!e.target.value) { e.target.value = String(partner.lead_time_days ?? ''); return; }
-                  const v = Math.max(1, Number(e.target.value));
-                  if (v !== partner.lead_time_days) void patch({ lead_time_days: v });
-                }}
-                placeholder="e.g. 14"
+              <span className="field-label">Lead time *</span>
+              <CadenceInput
+                value={partner.lead_time_days}
+                onCommit={(v) => void patch({ lead_time_days: v })}
                 disabled={busy}
-                className="field-input mt-0"
+                presets={LEAD_TIME_PRESETS}
               />
             </div>
           </div>

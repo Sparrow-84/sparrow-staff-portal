@@ -55,9 +55,11 @@ export function PartnerTileView({
             />
 
             <p className="pr-8 font-semibold text-sparrow-ink">{p.name}</p>
-            <p className="mt-1 text-xs text-sparrow-gray">
-              {type.icon} {type.label}
-            </p>
+            <div className="mt-1 flex flex-col gap-0.5 text-xs text-sparrow-gray">
+              {[type, ...p.secondary_types.map((t) => PARTNER_TYPE[t])].map((t) => (
+                <span key={t.label}>{t.icon} {t.label}</span>
+              ))}
+            </div>
             <p className="mt-0.5 text-xs text-sparrow-gray">{ownerName(p.owner_id)}</p>
 
             <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${st.chip}`}>

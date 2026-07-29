@@ -10,6 +10,8 @@ import {
 } from '@/lib/partnerships-types';
 import { Drawer } from '../lcp/Drawer';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+import { LEAD_TIME_PRESETS } from '@/lib/cadence';
+import { CadenceInput } from './CadenceInput';
 
 // Default stewardship cadence by type (days between touchpoints). Every partner now needs a
 // cadence value (migration 0080 makes partners.cadence_days NOT NULL — "a record without a
@@ -20,11 +22,11 @@ import { useRequiredFields } from '@/hooks/useRequiredFields';
 const DEFAULT_CADENCE: Record<PartnerType, number> = {
   donor:      182,
   church:     90,
-  community:  180,
-  volunteer:  180,
+  community:  182,
+  volunteer:  182,
   prayer:     90,
   fst:        90,
-  business:   180,
+  business:   182,
   foundation: 365,
   advisory:   365,
 };
@@ -48,6 +50,7 @@ export function AddPartnerPanel({
 }) {
   const [name, setName] = useState('');
   const [type, setType] = useState<PartnerType>('donor');
+  const [secondaryTypes, setSecondaryTypes] = useState<PartnerType[]>([]);
   const [stage, setStage] = useState<PartnerStage>('prospect');
   const [ownerId, setOwnerId] = useState<string>('');
   const [contactName, setContactName] = useState('');
@@ -64,6 +67,7 @@ export function AddPartnerPanel({
     if (open) {
       setName('');
       setType('donor');
+      setSecondaryTypes([]);
       setStage('prospect');
       setOwnerId(defaultOwnerId ?? '');
       setContactName('');
@@ -91,6 +95,11 @@ export function AddPartnerPanel({
     setType(t);
     setCadence(DEFAULT_CADENCE[t]); // follow the type's default rhythm unless the user overrides
     clear('pa-cadence');
+    setSecondaryTypes((prev) => prev.filter((s) => s !== t)); // can't tag the same type twice
+  }
+
+  function toggleSecondaryType(t: PartnerType) {
+    setSecondaryTypes((prev) => (prev.includes(t) ? prev.filter((s) => s !== t) : [...prev, t]));
   }
 
   async function save() {
@@ -102,6 +111,7 @@ export function AddPartnerPanel({
       await createPartner({
         name: trimmedName,
         type,
+        secondary_types: secondaryTypes,
         stage,
         owner_id: ownerId || null,
         organization: null,
@@ -181,6 +191,35 @@ export function AddPartnerPanel({
         </div>
 
         <div>
+          <label className="field-label">Also involved as (optional)</label>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {PARTNER_TYPES.filter((t) => t !== type).map((t) => (
+              <label
+                key={t}
+                className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
+                  secondaryTypes.includes(t)
+                    ? 'border-sparrow-green bg-sparrow-green/10 text-sparrow-ink'
+                    : 'border-sparrow-rule text-sparrow-gray'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={secondaryTypes.includes(t)}
+                  onChange={() => toggleSecondaryType(t)}
+                />
+                {PARTNER_TYPE[t].icon} {PARTNER_TYPE[t].label}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">
+            Someone who's more than one thing to Sparrow — e.g. a donor who's also a prayer
+            volunteer. Cadence still follows the main Type above; tag the other roles here so
+            they also show up under those Directory tabs.
+          </p>
+        </div>
+
+        <div>
           <label className="field-label" htmlFor="pa-owner">Owner</label>
           <select id="pa-owner" className="field-input" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
             <option value="">Unassigned</option>
@@ -199,33 +238,18 @@ export function AddPartnerPanel({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="field-label" htmlFor="pa-cadence">Cadence (days) *</label>
-            <input
-              id="pa-cadence"
-              type="number"
-              min={1}
-              required
-              className={fieldClass('pa-cadence')}
-              value={cadence ?? ''}
-              onChange={(e) => {
-                setCadence(e.target.value === '' ? null : Math.max(1, Number(e.target.value)));
-                clear('pa-cadence');
-              }}
+            <label className="field-label" htmlFor="pa-cadence">Cadence *</label>
+            <CadenceInput
+              value={cadence}
+              onCommit={(v) => { setCadence(v); clear('pa-cadence'); }}
             />
           </div>
           <div>
-            <label className="field-label" htmlFor="pa-lead-time">Lead time (days) *</label>
-            <input
-              id="pa-lead-time"
-              type="number"
-              min={1}
-              required
-              className={fieldClass('pa-lead-time')}
-              value={leadTime ?? ''}
-              onChange={(e) => {
-                setLeadTime(e.target.value === '' ? null : Math.max(1, Number(e.target.value)));
-                clear('pa-lead-time');
-              }}
+            <label className="field-label" htmlFor="pa-lead-time">Lead time *</label>
+            <CadenceInput
+              value={leadTime}
+              onCommit={(v) => { setLeadTime(v); clear('pa-lead-time'); }}
+              presets={LEAD_TIME_PRESETS}
             />
           </div>
         </div>

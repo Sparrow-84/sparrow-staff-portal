@@ -5,6 +5,7 @@ import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
 import { fetchArchivedPartners, fetchDonorStats, fetchPartners, syncDueTouchpointTasks, syncLapsedDonorTiers, syncLapsedPartnerTasks } from '@/lib/partnerships';
 import {
+  partnerMatchesType,
   stewardshipStatus,
   type DonorStat,
   type Partner,
@@ -194,7 +195,7 @@ export function PartnershipsRoom() {
         : archivedPartners;
       return [...list].sort((a, b) => a.name.localeCompare(b.name));
     }
-    let list = filter === 'all' ? partners : partners.filter((p) => p.type === filter);
+    let list = filter === 'all' ? partners : partners.filter((p) => partnerMatchesType(p, filter));
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((p) => p.name.toLowerCase().includes(q));
@@ -341,7 +342,7 @@ export function PartnershipsRoom() {
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-1.5 text-sm">
               {FILTERS.map((f) => {
-                const count = f.key === 'all' ? partners.length : partners.filter((p) => p.type === f.key).length;
+                const count = f.key === 'all' ? partners.length : partners.filter((p) => partnerMatchesType(p, f.key as PartnerType)).length;
                 if (count === 0 && f.key !== 'all') return null;
                 return (
                   <button

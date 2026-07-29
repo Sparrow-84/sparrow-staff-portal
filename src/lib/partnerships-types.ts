@@ -72,6 +72,11 @@ export interface Partner {
   id: string;
   name: string;
   type: PartnerType;
+  /** Extra tags on top of the primary type (migration 0107) — e.g. a donor who's also a
+   *  prayer volunteer. Purely additive: only affects tag display + which Directory filter
+   *  tabs a partner shows up under. The primary `type` alone still drives cadence defaults
+   *  and which extra fields (donor/MOU) show. */
+  secondary_types: PartnerType[];
   stage: PartnerStage;
   owner_id: string | null;
   organization: string | null;
@@ -189,6 +194,13 @@ export const STEWARDSHIP: Record<StewardshipStatus, { label: string; dot: string
   lapsed:     { label: 'Lapsed',      dot: 'bg-orange-500',    chip: 'bg-orange-500/15 text-orange-700' },
   inactive:   { label: 'Inactive',    dot: 'bg-sparrow-rule',  chip: 'bg-sparrow-mist text-sparrow-gray' },
 };
+
+/** True if a partner is this type either as their primary type or as a secondary tag —
+ *  used so a multi-tagged partner (e.g. donor + prayer volunteer) shows up under every
+ *  Directory filter tab that applies to them, not just their primary type's tab. */
+export function partnerMatchesType(p: Partner, t: PartnerType): boolean {
+  return p.type === t || p.secondary_types.includes(t);
+}
 
 const DAY_MS = 86_400_000;
 const LAPSED_DAYS = 365;

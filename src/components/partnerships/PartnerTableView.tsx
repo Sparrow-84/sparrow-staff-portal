@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Profile } from '@/lib/types';
 import { updatePartner } from '@/lib/partnerships';
+import { assignAvatarColors } from '@/lib/avatarColors';
+import { LEAD_TIME_PRESETS } from '@/lib/cadence';
+import { CadenceInput } from './CadenceInput';
 import {
   PARTNER_STAGE,
   PARTNER_TYPE,
@@ -44,6 +47,10 @@ export function PartnerTableView({
   const ownerProfiles = profiles.filter(
     (p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec',
   );
+
+  // Same palette + assignment as the Team page, so a given person's color matches everywhere —
+  // makes it easy to spot at a glance who owns what instead of everything reading as one color.
+  const ownerColors = useMemo(() => assignAvatarColors(profiles), [profiles]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -105,11 +112,12 @@ export function PartnerTableView({
     onChanged();
   }
 
-  function SortTh({ label, k }: { label: string; k: SortKey }) {
+  function SortTh({ label, k, minWidth }: { label: string; k: SortKey; minWidth?: string }) {
     const active = sortKey === k;
     return (
       <th
         onClick={() => toggleSort(k)}
+        style={minWidth ? { minWidth } : undefined}
         className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray hover:text-sparrow-ink"
       >
         {label}
@@ -128,30 +136,32 @@ export function PartnerTableView({
         <thead>
           <tr className="border-b border-sparrow-rule bg-sparrow-mist/40">
             <th className="w-6 px-3 py-2" />
-            <SortTh label="Name" k="name" />
-            <SortTh label="Type" k="type" />
-            <SortTh label="Stage" k="stage" />
-            <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+            <SortTh label="Name" k="name" minWidth="260px" />
+            <SortTh label="Type" k="type" minWidth="160px" />
+            <SortTh label="Stage" k="stage" minWidth="130px" />
+            <th
+              style={{ minWidth: '180px' }}
+              className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray"
+            >
               Owner
             </th>
-            <SortTh label="Last touch" k="last_touch" />
-            <SortTh label="Due" k="due" />
+            <SortTh label="Last touch" k="last_touch" minWidth="110px" />
+            <SortTh label="Due" k="due" minWidth="120px" />
             {isDonorView ? (
               <>
-                <SortTh label="Gifts" k="gift_count" />
-                <SortTh label="Last gift" k="last_gift" />
+                <SortTh label="Gifts" k="gift_count" minWidth="80px" />
+                <SortTh label="Last gift" k="last_gift" minWidth="110px" />
               </>
             ) : (
               <>
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+                <th style={{ minWidth: '150px' }} className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
                   Cadence
                 </th>
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+                <th style={{ minWidth: '150px' }} className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
                   Lead time
                 </th>
               </>
             )}
-            <th className="w-8 px-3 py-2" />
           </tr>
         </thead>
         <tbody>
@@ -171,26 +181,30 @@ export function PartnerTableView({
                   <span className={`block h-2 w-2 rounded-full ${st.dot}`} title={st.label} />
                 </td>
 
-                {/* Name + badges */}
+                {/* Name + badges — kept on one line; the table scrolls horizontally rather than squeezing this */}
                 <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sparrow-ink">{p.name}</span>
+                  <div className="flex flex-nowrap items-center gap-1.5">
+                    <span className="whitespace-nowrap font-medium text-sparrow-ink">{p.name}</span>
                     {(() => {
                       const tier = derivedDonorTier(p.donor_tier, donorStatMap.get(p.id));
-                      if (tier === 'major') return <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">Major</span>;
-                      if (tier === 'lapsed' && p.type === 'donor') return <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">Lapsed giving</span>;
-                      if (tier === 'first_time') return <span className="rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">First gift</span>;
+                      if (tier === 'major') return <span className="whitespace-nowrap rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">Major</span>;
+                      if (tier === 'lapsed' && p.type === 'donor') return <span className="whitespace-nowrap rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">Lapsed giving</span>;
+                      if (tier === 'first_time') return <span className="whitespace-nowrap rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">First gift</span>;
                       return null;
                     })()}
                     {(p.type === 'community' || p.type === 'church') && p.mou_status === 'needed' && (
-                      <span className="h-2 w-2 rounded-full bg-priority-p1" title="MOU needed" />
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-priority-p1" title="MOU needed" />
                     )}
                   </div>
                 </td>
 
-                {/* Type */}
+                {/* Type — every type this partner is (primary, then tags), stacked */}
                 <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">
-                  {type.icon} {type.label}
+                  <div className="flex flex-col gap-0.5">
+                    {[type, ...p.secondary_types.map((t) => PARTNER_TYPE[t])].map((t) => (
+                      <span key={t.label}>{t.icon} {t.label}</span>
+                    ))}
+                  </div>
                 </td>
 
                 {/* Stage — inline editable */}
@@ -209,21 +223,26 @@ export function PartnerTableView({
                   </select>
                 </td>
 
-                {/* Owner — inline editable */}
+                {/* Owner — inline editable, dot color matches the same person's color on the Team page */}
                 <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                  <select
-                    value={p.owner_id ?? ''}
-                    onChange={(e) => void patch(p.id, { owner_id: e.target.value || null })}
-                    disabled={isBusy}
-                    className="field-input mt-0 py-1 text-xs"
-                  >
-                    <option value="">Unassigned</option>
-                    {ownerProfiles.map((op) => (
-                      <option key={op.id} value={op.id}>
-                        {op.full_name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${p.owner_id ? (ownerColors[p.owner_id] ?? 'bg-sparrow-gray') : 'bg-sparrow-mist'}`}
+                    />
+                    <select
+                      value={p.owner_id ?? ''}
+                      onChange={(e) => void patch(p.id, { owner_id: e.target.value || null })}
+                      disabled={isBusy}
+                      className="field-input mt-0 py-1 text-xs"
+                    >
+                      <option value="">Unassigned</option>
+                      {ownerProfiles.map((op) => (
+                        <option key={op.id} value={op.id}>
+                          {op.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </td>
 
                 {/* Last touch */}
@@ -254,52 +273,23 @@ export function PartnerTableView({
                 })() : (
                   <>
                     <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="number"
-                        min={1}
-                        defaultValue={p.cadence_days ?? ''}
-                        onBlur={(e) => {
-                          // Required (migration 0080) — revert rather than saving an empty
-                          // value that would violate the DB's NOT NULL constraint.
-                          if (!e.target.value) { e.target.value = String(p.cadence_days ?? ''); return; }
-                          const v = Math.max(1, Number(e.target.value));
-                          if (v !== (p.cadence_days ?? null)) void patch(p.id, { cadence_days: v });
-                        }}
-                        placeholder="—"
+                      <CadenceInput
+                        value={p.cadence_days}
+                        onCommit={(v) => void patch(p.id, { cadence_days: v })}
                         disabled={isBusy}
-                        className="field-input mt-0 w-16 py-1 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="number"
-                        min={1}
-                        defaultValue={p.lead_time_days ?? ''}
-                        onBlur={(e) => {
-                          if (!e.target.value) { e.target.value = String(p.lead_time_days ?? ''); return; }
-                          const v = Math.max(1, Number(e.target.value));
-                          if (v !== p.lead_time_days) void patch(p.id, { lead_time_days: v });
-                        }}
-                        placeholder="—"
+                      <CadenceInput
+                        value={p.lead_time_days}
+                        onCommit={(v) => void patch(p.id, { lead_time_days: v })}
                         disabled={isBusy}
-                        className="field-input mt-0 w-16 py-1 text-xs"
+                        presets={LEAD_TIME_PRESETS}
                       />
                     </td>
                   </>
                 )}
 
-                {/* Open link */}
-                <td
-                  className="px-3 py-2.5 text-right opacity-0 transition group-hover:opacity-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={() => onOpenPartner(p.id)}
-                    className="text-xs font-medium text-sparrow-green hover:underline"
-                  >
-                    Open
-                  </button>
-                </td>
               </tr>
             );
           })}

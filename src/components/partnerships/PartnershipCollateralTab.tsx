@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { localDate } from '@/lib/date';
+import { LEAD_TIME_PRESETS } from '@/lib/cadence';
 import type { Profile } from '@/lib/types';
+import { CadenceInput } from './CadenceInput';
 import {
   archiveCollateralItem,
   createCollateralItem,
@@ -200,11 +202,8 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
     updateCollateralItem(item.id, patch as Partial<CollateralInput>).catch(console.error);
   }
 
-  // Cadence/lead-time/owner are required (migration 0080 — all NOT NULL). Guard against
-  // clearing to empty so a save attempt never hits the DB constraint as its only feedback.
-  function handleRequiredNumberBlur(item: PartnershipCollateral, field: 'cadence_days' | 'lead_time_days', raw: string, input: HTMLInputElement) {
-    if (!raw) { input.value = String(item[field]); return; }
-    const v = Math.max(1, Number(raw));
+  // Cadence/lead-time/owner are required (migration 0080 — all NOT NULL).
+  function commitCadenceField(item: PartnershipCollateral, field: 'cadence_days' | 'lead_time_days', v: number) {
     if (v === item[field]) return;
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, [field]: v } : i)));
     updateCollateralItem(item.id, { [field]: v } as Partial<CollateralInput>).catch(console.error);
@@ -336,25 +335,18 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
               />
             </div>
             <div>
-              <label className="field-label">Cadence (days) *</label>
-              <input
-                type="number"
-                min={1}
-                required
-                className="field-input w-full"
+              <label className="field-label">Cadence *</label>
+              <CadenceInput
                 value={form.cadence_days}
-                onChange={(e) => setForm((f) => ({ ...f, cadence_days: Math.max(1, Number(e.target.value) || 1) }))}
+                onCommit={(v) => setForm((f) => ({ ...f, cadence_days: v }))}
               />
             </div>
             <div>
-              <label className="field-label">Lead time (days) *</label>
-              <input
-                type="number"
-                min={1}
-                required
-                className="field-input w-full"
+              <label className="field-label">Lead time *</label>
+              <CadenceInput
                 value={form.lead_time_days}
-                onChange={(e) => setForm((f) => ({ ...f, lead_time_days: Math.max(1, Number(e.target.value) || 1) }))}
+                onCommit={(v) => setForm((f) => ({ ...f, lead_time_days: v }))}
+                presets={LEAD_TIME_PRESETS}
               />
             </div>
             <div>
@@ -457,23 +449,18 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
                       </select>
                     </td>
                     <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min={1}
-                        defaultValue={item.cadence_days}
-                        onBlur={(e) => handleRequiredNumberBlur(item, 'cadence_days', e.target.value, e.target)}
+                      <CadenceInput
+                        value={item.cadence_days}
+                        onCommit={(v) => commitCadenceField(item, 'cadence_days', v)}
                         disabled={isArchived}
-                        className="field-input w-16 py-1 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min={1}
-                        defaultValue={item.lead_time_days}
-                        onBlur={(e) => handleRequiredNumberBlur(item, 'lead_time_days', e.target.value, e.target)}
+                      <CadenceInput
+                        value={item.lead_time_days}
+                        onCommit={(v) => commitCadenceField(item, 'lead_time_days', v)}
                         disabled={isArchived}
-                        className="field-input w-16 py-1 text-xs"
+                        presets={LEAD_TIME_PRESETS}
                       />
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">

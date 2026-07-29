@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Profile } from '@/lib/types';
+import { LEAD_TIME_PRESETS } from '@/lib/cadence';
+import { CadenceInput } from './CadenceInput';
 import {
   fetchRecurringSetting,
   updateRecurringSetting,
@@ -75,33 +77,20 @@ export function PartnershipRecurringSettingsPanel({
               <p className="mb-3 text-xs text-sparrow-gray">{helpText}</p>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="field-label">Cadence (days) *</label>
-                  <input
-                    type="number"
-                    min={1}
-                    defaultValue={setting.cadence_days}
+                  <label className="field-label">Cadence *</label>
+                  <CadenceInput
+                    value={setting.cadence_days}
+                    onCommit={(v) => void patch({ cadence_days: v })}
                     disabled={busy}
-                    onBlur={(e) => {
-                      if (!e.target.value) { e.target.value = String(setting.cadence_days); return; }
-                      const v = Math.max(1, Number(e.target.value));
-                      if (v !== setting.cadence_days) void patch({ cadence_days: v });
-                    }}
-                    className="field-input mt-0"
                   />
                 </div>
                 <div>
-                  <label className="field-label">Lead time (days) *</label>
-                  <input
-                    type="number"
-                    min={1}
-                    defaultValue={setting.lead_time_days}
+                  <label className="field-label">Lead time *</label>
+                  <CadenceInput
+                    value={setting.lead_time_days}
+                    onCommit={(v) => void patch({ lead_time_days: v })}
                     disabled={busy}
-                    onBlur={(e) => {
-                      if (!e.target.value) { e.target.value = String(setting.lead_time_days); return; }
-                      const v = Math.max(1, Number(e.target.value));
-                      if (v !== setting.lead_time_days) void patch({ lead_time_days: v });
-                    }}
-                    className="field-input mt-0"
+                    presets={LEAD_TIME_PRESETS}
                   />
                 </div>
                 <div>
