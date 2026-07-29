@@ -199,7 +199,9 @@ export const STEWARDSHIP: Record<StewardshipStatus, { label: string; dot: string
  *  used so a multi-tagged partner (e.g. donor + prayer volunteer) shows up under every
  *  Directory filter tab that applies to them, not just their primary type's tab. */
 export function partnerMatchesType(p: Partner, t: PartnerType): boolean {
-  return p.type === t || p.secondary_types.includes(t);
+  // TEMP (2026-07-29): defensive fallback — secondary_types isn't being fetched right now
+  // (migration 0107 pending), so it comes back undefined rather than an empty array.
+  return p.type === t || (p.secondary_types ?? []).includes(t);
 }
 
 const DAY_MS = 86_400_000;

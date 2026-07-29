@@ -201,7 +201,7 @@ export function PartnerTableView({
                 {/* Type — every type this partner is (primary, then tags), stacked */}
                 <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">
                   <div className="flex flex-col gap-0.5">
-                    {[type, ...p.secondary_types.map((t) => PARTNER_TYPE[t])].map((t) => (
+                    {[type, ...(p.secondary_types ?? []).map((t) => PARTNER_TYPE[t])].map((t) => (
                       <span key={t.label}>{t.icon} {t.label}</span>
                     ))}
                   </div>

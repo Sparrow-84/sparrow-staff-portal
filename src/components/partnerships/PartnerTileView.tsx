@@ -56,7 +56,7 @@ export function PartnerTileView({
 
             <p className="pr-8 font-semibold text-sparrow-ink">{p.name}</p>
             <div className="mt-1 flex flex-col gap-0.5 text-xs text-sparrow-gray">
-              {[type, ...p.secondary_types.map((t) => PARTNER_TYPE[t])].map((t) => (
+              {[type, ...(p.secondary_types ?? []).map((t) => PARTNER_TYPE[t])].map((t) => (
                 <span key={t.label}>{t.icon} {t.label}</span>
               ))}
             </div>

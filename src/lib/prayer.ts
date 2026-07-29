@@ -64,10 +64,15 @@ export async function updatePrayerVolunteerNotes(id: string, notes: string | nul
  * calls (e.g. syncDueTouchpointTasks) — no cron needed for something this small.
  */
 export async function syncPrayerVolunteersFromDirectory(): Promise<void> {
+  // TEMP (2026-07-29): dropped the secondary_types half of this filter — that column
+  // doesn't exist in the live DB yet (migration 0107 pending), and referencing it in a
+  // filter fails the whole query same as selecting it would. No live partner has a Prayer
+  // tag yet anyway (the column's never existed), so this only misses tag-based matches
+  // temporarily, not anyone real. Restore the .or(...) once 0107 is confirmed applied.
   const { data: partners, error: pe } = await supabase
     .from('partners')
     .select('id, name, email, phone, active')
-    .or('type.eq.prayer,secondary_types.cs.{prayer}');
+    .eq('type', 'prayer');
   if (pe) throw new Error(pe.message);
 
   const qualifying = (partners ?? []).filter((p) => p.active);

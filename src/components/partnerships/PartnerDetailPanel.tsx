@@ -122,16 +122,18 @@ export function PartnerDetailPanel({
   async function patch(p: Parameters<typeof updatePartner>[1]) {
     if (!partner) return;
     setBusy(true);
-    await updatePartner(partner.id, p);
-    setBusy(false);
-    onChanged();
+    try {
+      await updatePartner(partner.id, p);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
   }
 
   function toggleSecondaryType(t: PartnerType) {
     if (!partner || t === partner.type) return; // can't tag the primary type as a secondary one too
-    const next = partner.secondary_types.includes(t)
-      ? partner.secondary_types.filter((s) => s !== t)
-      : [...partner.secondary_types, t];
+    const current = partner.secondary_types ?? [];
+    const next = current.includes(t) ? current.filter((s) => s !== t) : [...current, t];
     void patch({ secondary_types: next });
   }
 
@@ -403,7 +405,7 @@ export function PartnerDetailPanel({
                 <label
                   key={t}
                   className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
-                    partner.secondary_types.includes(t)
+                    (partner.secondary_types ?? []).includes(t)
                       ? 'border-sparrow-green bg-sparrow-green/10 text-sparrow-ink'
                       : 'border-sparrow-rule text-sparrow-gray'
                   }`}
@@ -411,7 +413,7 @@ export function PartnerDetailPanel({
                   <input
                     type="checkbox"
                     className="sr-only"
-                    checked={partner.secondary_types.includes(t)}
+                    checked={(partner.secondary_types ?? []).includes(t)}
                     disabled={busy}
                     onChange={() => toggleSecondaryType(t)}
                   />
