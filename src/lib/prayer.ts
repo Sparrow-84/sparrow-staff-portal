@@ -48,22 +48,58 @@ export async function fetchPrayerVolunteers(): Promise<PrayerVolunteer[]> {
   return (data ?? []) as PrayerVolunteer[];
 }
 
-export async function createPrayerVolunteer(input: {
-  full_name: string;
-  email: string | null;
-  phone: string | null;
-  notes: string | null;
-}): Promise<void> {
-  const { error } = await supabase.from('prayer_volunteers').insert(input);
+export async function updatePrayerVolunteerNotes(id: string, notes: string | null): Promise<void> {
+  const { error } = await supabase.from('prayer_volunteers').update({ notes }).eq('id', id);
   if (error) throw new Error(error.message);
 }
 
-export async function updatePrayerVolunteer(
-  id: string,
-  patch: Partial<Pick<PrayerVolunteer, 'full_name' | 'email' | 'phone' | 'notes' | 'active'>>,
-): Promise<void> {
-  const { error } = await supabase.from('prayer_volunteers').update(patch).eq('id', id);
-  if (error) throw new Error(error.message);
+/**
+ * One door: Directory (partners typed or tagged "Prayer volunteer") is the only place
+ * Bethany manages who's a prayer volunteer. This mirrors that into the roster the meeting
+ * attendance log actually points at (migration 0043's prayer_volunteers.partner_id link,
+ * previously optional and unused) — every active, Prayer-tagged partner gets a roster row
+ * (created or refreshed); anyone who's lost the tag or gone inactive drops off the *active*
+ * roster. Past attendance history is untouched either way — it just stops accumulating.
+ * Called opportunistically on Prayer tab load, same pattern as the room's other emit/sync
+ * calls (e.g. syncDueTouchpointTasks) — no cron needed for something this small.
+ */
+export async function syncPrayerVolunteersFromDirectory(): Promise<void> {
+  const { data: partners, error: pe } = await supabase
+    .from('partners')
+    .select('id, name, email, phone, active')
+    .or('type.eq.prayer,secondary_types.cs.{prayer}');
+  if (pe) throw new Error(pe.message);
+
+  const qualifying = (partners ?? []).filter((p) => p.active);
+  if (qualifying.length > 0) {
+    const { error: ue } = await supabase.from('prayer_volunteers').upsert(
+      qualifying.map((p) => ({
+        partner_id: p.id,
+        full_name: p.name,
+        email: p.email,
+        phone: p.phone,
+        active: true,
+      })),
+      { onConflict: 'partner_id' },
+    );
+    if (ue) throw new Error(ue.message);
+  }
+
+  const qualifyingIds = new Set(qualifying.map((p) => p.id));
+  const { data: currentRoster, error: re } = await supabase
+    .from('prayer_volunteers')
+    .select('id, partner_id')
+    .eq('active', true)
+    .not('partner_id', 'is', null);
+  if (re) throw new Error(re.message);
+
+  const toDeactivate = (currentRoster ?? [])
+    .filter((v) => v.partner_id && !qualifyingIds.has(v.partner_id))
+    .map((v) => v.id);
+  if (toDeactivate.length > 0) {
+    const { error: de } = await supabase.from('prayer_volunteers').update({ active: false }).in('id', toDeactivate);
+    if (de) throw new Error(de.message);
+  }
 }
 
 // ── Meetings ──────────────────────────────────────────────────────────

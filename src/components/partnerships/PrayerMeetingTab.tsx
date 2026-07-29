@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import {
   consecutiveMisses,
-  createPrayerVolunteer,
   fetchMeetingsWithAttendance,
   fetchPrayerVolunteers,
   logPrayerMeeting,
-  updatePrayerVolunteer,
+  syncPrayerVolunteersFromDirectory,
+  updatePrayerVolunteerNotes,
   type MeetingWithAttendance,
   type PrayerVolunteer,
 } from '@/lib/prayer';
@@ -22,67 +22,6 @@ function shortDate(iso: string): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, {
     weekday: 'short', month: 'short', day: 'numeric',
   });
-}
-
-// ── Add volunteer drawer ──────────────────────────────────────────────
-
-function AddVolunteerForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [notes, setNotes] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function save() {
-    if (!name.trim()) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      await createPrayerVolunteer({
-        full_name: name.trim(),
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-        notes: notes.trim() || null,
-      });
-      onSaved();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not add volunteer.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="rounded-2xl border border-sparrow-rule bg-sparrow-mist/40 p-4 space-y-3">
-      <p className="text-sm font-medium text-sparrow-ink">Add prayer volunteer</p>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <label className="field-label">Name</label>
-          <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" />
-        </div>
-        <div>
-          <label className="field-label">Phone</label>
-          <input className="field-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="optional" />
-        </div>
-        <div>
-          <label className="field-label">Email</label>
-          <input type="email" className="field-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="optional" />
-        </div>
-        <div className="col-span-2">
-          <label className="field-label">Notes</label>
-          <textarea rows={2} className="field-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="optional" />
-        </div>
-      </div>
-      {err && <p className="text-sm text-priority-p1">{err}</p>}
-      <div className="flex gap-2">
-        <button onClick={save} disabled={!name.trim() || busy} className="btn-primary flex-1">
-          {busy ? 'Adding…' : 'Add volunteer'}
-        </button>
-        <button onClick={onCancel} className="btn-secondary flex-1">Cancel</button>
-      </div>
-    </div>
-  );
 }
 
 // ── Log meeting panel ─────────────────────────────────────────────────
@@ -210,7 +149,6 @@ export function PrayerMeetingTab() {
   const [loading, setLoading] = useState(true);
   const [notReady, setNotReady] = useState(false);
   const [loggingMeeting, setLoggingMeeting] = useState(false);
-  const [addingVolunteer, setAddingVolunteer] = useState(false);
   const [editVolunteerId, setEditVolunteerId] = useState<string | null>(null);
   const [editNotes, setEditNotes] = useState('');
   const [expandedMeeting, setExpandedMeeting] = useState<string | null>(null);
@@ -218,6 +156,9 @@ export function PrayerMeetingTab() {
 
   const load = useCallback(async () => {
     try {
+      // One door: Directory (Prayer type/tag) decides who's on the roster — refresh it
+      // here before reading, same opportunistic-sync pattern the rest of the room uses.
+      await syncPrayerVolunteersFromDirectory().catch(() => undefined);
       const [vols, mtgs] = await Promise.all([
         fetchPrayerVolunteers(),
         fetchMeetingsWithAttendance(),
@@ -244,19 +185,14 @@ export function PrayerMeetingTab() {
     return () => { mounted.current = false; };
   }, [load]);
 
-  async function archiveVolunteer(id: string) {
-    await updatePrayerVolunteer(id, { active: false });
-    void load();
-  }
-
   async function saveVolunteerNotes(id: string) {
-    await updatePrayerVolunteer(id, { notes: editNotes.trim() || null });
+    await updatePrayerVolunteerNotes(id, editNotes.trim() || null);
     setEditVolunteerId(null);
     void load();
   }
 
   const activeVolunteers = volunteers.filter((v) => v.active);
-  const archivedVolunteers = volunteers.filter((v) => !v.active);
+  const inactiveVolunteers = volunteers.filter((v) => !v.active);
 
   if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading prayer log…</p>;
 
@@ -374,40 +310,27 @@ export function PrayerMeetingTab() {
       {/* ── Volunteer roster ── */}
       {section === 'volunteers' && (
         <div className="space-y-4">
-          {!addingVolunteer && (
-            <button onClick={() => setAddingVolunteer(true)} className="btn-primary">
-              + Add volunteer
-            </button>
-          )}
+          <p className="text-xs text-sparrow-gray">
+            This roster follows Directory automatically — tag someone as "Prayer volunteer"
+            there (Type or "Also involved as") to add them here; remove the tag to take them
+            off the active roster. Nothing to add or archive from this screen.
+          </p>
 
-          {addingVolunteer && (
-            <AddVolunteerForm
-              onSaved={() => { setAddingVolunteer(false); void load(); }}
-              onCancel={() => setAddingVolunteer(false)}
-            />
-          )}
-
-          {activeVolunteers.length === 0 && !addingVolunteer && (
-            <p className="py-6 text-center text-sm text-sparrow-gray">No active prayer volunteers yet.</p>
+          {activeVolunteers.length === 0 && (
+            <p className="py-6 text-center text-sm text-sparrow-gray">
+              No active prayer volunteers yet — tag someone in Directory to see them here.
+            </p>
           )}
 
           <div className="space-y-2">
             {activeVolunteers.map((v) => (
               <div key={v.id} className="rounded-2xl border border-sparrow-rule bg-white p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-sparrow-ink">{v.full_name}</p>
-                    <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray">
-                      {v.phone && <span>{v.phone}</span>}
-                      {v.email && <span>{v.email}</span>}
-                    </div>
+                <div>
+                  <p className="font-medium text-sparrow-ink">{v.full_name}</p>
+                  <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray">
+                    {v.phone && <span>{v.phone}</span>}
+                    {v.email && <span>{v.email}</span>}
                   </div>
-                  <button
-                    onClick={() => void archiveVolunteer(v.id)}
-                    className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1"
-                  >
-                    Archive
-                  </button>
                 </div>
 
                 {/* Notes — inline edit */}
@@ -443,21 +366,16 @@ export function PrayerMeetingTab() {
             ))}
           </div>
 
-          {archivedVolunteers.length > 0 && (
+          {inactiveVolunteers.length > 0 && (
             <details className="mt-4">
               <summary className="cursor-pointer text-xs text-sparrow-gray hover:text-sparrow-ink">
-                Archived volunteers ({archivedVolunteers.length})
+                No longer active ({inactiveVolunteers.length})
               </summary>
               <div className="mt-2 space-y-2">
-                {archivedVolunteers.map((v) => (
+                {inactiveVolunteers.map((v) => (
                   <div key={v.id} className="flex items-center justify-between rounded-xl border border-sparrow-rule/60 bg-sparrow-mist/40 px-4 py-2.5">
                     <span className="text-sm text-sparrow-gray">{v.full_name}</span>
-                    <button
-                      onClick={() => { void updatePrayerVolunteer(v.id, { active: true }); void load(); }}
-                      className="text-xs text-sparrow-green hover:underline"
-                    >
-                      Restore
-                    </button>
+                    <span className="text-xs text-sparrow-gray/70">No longer tagged in Directory</span>
                   </div>
                 ))}
               </div>
