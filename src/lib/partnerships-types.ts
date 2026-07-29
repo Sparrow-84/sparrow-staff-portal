@@ -137,7 +137,7 @@ export const DONOR_TIER: Record<DonorTier, string> = {
   first_time: 'First-time',
   recurring: 'Recurring',
   major: 'Major ($10k+)',
-  lapsed: 'Lapsed',
+  lapsed: 'Stopped giving',
 };
 
 export const TOUCHPOINT_METHOD: Record<TouchpointMethod, string> = {
@@ -259,9 +259,13 @@ export function shortDate(value: string | null): string {
 // ── Reference descriptions — shown in the help modal and inline in the detail panel ──
 
 export const PARTNER_STAGE_DESC: Record<PartnerStage, string> = {
-  prospect:   'New contact — no prior giving or active partnership. No touchpoints sent yet.',
+  prospect:   'Someone you\'re considering as a future partner. Move them to Active once they\'ve agreed to partnership — this can be as simple as them expressing they\'d like to hear more from us, stay connected to Sparrow, or give in some way.',
   active:     'Currently engaged in a regular stewardship rhythm.',
-  reengaging: 'You\'ve reached out — waiting for a response. Relational care only, no donation asks. If no response in 60 days, the system will prompt you to archive.',
+  reengaging: 'You\'ve reached out — waiting for a response. Relational care only, no donation asks. If 60 days pass with no response, click "archive" for them — the system will prompt you to do this. Archiving moves them to Inactive: off your active list, though they\'ll still get TSM unless they unsubscribe.',
+  // Not a stage you can set anywhere in the app (no dropdown offers it, no live partner has
+  // it) — kept only because the type/DB enum still has this value historically. The real
+  // "Lapsed" staff will ever see is the auto-computed status dot; see PartnershipsHelpModal's
+  // clarifying note.
   lapsed:     'Auto-detected: no meaningful engagement logged in 12+ months. Log a touchpoint using "We reached out" to move them to Re-engaging.',
   inactive:   'Archived. Off the active list. Still receives TSM unless they unsubscribe.',
 };
@@ -270,7 +274,7 @@ export const DONOR_TIER_DESC: Record<DonorTier, string> = {
   first_time: 'Gave for the first time. 72-hr personal follow-up email required.',
   recurring:  'Gives on a regular pattern. No special action beyond normal cadence.',
   major:      '$10,000+ total giving. Andrew is notified and calls within 72 hrs of this tier being set.',
-  lapsed:     'Previously gave but hasn\'t given in 12+ months. This is about giving history — stage tracks the relationship separately. A donor can be re-engaging in stage while lapsed in tier.',
+  lapsed:     'Previously gave but hasn\'t given in 12+ months. This is about giving history — stage tracks the relationship separately. A donor can be re-engaging in stage while their tier still reads Stopped giving.',
 };
 
 export const STEWARDSHIP_DESC: Record<StewardshipStatus, string> = {

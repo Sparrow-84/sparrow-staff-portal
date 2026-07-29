@@ -7,7 +7,7 @@ import {
   type PartnerStage,
 } from '@/lib/partnerships-types';
 
-const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'lapsed', 'inactive'];
+const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'inactive'];
 const TIERS: DonorTier[] = ['first_time', 'recurring', 'major', 'lapsed'];
 
 export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -35,6 +35,13 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
         </div>
 
         <div className="space-y-6 px-6 py-5">
+
+          <p className="text-xs leading-relaxed text-sparrow-gray">
+            A <strong>touchpoint</strong> is any logged, personal contact — a call, email, text,
+            letter, meeting, or event. Receiving TSM (the newsletter) doesn't count on its own,
+            since it's not one-on-one contact — if you also reached out to them directly about
+            it, log that separately.
+          </p>
 
           {/* ── Do I have a to-do right now? ── The most important section */}
           <section className="rounded-xl bg-sparrow-mist/60 px-4 py-4">
@@ -81,6 +88,11 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
                 </div>
               ))}
             </div>
+            <p className="mt-3 rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-xs text-sparrow-gray">
+              You'll also see "Lapsed" appear as an orange dot — that's not a stage you set. It's
+              calculated automatically once 12+ months pass with no contact, no matter what stage
+              the partner is officially in. See the color key above for what to do about it.
+            </p>
           </section>
 
           <hr className="border-sparrow-rule" />
@@ -112,20 +124,20 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
             </h3>
             <div className="space-y-4">
               <Rule
-                title="What counts as meaningful engagement"
+                title="What's worth logging as a touchpoint"
                 body="A donation, an inbound email reply, a returned call, or an in-person meeting. Opening the newsletter alone does not count."
               />
               <Rule
-                title="The 60-day rule (lapsed partners)"
-                body="After sending a warm check-in and waiting 60 days with no response, mark them inactive. Their record opens a prompt when that threshold is reached — the default is one click."
+                title="The 60-day rule (re-engaging partners)"
+                body={'After sending a warm check-in, wait. The system will prompt you when it\'s been 60 days. If there\'s still no response, click "archive" from the prompt on their record. This moves them to Inactive — off your active list, though they\'ll still get TSM unless they unsubscribe.'}
               />
               <Rule
                 title="Active list vs. newsletter list"
                 body="Marking someone inactive drops them off your stewardship list — it does not remove them from TSM. They keep getting the newsletter unless they unsubscribe."
               />
               <Rule
-                title="Re-engaging partners — donors only"
-                body="Get the newsletter and event invites, but no donation asks or year-end giving appeals. Move them back to an active donor tier manually when they financially re-engage."
+                title="Donors who are re-engaging: no asks yet"
+                body="Get the newsletter and event invites, but no donation asks or year-end giving appeals. Move their stage back to Active manually once they start giving again."
               />
               <Rule
                 title="3 financial asks per year — donors only"
