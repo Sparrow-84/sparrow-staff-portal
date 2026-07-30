@@ -15,12 +15,8 @@ import type {
 // All reads/writes are gated by RLS (0008_partnerships.sql): partnerships staff + admins
 // manage everything; a partner's named owner sees/stewards their own.
 
-// TEMP (2026-07-29): secondary_types dropped from the select — migration 0107 hasn't
-// actually landed yet despite being reported as run, so this column doesn't exist in the
-// live DB and was breaking every partner fetch with a hard error. Re-add once 0107 is
-// confirmed applied. See [[byron-pending-items]].
 const PARTNER_COLS =
-  'id, name, type, stage, owner_id, organization, contact_name, email, phone, address, donor_tier, cadence_days, lead_time_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status, business_card_front_path, business_card_back_path';
+  'id, name, type, secondary_types, stage, owner_id, organization, contact_name, email, phone, address, donor_tier, cadence_days, lead_time_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status, business_card_front_path, business_card_back_path';
 
 // ── Partners ─────────────────────────────────────────────────────────
 export async function fetchPartners(): Promise<Partner[]> {
@@ -64,12 +60,7 @@ export interface PartnerInput {
 }
 
 export async function createPartner(input: PartnerInput): Promise<void> {
-  // TEMP (2026-07-29): strip secondary_types before the insert — the column doesn't exist
-  // in the live DB yet (migration 0107 pending), sending it would fail every new-partner
-  // save. Callers keep passing it (harmless) so this is the only place that needs undoing
-  // once 0107 is confirmed applied.
-  const { secondary_types: _secondaryTypes, ...safeInput } = input;
-  const { error } = await supabase.from('partners').insert(safeInput);
+  const { error } = await supabase.from('partners').insert(input);
   if (error) throw new Error(error.message);
 }
 
@@ -103,10 +94,7 @@ export async function updatePartner(
     >
   >,
 ): Promise<void> {
-  // TEMP (2026-07-29): same secondary_types workaround as createPartner above.
-  const safePatch = { ...patch };
-  delete safePatch.secondary_types;
-  const { error } = await supabase.from('partners').update(safePatch).eq('id', id);
+  const { error } = await supabase.from('partners').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 }
 

@@ -131,12 +131,9 @@ export function PartnerDetailPanel({
   async function patch(p: Parameters<typeof updatePartner>[1]) {
     if (!partner) return;
     setBusy(true);
-    try {
-      await updatePartner(partner.id, p);
-      onChanged();
-    } finally {
-      setBusy(false);
-    }
+    await updatePartner(partner.id, p);
+    setBusy(false);
+    onChanged();
   }
 
   async function log() {
