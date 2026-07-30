@@ -22,9 +22,10 @@ interface Props {
   currentUserId: string;
   onBack: () => void;
   onChanged: () => void;
+  onOpenFamily: (familyId: string) => void;
 }
 
-export function SessionLogViewer({ log, families, currentUserId, onBack, onChanged }: Props) {
+export function SessionLogViewer({ log, families, currentUserId, onBack, onChanged, onOpenFamily }: Props) {
   const [notes, setNotes] = useState<StaffNote[]>([]);
   const [groupNote, setGroupNote] = useState(log.group_note ?? '');
   const [savingGroup, setSavingGroup] = useState(false);
@@ -90,9 +91,16 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
               const family = familyMap.get(a.family_id);
               return (
                 <li key={a.family_id} className="flex items-center gap-3 text-sm">
-                  <span className="flex-1 font-medium text-sparrow-ink">
-                    {family?.display_name ?? 'Unknown family'}
-                  </span>
+                  {family ? (
+                    <button
+                      onClick={() => onOpenFamily(family.id)}
+                      className="flex-1 text-left font-medium text-sparrow-ink hover:text-sparrow-green hover:underline"
+                    >
+                      {family.display_name}
+                    </button>
+                  ) : (
+                    <span className="flex-1 font-medium text-sparrow-ink">Unknown family</span>
+                  )}
                   <span
                     className={`rounded-lg px-2 py-1 text-[11px] font-medium ${
                       a.status === 'no_show'
@@ -154,7 +162,13 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
               return (
                 <li key={n.id} className="rounded-xl border border-sparrow-rule/70 p-3">
                   {family && (
-                    <p className="mb-1.5 text-xs font-semibold text-sparrow-gray">{family.display_name}</p>
+                    <button
+                      onClick={() => onOpenFamily(family.id)}
+                      className="mb-1.5 text-xs font-semibold text-sparrow-gray hover:text-sparrow-green hover:underline"
+                      title={`See all of ${family.display_name}'s notes`}
+                    >
+                      {family.display_name}
+                    </button>
                   )}
                   {editingNoteId === n.id ? (
                     <div className="space-y-2">

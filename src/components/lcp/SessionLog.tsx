@@ -23,6 +23,7 @@ interface Props {
   programUnitId: number | null;
   programSessionId: number | null;
   onChanged: () => void;
+  onOpenFamily: (familyId: string) => void;
 }
 
 type EntryConfig = {
@@ -43,7 +44,7 @@ function formatDate(iso: string) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-export function SessionLog({ families, homeworkByFamily, currentUserId, currentUserName, phases, programUnitId, programSessionId, onChanged }: Props) {
+export function SessionLog({ families, homeworkByFamily, currentUserId, currentUserName, phases, programUnitId, programSessionId, onChanged, onOpenFamily }: Props) {
   const [logs, setLogs] = useState<SessionLog[]>([]);
   const [todayEvents, setTodayEvents] = useState<LcpEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +121,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
           programSessionId={programSessionId}
           onBack={() => setEntry(null)}
           onFiled={handleFiled}
+          onOpenFamily={onOpenFamily}
         />
       </SessionSplitLayout>
     );
@@ -134,6 +136,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         currentUserId={currentUserId}
         onBack={() => setViewing(null)}
         onChanged={() => { void load(); onChanged(); }}
+        onOpenFamily={onOpenFamily}
       />
     );
   }
@@ -206,7 +209,8 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
               <input
                 type="date"
                 value={manualDate}
-                onChange={(e) => setManualDate(e.target.value)}
+                max={todayISO()}
+                onChange={(e) => setManualDate(e.target.value > todayISO() ? todayISO() : e.target.value)}
                 className="field-input"
               />
             </div>

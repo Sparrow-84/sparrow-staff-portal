@@ -27,7 +27,7 @@ import {
 } from '@/lib/lcp-types';
 import { isFeeOverdue, isOverdue } from '@/lib/lcp-format';
 import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
-import { FamilyDetailPanel } from './FamilyDetailPanel';
+import { FamilyDetailPanel, type FamilyDetailTab } from './FamilyDetailPanel';
 import { SessionBriefPanel } from './SessionBriefPanel';
 import { SessionLog } from './SessionLog';
 import { SessionLogViewer } from './SessionLogViewer';
@@ -99,6 +99,7 @@ export function LcpRoom() {
   const [tab, setTab] = useState<'families' | 'progress' | 'session-log' | 'session-cal' | 'team-cal' | 'curriculum'>('families');
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyOpen, setFamilyOpen] = useState(false);
+  const [familyOpenTab, setFamilyOpenTab] = useState<FamilyDetailTab | undefined>(undefined);
   const [event, setEvent] = useState<LcpEvent | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<LcpEvent | null>(null);
@@ -173,8 +174,9 @@ export function LcpRoom() {
     feeOverdue: families.filter(feeOverdue).length,
   };
 
-  function openFamily(id: string) {
+  function openFamily(id: string, tab?: FamilyDetailTab) {
     setFamilyId(id);
+    setFamilyOpenTab(tab);
     setFamilyOpen(true);
   }
   function openBrief(ev: LcpEvent) {
@@ -243,6 +245,7 @@ export function LcpRoom() {
             programUnitId={programPosition?.unit_id ?? null}
             programSessionId={programPosition?.session_id ?? null}
             onChanged={load}
+            onOpenFamily={(id) => openFamily(id, 'notes')}
           />
         </div>
       ) : tab === 'families' ? (
@@ -340,6 +343,7 @@ export function LcpRoom() {
               currentUserId={profile?.id ?? ''}
               onBack={() => setCalendarLog(null)}
               onChanged={() => { setCalendarLog(null); void load(); }}
+              onOpenFamily={(id) => openFamily(id, 'notes')}
             />
           ) : (
             <LcpCalendar
@@ -363,6 +367,7 @@ export function LcpRoom() {
         currentUserId={profile?.id ?? ''}
         onClose={() => setFamilyOpen(false)}
         onChanged={load}
+        initialTab={familyOpenTab}
       />
       <SessionBriefPanel
         open={briefOpen}

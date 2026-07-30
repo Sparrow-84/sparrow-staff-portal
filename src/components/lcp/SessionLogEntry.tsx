@@ -58,6 +58,7 @@ interface Props {
   programSessionId: number | null;
   onBack: () => void;
   onFiled: () => void;
+  onOpenFamily: (familyId: string) => void;
 }
 
 function formatDateHeader(iso: string) {
@@ -81,6 +82,7 @@ export function SessionLogEntry({
   programSessionId,
   onBack,
   onFiled,
+  onOpenFamily,
 }: Props) {
   // ── curriculum advance (thursday only) ────────────────────────────
   // The group moves together, so "the session to teach tonight" is simply
@@ -494,6 +496,7 @@ export function SessionLogEntry({
           onToggleAddGoal={() => setAddGoalOpen((prev) => ({ ...prev, [f.id]: !prev[f.id] }))}
           goalDraft={goalDraft[f.id] ?? { title: '', area: 'relational', due_date: '' }}
           onGoalDraftChange={(d) => setGoalDraft((prev) => ({ ...prev, [f.id]: d }))}
+          onOpenFamily={onOpenFamily}
         />
       ))}
 
@@ -537,6 +540,7 @@ interface FamilySectionProps {
   onToggleAddGoal: () => void;
   goalDraft: GoalDraft;
   onGoalDraftChange: (d: GoalDraft) => void;
+  onOpenFamily: (familyId: string) => void;
 }
 
 function FamilySection({
@@ -558,13 +562,20 @@ function FamilySection({
   onToggleAddGoal,
   goalDraft,
   onGoalDraftChange,
+  onOpenFamily,
 }: FamilySectionProps) {
   const openHw = homework.filter((h) => !completedIds.has(h.id));
   const openGoals = goals.filter((g) => !metGoalIds.has(g.id));
 
   return (
     <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
-      <p className="mb-3 font-medium text-sparrow-ink">{family.display_name}</p>
+      <button
+        onClick={() => onOpenFamily(family.id)}
+        className="mb-3 font-medium text-sparrow-ink hover:text-sparrow-green hover:underline"
+        title={`See ${family.display_name}'s past notes and goals`}
+      >
+        {family.display_name}
+      </button>
 
       {/* Note */}
       <div className="mb-4">

@@ -74,7 +74,8 @@ import { Drawer } from './Drawer';
 import { StaffThread } from './StaffThread';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 
-type Tab = 'general' | 'progress' | 'goals' | 'milestones' | 'program_fee' | 'homework' | 'messages' | 'notes' | 'rewards';
+export type FamilyDetailTab = 'general' | 'progress' | 'goals' | 'milestones' | 'program_fee' | 'homework' | 'messages' | 'notes' | 'rewards';
+type Tab = FamilyDetailTab;
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General Info' },
   { key: 'progress', label: 'Progress' },
@@ -97,6 +98,7 @@ export function FamilyDetailPanel({
   currentUserId,
   onClose,
   onChanged,
+  initialTab,
 }: {
   open: boolean;
   family: Family | null;
@@ -107,6 +109,7 @@ export function FamilyDetailPanel({
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
+  initialTab?: Tab;
 }) {
   const [tab, setTab] = useState<Tab>('general');
   const [homework, setHomework] = useState<Homework[]>([]);
@@ -156,10 +159,10 @@ export function FamilyDetailPanel({
 
   useEffect(() => {
     if (open && familyId) {
-      setTab('general');
+      setTab(initialTab ?? 'general');
       void reloadDetail();
     }
-  }, [open, familyId, reloadDetail]);
+  }, [open, familyId, reloadDetail, initialTab]);
 
   if (!family) return null;
 
@@ -548,6 +551,7 @@ function GoalsTab({
   const [busy, setBusy] = useState(false);
   const [extendingId, setExtendingId] = useState<string | null>(null);
   const [newDue, setNewDue] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const today = localDate();
 
@@ -630,36 +634,35 @@ function GoalsTab({
             const flag = needsTimeFlag(goal);
             const dueToday = goal.due_date === today;
             const overdue = goal.due_date && goal.due_date < today;
+            const expanded = expandedId === goal.id;
             return (
               <li
                 key={goal.id}
-                className={`rounded-xl border p-3 ${
+                onClick={() => setExpandedId(expanded ? null : goal.id)}
+                className={`cursor-pointer rounded-xl border p-3 transition ${
                   flag ? 'border-sparrow-gold/50 bg-sparrow-gold/5'
                   : dueToday ? 'border-sparrow-green/40 bg-sparrow-green/5'
                   : overdue ? 'border-priority-p1/30 bg-priority-p1/5'
-                  : 'border-sparrow-rule/70'
+                  : 'border-sparrow-rule/70 hover:border-sparrow-green/40'
                 }`}
               >
-                <div className="flex items-start gap-2">
-                  <button
-                    onClick={() => markMet(goal)}
-                    className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-sparrow-rule text-white hover:border-sparrow-green"
-                    aria-label="Mark met"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-sparrow-ink">{goal.title}</p>
-                    <p className={`text-xs ${overdue && !flag ? 'text-priority-p1' : 'text-sparrow-gray'}`}>
-                      {GOAL_AREA_LABEL[goal.area]}
-                      {goal.due_date && ` · due ${goal.due_date}`}
-                      {dueToday && ' · today'}
-                    </p>
-                    {flag && (
-                      <p className="mt-1 text-xs font-medium text-sparrow-gold">
-                        ⚑ Participant needs more time — consider adjusting the date
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 gap-2">
+                <p className="text-sm text-sparrow-ink">{goal.title}</p>
+                <p className={`text-xs ${overdue && !flag ? 'text-priority-p1' : 'text-sparrow-gray'}`}>
+                  {GOAL_AREA_LABEL[goal.area]}
+                  {goal.due_date && ` · due ${goal.due_date}`}
+                  {dueToday && ' · today'}
+                </p>
+                {flag && (
+                  <p className="mt-1 text-xs font-medium text-sparrow-gold">
+                    ⚑ Participant needs more time — consider adjusting the date
+                  </p>
+                )}
+                {expanded && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-3 flex cursor-default flex-wrap items-center gap-2 border-t border-sparrow-rule/50 pt-3"
+                  >
+                    <button onClick={() => markMet(goal)} className="btn-primary text-xs">Mark met</button>
                     {extendingId === goal.id ? (
                       <div className="flex items-center gap-1">
                         <input
@@ -681,7 +684,7 @@ function GoalsTab({
                     )}
                     <button onClick={() => remove(goal.id)} className="text-xs text-sparrow-gray hover:text-priority-p1">Delete</button>
                   </div>
-                </div>
+                )}
               </li>
             );
           })}
