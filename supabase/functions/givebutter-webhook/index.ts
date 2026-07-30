@@ -4,18 +4,25 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // Inbound webhook from Givebutter, NOT a signed-in Sparrow user — auth is a
 // signing secret, not a JWT, unlike every other function in this folder.
 //
-// TODO before going live (blocked on Bethany's Givebutter login):
-//   1. Confirm the exact `Signature` header format/algorithm against a real
-//      test webhook — Givebutter's docs describe a signing secret + a
-//      `Signature` header but not the precise scheme. This implements the
-//      common convention (HMAC-SHA256 hex digest of the raw body). Verify
-//      against Settings -> Developers -> Webhooks once accessible, adjust
-//      verifySignature() if Givebutter's actual scheme differs.
-//   2. Confirm the exact `transaction.succeeded` payload field names against
-//      a real test event (Givebutter's dashboard can send one). The field
-//      names below are best-guess based on their public docs; adjust the
-//      destructuring in handleTransactionSucceeded() to match.
-//   3. Confirm whether `amount` arrives in cents or dollars.
+// 2026-07-30: verified field names + amount units against a real test
+// `transaction.succeeded` event sent from Givebutter's dashboard (see
+// commit history / [[byron-pending-items]] for the actual payload). `amount`
+// confirmed to arrive in **dollars**, not cents (a 100-unit amount carried a
+// 2.9-unit fee — exactly 2.9%, a normal card-processing rate; would be an
+// absurd 290% fee if amount were cents). Donor identity fields are flat on
+// `data` (first_name/last_name/email), not nested under a `giver` object as
+// originally guessed.
+//
+// REMAINING BLOCKER: the test call above returned 401
+// UNAUTHORIZED_NO_AUTH_HEADER — that's Supabase's own platform-level JWT
+// gate rejecting the request before it reaches this file's code at all
+// (Givebutter has no Sparrow login token to send). Needs "Enforce JWT
+// Verification" turned off for this function (dashboard toggle, or redeploy
+// with `--no-verify-jwt`) — our own signature check below is the real auth
+// for this endpoint and doesn't need Supabase's JWT layer on top of it.
+// Still unverified: our own signature scheme (HMAC-SHA256 hex of the raw
+// body) — the test payload was sent with no `Signature` header at all, so
+// signature verification itself hasn't actually been exercised yet either.
 
 const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -78,13 +85,16 @@ Deno.serve(async (req) => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handleTransactionSucceeded(supabase: ReturnType<typeof createClient>, data: any) {
   const givebutterId: string     = String(data.id ?? data.transaction_id);
-  const givenByName: string      = data.giver?.name ?? data.donor_name ?? 'Unknown donor';
-  const givenByEmail: string | null = data.giver?.email ?? data.donor_email ?? null;
-  const amount: number           = Number(data.amount ?? 0); // TODO: confirm dollars vs. cents
+  // Donor identity is flat on `data` (first_name/last_name/company_name), not nested under
+  // a `giver` object as originally guessed — confirmed against a real test payload 2026-07-30.
+  const fullName                 = [data.first_name, data.last_name].filter(Boolean).join(' ').trim();
+  const givenByName: string      = fullName || data.company_name || data.company || 'Unknown donor';
+  const givenByEmail: string | null = data.email ?? null;
+  const amount: number           = Number(data.amount ?? 0); // confirmed dollars, not cents
   const amountAbove10k           = amount >= 10_000;
   const receivedOn: string       = (data.created_at ?? new Date().toISOString()).slice(0, 10);
-  const designation: string | null = data.campaign?.title ?? null;
-  const recurring: boolean       = Boolean(data.recurring ?? data.plan_id);
+  const designation: string | null = data.campaign_title ?? null;
+  const recurring: boolean       = Boolean(data.is_recurring);
 
   // 1. Upsert the donation row itself — retry-safe on givebutter_id (0044).
   const { data: donationRow, error: upsertErr } = await supabase
