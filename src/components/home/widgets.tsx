@@ -159,6 +159,27 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
 }
 
 // ── Triage inbox ──────────────────────────────────────────────────────
+// Collapses into the same date input used across the app (type-or-pick-from-calendar)
+// once opened, so "Pick a date" isn't limited to a couple of preset offsets.
+function DatePickerChip({ active, today, onOpen, onPick }: { active: boolean; today: string; onOpen: () => void; onPick: (date: string) => void }) {
+  if (active) {
+    return (
+      <input
+        type="date"
+        autoFocus
+        min={today}
+        className="rounded-md border border-sparrow-rule px-1.5 py-1 text-xs text-sparrow-ink focus:border-sparrow-green focus:outline-none focus:ring-1 focus:ring-sparrow-green"
+        onChange={(e) => onPick(e.target.value)}
+      />
+    );
+  }
+  return (
+    <button onClick={onOpen} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
+      Pick a date
+    </button>
+  );
+}
+
 function TriageWidget({ ctx }: { ctx: WidgetContext }) {
   const pending = ctx.tasks.filter(
     (t) => t.assignee_id === ctx.me.id && t.triage_status === 'pending' && t.status !== 'done',
@@ -174,6 +195,7 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
   const [pushBackTarget, setPushBackTarget] = useState<TaskWithPeople | null>(null);
   const [pushBackNote, setPushBackNote] = useState('');
   const [pushBackBusy, setPushBackBusy] = useState(false);
+  const [dateTarget, setDateTarget] = useState<string | null>(null);
 
   async function accept(id: string) {
     await acceptTask(id);
@@ -181,6 +203,12 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
   }
   async function defer(id: string, days: number) {
     await deferTask(id, addDays(ctx.today, days));
+    ctx.onChanged();
+  }
+  async function deferToDate(id: string, dueDate: string) {
+    if (!dueDate) return;
+    await deferTask(id, dueDate);
+    setDateTarget(null);
     ctx.onChanged();
   }
   async function confirmPushBack() {
@@ -217,16 +245,19 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
                 <p className="text-xs text-sparrow-gray">
                   Assigned by {t.creator?.full_name ?? 'the system'}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-                  <button onClick={() => void accept(t.id)} className="rounded-md bg-sparrow-green px-2 py-1 font-medium text-white hover:bg-sparrow-green-dark">
-                    Accept
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                  <button onClick={() => void defer(t.id, 0)} className="rounded-md bg-sparrow-green px-2 py-1 font-medium text-white hover:bg-sparrow-green-dark">
+                    Today
                   </button>
-                  <button onClick={() => void defer(t.id, 1)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
-                    → Tomorrow
+                  <button onClick={() => void accept(t.id)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
+                    Unscheduled
                   </button>
-                  <button onClick={() => void defer(t.id, 7)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
-                    → Next week
-                  </button>
+                  <DatePickerChip
+                    active={dateTarget === t.id}
+                    today={ctx.today}
+                    onOpen={() => setDateTarget(t.id)}
+                    onPick={(d) => void deferToDate(t.id, d)}
+                  />
                   {t.created_by && (
                     <button
                       onClick={() => { setPushBackTarget(t); setPushBackNote(''); }}
@@ -252,13 +283,16 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
             {unscheduled.map((t) => (
               <li key={t.id} className="rounded-lg border border-sparrow-rule px-3 py-2">
                 <p className="text-sm font-medium text-sparrow-ink">{t.title}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                   <button onClick={() => void defer(t.id, 0)} className="rounded-md bg-sparrow-green px-2 py-1 font-medium text-white hover:bg-sparrow-green-dark">
-                    Do today
+                    Today
                   </button>
-                  <button onClick={() => void defer(t.id, 1)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
-                    → Tomorrow
-                  </button>
+                  <DatePickerChip
+                    active={dateTarget === t.id}
+                    today={ctx.today}
+                    onOpen={() => setDateTarget(t.id)}
+                    onPick={(d) => void deferToDate(t.id, d)}
+                  />
                 </div>
               </li>
             ))}
