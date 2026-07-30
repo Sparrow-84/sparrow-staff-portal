@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react';
-import { localDate, localDateOf } from '@/lib/date';
+import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
 import {
   fetchComms,
+  fetchMilestones,
   fetchRecurringSetting,
   seedCommsForYear,
+  seedMilestonesForComms,
+  syncCommsMilestoneTasks,
   syncNewsletterReminderTasks,
   updateCommStatus,
   updateCommNotes,
+  updateMilestone,
   type CommStatus,
   type PartnershipComm,
+  type PartnershipCommsMilestone,
   type PartnershipRecurringSetting,
 } from '@/lib/partnerships-tabs';
 import { PartnershipRecurringSettingsPanel } from './PartnershipRecurringSettingsPanel';
@@ -38,23 +43,6 @@ function shortDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function addDays(iso: string, days: number): string {
-  const d = new Date(iso + 'T00:00:00');
-  d.setDate(d.getDate() + days);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-function milestones(publishDate: string): { label: string; date: string }[] {
-  return [
-    { label: 'Contributor content due (Audrey/Shelly)', date: addDays(publishDate, -10) },
-    { label: 'Draft 1 → Susanna', date: addDays(publishDate, -7) },
-    { label: 'Susanna notes back', date: addDays(publishDate, -5) },
-    { label: 'Draft 2 → Susanna', date: addDays(publishDate, -3) },
-    { label: 'Susanna notes back', date: addDays(publishDate, -1) },
-    { label: 'Final draft → Publish', date: shortDate(publishDate) },
-  ];
-}
-
 function isTsm(comm: PartnershipComm): boolean {
   return comm.comm_type.startsWith('tsm');
 }
@@ -80,28 +68,46 @@ function isLeadTimeWarning(comm: PartnershipComm, leadTimeDays: number): boolean
 export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
   const [year, setYear] = useState(new Date().getFullYear());
   const [comms, setComms] = useState<PartnershipComm[]>([]);
+  const [milestonesByComm, setMilestonesByComm] = useState<Record<string, PartnershipCommsMilestone[]>>({});
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notesById, setNotesById] = useState<Record<string, string>>({});
   const [setting, setSetting] = useState<PartnershipRecurringSetting | null>(null);
+
+  // Same standing-owner exclusion used everywhere else in the room — Andrew is never a
+  // selectable milestone owner beyond his one-time major-donor call.
+  const ownerProfiles = profiles.filter(
+    (p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec',
+  );
+  const bethanyId = profiles.find((p) => p.full_name.toLowerCase().startsWith('bethany'))?.id ?? null;
 
   useEffect(() => {
     setLoading(true);
     setExpandedId(null);
     seedCommsForYear(year)
       .then(() => fetchComms(year))
-      .then((rows) => {
+      .then(async (rows) => {
         setComms(rows);
         const notes: Record<string, string> = {};
         for (const r of rows) notes[r.id] = r.notes ?? '';
         setNotesById(notes);
+        // Every milestone defaults to Bethany — she reassigns individual ones (e.g. to
+        // Susanna, or back to Unassigned) from the row below afterward.
+        await seedMilestonesForComms(rows, bethanyId);
+        const milestones = await fetchMilestones(rows.map((r) => r.id));
+        const grouped: Record<string, PartnershipCommsMilestone[]> = {};
+        for (const m of milestones) {
+          (grouped[m.comm_id] ??= []).push(m);
+        }
+        setMilestonesByComm(grouped);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [year]);
+  }, [year, bethanyId]);
 
   useEffect(() => {
     syncNewsletterReminderTasks().catch(console.error);
+    syncCommsMilestoneTasks().catch(console.error);
     fetchRecurringSetting('newsletter').then(setSetting).catch(console.error);
   }, []);
 
@@ -116,6 +122,14 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
     if (notes !== (comm.notes ?? '')) {
       updateCommNotes(comm.id, notes).catch(console.error);
     }
+  }
+
+  function handleMilestoneChange(commId: string, milestoneId: string, patch: Partial<Pick<PartnershipCommsMilestone, 'due_date' | 'owner_id'>>) {
+    setMilestonesByComm((prev) => ({
+      ...prev,
+      [commId]: (prev[commId] ?? []).map((m) => (m.id === milestoneId ? { ...m, ...patch } : m)),
+    }));
+    updateMilestone(milestoneId, patch).catch(console.error);
   }
 
   const asksSent = comms.filter((c) => c.is_financial_ask && c.status === 'sent').length;
@@ -264,25 +278,39 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                       />
                     </div>
 
-                    {/* TSM milestones */}
+                    {/* TSM milestones — date + owner editable; label/order are fixed */}
                     {isTsm(comm) && (
                       <div>
                         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
                           Production milestones
                         </p>
-                        <ul className="space-y-1">
-                          {milestones(comm.publish_date).map((m, i) => {
-                            const milestoneDateRaw = new Date(comm.publish_date + 'T00:00:00');
-                            milestoneDateRaw.setDate(milestoneDateRaw.getDate() + [-10, -7, -5, -3, -1, 0][i]);
-                            const isPastMilestone = localDateOf(milestoneDateRaw) < todayISO;
+                        <ul className="space-y-1.5">
+                          {(milestonesByComm[comm.id] ?? []).map((m) => {
+                            const isPastMilestone = m.due_date < todayISO;
                             return (
                               <li
-                                key={i}
-                                className={`flex items-center gap-3 text-sm ${isPastMilestone ? 'text-sparrow-gray/60' : 'text-sparrow-ink'}`}
+                                key={m.id}
+                                className={`flex flex-wrap items-center gap-2 text-sm ${isPastMilestone ? 'text-sparrow-gray/60' : 'text-sparrow-ink'}`}
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isPastMilestone ? 'bg-sparrow-rule' : 'bg-sparrow-green'}`} />
-                                <span className="w-20 shrink-0 text-xs text-sparrow-gray">{m.date}</span>
-                                <span>{m.label}</span>
+                                <input
+                                  type="date"
+                                  value={m.due_date}
+                                  onChange={(e) => handleMilestoneChange(comm.id, m.id, { due_date: e.target.value })}
+                                  className="field-input mt-0 w-36 py-1 text-xs"
+                                />
+                                <span className="flex-1">{m.label}</span>
+                                <select
+                                  value={m.owner_id ?? ''}
+                                  onChange={(e) => handleMilestoneChange(comm.id, m.id, { owner_id: e.target.value || null })}
+                                  className="field-input mt-0 py-1 text-xs"
+                                >
+                                  <option value="">Unassigned</option>
+                                  {ownerProfiles.map((op) => (
+                                    <option key={op.id} value={op.id}>{op.full_name}</option>
+                                  ))}
+                                </select>
                               </li>
                             );
                           })}

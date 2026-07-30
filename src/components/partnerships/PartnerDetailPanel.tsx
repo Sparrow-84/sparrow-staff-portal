@@ -31,6 +31,9 @@ import {
 import { Drawer } from '../lcp/Drawer';
 import { LEAD_TIME_PRESETS } from '@/lib/cadence';
 import { CadenceInput } from './CadenceInput';
+import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
+import { createInterest, setPartnerInterests, type PartnershipInterest } from '@/lib/partnership-interests';
+import { BusinessCardPhotos } from './BusinessCardPhotos';
 
 const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'inactive'];
 const TIERS: DonorTier[] = ['first_time', 'recurring', 'major', 'lapsed'];
@@ -45,6 +48,9 @@ export function PartnerDetailPanel({
   onClose,
   onChanged,
   donorStat = null,
+  interests = [],
+  selectedInterestIds = [],
+  onInterestsCreated,
 }: {
   open: boolean;
   partner: Partner | null;
@@ -54,6 +60,9 @@ export function PartnerDetailPanel({
   onClose: () => void;
   onChanged: () => void;
   donorStat?: DonorStat | null;
+  interests?: PartnershipInterest[];
+  selectedInterestIds?: string[];
+  onInterestsCreated?: () => void;
 }) {
   const [touchpoints, setTouchpoints] = useState<Touchpoint[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
@@ -128,13 +137,6 @@ export function PartnerDetailPanel({
     } finally {
       setBusy(false);
     }
-  }
-
-  function toggleSecondaryType(t: PartnerType) {
-    if (!partner || t === partner.type) return; // can't tag the primary type as a secondary one too
-    const current = partner.secondary_types ?? [];
-    const next = current.includes(t) ? current.filter((s) => s !== t) : [...current, t];
-    void patch({ secondary_types: next });
   }
 
   async function log() {
@@ -400,27 +402,17 @@ export function PartnerDetailPanel({
           <span className="field-label block">Stewardship</span>
           <div>
             <span className="field-label">Also involved as</span>
-            <div className="mt-1 flex flex-wrap gap-2">
-              {PARTNER_TYPES.filter((t) => t !== partner.type).map((t) => (
-                <label
-                  key={t}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
-                    (partner.secondary_types ?? []).includes(t)
-                      ? 'border-sparrow-green bg-sparrow-green/10 text-sparrow-ink'
-                      : 'border-sparrow-rule text-sparrow-gray'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    className="sr-only"
-                    checked={(partner.secondary_types ?? []).includes(t)}
-                    disabled={busy}
-                    onChange={() => toggleSecondaryType(t)}
-                  />
-                  {PARTNER_TYPE[t].icon} {PARTNER_TYPE[t].label}
-                </label>
-              ))}
-            </div>
+            <MultiSelectDropdown
+              options={PARTNER_TYPES.filter((t) => t !== partner.type).map((t) => ({
+                value: t,
+                label: PARTNER_TYPE[t].label,
+                icon: PARTNER_TYPE[t].icon,
+              }))}
+              selected={partner.secondary_types ?? []}
+              onChange={(next) => void patch({ secondary_types: next as PartnerType[] })}
+              disabled={busy}
+              placeholder="None"
+            />
             <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">
               Tags {partner.name} onto those Directory tabs too. The main Type above still
               drives cadence and which fields show below.
@@ -575,6 +567,41 @@ export function PartnerDetailPanel({
               <EditField label="Source (how the connection was made)" value={partner.source ?? ''} disabled={busy} onSave={(v) => void patch({ source: v })} />
             </div>
           )}
+        </section>
+
+        {/* ── 6.4. Business card photo ── */}
+        <section>
+          <BusinessCardPhotos
+            table="partners"
+            recordId={partner.id}
+            frontPath={partner.business_card_front_path}
+            backPath={partner.business_card_back_path}
+            onChanged={onChanged}
+          />
+        </section>
+
+        {/* ── 6.5. Interests ── */}
+        <section>
+          <span className="field-label">Interests</span>
+          <MultiSelectDropdown
+            options={interests.map((i) => ({ value: i.id, label: i.label, color: i.color }))}
+            selected={selectedInterestIds}
+            onChange={(next) => {
+              if (!partner) return;
+              void setPartnerInterests(partner.id, next).then(() => onChanged());
+            }}
+            disabled={busy}
+            placeholder="None"
+            onCreateNew={async (label, color) => {
+              await createInterest(label, color);
+              onInterestsCreated?.();
+            }}
+          />
+          <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">
+            What this partner is drawn to (kids, poverty, LCP, etc.) — lets Bethany find and
+            group everyone interested in a given cause for targeted outreach. Search Directory
+            by an interest's name to pull up everyone tagged with it.
+          </p>
         </section>
 
         {/* ── 7. Notes ── */}

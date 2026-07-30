@@ -20,7 +20,7 @@ import type {
 // live DB and was breaking every partner fetch with a hard error. Re-add once 0107 is
 // confirmed applied. See [[byron-pending-items]].
 const PARTNER_COLS =
-  'id, name, type, stage, owner_id, organization, contact_name, email, phone, address, donor_tier, cadence_days, lead_time_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status';
+  'id, name, type, stage, owner_id, organization, contact_name, email, phone, address, donor_tier, cadence_days, lead_time_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status, business_card_front_path, business_card_back_path';
 
 // ── Partners ─────────────────────────────────────────────────────────
 export async function fetchPartners(): Promise<Partner[]> {

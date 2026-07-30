@@ -101,6 +101,9 @@ export interface Partner {
   sparrow_provides: string | null;
   partner_provides: string | null;
   mou_status: MouStatus | null;
+  // Business card photos (migration 0111) — storage paths, not URLs (private bucket).
+  business_card_front_path: string | null;
+  business_card_back_path: string | null;
 }
 
 export interface Touchpoint {

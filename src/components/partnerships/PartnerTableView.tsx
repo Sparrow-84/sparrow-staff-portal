@@ -4,6 +4,8 @@ import { updatePartner } from '@/lib/partnerships';
 import { assignAvatarColors } from '@/lib/avatarColors';
 import { LEAD_TIME_PRESETS } from '@/lib/cadence';
 import { CadenceInput } from './CadenceInput';
+import { LabelPill } from '@/components/LabelPill';
+import type { PartnershipInterest } from '@/lib/partnership-interests';
 import {
   PARTNER_STAGE,
   PARTNER_TYPE,
@@ -29,6 +31,7 @@ export function PartnerTableView({
   nextCommLabel,
   isDonorView = false,
   donorStatMap = new Map(),
+  interestMap = new Map(),
 }: {
   partners: Partner[];
   profiles: Profile[];
@@ -37,6 +40,7 @@ export function PartnerTableView({
   nextCommLabel?: string;
   isDonorView?: boolean;
   donorStatMap?: Map<string, DonorStat>;
+  interestMap?: Map<string, PartnershipInterest[]>;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -138,6 +142,9 @@ export function PartnerTableView({
             <th className="w-6 px-3 py-2" />
             <SortTh label="Name" k="name" minWidth="260px" />
             <SortTh label="Type" k="type" minWidth="160px" />
+            <th style={{ minWidth: '170px' }} className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+              Interests
+            </th>
             <SortTh label="Stage" k="stage" minWidth="130px" />
             <th
               style={{ minWidth: '180px' }}
@@ -203,6 +210,15 @@ export function PartnerTableView({
                   <div className="flex flex-col gap-0.5">
                     {[type, ...(p.secondary_types ?? []).map((t) => PARTNER_TYPE[t])].map((t) => (
                       <span key={t.label}>{t.icon} {t.label}</span>
+                    ))}
+                  </div>
+                </td>
+
+                {/* Interests */}
+                <td className="px-3 py-2.5">
+                  <div className="flex flex-wrap gap-1">
+                    {(interestMap.get(p.id) ?? []).map((i) => (
+                      <LabelPill key={i.id} label={i.label} color={i.color} />
                     ))}
                   </div>
                 </td>

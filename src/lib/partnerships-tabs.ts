@@ -98,6 +98,9 @@ export interface PartnershipConnection {
   owner_id: string | null;
   created_at: string;
   updated_at: string;
+  // Business card photos (migration 0111) — storage paths, not URLs (private bucket).
+  business_card_front_path: string | null;
+  business_card_back_path: string | null;
 }
 
 // ─── Comms ────────────────────────────────────────────────────────────
@@ -220,6 +223,92 @@ export async function updateCommNotes(id: string, notes: string): Promise<void> 
     .update({ notes })
     .eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+// ─── TSM production milestones (migration 0110) ────────────────────────
+// Bethany can only move dates and reassign owners on these 6 — not rename, add, or remove.
+
+export interface PartnershipCommsMilestone {
+  id: string;
+  comm_id: string;
+  label: string;
+  due_date: string;
+  owner_id: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+const MILESTONE_TEMPLATE: { label: string; offsetDays: number }[] = [
+  { label: 'Contributor content due (Audrey/Shelly)', offsetDays: -10 },
+  { label: 'Draft 1 → Susanna', offsetDays: -7 },
+  { label: 'Susanna notes back', offsetDays: -5 },
+  { label: 'Draft 2 → Susanna', offsetDays: -3 },
+  { label: 'Susanna notes back', offsetDays: -1 },
+  { label: 'Final draft → Publish', offsetDays: 0 },
+];
+
+function addDaysISO(iso: string, days: number): string {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export async function fetchMilestones(commIds: string[]): Promise<PartnershipCommsMilestone[]> {
+  if (commIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('partnership_comms_milestones')
+    .select('*')
+    .in('comm_id', commIds)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PartnershipCommsMilestone[];
+}
+
+/**
+ * Seeds the 6 default production milestones for any TSM comm that doesn't have them yet,
+ * defaulting every one to defaultOwnerId (Bethany) — she reassigns individual ones (e.g. to
+ * Susanna, or back to Unassigned for "Contributor content due") afterward.
+ */
+export async function seedMilestonesForComms(comms: PartnershipComm[], defaultOwnerId: string | null): Promise<void> {
+  const tsmComms = comms.filter((c) => c.comm_type.startsWith('tsm'));
+  if (tsmComms.length === 0) return;
+  const { data: existing, error } = await supabase
+    .from('partnership_comms_milestones')
+    .select('comm_id')
+    .in('comm_id', tsmComms.map((c) => c.id));
+  if (error) throw new Error(error.message);
+  const seededCommIds = new Set((existing ?? []).map((r) => r.comm_id as string));
+
+  const rows: Omit<PartnershipCommsMilestone, 'id' | 'created_at'>[] = [];
+  for (const comm of tsmComms) {
+    if (seededCommIds.has(comm.id)) continue;
+    MILESTONE_TEMPLATE.forEach((m, i) => {
+      rows.push({
+        comm_id: comm.id,
+        label: m.label,
+        due_date: addDaysISO(comm.publish_date, m.offsetDays),
+        owner_id: defaultOwnerId,
+        sort_order: i,
+      });
+    });
+  }
+  if (rows.length === 0) return;
+  const { error: insErr } = await supabase.from('partnership_comms_milestones').insert(rows);
+  if (insErr) throw new Error(insErr.message);
+}
+
+export async function updateMilestone(
+  id: string,
+  patch: Partial<Pick<PartnershipCommsMilestone, 'due_date' | 'owner_id'>>,
+): Promise<void> {
+  const { error } = await supabase.from('partnership_comms_milestones').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function syncCommsMilestoneTasks(): Promise<number> {
+  const { data, error } = await supabase.rpc('emit_comms_milestone_tasks');
+  if (error) throw new Error(error.message);
+  return (data as number | null) ?? 0;
 }
 
 // ─── Collateral ───────────────────────────────────────────────────────
@@ -346,6 +435,11 @@ export async function createEvent(input: EventInput): Promise<PartnershipEvent> 
     .single();
   if (error) throw new Error(error.message);
   return data as PartnershipEvent;
+}
+
+export async function updateEvent(id: string, patch: Partial<EventInput>): Promise<void> {
+  const { error } = await supabase.from('partnership_events').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 // ─── Connections ──────────────────────────────────────────────────────

@@ -15,6 +15,8 @@ import {
   type PartnershipConnection,
   type PartnershipEvent,
 } from '@/lib/partnerships-tabs';
+import { EventDetailPanel } from './EventDetailPanel';
+import { ConnectionDetailPanel } from './ConnectionDetailPanel';
 
 function shortDate(iso: string | null): string {
   if (!iso) return '—';
@@ -58,6 +60,9 @@ export function PartnershipEventsTab() {
   const [showConnForm, setShowConnForm] = useState(false);
   const [connForm, setConnForm] = useState<ConnectionInput>(EMPTY_CONN_FORM);
   const [savingConn, setSavingConn] = useState(false);
+
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedConnId, setSelectedConnId] = useState<string | null>(null);
 
   // Exec is excluded even if flagged with partnerships_access — same standing-owner
   // exclusion used for partner records (AddPartnerPanel/PartnerTableView).
@@ -233,15 +238,21 @@ export function PartnershipEventsTab() {
               </thead>
               <tbody className="divide-y divide-sparrow-rule">
                 {events.map((ev) => (
-                  <tr key={ev.id}>
+                  <tr
+                    key={ev.id}
+                    onClick={() => setSelectedEventId(ev.id)}
+                    className="cursor-pointer hover:bg-sparrow-mist/40"
+                  >
                     <td className="px-4 py-2.5 whitespace-nowrap text-xs text-sparrow-gray">
                       {shortDate(ev.event_date)}
                     </td>
                     <td className="px-3 py-2.5 font-medium text-sparrow-ink">{ev.event_name}</td>
                     <td className="px-3 py-2.5 text-sparrow-gray">{ev.location ?? '—'}</td>
                     <td className="px-3 py-2.5 text-sparrow-gray">{ev.attendees ?? '—'}</td>
-                    <td className="px-3 py-2.5 text-sparrow-gray">{ev.notes ?? '—'}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3 py-2.5 max-w-[200px]">
+                      <p className="truncate text-sparrow-gray" title={ev.notes ?? undefined}>{ev.notes ?? '—'}</p>
+                    </td>
+                    <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => openConnFormForEvent(ev)}
                         className="whitespace-nowrap text-xs font-medium text-sparrow-green hover:underline"
@@ -378,7 +389,8 @@ export function PartnershipEventsTab() {
                   return (
                     <tr
                       key={conn.id}
-                      className={overdue ? 'border-l-4 border-l-priority-p1' : ''}
+                      onClick={() => setSelectedConnId(conn.id)}
+                      className={`cursor-pointer hover:bg-sparrow-mist/40 ${overdue ? 'border-l-4 border-l-priority-p1' : ''}`}
                     >
                       <td className="px-4 py-2.5 font-medium text-sparrow-ink">{conn.name}</td>
                       <td className="px-3 py-2.5 text-sparrow-gray">{conn.organization ?? '—'}</td>
@@ -395,7 +407,7 @@ export function PartnershipEventsTab() {
                       <td className={`px-3 py-2.5 whitespace-nowrap text-xs ${overdue ? 'font-semibold text-priority-p1' : 'text-sparrow-gray'}`}>
                         {shortDate(conn.followup_due)}
                       </td>
-                      <td className="px-3 py-2.5 text-center">
+                      <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={conn.followup_done}
@@ -418,7 +430,7 @@ export function PartnershipEventsTab() {
                       <td className="px-3 py-2.5 text-xs text-sparrow-gray whitespace-nowrap">
                         {eventName(conn.event_id)}
                       </td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                         <a
                           href={`/partnerships?action=add&name=${encodeURIComponent(conn.name)}&org=${encodeURIComponent(conn.organization ?? '')}`}
                           className="whitespace-nowrap text-xs font-medium text-sparrow-green hover:underline"
@@ -435,6 +447,21 @@ export function PartnershipEventsTab() {
           </div>
         )}
       </section>
+
+      <EventDetailPanel
+        open={selectedEventId !== null}
+        event={events.find((e) => e.id === selectedEventId) ?? null}
+        onClose={() => setSelectedEventId(null)}
+        onChanged={load}
+      />
+      <ConnectionDetailPanel
+        open={selectedConnId !== null}
+        connection={connections.find((c) => c.id === selectedConnId) ?? null}
+        events={events}
+        profiles={profiles}
+        onClose={() => setSelectedConnId(null)}
+        onChanged={load}
+      />
     </div>
   );
 }

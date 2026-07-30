@@ -11,6 +11,7 @@ import {
   type Partner,
   type PartnerType,
 } from '@/lib/partnerships-types';
+import { fetchInterests, fetchPartnerInterestMap, type PartnershipInterest } from '@/lib/partnership-interests';
 import { PartnerDetailPanel } from './PartnerDetailPanel';
 import { AddPartnerPanel } from './AddPartnerPanel';
 import { PartnershipsHelpModal } from './PartnershipsHelpModal';
@@ -119,6 +120,8 @@ export function PartnershipsRoom() {
 
   const [nextCommLabel, setNextCommLabel] = useState<string | undefined>(undefined);
   const [donorStatMap, setDonorStatMap] = useState<Map<string, DonorStat>>(new Map());
+  const [interests, setInterests] = useState<PartnershipInterest[]>([]);
+  const [interestMap, setInterestMap] = useState<Map<string, PartnershipInterest[]>>(new Map());
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -131,17 +134,21 @@ export function PartnershipsRoom() {
   const load = useCallback(async () => {
     try {
       const year = new Date().getFullYear();
-      const [pp, pr, archived, comms, stats] = await Promise.all([
+      const [pp, pr, archived, comms, stats, interestList, partnerInterests] = await Promise.all([
         fetchPartners(),
         fetchProfiles(),
         fetchArchivedPartners(),
         fetchComms(year),
         fetchDonorStats(),
+        fetchInterests(),
+        fetchPartnerInterestMap(),
       ]);
       setPartners(pp);
       setProfiles(pr);
       setArchivedPartners(archived);
       setDonorStatMap(new Map(stats.map((s) => [s.partner_id, s])));
+      setInterests(interestList);
+      setInterestMap(partnerInterests);
       // Find the next upcoming comm that hasn't been sent — shown for donors/prayer in place of "No cadence"
       const today = localDate();
       const next = comms
@@ -188,17 +195,25 @@ export function PartnershipsRoom() {
     return { total: partners.length, overdue, dueSoon, noCadence, lapsed };
   }, [partners]);
 
+  // Search matches a partner's name OR any of their assigned Interest labels — so typing
+  // "kids" surfaces everyone tagged with a "Kids" interest even if their name doesn't
+  // contain "kids" (Andrew's targeted-outreach use case, e.g. a playground announcement).
+  function matchesSearch(p: Partner, q: string): boolean {
+    if (p.name.toLowerCase().includes(q)) return true;
+    return (interestMap.get(p.id) ?? []).some((i) => i.label.toLowerCase().includes(q));
+  }
+
   const visible = useMemo(() => {
     if (filter === 'archived') {
       const list = search.trim()
-        ? archivedPartners.filter((p) => p.name.toLowerCase().includes(search.trim().toLowerCase()))
+        ? archivedPartners.filter((p) => matchesSearch(p, search.trim().toLowerCase()))
         : archivedPartners;
       return [...list].sort((a, b) => a.name.localeCompare(b.name));
     }
     let list = filter === 'all' ? partners : partners.filter((p) => partnerMatchesType(p, filter));
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(q));
+      list = list.filter((p) => matchesSearch(p, q));
     }
     return [...list].sort((a, b) => {
       const ra = STATUS_RANK[stewardshipStatus(a)];
@@ -206,7 +221,7 @@ export function PartnershipsRoom() {
       if (ra !== rb) return ra - rb;
       return a.name.localeCompare(b.name);
     });
-  }, [partners, archivedPartners, filter, search]);
+  }, [partners, archivedPartners, filter, search, interestMap]);
 
   function openPartner(id: string) {
     setPartnerId(id);
@@ -401,6 +416,7 @@ export function PartnershipsRoom() {
                 nextCommLabel={nextCommLabel}
                 isDonorView={filter === 'donor'}
                 donorStatMap={donorStatMap}
+                interestMap={interestMap}
               />
             )}
             {view === 'tile' && (
@@ -410,6 +426,7 @@ export function PartnershipsRoom() {
                 onOpenPartner={openPartner}
                 nextCommLabel={nextCommLabel}
                 donorStatMap={donorStatMap}
+                interestMap={interestMap}
               />
             )}
           </div>
@@ -425,6 +442,9 @@ export function PartnershipsRoom() {
         onClose={() => setDetailOpen(false)}
         onChanged={load}
         donorStat={selected ? (donorStatMap.get(selected.id) ?? null) : null}
+        interests={interests}
+        selectedInterestIds={selected ? (interestMap.get(selected.id) ?? []).map((i) => i.id) : []}
+        onInterestsCreated={load}
       />
       <AddPartnerPanel
         open={addOpen}
@@ -432,6 +452,8 @@ export function PartnershipsRoom() {
         defaultOwnerId={profile?.id ?? null}
         onClose={() => setAddOpen(false)}
         onCreated={load}
+        interests={interests}
+        onInterestsCreated={load}
       />
       <PartnershipsHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>

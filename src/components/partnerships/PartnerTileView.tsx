@@ -1,4 +1,6 @@
 import type { Profile } from '@/lib/types';
+import { LabelPill } from '@/components/LabelPill';
+import type { PartnershipInterest } from '@/lib/partnership-interests';
 import {
   PARTNER_STAGE,
   PARTNER_TYPE,
@@ -17,12 +19,14 @@ export function PartnerTileView({
   onOpenPartner,
   nextCommLabel,
   donorStatMap = new Map(),
+  interestMap = new Map(),
 }: {
   partners: Partner[];
   profiles: Profile[];
   onOpenPartner: (id: string) => void;
   nextCommLabel?: string;
   donorStatMap?: Map<string, DonorStat>;
+  interestMap?: Map<string, PartnershipInterest[]>;
 }) {
   function ownerName(id: string | null) {
     return id ? (profiles.find((p) => p.id === id)?.full_name ?? 'Unassigned') : 'Unassigned';
@@ -61,6 +65,14 @@ export function PartnerTileView({
               ))}
             </div>
             <p className="mt-0.5 text-xs text-sparrow-gray">{ownerName(p.owner_id)}</p>
+
+            {(interestMap.get(p.id) ?? []).length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {(interestMap.get(p.id) ?? []).map((i) => (
+                  <LabelPill key={i.id} label={i.label} color={i.color} />
+                ))}
+              </div>
+            )}
 
             <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${st.chip}`}>
               {dueLabel(p, new Date(), p.cadence_days == null ? nextCommLabel : undefined)}

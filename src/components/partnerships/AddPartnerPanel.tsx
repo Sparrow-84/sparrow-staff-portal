@@ -12,6 +12,8 @@ import { Drawer } from '../lcp/Drawer';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { LEAD_TIME_PRESETS } from '@/lib/cadence';
 import { CadenceInput } from './CadenceInput';
+import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
+import { createInterest, setPartnerInterests, type PartnershipInterest } from '@/lib/partnership-interests';
 
 // Default stewardship cadence by type (days between touchpoints). Every partner now needs a
 // cadence value (migration 0080 makes partners.cadence_days NOT NULL — "a record without a
@@ -41,16 +43,21 @@ export function AddPartnerPanel({
   defaultOwnerId,
   onClose,
   onCreated,
+  interests = [],
+  onInterestsCreated,
 }: {
   open: boolean;
   profiles: Profile[];
   defaultOwnerId: string | null;
   onClose: () => void;
   onCreated: () => void;
+  interests?: PartnershipInterest[];
+  onInterestsCreated?: () => void;
 }) {
   const [name, setName] = useState('');
   const [type, setType] = useState<PartnerType>('donor');
   const [secondaryTypes, setSecondaryTypes] = useState<PartnerType[]>([]);
+  const [interestIds, setInterestIds] = useState<string[]>([]);
   const [stage, setStage] = useState<PartnerStage>('prospect');
   const [ownerId, setOwnerId] = useState<string>('');
   const [contactName, setContactName] = useState('');
@@ -68,6 +75,7 @@ export function AddPartnerPanel({
       setName('');
       setType('donor');
       setSecondaryTypes([]);
+      setInterestIds([]);
       setStage('prospect');
       setOwnerId(defaultOwnerId ?? '');
       setContactName('');
@@ -98,10 +106,6 @@ export function AddPartnerPanel({
     setSecondaryTypes((prev) => prev.filter((s) => s !== t)); // can't tag the same type twice
   }
 
-  function toggleSecondaryType(t: PartnerType) {
-    setSecondaryTypes((prev) => (prev.includes(t) ? prev.filter((s) => s !== t) : [...prev, t]));
-  }
-
   async function save() {
     if (!validate() || cadence == null || leadTime == null) return;
     setBusy(true);
@@ -125,14 +129,19 @@ export function AddPartnerPanel({
         source: source.trim() || null,
         notes: null,
       });
-      // 72-hr follow-up task for new donors — best-effort, don't block the save
-      if (type === 'donor' && ownerId) {
-        // Fetch the new partner's id to emit the dedup-safe task
+      // Fetch the new partner's id — needed for the donor follow-up task and/or saving
+      // any Interests picked before the record existed.
+      if ((type === 'donor' && ownerId) || interestIds.length > 0) {
         const { data } = await import('@/lib/supabase').then((m) =>
           m.supabase.from('partners').select('id').eq('name', trimmedName).order('created_at', { ascending: false }).limit(1).single()
         );
         if (data?.id) {
-          void emitFirstTimeDonorTask(data.id, trimmedName, ownerId).catch(() => undefined);
+          if (type === 'donor' && ownerId) {
+            void emitFirstTimeDonorTask(data.id, trimmedName, ownerId).catch(() => undefined);
+          }
+          if (interestIds.length > 0) {
+            await setPartnerInterests(data.id, interestIds);
+          }
         }
       }
       onCreated();
@@ -192,26 +201,16 @@ export function AddPartnerPanel({
 
         <div>
           <label className="field-label">Also involved as (optional)</label>
-          <div className="mt-1 flex flex-wrap gap-2">
-            {PARTNER_TYPES.filter((t) => t !== type).map((t) => (
-              <label
-                key={t}
-                className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
-                  secondaryTypes.includes(t)
-                    ? 'border-sparrow-green bg-sparrow-green/10 text-sparrow-ink'
-                    : 'border-sparrow-rule text-sparrow-gray'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={secondaryTypes.includes(t)}
-                  onChange={() => toggleSecondaryType(t)}
-                />
-                {PARTNER_TYPE[t].icon} {PARTNER_TYPE[t].label}
-              </label>
-            ))}
-          </div>
+          <MultiSelectDropdown
+            options={PARTNER_TYPES.filter((t) => t !== type).map((t) => ({
+              value: t,
+              label: PARTNER_TYPE[t].label,
+              icon: PARTNER_TYPE[t].icon,
+            }))}
+            selected={secondaryTypes}
+            onChange={(next) => setSecondaryTypes(next as PartnerType[])}
+            placeholder="None"
+          />
           <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">
             Someone who's more than one thing to Sparrow — e.g. a donor who's also a prayer
             volunteer. Cadence still follows the main Type above; tag the other roles here so
@@ -277,6 +276,20 @@ export function AddPartnerPanel({
         <div>
           <label className="field-label" htmlFor="pa-address">Mailing address</label>
           <textarea id="pa-address" rows={2} className="field-input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="optional" />
+        </div>
+
+        <div>
+          <label className="field-label">Interests</label>
+          <MultiSelectDropdown
+            options={interests.map((i) => ({ value: i.id, label: i.label, color: i.color }))}
+            selected={interestIds}
+            onChange={setInterestIds}
+            placeholder="None"
+            onCreateNew={async (label, color) => {
+              await createInterest(label, color);
+              onInterestsCreated?.();
+            }}
+          />
         </div>
 
         <div>
