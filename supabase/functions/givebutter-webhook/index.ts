@@ -13,16 +13,17 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // `data` (first_name/last_name/email), not nested under a `giver` object as
 // originally guessed.
 //
-// REMAINING BLOCKER: the test call above returned 401
-// UNAUTHORIZED_NO_AUTH_HEADER — that's Supabase's own platform-level JWT
-// gate rejecting the request before it reaches this file's code at all
-// (Givebutter has no Sparrow login token to send). Needs "Enforce JWT
-// Verification" turned off for this function (dashboard toggle, or redeploy
-// with `--no-verify-jwt`) — our own signature check below is the real auth
-// for this endpoint and doesn't need Supabase's JWT layer on top of it.
-// Still unverified: our own signature scheme (HMAC-SHA256 hex of the raw
-// body) — the test payload was sent with no `Signature` header at all, so
-// signature verification itself hasn't actually been exercised yet either.
+// 2026-07-30: JWT blocker resolved — Byron turned off Supabase's platform
+// "Enforce JWT Verification" for this function, so it now actually receives
+// requests. That surfaced a second bug: this file originally guessed
+// Givebutter signs webhooks the common way (HMAC-SHA256 of the raw body,
+// hex-encoded). Givebutter's own help center says otherwise — "review your
+// code to see if the webhook request received contains a header called
+// Signature. This should contain the same value in your dashboard" — i.e.
+// the `Signature` header is just the raw signing secret sent as-is, not a
+// computed hash. Fixed below to a direct comparison. (No third-party
+// integration writeup found that documents this differently — if a real
+// test still 401s after this fix, that's the next thing to question.)
 
 const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -33,18 +34,8 @@ const CORS = {
   'Access-Control-Allow-Headers': 'content-type, signature',
 };
 
-async function verifySignature(rawBody: string, signatureHeader: string | null): Promise<boolean> {
-  if (!signatureHeader) return false;
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(WEBHOOK_SECRET),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
-  const digestHex = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('');
-  return digestHex === signatureHeader;
+function verifySignature(signatureHeader: string | null): boolean {
+  return signatureHeader === WEBHOOK_SECRET;
 }
 
 Deno.serve(async (req) => {
@@ -52,7 +43,7 @@ Deno.serve(async (req) => {
 
   const rawBody = await req.text();
   const signature = req.headers.get('signature') ?? req.headers.get('Signature');
-  if (!(await verifySignature(rawBody, signature))) {
+  if (!verifySignature(signature)) {
     return new Response(JSON.stringify({ error: 'Invalid signature' }), {
       status: 401,
       headers: { ...CORS, 'Content-Type': 'application/json' },
