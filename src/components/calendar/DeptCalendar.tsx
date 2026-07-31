@@ -86,7 +86,7 @@ export function DeptCalendar({ department }: Props) {
         lcpEvs.map((ev) => ({
           id: `lcp-${ev.id}`,
           kind: 'lcp_session',
-          title: `LCP · ${ev.title}`,
+          title: ev.title,
           starts_at: ev.starts_at,
           ends_at: ev.ends_at,
           all_day: false,
