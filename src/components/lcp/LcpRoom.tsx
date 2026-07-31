@@ -12,6 +12,8 @@ import {
   fetchRecentSessionLogs,
   fetchSessions,
 } from '@/lib/lcp';
+import { fetchProfiles } from '@/lib/data';
+import type { Profile } from '@/lib/types';
 import {
   FAMILY_STATUS,
   type CurriculumSession,
@@ -93,6 +95,7 @@ export function LcpRoom() {
   const [programPosition, setProgramPosition] = useState<ProgramPosition | null>(null);
   const [tocSpaces, setTocSpaces] = useState<TocSpaceSlim[]>([]);
   const [feePayments, setFeePayments] = useState<Pick<ProgramFeePayment, 'family_id' | 'paid_date'>[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +112,7 @@ export function LcpRoom() {
 
   const load = useCallback(async () => {
     try {
-      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees] = await Promise.all([
+      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs] = await Promise.all([
         fetchFamilies(),
         fetchAllHomework(),
         fetchEvents(),
@@ -120,6 +123,7 @@ export function LcpRoom() {
         fetchProgramPosition(),
         fetchLcpDesignatedSpaces(),
         fetchAllProgramFeePayments(),
+        fetchProfiles(),
       ]);
       setFamilies(fam);
       setHomework(hw);
@@ -131,6 +135,7 @@ export function LcpRoom() {
       setProgramPosition(pos);
       setTocSpaces(spaces);
       setFeePayments(fees);
+      setProfiles(profs);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load LifeChange data.');
     } finally {
@@ -389,6 +394,7 @@ export function LcpRoom() {
       <AddEventPanel
         open={addEventOpen}
         currentUserId={profile?.id ?? ''}
+        profiles={profiles}
         onClose={() => setAddEventOpen(false)}
         onCreated={() => { setAddEventOpen(false); void load(); }}
       />

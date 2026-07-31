@@ -6,6 +6,7 @@ import {
   deleteCalendarEventAndFuture,
   fetchEventAttendees,
   fetchEventComments,
+  fetchOfficeRooms,
   notifyEventCommentMentions,
   removeAttendee,
   setMyAttendance,
@@ -26,7 +27,7 @@ import { Drawer } from '@/components/lcp/Drawer';
 import { MentionInput } from '@/components/chat/MentionInput';
 import { CalendarLabelPicker } from '@/components/calendar/CalendarLabelPicker';
 import { LABEL_COLORS } from '@/components/LabelPill';
-import type { Profile } from '@/lib/types';
+import type { OfficeRoom, Profile } from '@/lib/types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 interface Props {
@@ -65,6 +66,11 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
   const [editLocation, setEditLocation] = useState('');
+  const [rooms, setRooms] = useState<OfficeRoom[]>([]);
+  const [editRoomId, setEditRoomId] = useState('');
+  const [editIsPrivateMeeting, setEditIsPrivateMeeting] = useState(false);
+
+  useEffect(() => { void fetchOfficeRooms().then(setRooms); }, []);
 
   const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
     { key: 'org-edit-title', label: 'Title', valid: editTitle.trim().length > 0 },
@@ -195,6 +201,8 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
     setEditStartTime(event.all_day ? '09:00' : toLocalTime(event.starts_at));
     setEditEndTime(!event.all_day && event.ends_at ? toLocalTime(event.ends_at) : '');
     setEditLocation(event.location ?? '');
+    setEditRoomId(event.room_id ?? '');
+    setEditIsPrivateMeeting(event.is_private_meeting);
     setError(null);
     resetValidation();
     setMode('edit');
@@ -220,12 +228,15 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
           ? withTzOffset(editDate, editEndTime)
           : null;
 
+      const selectedRoom = rooms.find((r) => r.id === editRoomId) ?? null;
       const basePatch = {
         title: editTitle.trim(),
         kind: event.kind, // preserve original kind — not editable via UI
         label_id: editLabelId,
         all_day: editAllDay,
         location: editLocation.trim() || null,
+        room_id: editRoomId || null,
+        is_private_meeting: selectedRoom?.blocks_whole_office ? editIsPrivateMeeting : false,
       };
 
       if (saveMode === 'future' && event.recurrence_id) {
@@ -287,6 +298,10 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
   const canEdit = isAdmin || event.created_by === currentUserId;
   const isRecurring = !!event.recurrence_id;
+  // Synced from the LCP Session Cal — title/time/location and deletion stay
+  // Session Cal-only (enforced in the DB too); RSVP/comments/labels/room
+  // booking are fully editable here same as any other event.
+  const isLcpSession = event.source_system === 'lcp_session';
 
   // For all-day events use the ISO date component directly (avoids UTC-midnight timezone shift).
   // Use noon local time for Date objects so toLocaleDateString() never returns the wrong day.
@@ -410,13 +425,18 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
             <button onClick={enterEdit} className="flex-1 btn-ghost text-sm">
               Edit
             </button>
-            <button
-              onClick={() => setConfirm(true)}
-              className="flex-1 rounded-xl border border-priority-p1/40 py-2 text-sm font-medium text-priority-p1 hover:bg-priority-p1/5"
-            >
-              Delete
-            </button>
+            {!isLcpSession && (
+              <button
+                onClick={() => setConfirm(true)}
+                className="flex-1 rounded-xl border border-priority-p1/40 py-2 text-sm font-medium text-priority-p1 hover:bg-priority-p1/5"
+              >
+                Delete
+              </button>
+            )}
           </div>
+        )}
+        {canEdit && isLcpSession && (
+          <p className="text-center text-xs text-sparrow-gray">Delete this session from the LCP Session Cal.</p>
         )}
       </div>
     );
@@ -432,16 +452,26 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
     >
       {mode === 'edit' ? (
         <div className="space-y-5">
-          <div>
-            <label className="field-label" htmlFor="org-edit-title">Title</label>
-            <input
-              id="org-edit-title"
-              type="text"
-              value={editTitle}
-              onChange={(e) => { setEditTitle(e.target.value); clear('org-edit-title'); }}
-              className={fieldClass('org-edit-title')}
-            />
-          </div>
+          {isLcpSession && (
+            <div className="rounded-lg border border-sparrow-rule bg-sparrow-mist/50 p-3">
+              <p className="text-sm font-medium text-sparrow-ink">{event.title}</p>
+              <p className="mt-0.5 text-xs text-sparrow-gray">{dateLabel} · {timeLabel}{event.location ? ` · ${event.location}` : ''}</p>
+              <p className="mt-1.5 text-xs text-sparrow-gray">Title, time, and location are managed on the LCP Session Cal.</p>
+            </div>
+          )}
+
+          {!isLcpSession && (
+            <div>
+              <label className="field-label" htmlFor="org-edit-title">Title</label>
+              <input
+                id="org-edit-title"
+                type="text"
+                value={editTitle}
+                onChange={(e) => { setEditTitle(e.target.value); clear('org-edit-title'); }}
+                className={fieldClass('org-edit-title')}
+              />
+            </div>
+          )}
 
           <CalendarLabelPicker
             value={editLabelId}
@@ -452,84 +482,122 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
             onChange={(id) => setEditLabelId(id)}
           />
 
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
-            <input
-              type="checkbox"
-              checked={editAllDay}
-              onChange={(e) => setEditAllDay(e.target.checked)}
-              className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
-            />
-            All day
-          </label>
+          {!isLcpSession && (
+            <>
+              <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+                <input
+                  type="checkbox"
+                  checked={editAllDay}
+                  onChange={(e) => setEditAllDay(e.target.checked)}
+                  className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                />
+                All day
+              </label>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className={editAllDay ? 'col-span-1' : 'col-span-2'}>
-              <label className="field-label" htmlFor="org-edit-date">{editAllDay ? 'Start date' : 'Date'}</label>
-              <input
-                id="org-edit-date"
-                type="date"
-                value={editDate}
-                onChange={(e) => {
-                  setEditDate(e.target.value);
-                  clear('org-edit-date');
-                  // Clear end date if start moves to or past it
-                  if (editEndDate && e.target.value >= editEndDate) setEditEndDate('');
-                }}
-                className={fieldClass('org-edit-date')}
-              />
-            </div>
-            {editAllDay && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className={editAllDay ? 'col-span-1' : 'col-span-2'}>
+                  <label className="field-label" htmlFor="org-edit-date">{editAllDay ? 'Start date' : 'Date'}</label>
+                  <input
+                    id="org-edit-date"
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => {
+                      setEditDate(e.target.value);
+                      clear('org-edit-date');
+                      // Clear end date if start moves to or past it
+                      if (editEndDate && e.target.value >= editEndDate) setEditEndDate('');
+                    }}
+                    className={fieldClass('org-edit-date')}
+                  />
+                </div>
+                {editAllDay && (
+                  <div>
+                    <label className="field-label">
+                      End date <span className="font-normal text-sparrow-gray">(optional)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={editEndDate}
+                      min={editDate}
+                      onChange={(e) => setEditEndDate(e.target.value)}
+                      className="field-input"
+                    />
+                  </div>
+                )}
+                {!editAllDay && (
+                  <>
+                    <div>
+                      <label className="field-label" htmlFor="org-edit-start-time">Start time</label>
+                      <input
+                        id="org-edit-start-time"
+                        type="time"
+                        value={editStartTime}
+                        onChange={(e) => { setEditStartTime(e.target.value); clear('org-edit-start-time'); }}
+                        className={fieldClass('org-edit-start-time')}
+                      />
+                    </div>
+                    <div>
+                      <label className="field-label">
+                        End time <span className="font-normal text-sparrow-gray">(optional)</span>
+                      </label>
+                      <input
+                        type="time"
+                        value={editEndTime}
+                        onChange={(e) => setEditEndTime(e.target.value)}
+                        className="field-input"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
               <div>
                 <label className="field-label">
-                  End date <span className="font-normal text-sparrow-gray">(optional)</span>
+                  Location <span className="font-normal text-sparrow-gray">(optional)</span>
                 </label>
                 <input
-                  type="date"
-                  value={editEndDate}
-                  min={editDate}
-                  onChange={(e) => setEditEndDate(e.target.value)}
+                  type="text"
+                  value={editLocation}
+                  onChange={(e) => setEditLocation(e.target.value)}
                   className="field-input"
                 />
               </div>
-            )}
-            {!editAllDay && (
-              <>
-                <div>
-                  <label className="field-label" htmlFor="org-edit-start-time">Start time</label>
-                  <input
-                    id="org-edit-start-time"
-                    type="time"
-                    value={editStartTime}
-                    onChange={(e) => { setEditStartTime(e.target.value); clear('org-edit-start-time'); }}
-                    className={fieldClass('org-edit-start-time')}
-                  />
-                </div>
-                <div>
-                  <label className="field-label">
-                    End time <span className="font-normal text-sparrow-gray">(optional)</span>
-                  </label>
-                  <input
-                    type="time"
-                    value={editEndTime}
-                    onChange={(e) => setEditEndTime(e.target.value)}
-                    className="field-input"
-                  />
-                </div>
-              </>
-            )}
-          </div>
+            </>
+          )}
 
-          <div>
-            <label className="field-label">
-              Location <span className="font-normal text-sparrow-gray">(optional)</span>
-            </label>
-            <input
-              type="text"
-              value={editLocation}
-              onChange={(e) => setEditLocation(e.target.value)}
-              className="field-input"
-            />
-          </div>
+          {rooms.length > 0 && (
+            <div>
+              <label className="field-label">
+                Office room <span className="font-normal text-sparrow-gray">(optional)</span>
+              </label>
+              <select
+                value={editRoomId}
+                onChange={(e) => { setEditRoomId(e.target.value); setEditIsPrivateMeeting(false); }}
+                className="field-input"
+              >
+                <option value="">No room booked</option>
+                {rooms.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+              {editRoomId && rooms.find((r) => r.id === editRoomId)?.blocks_whole_office && (
+                <label className="mt-2 flex cursor-pointer items-start gap-2.5 text-sm text-sparrow-ink">
+                  <input
+                    type="checkbox"
+                    checked={editIsPrivateMeeting}
+                    onChange={(e) => setEditIsPrivateMeeting(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                  />
+                  <span>
+                    <span className="font-medium">Private meeting — do not walk through</span>
+                    <span className="mt-0.5 block text-xs text-sparrow-gray">
+                      This blocks the whole office. Other rooms will show as unavailable during this time.
+                    </span>
+                  </span>
+                </label>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-5">

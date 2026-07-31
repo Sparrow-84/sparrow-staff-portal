@@ -161,6 +161,7 @@ export interface CalendarEvent {
   label_id: string | null;
   label: CalendarLabel | null;
   creator: { id: string; full_name: string } | null;
+  source_system: string | null; // 'lcp_session' for Session Cal-synced events; title/time/location/delete are Session Cal-only for these
 }
 
 export interface EventOccurrence {
@@ -404,7 +405,7 @@ export async function removeEventAttendee(
 
 export async function updateCalendarEvent(
   id: string,
-  patch: Partial<Pick<CalendarEvent, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'all_day' | 'location' | 'label_id'>>,
+  patch: Partial<Pick<CalendarEvent, 'kind' | 'title' | 'starts_at' | 'ends_at' | 'all_day' | 'location' | 'label_id' | 'room_id' | 'is_private_meeting'>>,
 ): Promise<void> {
   const { error } = await supabase.from('calendar_events').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
@@ -413,7 +414,7 @@ export async function updateCalendarEvent(
 export async function updateCalendarEventAndFuture(
   recurrenceId: string,
   fromStartsAt: string,
-  fields: Partial<Pick<CalendarEvent, 'kind' | 'title' | 'all_day' | 'location'>>,
+  fields: Partial<Pick<CalendarEvent, 'kind' | 'title' | 'all_day' | 'location' | 'label_id' | 'room_id' | 'is_private_meeting'>>,
   startTime?: string,
   endTime?: string | null,
   dateDeltaMs?: number,

@@ -357,9 +357,27 @@ export async function createEvents(
     // NOTE: add show_on_org_calendar here after Byron runs migration 0039
     created_by: string;
   }>,
-): Promise<void> {
-  const { error } = await supabase.from('lcp_events').insert(inputs);
+): Promise<string[]> {
+  const { data, error } = await supabase.from('lcp_events').insert(inputs).select('id');
   if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => r.id as string);
+}
+
+/**
+ * Resolves the real calendar_events rows a set of Session Cal entries were
+ * synced into (migration 0114's trigger creates these synchronously on
+ * insert), so attendees can be attached to them right at creation time —
+ * same as picking attendees for any other Team Cal event.
+ */
+export async function fetchLcpSessionCalendarEventIds(lcpEventIds: string[]): Promise<string[]> {
+  if (lcpEventIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('calendar_events')
+    .select('id')
+    .eq('source_system', 'lcp_session')
+    .in('source_ref', lcpEventIds);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => r.id as string);
 }
 
 export async function deleteEvent(id: string): Promise<void> {

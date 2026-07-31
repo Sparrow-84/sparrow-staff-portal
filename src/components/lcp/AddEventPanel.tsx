@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { EVENT_LABEL, type EventKind } from '@/lib/lcp-types';
-import { createEvents } from '@/lib/lcp';
+import { createEvents, fetchLcpSessionCalendarEventIds } from '@/lib/lcp';
+import { addEventAttendees } from '@/lib/calendar';
 import { Drawer } from './Drawer';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+import type { Profile } from '@/lib/types';
 
 const EVENT_KINDS: EventKind[] = ['curriculum', 'one_on_one', 'dinner', 'volunteer', 'other'];
 const DOW_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -65,11 +67,12 @@ function generateDates(
 interface Props {
   open: boolean;
   currentUserId: string;
+  profiles: Profile[];
   onClose: () => void;
   onCreated: () => void;
 }
 
-export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props) {
+export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreated }: Props) {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<EventKind>('curriculum');
   const [date, setDate] = useState(todayISO);
@@ -79,6 +82,13 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
   const [mandatory, setMandatory] = useState(true);
   // NOTE: restore showOnOrgCal state after Byron runs migration 0039
   // const [showOnOrgCal, setShowOnOrgCal] = useState(false);
+
+  // Attendees — same pattern as AddOrgEventPanel; picked staff get RSVP'd on
+  // the real calendar_events row this session syncs into (migration 0114).
+  const [attendeeIds, setAttendeeIds] = useState<string[]>([]);
+  const [attendeeSearch, setAttendeeSearch] = useState('');
+  const [attendeeDropdownOpen, setAttendeeDropdownOpen] = useState(false);
+  const attendeeRef = useRef<HTMLDivElement>(null);
 
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState<'weekly' | 'biweekly'>('weekly');
@@ -147,7 +157,16 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
         created_by: currentUserId,
       }));
 
-      await createEvents(inputs);
+      const insertedIds = await createEvents(inputs);
+
+      if (attendeeIds.length > 0 && insertedIds.length > 0) {
+        const mirrorIds = await fetchLcpSessionCalendarEventIds(insertedIds);
+        if (mirrorIds.length > 0) {
+          const allAttendees = Array.from(new Set([currentUserId, ...attendeeIds]));
+          await addEventAttendees(mirrorIds, title.trim(), allAttendees, currentUserId);
+        }
+      }
+
       reset();
       onCreated();
     } catch (e) {
@@ -171,6 +190,8 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
     setDaysOfWeek(new Set([new Date().getDay()]));
     setUntilMode('date');
     setUntilDate(addMonths(todayISO(), 3));
+    setAttendeeIds([]);
+    setAttendeeSearch('');
     setError(null);
     daysOfWeekTouchedRef.current = false;
     resetValidation();
@@ -285,6 +306,68 @@ export function AddEventPanel({ open, currentUserId, onClose, onCreated }: Props
           />
           Mandatory attendance
         </label>
+
+        {/* Attendees — mirrors AddOrgEventPanel's picker */}
+        <div ref={attendeeRef} className="relative">
+          <label className="field-label">
+            Attendees <span className="font-normal text-sparrow-gray">(optional — adds session to their widget)</span>
+          </label>
+          {attendeeIds.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {attendeeIds.map((id) => {
+                const p = profiles.find((x) => x.id === id);
+                return (
+                  <span key={id} className="flex items-center gap-1 rounded-full bg-sparrow-sage px-2.5 py-0.5 text-xs font-medium text-sparrow-ink">
+                    {p?.full_name ?? id}
+                    <button
+                      type="button"
+                      onClick={() => setAttendeeIds((prev) => prev.filter((x) => x !== id))}
+                      className="ml-0.5 text-sparrow-gray hover:text-sparrow-ink"
+                      aria-label={`Remove ${p?.full_name ?? id}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          <input
+            type="text"
+            value={attendeeSearch}
+            onChange={(e) => { setAttendeeSearch(e.target.value); setAttendeeDropdownOpen(true); }}
+            onFocus={() => setAttendeeDropdownOpen(true)}
+            onBlur={() => setTimeout(() => setAttendeeDropdownOpen(false), 150)}
+            placeholder="Search staff…"
+            className="field-input"
+          />
+          {attendeeDropdownOpen && attendeeSearch.trim() && (
+            <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-sparrow-rule bg-white shadow-lg">
+              {profiles
+                .filter((p) =>
+                  p.id !== currentUserId &&
+                  !attendeeIds.includes(p.id) &&
+                  p.full_name.toLowerCase().includes(attendeeSearch.toLowerCase()),
+                )
+                .map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onMouseDown={() => {
+                        setAttendeeIds((prev) => [...prev, p.id]);
+                        setAttendeeSearch('');
+                        setAttendeeDropdownOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm text-sparrow-ink hover:bg-sparrow-mist"
+                    >
+                      {p.full_name}
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          )}
+          <p className="mt-1 text-xs text-sparrow-gray">You're always added as attending. Selected staff will be notified.</p>
+        </div>
 
         {/* NOTE: restore this checkbox after Byron runs migration 0039
         <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
