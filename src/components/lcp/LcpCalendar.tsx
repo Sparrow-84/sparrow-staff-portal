@@ -2,6 +2,22 @@ import { useState } from 'react';
 import { EVENT_LABEL, SESSION_LOG_LABEL, type LcpEvent, type SessionLog } from '@/lib/lcp-types';
 import { timeLabel } from '@/lib/lcp-format';
 
+interface TooltipState { title: string; sub?: string; x: number; y: number; }
+
+function EventTooltip({ s }: { s: TooltipState }) {
+  const left = s.x > window.innerWidth - 290 ? s.x - 274 : s.x + 14;
+  const top = s.y + 16;
+  return (
+    <div
+      className="pointer-events-none fixed z-50 w-56 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg"
+      style={{ left, top }}
+    >
+      <p className="text-sm font-medium leading-snug text-sparrow-ink">{s.title}</p>
+      {s.sub && <p className="mt-1 text-xs text-sparrow-gray">{s.sub}</p>}
+    </div>
+  );
+}
+
 // Same muted bg-{color}-100 / text-{color}-700 pairing the Team Cal's label
 // system uses (see LABEL_COLORS in LabelPill.tsx) — kept consistent across
 // both calendars rather than the bolder -500 shades this used to have.
@@ -48,6 +64,7 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   const todayISO = localISO(today);
 
@@ -156,7 +173,8 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
                     <button
                       key={ev.id}
                       onClick={() => isPast && dayLog ? onLogClick(dayLog) : onEventClick(ev)}
-                      title={`${timeLabel(ev.starts_at)} · ${ev.title}`}
+                      onMouseEnter={(e) => setTooltip({ title: ev.title, sub: `${timeLabel(ev.starts_at)} · ${EVENT_LABEL[ev.kind]}`, x: e.clientX, y: e.clientY })}
+                      onMouseLeave={() => setTooltip(null)}
                       className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${
                         isPast ? 'bg-sparrow-rule text-sparrow-gray' : (KIND_COLOR[ev.kind] ?? 'bg-slate-400 text-white')
                       }`}
@@ -168,7 +186,8 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
                   {isPast && dayLog && dayEvents.length === 0 && (
                     <button
                       onClick={() => onLogClick(dayLog)}
-                      title={SESSION_LOG_LABEL[dayLog.session_type]}
+                      onMouseEnter={(e) => setTooltip({ title: SESSION_LOG_LABEL[dayLog.session_type], x: e.clientX, y: e.clientY })}
+                      onMouseLeave={() => setTooltip(null)}
                       className="w-full truncate rounded bg-sparrow-rule px-1 py-0.5 text-left text-[10px] font-medium leading-tight text-sparrow-gray transition hover:opacity-75"
                     >
                       {SESSION_LOG_LABEL[dayLog.session_type]}
@@ -212,6 +231,8 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
       {events.length === 0 && (
         <p className="text-sm text-sparrow-gray">No sessions scheduled yet.</p>
       )}
+
+      {tooltip && <EventTooltip s={tooltip} />}
     </div>
   );
 }

@@ -247,14 +247,17 @@ export function CalendarView() {
     if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1);
   }
 
-  // Build grid cells
-  const firstDay = new Date(year, month, 1);
+  // Build grid days — includes real leading/trailing days from the adjacent
+  // months (not blank filler) so the last/first week row previews what's
+  // just off-screen, same pattern as LcpCalendar/TaskCalendarView.
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startPad = firstDay.getDay();
-  const cells: (number | null)[] = [];
-  for (let i = 0; i < startPad; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-  while (cells.length % 7 !== 0) cells.push(null);
+  const firstDow = new Date(year, month, 1).getDay();
+  const days: Date[] = [];
+  for (let i = firstDow - 1; i >= 0; i--) days.push(new Date(year, month, -i));
+  for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
+  while (days.length % 7 !== 0) {
+    days.push(new Date(year, month + 1, days.length - daysInMonth - firstDow + 1));
+  }
 
   // Partition events: single-day go into a map keyed by date; multi-day all-day events
   // go into a separate array for spanning-bar rendering across the week grid.
@@ -273,18 +276,15 @@ export function CalendarView() {
     if (ev.all_day && endD > startD) {
       visibleMultiDay.push(ev);
     } else {
-      const dDate = new Date(startD + 'T12:00:00');
-      if (dDate.getFullYear() === year && dDate.getMonth() === month) {
-        if (!singleDayByDate.has(startD)) singleDayByDate.set(startD, []);
-        singleDayByDate.get(startD)!.push(ev);
-      }
+      if (!singleDayByDate.has(startD)) singleDayByDate.set(startD, []);
+      singleDayByDate.get(startD)!.push(ev);
     }
   }
   for (const arr of singleDayByDate.values()) arr.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 
-  // Group cells into week rows for spanning bar rendering
-  const weeks: (number | null)[][] = [];
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  // Group days into week rows for spanning bar rendering
+  const weeks: Date[][] = [];
+  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
 
   type MultiDayBar = {
     event: CalendarEvent;
@@ -295,12 +295,10 @@ export function CalendarView() {
     isActualEnd: boolean;
   };
 
-  function getBarsForWeek(week: (number | null)[]): MultiDayBar[] {
-    const weekDates = week.map(d => (d !== null ? cellDate(d) : null));
-    const nonNull = weekDates.filter((d): d is string => d !== null);
-    if (nonNull.length === 0) return [];
-    const weekStart = nonNull[0];
-    const weekEnd = nonNull[nonNull.length - 1];
+  function getBarsForWeek(week: Date[]): MultiDayBar[] {
+    const weekDates = week.map(localISO);
+    const weekStart = weekDates[0];
+    const weekEnd = weekDates[weekDates.length - 1];
 
     type Raw = Omit<MultiDayBar, 'lane'>;
     const raw: Raw[] = [];
@@ -312,11 +310,11 @@ export function CalendarView() {
 
       let startCol = 0;
       for (let c = 0; c < 7; c++) {
-        if (weekDates[c] !== null && weekDates[c]! >= evStart) { startCol = c; break; }
+        if (weekDates[c] >= evStart) { startCol = c; break; }
       }
       let endCol = 6;
       for (let c = 6; c >= 0; c--) {
-        if (weekDates[c] !== null && weekDates[c]! <= evEnd) { endCol = c; break; }
+        if (weekDates[c] <= evEnd) { endCol = c; break; }
       }
 
       raw.push({
@@ -344,11 +342,8 @@ export function CalendarView() {
   const lcpEventsByDay = new Map<string, LcpEvent[]>();
   for (const ev of lcpOrgEvents) {
     const d = localISO(new Date(ev.starts_at));
-    const dDate = new Date(d + 'T12:00:00');
-    if (dDate.getFullYear() === year && dDate.getMonth() === month) {
-      if (!lcpEventsByDay.has(d)) lcpEventsByDay.set(d, []);
-      lcpEventsByDay.get(d)!.push(ev);
-    }
+    if (!lcpEventsByDay.has(d)) lcpEventsByDay.set(d, []);
+    lcpEventsByDay.get(d)!.push(ev);
   }
 
   // Group deadlines by day
@@ -368,9 +363,6 @@ export function CalendarView() {
     .filter(d => showMyDepts && !disabledDepts.has(d) && !DEPTS_WITH_CALENDARS.includes(d))
     .map(d => DEPARTMENTS.find(x => x.value === d)?.label ?? d);
 
-  function cellDate(d: number): string {
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  }
   function openAdd(dStr: string) { setAddDate(dStr); setAddOpen(true); }
 
   // Dynamic color mode: 1 active source layer → label colors; 2+ → layer colors
@@ -506,11 +498,9 @@ export function CalendarView() {
                   // position:relative so absolutely-positioned bars anchor to this row
                   <div key={wi} className="relative">
                     <div className="grid grid-cols-7">
-                      {week.map((d, col) => {
-                        if (d === null) {
-                          return <div key={`pad-${wi}-${col}`} className="min-h-[6rem] border-b border-r border-sparrow-rule bg-sparrow-mist/30" />;
-                        }
-                        const dStr = cellDate(d);
+                      {week.map((day, col) => {
+                        const dStr = localISO(day);
+                        const inMonth = day.getMonth() === month;
                         const dayEvents    = singleDayByDate.get(dStr) ?? [];
                         const dayLcpEvents = lcpEventsByDay.get(dStr) ?? [];
                         const dayDeadlines = deadlinesByDay.get(dStr) ?? [];
@@ -522,14 +512,14 @@ export function CalendarView() {
 
                         return (
                           <div
-                            key={dStr}
-                            className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${isPast ? 'bg-sparrow-mist/30' : ''}`}
+                            key={`${dStr}-${col}`}
+                            className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${!inMonth || isPast ? 'bg-sparrow-mist/30' : ''}`}
                             style={barAreaPx > 0 ? { paddingTop: barAreaPx + 4 } : undefined}
                           >
                             {/* Day number */}
                             <div className="flex items-center justify-between">
-                              <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : isPast ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
-                                {d}
+                              <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : !inMonth ? 'text-sparrow-rule' : isPast ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
+                                {day.getDate()}
                               </span>
                               <button
                                 onClick={() => openAdd(dStr)}
