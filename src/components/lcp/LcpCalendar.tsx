@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { EVENT_LABEL, SESSION_LOG_LABEL, type LcpEvent, type SessionLog } from '@/lib/lcp-types';
 import { timeLabel } from '@/lib/lcp-format';
 
+// Same muted bg-{color}-100 / text-{color}-700 pairing the Team Cal's label
+// system uses (see LABEL_COLORS in LabelPill.tsx) — kept consistent across
+// both calendars rather than the bolder -500 shades this used to have.
 const KIND_COLOR: Record<string, string> = {
-  curriculum: 'bg-sparrow-green text-white',
-  one_on_one:  'bg-amber-500 text-white',
-  dinner:      'bg-violet-500 text-white',
-  volunteer:   'bg-sky-500 text-white',
-  other:       'bg-slate-400 text-white',
+  curriculum: 'bg-sparrow-sage text-sparrow-green',
+  one_on_one:  'bg-amber-100 text-amber-700',
+  dinner:      'bg-violet-100 text-violet-700',
+  volunteer:   'bg-sky-100 text-sky-700',
+  other:       'bg-slate-100 text-slate-700',
 };
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

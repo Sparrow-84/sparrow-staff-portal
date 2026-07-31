@@ -8,7 +8,12 @@ import {
 } from '@/lib/calendar';
 import { LABEL_COLORS } from '@/components/LabelPill';
 
-function eventPillClass(ev: CalendarEvent): string {
+// A Session Cal (lcp_events) entry mirrored read-only onto the LCP Team Cal —
+// one-way by construction: Team Cal only ever reads lcp_events, never writes
+// to them, so there's nothing to keep in sync or drift.
+type DisplayEvent = CalendarEvent & { isLcpMirror?: boolean };
+
+function eventPillClass(ev: DisplayEvent): string {
   if (ev.label?.color) {
     const meta = LABEL_COLORS.find((c) => c.id === ev.label!.color);
     if (meta) return meta.pill;
@@ -16,6 +21,7 @@ function eventPillClass(ev: CalendarEvent): string {
   return KIND_PILL[ev.kind];
 }
 import { fetchProfiles } from '@/lib/data';
+import { fetchEvents as fetchLcpEvents } from '@/lib/lcp';
 import type { Department, Profile } from '@/lib/types';
 import { AddOrgEventPanel } from './AddOrgEventPanel';
 import { OrgEventDetailPanel } from './OrgEventDetailPanel';
@@ -34,10 +40,10 @@ function shortTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-interface TooltipState { title: string; sub?: string; time?: string; x: number; y: number; }
+interface TooltipState { title: string; sub?: string; time?: string; hint?: string; x: number; y: number; }
 
 type MultiDayBar = {
-  event: CalendarEvent;
+  event: DisplayEvent;
   startCol: number;
   span: number;
   lane: number;
@@ -57,6 +63,7 @@ export function DeptCalendar({ department }: Props) {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [lcpMirrorEvents, setLcpMirrorEvents] = useState<DisplayEvent[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
@@ -68,21 +75,50 @@ export function DeptCalendar({ department }: Props) {
 
   const load = useCallback(async () => {
     try {
-      const [evs, profs] = await Promise.all([fetchCalendar(), fetchProfiles()]);
+      const [evs, profs, lcpEvs] = await Promise.all([
+        fetchCalendar(),
+        fetchProfiles(),
+        department === 'lcp' ? fetchLcpEvents() : Promise.resolve([]),
+      ]);
       setEvents(evs);
       setProfiles(profs);
+      setLcpMirrorEvents(
+        lcpEvs.map((ev) => ({
+          id: `lcp-${ev.id}`,
+          kind: 'lcp_session',
+          title: `LCP · ${ev.title}`,
+          starts_at: ev.starts_at,
+          ends_at: ev.ends_at,
+          all_day: false,
+          location: ev.location,
+          recurrence: null,
+          recurrence_id: ev.recurrence_id,
+          department,
+          is_personal: false,
+          created_by: null,
+          created_at: ev.starts_at,
+          room_id: null,
+          is_private_meeting: false,
+          office_room: null,
+          label_id: null,
+          label: null,
+          creator: null,
+          isLcpMirror: true,
+        })),
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [department]);
 
   useEffect(() => { void load(); }, [load]);
 
-  // Filter to this dept only (no personal, no all-staff)
-  const deptEvents = useMemo(
-    () => events.filter((ev) => ev.department === department && !ev.is_personal),
-    [events, department],
-  );
+  // Filter to this dept only (no personal, no all-staff), plus Session Cal's
+  // events mirrored in read-only when this is the LCP department calendar.
+  const deptEvents = useMemo(() => {
+    const real = events.filter((ev) => ev.department === department && !ev.is_personal);
+    return department === 'lcp' ? [...real, ...lcpMirrorEvents] : real;
+  }, [events, lcpMirrorEvents, department]);
 
   // Build grid cells
   const firstDay = new Date(year, month, 1);
@@ -94,8 +130,8 @@ export function DeptCalendar({ department }: Props) {
   while (cells.length % 7 !== 0) cells.push(null);
 
   // Partition into single-day map and multi-day array
-  const singleDayByDate = new Map<string, CalendarEvent[]>();
-  const visibleMultiDay: CalendarEvent[] = [];
+  const singleDayByDate = new Map<string, DisplayEvent[]>();
+  const visibleMultiDay: DisplayEvent[] = [];
   for (const ev of deptEvents) {
     const startD = ev.all_day ? ev.starts_at.slice(0, 10) : localISO(new Date(ev.starts_at));
     const endD = ev.all_day && ev.ends_at ? ev.ends_at.slice(0, 10) : startD;
@@ -219,8 +255,8 @@ export function DeptCalendar({ department }: Props) {
                   {bars.map((bar, bi) => (
                     <button
                       key={`bar-${bi}`}
-                      onClick={() => setDetailEvent(bar.event)}
-                      onMouseEnter={(e) => setTooltip({ title: bar.event.title, sub: bar.event.label?.name ?? KIND_LABEL[bar.event.kind], x: e.clientX, y: e.clientY })}
+                      onClick={() => { if (!bar.event.isLcpMirror) setDetailEvent(bar.event); }}
+                      onMouseEnter={(e) => setTooltip({ title: bar.event.title, sub: bar.event.label?.name ?? KIND_LABEL[bar.event.kind], hint: bar.event.isLcpMirror ? 'Edit on the LCP Session Cal' : undefined, x: e.clientX, y: e.clientY })}
                       onMouseLeave={() => setTooltip(null)}
                       style={{
                         position: 'absolute',
@@ -230,7 +266,7 @@ export function DeptCalendar({ department }: Props) {
                         height: 20,
                         borderRadius: bar.isActualStart && bar.isActualEnd ? 4 : bar.isActualStart ? '4px 0 0 4px' : bar.isActualEnd ? '0 4px 4px 0' : 0,
                       }}
-                      className={`z-10 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-75 ${eventPillClass(bar.event)}`}
+                      className={`z-10 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition ${bar.event.isLcpMirror ? 'cursor-default' : 'hover:opacity-75'} ${eventPillClass(bar.event)}`}
                     >
                       {bar.isActualStart ? bar.event.title : ''}
                     </button>
@@ -269,10 +305,10 @@ export function DeptCalendar({ department }: Props) {
                             {shown.map((ev) => (
                               <button
                                 key={ev.id}
-                                onClick={() => setDetailEvent(ev)}
-                                onMouseEnter={(e) => setTooltip({ title: ev.title, sub: ev.label?.name ?? KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), x: e.clientX, y: e.clientY })}
+                                onClick={() => { if (!ev.isLcpMirror) setDetailEvent(ev); }}
+                                onMouseEnter={(e) => setTooltip({ title: ev.title, sub: ev.label?.name ?? KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), hint: ev.isLcpMirror ? 'Edit on the LCP Session Cal' : undefined, x: e.clientX, y: e.clientY })}
                                 onMouseLeave={() => setTooltip(null)}
-                                className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${eventPillClass(ev)}`}
+                                className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition ${ev.isLcpMirror ? 'cursor-default' : 'hover:opacity-75'} ${eventPillClass(ev)}`}
                               >
                                 {ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
                               </button>
@@ -307,6 +343,7 @@ export function DeptCalendar({ department }: Props) {
           <p className="text-sm font-medium text-sparrow-ink">{tooltip.title}</p>
           {tooltip.sub && <p className="mt-0.5 text-xs text-sparrow-gray">{tooltip.sub}</p>}
           {tooltip.time && <p className="mt-0.5 text-xs text-sparrow-gray">{tooltip.time}</p>}
+          {tooltip.hint && <p className="mt-1 text-xs font-medium text-sparrow-green">{tooltip.hint}</p>}
         </div>
       )}
 

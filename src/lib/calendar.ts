@@ -173,7 +173,7 @@ export const KIND_PILL: Record<CalendarKind, string> = {
   closure:     'bg-priority-p1 text-white',
   holiday:     'bg-sparrow-green text-white',
   ooo:         'bg-sparrow-gray text-white',
-  lcp_session: 'bg-blue-600 text-white',
+  lcp_session: 'bg-blue-100 text-blue-700',
   toc:         'bg-teal-600 text-white',
   other:       'bg-sparrow-gold text-sparrow-ink',
   birthday:    'bg-pink-500 text-white',
