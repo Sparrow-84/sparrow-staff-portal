@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  EVENT_LABEL,
   SESSION_LOG_LABEL,
   type Family,
   type Homework,
@@ -8,11 +9,16 @@ import {
   type SessionLog,
   type SessionLogType,
 } from '@/lib/lcp-types';
-import { fetchRecentSessionLogs, fetchSessionMentorContent, fetchTodayEvents } from '@/lib/lcp';
+import { fetchNotePreviewsForSessionLogs, fetchRecentSessionLogs, fetchSessionMentorContent, fetchTodayEvents } from '@/lib/lcp';
 import { timeLabel } from '@/lib/lcp-format';
+import { MondaySessionPanel } from './MondaySessionPanel';
+import { SessionLogByBucket } from './SessionLogByBucket';
+import { SessionLogByParticipant } from './SessionLogByParticipant';
 import { SessionLogEntry } from './SessionLogEntry';
 import { SessionLogViewer } from './SessionLogViewer';
 import { SessionSplitLayout, type MondayMentorContent } from './SessionSplitLayout';
+
+type PastView = 'recent' | 'group' | 'participant' | 'bucket';
 
 interface Props {
   families: Family[];
@@ -56,12 +62,16 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
   const [mondayContent, setMondayContent] = useState<MondayMentorContent | null>(null);
   const [mondayLoading, setMondayLoading] = useState(false);
+  const [pastView, setPastView] = useState<PastView>('recent');
+  const [adHocPreviews, setAdHocPreviews] = useState<Record<string, string>>({});
 
   async function load() {
     try {
       const [r, ev] = await Promise.all([fetchRecentSessionLogs(8), fetchTodayEvents()]);
       setLogs(r);
       setTodayEvents(ev);
+      const adHocIds = r.filter((l) => l.session_type === 'ad_hoc').map((l) => l.id);
+      setAdHocPreviews(await fetchNotePreviewsForSessionLogs(adHocIds));
     } finally {
       setLoading(false);
     }
@@ -110,19 +120,31 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         mondayContent={mondayContent}
         mondayLoading={mondayLoading}
       >
-        <SessionLogEntry
-          {...entry}
-          families={families}
-          homeworkByFamily={homeworkByFamily}
-          currentUserId={currentUserId}
-          currentUserName={currentUserName}
-          phases={phases}
-          programUnitId={programUnitId}
-          programSessionId={programSessionId}
-          onBack={() => setEntry(null)}
-          onFiled={handleFiled}
-          onOpenFamily={onOpenFamily}
-        />
+        {entry.sessionType === 'monday_mentoring' ? (
+          <MondaySessionPanel
+            families={families}
+            currentUserId={currentUserId}
+            sessionDate={entry.sessionDate}
+            eventId={entry.eventId}
+            onBack={() => { setEntry(null); void load(); }}
+            onOpenFamily={onOpenFamily}
+            onChanged={onChanged}
+          />
+        ) : (
+          <SessionLogEntry
+            {...entry}
+            families={families}
+            homeworkByFamily={homeworkByFamily}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName}
+            phases={phases}
+            programUnitId={programUnitId}
+            programSessionId={programSessionId}
+            onBack={() => setEntry(null)}
+            onFiled={handleFiled}
+            onOpenFamily={onOpenFamily}
+          />
+        )}
       </SessionSplitLayout>
     );
   }
@@ -157,20 +179,26 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
   if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading session log…</p>;
 
   return (
-    <div className="space-y-6">
+    <div>
 
-      {/* Today's calendar events (if any) */}
-      {todayEvents.length > 0 && (
-        <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
-            Today's scheduled events
-          </h2>
-          <div className="space-y-3">
+      {/* ── Section 1: what you can log right now ───────────────────── */}
+      <section className="rounded-2xl bg-sparrow-sage/40 p-4 sm:p-5">
+        <h2 className="font-serif text-lg font-semibold text-sparrow-ink">Log tonight's session</h2>
+        <p className="mt-0.5 text-sm text-sparrow-gray">
+          Today's scheduled sessions, or start one for a different date.
+        </p>
+
+        {todayEvents.length > 0 && (
+          <div className="mt-4 space-y-3">
             {todayEvents.map((ev) => {
-              const type: SessionLogType =
+              // Only curriculum/one_on_one calendar events map to a real session
+              // type. Anything else (dinner, volunteer, other) doesn't get to
+              // silently become "Ad-hoc" — that's how a mistagged calendar event
+              // once passed as a real filed session. Log it manually below instead.
+              const type: SessionLogType | null =
                 ev.kind === 'curriculum' ? 'thursday_group'
                 : ev.kind === 'one_on_one' ? 'monday_mentoring'
-                : 'ad_hoc';
+                : null;
               return (
                 <div key={ev.id} className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
                   <p className="font-medium text-sparrow-ink">{ev.title}</p>
@@ -178,99 +206,178 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
                     {timeLabel(ev.starts_at)} · {families.length} {families.length === 1 ? 'family' : 'families'} active
                   </p>
                   <div className="mt-3">
-                    <button
-                      onClick={() => setEntry({ sessionType: type, sessionDate: todayISO(), eventId: ev.id, label: ev.title })}
-                      className="btn-primary"
-                    >
-                      Log this session
-                    </button>
+                    {type ? (
+                      <button
+                        onClick={() => setEntry({ sessionType: type, sessionDate: todayISO(), eventId: ev.id, label: ev.title })}
+                        className="btn-primary"
+                      >
+                        Log this session
+                      </button>
+                    ) : (
+                      <p className="text-xs text-sparrow-gray">
+                        This calendar event's type ({EVENT_LABEL[ev.kind]}) isn't one Session Log tracks — if this
+                        should be a Thursday Group or Monday Mentoring session, check the calendar entry's type.
+                        Otherwise, log a session manually below.
+                      </p>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
-        </section>
-      )}
+        )}
 
-      {/* Manual / spontaneous */}
-      {!showDatePicker ? (
-        <button
-          onClick={() => setShowDatePicker(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-sparrow-green px-4 py-2 text-sm font-medium text-sparrow-green transition hover:bg-sparrow-sage"
-        >
-          + Log a different session
-        </button>
-      ) : (
-        <div className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
-          <p className="mb-3 text-sm font-medium text-sparrow-ink">Log a session</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="field-label">Date</label>
-              <input
-                type="date"
-                value={manualDate}
-                max={todayISO()}
-                onChange={(e) => setManualDate(e.target.value > todayISO() ? todayISO() : e.target.value)}
-                className="field-input"
-              />
-            </div>
-            <div>
-              <label className="field-label">Session type</label>
-              <select
-                value={manualType}
-                onChange={(e) => setManualType(e.target.value as SessionLogType)}
-                className="field-input"
-              >
-                <option value="monday_mentoring">Monday Mentoring</option>
-                <option value="thursday_group">Thursday Group</option>
-                <option value="ad_hoc">Ad-hoc Session</option>
-              </select>
-            </div>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <button onClick={openManual} className="btn-primary">Continue</button>
-            <button onClick={() => setShowDatePicker(false)} className="btn-ghost">Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {/* Recent session logs */}
-      {logsByDate.size > 0 && (
-        <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Recent sessions</h2>
-          <ul className="space-y-1">
-            {Array.from(logsByDate.entries()).map(([date, dateLogs]) => (
-              <li key={date} className="overflow-hidden rounded-xl border border-sparrow-rule bg-white">
-                <div className="bg-sparrow-mist px-4 py-2">
-                  <span className="text-xs font-semibold text-sparrow-gray">{formatDate(date)}</span>
+        {/* Manual / spontaneous */}
+        <div className="mt-4">
+          {!showDatePicker ? (
+            <button
+              onClick={() => setShowDatePicker(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-sparrow-green px-4 py-2 text-sm font-medium text-sparrow-green transition hover:bg-white"
+            >
+              + Log a different session
+            </button>
+          ) : (
+            <div className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+              <p className="mb-3 text-sm font-medium text-sparrow-ink">Log a session</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="field-label">Date</label>
+                  <input
+                    type="date"
+                    value={manualDate}
+                    max={todayISO()}
+                    onChange={(e) => setManualDate(e.target.value > todayISO() ? todayISO() : e.target.value)}
+                    className="field-input"
+                  />
                 </div>
-                {dateLogs.map((log) => (
-                  <button
-                    key={log.id}
-                    onClick={() => setViewing(log)}
-                    className="flex w-full items-center gap-3 border-t border-sparrow-rule px-4 py-3 text-left hover:bg-sparrow-mist"
+                <div>
+                  <label className="field-label">Session type</label>
+                  <select
+                    value={manualType}
+                    onChange={(e) => setManualType(e.target.value as SessionLogType)}
+                    className="field-input"
                   >
-                    <span className="flex-1 text-sm font-medium text-sparrow-ink">
-                      {SESSION_LOG_LABEL[log.session_type]}
-                    </span>
-                    <span className="text-xs text-sparrow-gray">
-                      {log.attendance.length} {log.attendance.length === 1 ? 'family' : 'families'}
-                    </span>
-                    <span className="text-xs text-sparrow-gray">
-                      Filed by {log.created_by_name ?? 'staff'}
-                    </span>
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-sparrow-green" title="Filed" />
-                  </button>
-                ))}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+                    <option value="monday_mentoring">Monday Mentoring</option>
+                    <option value="thursday_group">Thursday Group</option>
+                    <option value="ad_hoc">Ad-hoc Session</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button onClick={openManual} className="btn-primary">Continue</button>
+                <button onClick={() => setShowDatePicker(false)} className="btn-ghost">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
 
-      {logsByDate.size === 0 && !loading && (
-        <p className="text-sm text-sparrow-gray">No sessions logged in the past 8 weeks.</p>
-      )}
+      {/* ── Section 2: what's already been logged ───────────────────── */}
+      <section className="mt-10">
+        <h2 className="font-serif text-lg font-semibold text-sparrow-ink">Past sessions</h2>
+        <p className="mt-0.5 text-sm text-sparrow-gray">Everything logged so far, most recent first.</p>
+
+        <div className="mt-4 inline-flex flex-wrap gap-0.5 rounded-xl border border-sparrow-rule bg-sparrow-mist p-1">
+          {([
+            ['recent', 'Recent'],
+            ['group', 'Group Notes'],
+            ['participant', 'By Participant'],
+            ['bucket', 'By Monday Type'],
+          ] as [PastView, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setPastView(key)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                pastView === key ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4">
+          {pastView === 'recent' && (
+            <SessionLogList
+              logsByDate={logsByDate}
+              adHocPreviews={adHocPreviews}
+              onSelect={setViewing}
+              emptyMessage="No sessions logged in the past 8 weeks."
+            />
+          )}
+          {pastView === 'group' && (
+            <SessionLogList
+              logsByDate={filterLogsByDate(logsByDate, (l) => l.session_type === 'thursday_group')}
+              adHocPreviews={adHocPreviews}
+              onSelect={setViewing}
+              emptyMessage="No Thursday Group sessions logged in the past 8 weeks."
+            />
+          )}
+          {pastView === 'participant' && <SessionLogByParticipant families={families} />}
+          {pastView === 'bucket' && <SessionLogByBucket families={families} />}
+        </div>
+      </section>
     </div>
+  );
+}
+
+function filterLogsByDate(logsByDate: Map<string, SessionLog[]>, predicate: (log: SessionLog) => boolean): Map<string, SessionLog[]> {
+  const out = new Map<string, SessionLog[]>();
+  for (const [date, list] of logsByDate) {
+    const filtered = list.filter(predicate);
+    if (filtered.length > 0) out.set(date, filtered);
+  }
+  return out;
+}
+
+function SessionLogList({
+  logsByDate,
+  adHocPreviews,
+  onSelect,
+  emptyMessage,
+}: {
+  logsByDate: Map<string, SessionLog[]>;
+  adHocPreviews: Record<string, string>;
+  onSelect: (log: SessionLog) => void;
+  emptyMessage: string;
+}) {
+  if (logsByDate.size === 0) {
+    return <p className="text-sm text-sparrow-gray">{emptyMessage}</p>;
+  }
+  return (
+    <ul className="space-y-1">
+      {Array.from(logsByDate.entries()).map(([date, dateLogs]) => (
+        <li key={date} className="overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+          <div className="bg-sparrow-mist px-4 py-2">
+            <span className="text-xs font-semibold text-sparrow-gray">{formatDate(date)}</span>
+          </div>
+          {dateLogs.map((log) => {
+            const preview =
+              log.session_type === 'thursday_group' ? log.group_note
+              : log.session_type === 'ad_hoc' ? adHocPreviews[log.id]
+              : null;
+            return (
+              <button
+                key={log.id}
+                onClick={() => onSelect(log)}
+                className="flex w-full items-center gap-3 border-t border-sparrow-rule px-4 py-3 text-left hover:bg-sparrow-mist"
+              >
+                <span className="shrink-0 text-sm font-medium text-sparrow-ink">
+                  {SESSION_LOG_LABEL[log.session_type]}
+                </span>
+                {preview && (
+                  <span className="min-w-0 flex-1 truncate text-sm text-sparrow-gray">"{preview}"</span>
+                )}
+                {!preview && <span className="flex-1" />}
+                <span className="shrink-0 text-xs text-sparrow-gray">
+                  {log.attendance.length} {log.attendance.length === 1 ? 'family' : 'families'}
+                </span>
+                <span className="h-2 w-2 shrink-0 rounded-full bg-sparrow-green" title="Filed" />
+              </button>
+            );
+          })}
+        </li>
+      ))}
+    </ul>
   );
 }

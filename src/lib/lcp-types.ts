@@ -12,6 +12,7 @@ export type HomeworkStatus = 'assigned' | 'submitted' | 'complete';
 export type MessageSender = 'staff' | 'family';
 export type RedemptionStatus = 'requested' | 'fulfilled' | 'cancelled';
 export type SessionLogType = 'monday_mentoring' | 'thursday_group' | 'ad_hoc';
+export type MondayBucket = 'finance' | 'life_skills' | 'mentoring';
 
 export interface Family {
   id: string;
@@ -185,9 +186,18 @@ export interface StaffNote {
   author_name: string | null;
   session_id: number | null;
   session_log_id: string | null;
+  bucket: MondayBucket | null;
   body: string;
   created_at: string;
   updated_at: string | null;
+}
+
+// StaffNote joined with its parent session log's type/date — used anywhere a note
+// needs to show what kind of session it came from (History preview, By Participant,
+// By Monday Type) without a second round trip per note.
+export interface StaffNoteWithSession extends StaffNote {
+  session_log_type: SessionLogType | null;
+  session_log_date: string | null;
 }
 
 export interface SessionLog {
@@ -278,6 +288,20 @@ export const SESSION_LOG_LABEL: Record<SessionLogType, string> = {
   monday_mentoring: 'Monday Mentoring',
   thursday_group:   'Thursday Group',
   ad_hoc:           'Ad-hoc Session',
+};
+
+export const MONDAY_BUCKETS: MondayBucket[] = ['finance', 'life_skills', 'mentoring'];
+
+export const MONDAY_BUCKET_LABEL: Record<MondayBucket, string> = {
+  finance:     'Finance',
+  life_skills: 'Life Skills',
+  mentoring:   'Mentoring',
+};
+
+export const MONDAY_BUCKET_DESCRIPTION: Record<MondayBucket, string> = {
+  finance:     "Andrew's budget & savings check-in",
+  life_skills: 'Goal-setting across life areas',
+  mentoring:   'Heart-level conversation',
 };
 
 // ── Goals ─────────────────────────────────────────────────────────────────────

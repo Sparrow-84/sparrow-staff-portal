@@ -27,6 +27,7 @@ import type {
   LcpPhaseWithUnits,
   LcpUnitSlim,
   Message,
+  MondayBucket,
   ProgramFeeMethod,
   ProgramFeePayment,
   ProgramPosition,
@@ -38,6 +39,7 @@ import type {
   SessionLog,
   SessionLogType,
   StaffNote,
+  StaffNoteWithSession,
   TocSpaceSlim,
   Voucher,
 } from './lcp-types';
@@ -419,7 +421,7 @@ export async function sendStaffMessage(familyId: string, body: string, senderId:
 export async function fetchStaffNotes(familyId: string): Promise<StaffNote[]> {
   const { data, error } = await supabase
     .from('lcp_staff_notes')
-    .select('id, family_id, author_id, session_id, session_log_id, body, created_at, updated_at, author:profiles(full_name)')
+    .select('id, family_id, author_id, session_id, session_log_id, bucket, body, created_at, updated_at, author:profiles(full_name)')
     .eq('family_id', familyId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -430,6 +432,77 @@ export async function fetchStaffNotes(familyId: string): Promise<StaffNote[]> {
       author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
     } as StaffNote;
   });
+}
+
+// Same as fetchStaffNotes, but joined with the parent session log's type/date —
+// used by History-in-panel and the By Participant / By Monday Type home views,
+// which all need to show what kind of session a note came from.
+export async function fetchStaffNotesWithSession(familyId: string, limit?: number): Promise<StaffNoteWithSession[]> {
+  let query = supabase
+    .from('lcp_staff_notes')
+    .select(
+      'id, family_id, author_id, session_id, session_log_id, bucket, body, created_at, updated_at, ' +
+        'author:profiles(full_name), session_log:lcp_session_logs(session_type, session_date)',
+    )
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: false });
+  if (limit) query = query.limit(limit);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown[]).map((r) => {
+    const row = r as Record<string, unknown>;
+    const sessionLog = row.session_log as { session_type: SessionLogType; session_date: string } | null;
+    return {
+      ...row,
+      author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
+      session_log_type: sessionLog?.session_type ?? null,
+      session_log_date: sessionLog?.session_date ?? null,
+    } as StaffNoteWithSession;
+  });
+}
+
+// Every note logged in a given Monday bucket, across every family — the "By Monday
+// Type" home view. Capped at 200 rows; at Sparrow's scale (a handful of families,
+// weekly cadence) that's well over a year of history.
+export async function fetchNotesByBucket(bucket: MondayBucket): Promise<StaffNoteWithSession[]> {
+  const { data, error } = await supabase
+    .from('lcp_staff_notes')
+    .select(
+      'id, family_id, author_id, session_id, session_log_id, bucket, body, created_at, updated_at, ' +
+        'author:profiles(full_name), session_log:lcp_session_logs(session_type, session_date)',
+    )
+    .eq('bucket', bucket)
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown[]).map((r) => {
+    const row = r as Record<string, unknown>;
+    const sessionLog = row.session_log as { session_type: SessionLogType; session_date: string } | null;
+    return {
+      ...row,
+      author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
+      session_log_type: sessionLog?.session_type ?? null,
+      session_log_date: sessionLog?.session_date ?? null,
+    } as StaffNoteWithSession;
+  });
+}
+
+// First-authored note per session log — used for Ad-hoc's single-family preview
+// in the Recent list. Monday shows no preview (3 separate bucket notes don't
+// collapse into one line sensibly); Thursday uses group_note directly instead.
+export async function fetchNotePreviewsForSessionLogs(sessionLogIds: string[]): Promise<Record<string, string>> {
+  if (sessionLogIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from('lcp_staff_notes')
+    .select('session_log_id, body, created_at')
+    .in('session_log_id', sessionLogIds)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  const map: Record<string, string> = {};
+  for (const row of (data ?? []) as { session_log_id: string | null; body: string }[]) {
+    if (row.session_log_id && !map[row.session_log_id]) map[row.session_log_id] = row.body;
+  }
+  return map;
 }
 
 export async function addStaffNote(
@@ -451,6 +524,41 @@ export async function updateStaffNote(id: string, body: string): Promise<void> {
     .update({ body: body.trim(), updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+// Upsert a family's note for one Monday bucket — one row per (session log,
+// family, bucket), whichever staff member is in that bucket tonight. A plain
+// select-then-branch rather than a DB upsert, since the uniqueness constraint
+// is a partial index (bucket IS NOT NULL) and PostgREST's upsert can't target
+// partial indexes directly.
+export async function upsertBucketNote(
+  sessionLogId: string,
+  familyId: string,
+  bucket: MondayBucket,
+  body: string,
+  authorId: string,
+): Promise<void> {
+  const { data: existing, error: findErr } = await supabase
+    .from('lcp_staff_notes')
+    .select('id')
+    .eq('session_log_id', sessionLogId)
+    .eq('family_id', familyId)
+    .eq('bucket', bucket)
+    .maybeSingle();
+  if (findErr) throw new Error(findErr.message);
+
+  if (existing) {
+    const { error } = await supabase
+      .from('lcp_staff_notes')
+      .update({ body, author_id: authorId, updated_at: new Date().toISOString() })
+      .eq('id', (existing as { id: string }).id);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from('lcp_staff_notes')
+      .insert({ session_log_id: sessionLogId, family_id: familyId, bucket, body, author_id: authorId });
+    if (error) throw new Error(error.message);
+  }
 }
 
 // ── Session logs ──────────────────────────────────────────────────────
@@ -505,6 +613,34 @@ export async function createSessionLog(input: {
   return (data as { id: string }).id;
 }
 
+// Monday Mentoring is a shared record for the evening — whichever staff member
+// opens it first creates the row; everyone after reuses the same one. This is
+// what lets Finance/Life Skills/Mentoring be filled in independently by
+// different staff without producing 3 separate, partially-overlapping logs for
+// the same night (Thursday/ad-hoc keep the old one-row-per-filing behavior).
+export async function findOrCreateMondaySessionLog(
+  sessionDate: string,
+  eventId: string | null,
+  createdBy: string,
+): Promise<string> {
+  const { data: existing, error: findErr } = await supabase
+    .from('lcp_session_logs')
+    .select('id')
+    .eq('session_date', sessionDate)
+    .eq('session_type', 'monday_mentoring')
+    .maybeSingle();
+  if (findErr) throw new Error(findErr.message);
+  if (existing) return (existing as { id: string }).id;
+
+  return createSessionLog({
+    session_date: sessionDate,
+    session_type: 'monday_mentoring',
+    event_id: eventId,
+    group_note: null,
+    created_by: createdBy,
+  });
+}
+
 export async function upsertSessionAttendance(
   sessionLogId: string,
   familyId: string,
@@ -533,7 +669,7 @@ export async function fetchAttendanceForSessionLog(sessionLogId: string): Promis
 export async function fetchNotesForSessionLog(sessionLogId: string): Promise<StaffNote[]> {
   const { data, error } = await supabase
     .from('lcp_staff_notes')
-    .select('id, family_id, author_id, session_id, session_log_id, body, created_at, updated_at, author:profiles(full_name)')
+    .select('id, family_id, author_id, session_id, session_log_id, bucket, body, created_at, updated_at, author:profiles(full_name)')
     .eq('session_log_id', sessionLogId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);

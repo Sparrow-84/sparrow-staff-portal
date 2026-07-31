@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   ATTENDANCE_LABEL,
+  MONDAY_BUCKETS,
+  MONDAY_BUCKET_LABEL,
   SESSION_LOG_LABEL,
   type Family,
   type SessionLog,
@@ -68,7 +70,10 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
-        <button onClick={onBack} className="mt-0.5 text-sm text-sparrow-gray hover:text-sparrow-ink">
+        <button
+          onClick={onBack}
+          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green transition hover:bg-sparrow-sage/70"
+        >
           ← Back
         </button>
         <div>
@@ -146,84 +151,151 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
       )}
 
       {/* Per-family notes */}
-      <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
-        <div className="flex items-center justify-between">
-          <span className="field-label">
-            {log.session_type === 'thursday_group' ? 'Individual session notes' : 'Session notes'}
-          </span>
-          {noteSaved && <span className="text-xs text-sparrow-green">Saved</span>}
+      {log.session_type === 'monday_mentoring' ? (
+        <div className="space-y-4">
+          {MONDAY_BUCKETS.map((bucket) => (
+            <section key={bucket} className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+              <div className="flex items-center justify-between">
+                <span className="field-label">{MONDAY_BUCKET_LABEL[bucket]}</span>
+                {noteSaved && <span className="text-xs text-sparrow-green">Saved</span>}
+              </div>
+              <NoteList
+                notes={notes.filter((n) => n.bucket === bucket)}
+                familyMap={familyMap}
+                currentUserId={currentUserId}
+                editingNoteId={editingNoteId}
+                editNoteBody={editNoteBody}
+                savingNote={savingNote}
+                onEditStart={(n) => { setEditingNoteId(n.id); setEditNoteBody(n.body); }}
+                onEditCancel={() => setEditingNoteId(null)}
+                onEditBodyChange={setEditNoteBody}
+                onSave={saveNote}
+                onOpenFamily={onOpenFamily}
+                emptyMessage="No note logged for this bucket."
+              />
+            </section>
+          ))}
         </div>
-        {notes.length === 0 ? (
-          <p className="mt-2 text-sm text-sparrow-gray">No notes were filed for this session.</p>
-        ) : (
-          <ul className="mt-3 space-y-3">
-            {notes.map((n) => {
-              const family = familyMap.get(n.family_id);
-              return (
-                <li key={n.id} className="rounded-xl border border-sparrow-rule/70 p-3">
-                  {family && (
-                    <button
-                      onClick={() => onOpenFamily(family.id)}
-                      className="mb-1.5 text-xs font-semibold text-sparrow-gray hover:text-sparrow-green hover:underline"
-                      title={`See all of ${family.display_name}'s notes`}
-                    >
-                      {family.display_name}
-                    </button>
-                  )}
-                  {editingNoteId === n.id ? (
-                    <div className="space-y-2">
-                      <textarea
-                        value={editNoteBody}
-                        onChange={(e) => setEditNoteBody(e.target.value)}
-                        rows={3}
-                        className="field-input"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => saveNote(n.id)}
-                          disabled={savingNote || !editNoteBody.trim()}
-                          className="btn-primary text-xs"
-                        >
-                          {savingNote ? 'Saving…' : 'Save'}
-                        </button>
-                        <button
-                          onClick={() => setEditingNoteId(null)}
-                          disabled={savingNote}
-                          className="btn-ghost text-xs"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-sm text-sparrow-ink">{n.body}</p>
-                      <div className="mt-1 flex items-center justify-between gap-2">
-                        <p className="text-xs text-sparrow-gray">
-                          {n.author_name && `${n.author_name} · `}
-                          {n.updated_at && n.updated_at !== n.created_at
-                            ? `Edited ${dayLabel(n.updated_at)}`
-                            : dayLabel(n.created_at)}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          {n.author_id === currentUserId && (
-                            <button
-                              onClick={() => { setEditingNoteId(n.id); setEditNoteBody(n.body); }}
-                              className="text-xs text-sparrow-gray hover:text-sparrow-green"
-                            >
-                              Edit
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      ) : (
+        <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+          <div className="flex items-center justify-between">
+            <span className="field-label">
+              {log.session_type === 'thursday_group' ? 'Individual session notes' : 'Session notes'}
+            </span>
+            {noteSaved && <span className="text-xs text-sparrow-green">Saved</span>}
+          </div>
+          <NoteList
+            notes={notes}
+            familyMap={familyMap}
+            currentUserId={currentUserId}
+            editingNoteId={editingNoteId}
+            editNoteBody={editNoteBody}
+            savingNote={savingNote}
+            onEditStart={(n) => { setEditingNoteId(n.id); setEditNoteBody(n.body); }}
+            onEditCancel={() => setEditingNoteId(null)}
+            onEditBodyChange={setEditNoteBody}
+            onSave={saveNote}
+            onOpenFamily={onOpenFamily}
+            emptyMessage="No notes were filed for this session."
+          />
+        </section>
+      )}
     </div>
+  );
+}
+
+function NoteList({
+  notes,
+  familyMap,
+  currentUserId,
+  editingNoteId,
+  editNoteBody,
+  savingNote,
+  onEditStart,
+  onEditCancel,
+  onEditBodyChange,
+  onSave,
+  onOpenFamily,
+  emptyMessage,
+}: {
+  notes: StaffNote[];
+  familyMap: Map<string, Family>;
+  currentUserId: string;
+  editingNoteId: string | null;
+  editNoteBody: string;
+  savingNote: boolean;
+  onEditStart: (n: StaffNote) => void;
+  onEditCancel: () => void;
+  onEditBodyChange: (body: string) => void;
+  onSave: (id: string) => void;
+  onOpenFamily: (familyId: string) => void;
+  emptyMessage: string;
+}) {
+  if (notes.length === 0) {
+    return <p className="mt-2 text-sm text-sparrow-gray">{emptyMessage}</p>;
+  }
+  return (
+    <ul className="mt-3 space-y-3">
+      {notes.map((n) => {
+        const family = familyMap.get(n.family_id);
+        // Bucket notes are a shared record any staff can edit; non-bucket notes
+        // (Thursday/ad-hoc) stay author-only, as before.
+        const canEdit = n.bucket !== null || n.author_id === currentUserId;
+        return (
+          <li key={n.id} className="rounded-xl border border-sparrow-rule/70 p-3">
+            {family && (
+              <button
+                onClick={() => onOpenFamily(family.id)}
+                className="mb-1.5 text-xs font-semibold text-sparrow-gray hover:text-sparrow-green hover:underline"
+                title={`See all of ${family.display_name}'s notes`}
+              >
+                {family.display_name}
+              </button>
+            )}
+            {editingNoteId === n.id ? (
+              <div className="space-y-2">
+                <textarea
+                  value={editNoteBody}
+                  onChange={(e) => onEditBodyChange(e.target.value)}
+                  rows={3}
+                  className="field-input"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onSave(n.id)}
+                    disabled={savingNote || !editNoteBody.trim()}
+                    className="btn-primary text-xs"
+                  >
+                    {savingNote ? 'Saving…' : 'Save'}
+                  </button>
+                  <button onClick={onEditCancel} disabled={savingNote} className="btn-ghost text-xs">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-sparrow-ink">{n.body}</p>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <p className="text-xs text-sparrow-gray">
+                    {n.author_name && `${n.author_name} · `}
+                    {n.updated_at && n.updated_at !== n.created_at
+                      ? `Edited ${dayLabel(n.updated_at)}`
+                      : dayLabel(n.created_at)}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <button onClick={() => onEditStart(n)} className="text-xs text-sparrow-gray hover:text-sparrow-green">
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

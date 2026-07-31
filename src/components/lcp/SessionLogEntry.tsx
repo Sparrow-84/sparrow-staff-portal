@@ -346,7 +346,10 @@ export function SessionLogEntry({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
-        <button onClick={onBack} className="mt-0.5 text-sm text-sparrow-gray hover:text-sparrow-ink">
+        <button
+          onClick={onBack}
+          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green transition hover:bg-sparrow-sage/70"
+        >
           ← Back
         </button>
         <div>
