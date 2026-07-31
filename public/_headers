@@ -1,0 +1,11 @@
+# Caching headers applied by Cloudflare Pages.
+# Always revalidate the app shell so staff get the latest build without a manual hard refresh.
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/
+  Cache-Control: no-cache, must-revalidate
+
+# Vite fingerprints these filenames per build, so they can be cached forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
