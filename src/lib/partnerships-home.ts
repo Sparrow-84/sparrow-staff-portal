@@ -170,11 +170,15 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
   const items: HomeItem[] = [];
 
   // 1. Partner touchpoints coming due — mirrors emit_due_touchpoint_tasks().
+  // A partner who's NEVER been touched is due today, full stop — not
+  // created_at + cadence_days (that treated "never contacted" as if the
+  // stewardship clock had just started, hiding brand-new donors for a full
+  // cadence period instead of surfacing them immediately). Fixed 2026-07-31
+  // (migration 0115) after a real Givebutter test donor sat un-surfaced.
   for (const p of partners) {
     if (!p.owner_id || p.cadence_days == null) continue;
     if (p.stage !== 'active' && p.stage !== 'prospect') continue;
-    const anchor = dateOnly(p.last_touchpoint_at ?? p.created_at);
-    const due = addDays(anchor, p.cadence_days);
+    const due = p.last_touchpoint_at ? addDays(dateOnly(p.last_touchpoint_at), p.cadence_days) : today;
     if (!inScope(due, today)) continue;
     items.push({
       key: `touchpoint:${p.id}`,

@@ -595,9 +595,7 @@ export function PartnerDetailPanel({
             }}
           />
           <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">
-            What this partner is drawn to (kids, poverty, LCP, etc.) — lets Bethany find and
-            group everyone interested in a given cause for targeted outreach. Search Directory
-            by an interest's name to pull up everyone tagged with it.
+            You can search Directory by an interest's name to pull up everyone tagged with it.
           </p>
         </section>
 

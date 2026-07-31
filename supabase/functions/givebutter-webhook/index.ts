@@ -119,7 +119,11 @@ async function handleTransactionSucceeded(supabase: ReturnType<typeof createClie
       .maybeSingle();
     if (exact) {
       await supabase.from('donations').update({ partner_id: exact.id }).eq('id', donationId);
-      await supabase.rpc('attach_gift_to_partner', { p_partner_id: exact.id, p_amount_above_10k: amountAbove10k });
+      await supabase.rpc('attach_gift_to_partner', {
+        p_partner_id: exact.id,
+        p_amount_above_10k: amountAbove10k,
+        p_gift_date: receivedOn,
+      });
       return;
     }
   }
@@ -160,6 +164,7 @@ async function handleTransactionSucceeded(supabase: ReturnType<typeof createClie
     p_email: givenByEmail,
     p_amount_above_10k: amountAbove10k,
     p_source: 'Givebutter',
+    p_gift_date: receivedOn,
   });
   await supabase.from('donations').update({ partner_id: newPartnerId }).eq('id', donationId);
 }
