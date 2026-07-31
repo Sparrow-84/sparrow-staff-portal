@@ -145,7 +145,9 @@ export interface Homework {
   status: HomeworkStatus;
   submission_text: string | null;
   submitted_at: string | null;
+  completed_at: string | null;
   assigned_by: string | null;
+  created_at: string;
 }
 
 export interface LcpEvent {
@@ -260,6 +262,17 @@ export const AREA_LABEL: Record<HomeworkArea, string> = {
   spiritual: 'Spiritual',
   emotional: 'Emotional',
   general: 'General',
+};
+
+// Shared by goals and homework (same 5 life-area values) — a deliberately
+// different palette from the Monday bucket colors (Finance/Life Skills/
+// Mentoring) so the two categorizations never look like the same taxonomy.
+export const AREA_COLOR_CLASS: Record<HomeworkArea, string> = {
+  relational: 'bg-rose-100 text-rose-700',
+  physical_financial: 'bg-teal-100 text-teal-700',
+  spiritual: 'bg-indigo-100 text-indigo-700',
+  emotional: 'bg-orange-100 text-orange-700',
+  general: 'bg-slate-100 text-slate-700',
 };
 
 export const ATTENDANCE_LABEL: Record<AttendanceStatus, string> = {

@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
-import { SESSION_LOG_LABEL, type Family, type StaffNoteWithSession } from '@/lib/lcp-types';
-import { fetchStaffNotesWithSession } from '@/lib/lcp';
+import {
+  AREA_COLOR_CLASS,
+  AREA_LABEL,
+  GOAL_AREA_LABEL,
+  SESSION_LOG_LABEL,
+  type Family,
+  type Goal,
+  type GoalArea,
+  type Homework,
+  type HomeworkArea,
+  type StaffNoteWithSession,
+} from '@/lib/lcp-types';
+import { fetchGoalsForFamily, fetchHomeworkForFamily, fetchStaffNotesWithSession } from '@/lib/lcp';
 import { dayLabel } from '@/lib/lcp-format';
 
 // Distinct colors per note category, consistent with the Monday filing panel's
@@ -48,20 +59,66 @@ function NoteCard({ note }: { note: StaffNoteWithSession }) {
   );
 }
 
+type Subtab = 'notes' | 'goals' | 'homework';
+
+// One line per item (not one line per action) — a status circle (green ✓ once
+// done, grey/empty while open), a color-coded area badge, the title, and a
+// single "Assigned [date]" / "Completed [date]" line — same wording whether
+// it's a goal or a piece of homework.
+function GoalHomeworkRow({
+  title,
+  area,
+  areaLabel,
+  assignedAt,
+  completedAt,
+}: {
+  title: string;
+  area: GoalArea | HomeworkArea;
+  areaLabel: string;
+  assignedAt: string;
+  completedAt: string | null;
+}) {
+  const done = !!completedAt;
+  return (
+    <div className="flex items-center gap-2 border-t border-sparrow-rule/70 py-2.5 first:border-t-0 first:pt-0">
+      <span
+        className={`grid h-4 w-4 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
+          done ? 'bg-sparrow-green text-white' : 'bg-sparrow-mist text-sparrow-gray'
+        }`}
+      >
+        {done ? '✓' : ''}
+      </span>
+      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${AREA_COLOR_CLASS[area]}`}>{areaLabel}</span>
+      <span className="min-w-0 flex-1 truncate text-sm text-sparrow-ink">{title}</span>
+      <span className="shrink-0 text-xs text-sparrow-gray">
+        {done ? `Completed ${dayLabel(completedAt)}` : `Assigned ${dayLabel(assignedAt)}`}
+      </span>
+    </div>
+  );
+}
+
 export function SessionLogByParticipant({ families }: { families: Family[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(families[0]?.id ?? null);
+  const [subtab, setSubtab] = useState<Subtab>('notes');
   const [notes, setNotes] = useState<StaffNoteWithSession[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [homework, setHomework] = useState<Homework[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedId) return;
     let cancelled = false;
     setLoading(true);
-    fetchStaffNotesWithSession(selectedId).then((ns) => {
-      if (!cancelled) {
-        setNotes(ns);
-        setLoading(false);
-      }
+    Promise.all([
+      fetchStaffNotesWithSession(selectedId),
+      fetchGoalsForFamily(selectedId),
+      fetchHomeworkForFamily(selectedId),
+    ]).then(([ns, gl, hw]) => {
+      if (cancelled) return;
+      setNotes(ns);
+      setGoals(gl);
+      setHomework(hw);
+      setLoading(false);
     });
     return () => {
       cancelled = true;
@@ -88,12 +145,53 @@ export function SessionLogByParticipant({ families }: { families: Family[] }) {
 
       <div className="min-h-[20rem] rounded-2xl border border-sparrow-rule bg-white p-4">
         {selected && <h3 className="mb-2 font-serif text-lg font-semibold text-sparrow-ink">{selected.display_name}</h3>}
+
+        <div className="mb-3 inline-flex gap-0.5 rounded-lg border border-sparrow-rule bg-sparrow-mist p-1">
+          {(['notes', 'goals', 'homework'] as Subtab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setSubtab(t)}
+              className={`rounded-md px-2.5 py-1 text-xs font-semibold capitalize transition ${
+                subtab === t ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
         {loading ? (
           <p className="text-sm text-sparrow-gray">Loading…</p>
-        ) : notes.length === 0 ? (
-          <p className="text-sm text-sparrow-gray">No notes yet.</p>
+        ) : subtab === 'notes' ? (
+          notes.length === 0 ? <p className="text-sm text-sparrow-gray">No notes yet.</p> : notes.map((n) => <NoteCard key={n.id} note={n} />)
+        ) : subtab === 'goals' ? (
+          goals.length === 0 ? (
+            <p className="text-sm text-sparrow-gray">No goals yet.</p>
+          ) : (
+            goals.map((g) => (
+              <GoalHomeworkRow
+                key={g.id}
+                title={g.title}
+                area={g.area}
+                areaLabel={GOAL_AREA_LABEL[g.area]}
+                assignedAt={g.created_at}
+                completedAt={g.met_at}
+              />
+            ))
+          )
+        ) : homework.length === 0 ? (
+          <p className="text-sm text-sparrow-gray">No homework yet.</p>
         ) : (
-          notes.map((n) => <NoteCard key={n.id} note={n} />)
+          homework.map((h) => (
+            <GoalHomeworkRow
+              key={h.id}
+              title={h.title}
+              area={h.area}
+              areaLabel={AREA_LABEL[h.area]}
+              assignedAt={h.created_at}
+              completedAt={h.completed_at}
+            />
+          ))
         )}
       </div>
     </div>

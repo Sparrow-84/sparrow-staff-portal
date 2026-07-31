@@ -265,7 +265,10 @@ export async function assignHomework(input: HomeworkInput, assignedBy: string): 
 }
 
 export async function setHomeworkStatus(id: string, status: HomeworkStatus): Promise<void> {
-  const { error } = await supabase.from('lcp_homework').update({ status }).eq('id', id);
+  const patch: { status: HomeworkStatus; completed_at?: string | null } = { status };
+  if (status === 'complete') patch.completed_at = new Date().toISOString();
+  else if (status === 'assigned') patch.completed_at = null;
+  const { error } = await supabase.from('lcp_homework').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 }
 
