@@ -230,6 +230,18 @@ export async function deleteProgramPosition(): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+// The curriculum is group-paced: every active family advances together when
+// Thursday's session is filed, regardless of who actually attended that
+// night. Shelly can still move an individual family back manually via the
+// "Curriculum entry" unit picker on their detail panel — expected to be rare.
+export async function advanceAllFamiliesToSession(sessionNumber: number): Promise<void> {
+  const { error } = await supabase
+    .from('families')
+    .update({ current_session_number: sessionNumber })
+    .eq('active', true);
+  if (error) throw new Error(error.message);
+}
+
 // ── Homework ─────────────────────────────────────────────────────────
 export async function fetchAllHomework(): Promise<Homework[]> {
   const { data, error } = await supabase
