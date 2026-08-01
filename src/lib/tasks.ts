@@ -52,11 +52,10 @@ export interface DayGroup {
 }
 
 /**
- * List view grouping: Overdue pinned first, then Today, then each remaining
- * day of the current week (Mon–Sun) in order — skipping any day with nothing
- * due — then anything further out, then undated tasks. Unlike groupTasks(),
- * this shrinks to nothing once the week's work is done instead of holding a
- * standing "this week / upcoming" bucket.
+ * List view grouping: Overdue pinned first, then one section per remaining
+ * day of the current week (today through Sunday), then anything further
+ * out, then undated tasks. The day sections always render — even with zero
+ * items — so every day is a valid drag-and-drop target for rescheduling.
  */
 export function weekListGroups(tasks: TaskWithPeople[], today: string): DayGroup[] {
   const todayD = new Date(today + 'T00:00:00');
@@ -68,7 +67,6 @@ export function weekListGroups(tasks: TaskWithPeople[], today: string): DayGroup
   const weekEndIso = isoDate(weekEnd);
 
   const overdue: TaskWithPeople[] = [];
-  const todayItems: TaskWithPeople[] = [];
   const byDate = new Map<string, TaskWithPeople[]>();
   const noDate: TaskWithPeople[] = [];
 
@@ -77,8 +75,6 @@ export function weekListGroups(tasks: TaskWithPeople[], today: string): DayGroup
       noDate.push(t);
     } else if (t.due_date < today) {
       overdue.push(t);
-    } else if (t.due_date === today) {
-      todayItems.push(t);
     } else if (t.due_date <= weekEndIso) {
       const list = byDate.get(t.due_date) ?? [];
       list.push(t);
@@ -90,16 +86,15 @@ export function weekListGroups(tasks: TaskWithPeople[], today: string): DayGroup
 
   const groups: DayGroup[] = [];
   if (overdue.length > 0) groups.push({ key: 'overdue', label: 'Overdue', items: overdue });
-  if (todayItems.length > 0) groups.push({ key: 'today', label: 'Today', items: todayItems });
 
-  for (const d = new Date(todayD); ; ) {
-    d.setDate(d.getDate() + 1);
+  for (const d = new Date(todayD); ; d.setDate(d.getDate() + 1)) {
     const iso = isoDate(d);
     if (iso > weekEndIso) break;
-    const items = byDate.get(iso);
-    if (items && items.length > 0) {
-      groups.push({ key: iso, label: d.toLocaleDateString(undefined, { weekday: 'long' }), items });
-    }
+    groups.push({
+      key: iso,
+      label: iso === today ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'long' }),
+      items: byDate.get(iso) ?? [],
+    });
   }
 
   if (noDate.length > 0) groups.push({ key: 'no_date', label: 'No date', items: noDate });

@@ -233,6 +233,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
             showAssignee={showAssignee}
             onToggle={toggleDone}
             onOpen={openEdit}
+            onMoveDate={moveToDate}
           />
         )}
         {layout === 'board' && (

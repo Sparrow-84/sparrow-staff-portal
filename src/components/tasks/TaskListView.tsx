@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, type DragEvent } from 'react';
 import { dueLabel, weekListGroups } from '@/lib/tasks';
 import type { TaskWithPeople } from '@/lib/types';
 import { PriorityChip } from '../PriorityChip';
@@ -12,22 +12,46 @@ interface Props {
   showAssignee: boolean;
   onToggle: (task: TaskWithPeople) => void;
   onOpen: (task: TaskWithPeople) => void;
+  onMoveDate: (taskId: string, dateIso: string | null) => void;
 }
 
-export function TaskListView({ tasks, today, currentUserId, showAssignee, onToggle, onOpen }: Props) {
+// A group's key is a real ISO date (droppable to reschedule) unless it's one
+// of these two overflow buckets, which aren't days you can drag a task onto.
+function isDateKey(key: string): boolean {
+  return key !== 'overdue' && key !== 'no_date';
+}
+
+export function TaskListView({ tasks, today, currentUserId, showAssignee, onToggle, onOpen, onMoveDate }: Props) {
   const groups = useMemo(() => weekListGroups(tasks, today), [tasks, today]);
+  const [overKey, setOverKey] = useState<string | null>(null);
 
   if (tasks.length === 0) return <EmptyState />;
-  if (groups.length === 0) return <EmptyState allDoneThisWeek />;
+
+  function onDrop(e: DragEvent, key: string) {
+    e.preventDefault();
+    setOverKey(null);
+    if (!isDateKey(key)) return;
+    const id = e.dataTransfer.getData('text/plain');
+    if (id) onMoveDate(id, key);
+  }
 
   return (
     <div className="space-y-8">
       {groups.map(({ key, label, items }) => (
-        <section key={key}>
+        <section
+          key={key}
+          onDragOver={isDateKey(key) ? (e) => { e.preventDefault(); setOverKey(key); } : undefined}
+          onDragLeave={isDateKey(key) ? () => setOverKey((k) => (k === key ? null : k)) : undefined}
+          onDrop={isDateKey(key) ? (e) => onDrop(e, key) : undefined}
+        >
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
             {label} <span className="text-sparrow-gray/70">· {items.length}</span>
           </h2>
-          <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+          <ul
+            className={`divide-y divide-sparrow-rule overflow-hidden rounded-xl border bg-white transition ${
+              overKey === key ? 'border-sparrow-gold bg-amber-50' : 'border-sparrow-rule'
+            }`}
+          >
             {items.map((t) => (
               <TaskRow
                 key={t.id}
@@ -40,6 +64,9 @@ export function TaskListView({ tasks, today, currentUserId, showAssignee, onTogg
                 onOpen={() => onOpen(t)}
               />
             ))}
+            {items.length === 0 && (
+              <li className="px-4 py-6 text-center text-xs text-sparrow-gray/70">Drop a task here</li>
+            )}
           </ul>
         </section>
       ))}
@@ -47,16 +74,10 @@ export function TaskListView({ tasks, today, currentUserId, showAssignee, onTogg
   );
 }
 
-function EmptyState({ allDoneThisWeek = false }: { allDoneThisWeek?: boolean }) {
+function EmptyState() {
   return (
     <p className="rounded-xl border border-dashed border-sparrow-rule bg-white p-8 text-center text-sm text-sparrow-gray">
-      {allDoneThisWeek ? (
-        <>Nothing due this week. 🎉 Later tasks are on the Board, Calendar, or Planner view.</>
-      ) : (
-        <>
-          Nothing here yet. Click <span className="font-medium text-sparrow-green">+ New task</span> to add one.
-        </>
-      )}
+      Nothing here yet. Click <span className="font-medium text-sparrow-green">+ New task</span> to add one.
     </p>
   );
 }
@@ -82,7 +103,11 @@ function TaskRow({
   const assignedByOther = task.created_by !== task.assignee_id && task.assignee_id === currentUserId;
 
   return (
-    <li className="flex items-center gap-3 px-4 py-3 hover:bg-sparrow-mist">
+    <li
+      draggable
+      onDragStart={(e) => e.dataTransfer.setData('text/plain', task.id)}
+      className="flex cursor-grab items-center gap-3 px-4 py-3 hover:bg-sparrow-mist active:cursor-grabbing"
+    >
       <input
         type="checkbox"
         checked={done}
