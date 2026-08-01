@@ -473,10 +473,6 @@ export function SessionLogEntry({
               <p className="mt-1 text-sm font-medium text-sparrow-ink">
                 Session {sessionToTeach.session_number} · {sessionToTeach.title}
               </p>
-              <p className="mt-0.5 text-xs text-sparrow-gray">
-                Filing this session will set it as the group's current position — what Monday
-                Mentoring reads afterward.
-              </p>
 
               {/* Quick access to tonight's materials — no need to hunt through Curriculum Admin */}
               <div className="mt-3 flex flex-wrap items-center gap-2">

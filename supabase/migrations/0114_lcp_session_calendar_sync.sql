@@ -32,7 +32,7 @@ BEGIN
     'lcp_session', NEW.title, NEW.starts_at, NEW.ends_at, false, NEW.location, NEW.recurrence_id,
     'lcp', false, NEW.created_by, 'lcp_session', NEW.id::text
   )
-  ON CONFLICT (source_system, source_ref) DO UPDATE SET
+  ON CONFLICT (source_system, source_ref) WHERE source_system IS NOT NULL DO UPDATE SET
     title = EXCLUDED.title,
     starts_at = EXCLUDED.starts_at,
     ends_at = EXCLUDED.ends_at,
@@ -125,6 +125,6 @@ BEGIN
       'lcp_session', r.title, r.starts_at, r.ends_at, false, r.location, r.recurrence_id,
       'lcp', false, r.created_by, 'lcp_session', r.id::text
     )
-    ON CONFLICT (source_system, source_ref) DO NOTHING;
+    ON CONFLICT (source_system, source_ref) WHERE source_system IS NOT NULL DO NOTHING;
   END LOOP;
 END $$;
