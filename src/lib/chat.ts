@@ -222,10 +222,14 @@ export async function deleteMessage(messageId: string): Promise<void> {
 }
 
 export async function editMessage(messageId: string, newBody: string): Promise<void> {
+  // .select().single() forces an error when RLS blocks the update (0 rows updated)
+  // instead of silently succeeding with nothing changed — see 0118_chat_message_update.sql.
   const { error } = await supabase
     .from('chat_messages')
     .update({ body: newBody, edited_at: new Date().toISOString() })
-    .eq('id', messageId);
+    .eq('id', messageId)
+    .select()
+    .single();
   if (error) throw new Error(error.message);
 }
 
