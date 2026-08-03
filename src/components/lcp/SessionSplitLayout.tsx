@@ -20,12 +20,21 @@ export interface MondayMentorContent {
   goingDeeper: string | null;
 }
 
+export interface ThursdayGuideContent {
+  sessionNumber: number;
+  sessionTitle: string;
+  teacherGuide: string | null;
+  teacherGuideDriveUrl: string | null;
+}
+
 export function SessionSplitLayout({
   sessionLabel,
   sessionDate,
   sessionType,
   mondayContent,
   mondayLoading,
+  thursdayGuideContent,
+  thursdayGuideLoading,
   children,
 }: {
   sessionLabel: string;
@@ -33,6 +42,8 @@ export function SessionSplitLayout({
   sessionType?: SessionLogType;
   mondayContent?: MondayMentorContent | null;
   mondayLoading?: boolean;
+  thursdayGuideContent?: ThursdayGuideContent | null;
+  thursdayGuideLoading?: boolean;
   children: ReactNode;
 }) {
   const [notesOpen, setNotesOpen] = useState(true);
@@ -137,6 +148,55 @@ export function SessionSplitLayout({
                   ) : (
                     <p className="text-sm text-sparrow-gray">
                       No Thursday session has been filed yet, so there's nothing for Monday to reference.
+                    </p>
+                  )}
+                </div>
+                <div className="shrink-0 border-t border-sparrow-rule">
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                    className="w-full resize-none bg-white p-3 text-xs leading-relaxed text-sparrow-ink outline-none placeholder:text-sparrow-rule"
+                    placeholder="Personal scratch notes — visible only here, not saved"
+                  />
+                </div>
+              </div>
+            ) : sessionType === 'thursday_group' ? (
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="shrink-0 border-b border-sparrow-rule bg-sparrow-mist px-4 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+                    Teacher Guide
+                  </p>
+                  <p className="text-[10px] text-sparrow-gray/70">
+                    Tonight's script — Slideshow &amp; Student Handout links are on the right
+                  </p>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
+                  {thursdayGuideLoading ? (
+                    <p className="text-sm text-sparrow-gray">Loading tonight's guide…</p>
+                  ) : thursdayGuideContent ? (
+                    <>
+                      <p className="mb-3 text-sm font-semibold text-sparrow-green">
+                        Session {thursdayGuideContent.sessionNumber} · {thursdayGuideContent.sessionTitle}
+                      </p>
+                      {thursdayGuideContent.teacherGuide ? (
+                        <RichTextView html={thursdayGuideContent.teacherGuide} />
+                      ) : thursdayGuideContent.teacherGuideDriveUrl ? (
+                        <a
+                          href={thursdayGuideContent.teacherGuideDriveUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-sparrow-green hover:underline"
+                        >
+                          Open Teacher Guide ↗
+                        </a>
+                      ) : (
+                        <p className="text-sm text-sparrow-gray">Not filled in yet — add it in Curriculum Admin.</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-sparrow-gray">
+                      No session is currently positioned to teach — check the Progress tab.
                     </p>
                   )}
                 </div>

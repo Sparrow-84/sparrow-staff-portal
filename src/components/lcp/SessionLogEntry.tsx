@@ -32,7 +32,6 @@ import {
   upsertSessionAttendance,
 } from '@/lib/lcp';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
-import { RichTextView } from './RichText';
 
 const STATUSES: AttendanceStatus[] = ['on_time', 'late', 'no_show'];
 
@@ -113,7 +112,6 @@ export function SessionLogEntry({
   // ── tonight's materials (Thursday only) — quick access to what's needed
   // live during the session, without leaving this screen ────────────────
   const [tonightResources, setTonightResources] = useState<Resource[]>([]);
-  const [guideOpen, setGuideOpen] = useState(false);
   useEffect(() => {
     if (sessionType !== 'thursday_group' || !sessionToTeach) {
       setTonightResources([]);
@@ -125,7 +123,6 @@ export function SessionLogEntry({
     });
     return () => { cancelled = true; };
   }, [sessionType, sessionToTeach?.id]);
-  const tonightTeacherGuide = tonightResources.find((r) => r.kind === 'teacher_guide') ?? null;
   const tonightSlideshow = tonightResources.find((r) => r.kind === 'ppt') ?? null;
   const tonightHandout = tonightResources.find((r) => r.kind === 'handout') ?? null;
 
@@ -474,15 +471,8 @@ export function SessionLogEntry({
                 Session {sessionToTeach.session_number} · {sessionToTeach.title}
               </p>
 
-              {/* Quick access to tonight's materials — no need to hunt through Curriculum Admin */}
+              {/* Quick access to tonight's materials — Teacher Guide itself is on the left */}
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setGuideOpen((v) => !v)}
-                  disabled={!tonightTeacherGuide?.content && !tonightTeacherGuide?.drive_url}
-                  className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-sparrow-green shadow-sm ring-1 ring-sparrow-rule transition hover:bg-sparrow-mist disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {guideOpen ? 'Hide Teacher Guide' : 'Teacher Guide'}
-                </button>
                 {tonightSlideshow?.drive_url ? (
                   <a
                     href={tonightSlideshow.drive_url}
@@ -508,23 +498,6 @@ export function SessionLogEntry({
                   <span className="rounded-lg px-3 py-1.5 text-xs text-sparrow-gray">Handout not added</span>
                 )}
               </div>
-
-              {guideOpen && tonightTeacherGuide && (
-                <div className="mt-3 max-h-96 overflow-y-auto rounded-xl border border-sparrow-rule bg-white p-4">
-                  {tonightTeacherGuide.content ? (
-                    <RichTextView html={tonightTeacherGuide.content} />
-                  ) : tonightTeacherGuide.drive_url ? (
-                    <a
-                      href={tonightTeacherGuide.drive_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-medium text-sparrow-green hover:underline"
-                    >
-                      Open Teacher Guide ↗
-                    </a>
-                  ) : null}
-                </div>
-              )}
             </>
           ) : (
             <p className="text-sm text-sparrow-gray">

@@ -9,14 +9,14 @@ import {
   type SessionLog,
   type SessionLogType,
 } from '@/lib/lcp-types';
-import { fetchNotePreviewsForSessionLogs, fetchRecentSessionLogs, fetchSessionMentorContent, fetchTodayEvents } from '@/lib/lcp';
+import { fetchNotePreviewsForSessionLogs, fetchRecentSessionLogs, fetchSessionMentorContent, fetchSessionResources, fetchTodayEvents } from '@/lib/lcp';
 import { timeLabel } from '@/lib/lcp-format';
 import { MondaySessionPanel } from './MondaySessionPanel';
 import { SessionLogByBucket } from './SessionLogByBucket';
 import { SessionLogByParticipant } from './SessionLogByParticipant';
 import { SessionLogEntry } from './SessionLogEntry';
 import { SessionLogViewer } from './SessionLogViewer';
-import { SessionSplitLayout, type MondayMentorContent } from './SessionSplitLayout';
+import { SessionSplitLayout, type MondayMentorContent, type ThursdayGuideContent } from './SessionSplitLayout';
 
 type PastView = 'recent' | 'group' | 'participant' | 'bucket';
 
@@ -62,6 +62,8 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
   const [mondayContent, setMondayContent] = useState<MondayMentorContent | null>(null);
   const [mondayLoading, setMondayLoading] = useState(false);
+  const [thursdayGuideContent, setThursdayGuideContent] = useState<ThursdayGuideContent | null>(null);
+  const [thursdayGuideLoading, setThursdayGuideLoading] = useState(false);
   const [pastView, setPastView] = useState<PastView>('recent');
   const [adHocPreviews, setAdHocPreviews] = useState<Record<string, string>>({});
 
@@ -105,6 +107,33 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
       .finally(() => setMondayLoading(false));
   }, [entry, programSessionId]);
 
+  // Thursday Group's left pane shows the actual Teacher Guide for tonight's
+  // session — "whatever comes right after the last one filed," same rule
+  // SessionLogEntry uses to decide what it's about to file.
+  useEffect(() => {
+    if (!entry || entry.sessionType !== 'thursday_group') return;
+    const allUnits = phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order);
+    const allSessions = allUnits.flatMap((u) => u.sessions).sort((a, b) => a.session_number - b.session_number);
+    const lastCompletedIndex = programSessionId != null ? allSessions.findIndex((s) => s.id === programSessionId) : -1;
+    const sessionToTeach = allSessions[lastCompletedIndex + 1] ?? null;
+    if (!sessionToTeach) {
+      setThursdayGuideContent(null);
+      return;
+    }
+    setThursdayGuideLoading(true);
+    fetchSessionResources(sessionToTeach.id)
+      .then((resources) => {
+        const guide = resources.find((r) => r.kind === 'teacher_guide') ?? null;
+        setThursdayGuideContent({
+          sessionNumber: sessionToTeach.session_number,
+          sessionTitle: sessionToTeach.title,
+          teacherGuide: guide?.content ?? null,
+          teacherGuideDriveUrl: guide?.drive_url ?? null,
+        });
+      })
+      .finally(() => setThursdayGuideLoading(false));
+  }, [entry, phases, programSessionId]);
+
   function handleFiled() {
     setEntry(null);
     void load();
@@ -119,6 +148,8 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         sessionType={entry.sessionType}
         mondayContent={mondayContent}
         mondayLoading={mondayLoading}
+        thursdayGuideContent={thursdayGuideContent}
+        thursdayGuideLoading={thursdayGuideLoading}
       >
         {entry.sessionType === 'monday_mentoring' ? (
           <MondaySessionPanel
