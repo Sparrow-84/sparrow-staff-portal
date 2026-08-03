@@ -302,7 +302,7 @@ export function SessionEditPanel({
                 <label className="field-label">Mentor Brief</label>
                 <RichTextField
                   key={`brief-${session.id}`}
-                  initialValue={mentorBrief}
+                  initialValue={session.mentor_brief ?? ''}
                   onChange={setMentorBrief}
                   placeholder="Context for the mentor — what this session covered and what to watch for."
                   minHeightRem={5}
@@ -312,7 +312,7 @@ export function SessionEditPanel({
                 <label className="field-label">From Her Handout</label>
                 <RichTextField
                   key={`handout-${session.id}`}
-                  initialValue={mentorHandoutEcho}
+                  initialValue={session.mentor_handout_echo ?? ''}
                   onChange={setMentorHandoutEcho}
                   placeholder="The questions she already worked through in group — echoed here so the mentor can follow up naturally."
                   minHeightRem={5}
@@ -322,7 +322,7 @@ export function SessionEditPanel({
                 <label className="field-label">Going Deeper</label>
                 <RichTextField
                   key={`deeper-${session.id}`}
-                  initialValue={mentorGoingDeeper}
+                  initialValue={session.mentor_going_deeper ?? ''}
                   onChange={setMentorGoingDeeper}
                   placeholder="Questions for when she's ready to go further than the group context allowed."
                   minHeightRem={5}
