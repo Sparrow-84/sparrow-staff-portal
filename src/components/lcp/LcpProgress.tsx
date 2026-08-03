@@ -177,29 +177,6 @@ export function LcpProgress({
             </div>
           ))}
         </div>
-
-        <div className="mt-4 flex flex-wrap gap-5 text-xs text-sparrow-gray">
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-5 rounded-sm" style={{ backgroundColor: '#5A8F6A' }} />
-            Completed
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-5 rounded-sm" style={{ backgroundColor: '#5A8F6A', opacity: 0.2 }} />
-            Not yet reached
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span
-              className="inline-block h-2.5 w-5 rounded-sm"
-              style={{
-                backgroundColor: '#C2697A',
-                backgroundImage:
-                  'repeating-linear-gradient(45deg, rgba(0,0,0,0.3) 0, rgba(0,0,0,0.3) 3px, transparent 3px, transparent 8px)',
-                opacity: 0.45,
-              }}
-            />
-            Gap — will cycle back
-          </span>
-        </div>
       </div>
     </div>
   );
