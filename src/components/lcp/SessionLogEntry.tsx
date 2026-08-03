@@ -267,14 +267,11 @@ export function SessionLogEntry({
       }
 
       if (sessionType === 'thursday_group' && sessionToTeach) {
-        if (willCrossUnit) {
-          // Crossing into a new unit is a bigger milestone — confirm before advancing.
-          setFiled(true);
-        } else {
-          await advanceProgramPosition(sessionToTeach.id, sessionToTeach.unit_id, currentUserId);
-          await advanceAllFamiliesToSession(sessionToTeach.session_number);
-          onFiled();
-        }
+        // Whether to actually advance is always Shelly's call, not automatic --
+        // she may want another night on the same session either way, not just
+        // at a unit boundary. Tonight's attendance/notes/homework/goals above
+        // are already saved regardless of what she picks next.
+        setFiled(true);
       } else {
         onFiled();
       }
@@ -335,11 +332,12 @@ export function SessionLogEntry({
   const isAdHoc = sessionType === 'ad_hoc';
   const showVouchers = !isAdHoc;
 
-  if (filed && nextUnit) {
+  if (filed && sessionToTeach) {
     // programSessionId (the prop) is still last week's position here -- the
-    // real advance only happens if "Complete unit" below is clicked. Tonight's
-    // session was just filed though, so treat it as current for this screen.
-    const track = computeCurriculumTrack(phases, sessionToTeach!.unit_id, sessionToTeach!.id);
+    // real advance only happens if "Session complete" below is clicked.
+    // Tonight's session was just filed though, so treat it as current for
+    // this FYI screen: here's what you just covered, here's what's next.
+    const track = computeCurriculumTrack(phases, sessionToTeach.unit_id, sessionToTeach.id);
     return (
       <div className="space-y-4">
         <div className="rounded-2xl border border-sparrow-rule bg-white p-5 shadow-card">
@@ -350,8 +348,15 @@ export function SessionLogEntry({
             </div>
           )}
           <p className="mt-3 text-sm text-sparrow-ink">
-            Complete unit and advance curriculum to{' '}
-            <span className="font-semibold">{nextUnit.name}</span>?
+            {willCrossUnit ? (
+              <>
+                Session complete? This moves into a new unit —{' '}
+                <span className="font-semibold">{nextUnit!.name}</span>.
+              </>
+            ) : (
+              'Session complete? This moves forward to the next session.'
+            )}{' '}
+            If the group needs another night on this one, that's fine — pick "Not yet" and it'll come up again next time.
           </p>
           {advanceErr && <p className="mt-2 text-sm text-priority-p1">{advanceErr}</p>}
           <div className="mt-4 flex gap-3">
@@ -360,7 +365,7 @@ export function SessionLogEntry({
               onClick={advanceCurriculum}
               className="btn-primary"
             >
-              {advancing ? 'Saving…' : 'Complete unit'}
+              {advancing ? 'Saving…' : 'Session complete'}
             </button>
             <button
               disabled={advancing}

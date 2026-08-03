@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { deleteProgramPosition, updateProgramPosition } from '@/lib/lcp';
+import { advanceAllFamiliesToSession, advanceProgramPosition, deleteProgramPosition, updateProgramPosition } from '@/lib/lcp';
 import type { Family, LcpPhaseWithUnits, ProgramPosition } from '@/lib/lcp-types';
 import { computeCurriculumTrack } from '@/lib/curriculum-track';
 import { CurriculumTrackHorizontal } from './CurriculumTrack';
@@ -21,6 +21,7 @@ export function LcpProgress({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
+  const [manualUnitId, setManualUnitId] = useState<number | null>(null);
 
   const allUnits = phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order);
   const currentIndex = position ? allUnits.findIndex((u) => u.id === position.unit_id) : -1;
@@ -34,6 +35,27 @@ export function LcpProgress({
       await updateProgramPosition(unitId, currentUserId);
       onChanged();
       setShowManual(false);
+      setManualUnitId(null);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not update position.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Session-specific correction -- e.g. Shelly clicked "Not yet" by mistake
+  // on a Thursday and the group actually did finish. Mirrors exactly what
+  // a normal Thursday advance does (position + every family's own tracker),
+  // just triggered manually instead of from that night's filing.
+  async function moveToSession(sessionId: number, unitId: number, sessionNumber: number) {
+    setBusy(true);
+    setErr(null);
+    try {
+      await advanceProgramPosition(sessionId, unitId, currentUserId);
+      await advanceAllFamiliesToSession(sessionNumber);
+      onChanged();
+      setShowManual(false);
+      setManualUnitId(null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not update position.');
     } finally {
@@ -106,7 +128,10 @@ export function LcpProgress({
             </button>
           )}
           <button
-            onClick={() => setShowManual((v) => !v)}
+            onClick={() => {
+              setShowManual((v) => !v);
+              setManualUnitId(null);
+            }}
             className="text-xs text-sparrow-gray underline hover:text-sparrow-ink"
           >
             {showManual ? 'Cancel' : 'Set position manually'}
@@ -114,11 +139,11 @@ export function LcpProgress({
         </div>
 
         {showManual && (
-          <div className="mt-3">
+          <div className="mt-3 space-y-2">
             <select
               disabled={busy}
-              defaultValue=""
-              onChange={(e) => e.target.value && moveTo(Number(e.target.value))}
+              value={manualUnitId ?? ''}
+              onChange={(e) => setManualUnitId(e.target.value ? Number(e.target.value) : null)}
               className="rounded-lg border border-sparrow-rule bg-white px-3 py-1.5 text-sm text-sparrow-ink"
             >
               <option value="" disabled>Choose a unit…</option>
@@ -132,6 +157,38 @@ export function LcpProgress({
                 </optgroup>
               ))}
             </select>
+
+            {manualUnitId != null && (
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  disabled={busy}
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    const unit = allUnits.find((u) => u.id === manualUnitId);
+                    const session = unit?.sessions.find((s) => s.id === Number(e.target.value));
+                    if (unit && session) void moveToSession(session.id, unit.id, session.session_number);
+                  }}
+                  className="rounded-lg border border-sparrow-rule bg-white px-3 py-1.5 text-sm text-sparrow-ink"
+                >
+                  <option value="" disabled>Choose a session…</option>
+                  {allUnits
+                    .find((u) => u.id === manualUnitId)
+                    ?.sessions.map((session, i) => (
+                      <option key={session.id} value={session.id}>
+                        Session {i + 1} of {allUnits.find((u) => u.id === manualUnitId)!.sessions.length}: {session.title}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  disabled={busy}
+                  onClick={() => moveTo(manualUnitId)}
+                  className="text-xs text-sparrow-gray underline hover:text-sparrow-ink"
+                >
+                  Just this unit, no specific session
+                </button>
+              </div>
+            )}
           </div>
         )}
 
