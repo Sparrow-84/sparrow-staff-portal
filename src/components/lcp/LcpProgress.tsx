@@ -68,10 +68,10 @@ export function LcpProgress({
               className="font-serif text-xl font-semibold"
               style={{ color: track.currentUnit.color }}
             >
-              {position.phase_number}. {position.phase_name}
+              Phase {position.phase_number}: {position.phase_name}
             </p>
             <p className="mb-1.5 text-sm font-medium text-sparrow-ink">
-              {track.currentUnit.globalUnitIndex}. {position.unit_name}
+              Unit {track.currentUnit.globalUnitIndex}: {position.unit_name}
             </p>
           </>
         ) : (
