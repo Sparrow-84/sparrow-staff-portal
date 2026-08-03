@@ -88,7 +88,12 @@ export function MondaySessionPanel({
 }: Props) {
   const [loading, setLoading] = useState(true);
   const [sessionLogId, setSessionLogId] = useState<string | null>(null);
-  const [selectedBucket, setSelectedBucket] = useState<MondayBucket | null>(null);
+  const [selectedBucket, setSelectedBucketRaw] = useState<MondayBucket | null>(null);
+  function setSelectedBucket(bucket: MondayBucket | null) {
+    setSelectedBucketRaw(bucket);
+    setBucketSaveState('idle');
+    setBucketSaveError(null);
+  }
 
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
   const [vouchers, setVouchers] = useState<Record<string, boolean>>({});
@@ -98,7 +103,15 @@ export function MondaySessionPanel({
     life_skills: {},
     mentoring: {},
   });
-  const [noteStatus, setNoteStatus] = useState<Record<string, 'idle' | 'saving' | 'saved'>>({});
+  // Last-saved copy, so the Save button only writes families whose note
+  // actually changed -- notesByBucket itself is the live editable draft.
+  const [savedNotesByBucket, setSavedNotesByBucket] = useState<Record<MondayBucket, Record<string, string>>>({
+    finance: {},
+    life_skills: {},
+    mentoring: {},
+  });
+  const [bucketSaveState, setBucketSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [bucketSaveError, setBucketSaveError] = useState<string | null>(null);
 
   const [liveGoals, setLiveGoals] = useState<Record<string, Goal[]>>({});
   const [liveHomework, setLiveHomework] = useState<Record<string, Homework[]>>({});
@@ -141,6 +154,7 @@ export function MondaySessionPanel({
         if (n.bucket) grouped[n.bucket][n.family_id] = n.body;
       }
       setNotesByBucket(grouped);
+      setSavedNotesByBucket(structuredClone(grouped));
 
       const goalUpdates: Record<string, Goal[]> = {};
       const hwUpdates: Record<string, Homework[]> = {};
@@ -180,13 +194,31 @@ export function MondaySessionPanel({
     await awardVoucher(familyId, 'Session attendance — Monday Mentoring', currentUserId);
   }
 
-  async function saveNote(familyId: string, bucket: MondayBucket, body: string) {
+  function setNoteDraft(bucket: MondayBucket, familyId: string, body: string) {
+    setNotesByBucket((prev) => ({ ...prev, [bucket]: { ...prev[bucket], [familyId]: body } }));
+    if (bucketSaveState !== 'idle') setBucketSaveState('idle');
+  }
+
+  // Explicit save, not tied to a field losing focus -- doesn't depend on
+  // attendance being filled in, doesn't depend on which family/bucket was
+  // touched last, and surfaces a real error instead of failing silently.
+  async function saveBucketNotes(bucket: MondayBucket) {
     if (!sessionLogId) return;
-    const key = `${bucket}-${familyId}`;
-    setNoteStatus((prev) => ({ ...prev, [key]: 'saving' }));
-    await upsertBucketNote(sessionLogId, familyId, bucket, body.trim(), currentUserId);
-    setNoteStatus((prev) => ({ ...prev, [key]: 'saved' }));
-    setTimeout(() => setNoteStatus((prev) => ({ ...prev, [key]: 'idle' })), 2000);
+    setBucketSaveState('saving');
+    setBucketSaveError(null);
+    try {
+      const drafts = notesByBucket[bucket];
+      const saved = savedNotesByBucket[bucket];
+      const changed = families.filter((f) => (drafts[f.id] ?? '').trim() !== (saved[f.id] ?? '').trim());
+      await Promise.all(
+        changed.map((f) => upsertBucketNote(sessionLogId, f.id, bucket, (drafts[f.id] ?? '').trim(), currentUserId)),
+      );
+      setSavedNotesByBucket((prev) => ({ ...prev, [bucket]: { ...drafts } }));
+      setBucketSaveState('saved');
+    } catch (e) {
+      setBucketSaveState('error');
+      setBucketSaveError(e instanceof Error ? e.message : 'Could not save notes — try again.');
+    }
   }
 
   async function toggleHistory(familyId: string) {
@@ -233,8 +265,11 @@ export function MondaySessionPanel({
 
   if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading tonight's session…</p>;
 
+  // "Logged" means actually saved, not just typed -- reads the last-saved
+  // snapshot, not the live draft, so this badge can't overstate progress
+  // that hasn't been written yet.
   function bucketCompletion(bucket: MondayBucket) {
-    const done = families.filter((f) => (notesByBucket[bucket][f.id] ?? '').trim().length > 0).length;
+    const done = families.filter((f) => (savedNotesByBucket[bucket][f.id] ?? '').trim().length > 0).length;
     return { done, total: families.length };
   }
 
@@ -374,8 +409,7 @@ export function MondaySessionPanel({
                   family={f}
                   bucket={selectedBucket}
                   note={notesByBucket[selectedBucket][f.id] ?? ''}
-                  noteStatus={noteStatus[`${selectedBucket}-${f.id}`] ?? 'idle'}
-                  onSaveNote={(body) => saveNote(f.id, selectedBucket, body)}
+                  onNoteChange={(body) => setNoteDraft(selectedBucket, f.id, body)}
                   historyOpen={historyOpen[f.id] ?? false}
                   historyData={historyByFamily[f.id]}
                   onToggleHistory={() => toggleHistory(f.id)}
@@ -397,6 +431,20 @@ export function MondaySessionPanel({
                 />
               ))}
             </div>
+
+            <div className="mt-4 flex items-center gap-3 border-t border-sparrow-rule pt-4">
+              <button
+                onClick={() => void saveBucketNotes(selectedBucket)}
+                disabled={bucketSaveState === 'saving'}
+                className="btn-primary"
+              >
+                {bucketSaveState === 'saving' ? 'Saving…' : `Save ${MONDAY_BUCKET_LABEL[selectedBucket]} notes`}
+              </button>
+              {bucketSaveState === 'saved' && <span className="text-sm font-medium text-sparrow-green">Saved ✓</span>}
+              {bucketSaveState === 'error' && (
+                <span className="text-sm font-medium text-priority-p1">{bucketSaveError}</span>
+              )}
+            </div>
           </>
         )}
       </section>
@@ -410,8 +458,7 @@ interface MondayFamilyCardProps {
   family: Family;
   bucket: MondayBucket;
   note: string;
-  noteStatus: 'idle' | 'saving' | 'saved';
-  onSaveNote: (body: string) => void;
+  onNoteChange: (body: string) => void;
   historyOpen: boolean;
   historyData: StaffNoteWithSession[] | 'loading' | undefined;
   onToggleHistory: () => void;
@@ -436,8 +483,7 @@ function MondayFamilyCard({
   family,
   bucket,
   note,
-  noteStatus,
-  onSaveNote,
+  onNoteChange,
   historyOpen,
   historyData,
   onToggleHistory,
@@ -457,8 +503,6 @@ function MondayFamilyCard({
   onAssignDraftChange,
   onSubmitHomework,
 }: MondayFamilyCardProps) {
-  const [draftNote, setDraftNote] = useState(note);
-
   return (
     <div className={`rounded-2xl border border-transparent p-4 ${BUCKET_FAMILY_CARD_BG[bucket]}`}>
       <div className="mb-2 flex items-baseline justify-between gap-2">
@@ -495,20 +539,12 @@ function MondayFamilyCard({
       )}
 
       <textarea
-        value={draftNote}
-        onChange={(e) => setDraftNote(e.target.value)}
-        onBlur={() => {
-          if (draftNote !== note) onSaveNote(draftNote);
-        }}
+        value={note}
+        onChange={(e) => onNoteChange(e.target.value)}
         rows={2}
         placeholder={`${family.display_name}'s ${bucket === 'finance' ? 'finance' : bucket === 'life_skills' ? 'life skills' : 'mentoring'} note…`}
         className="field-input bg-white"
       />
-      <div className="mt-1 flex items-center justify-between">
-        <span className="text-xs text-sparrow-gray">
-          {noteStatus === 'saving' ? 'Saving…' : noteStatus === 'saved' ? 'Saved' : ''}
-        </span>
-      </div>
 
       {/* Goals — shared across all 3 buckets, not duplicated */}
       <div className="mt-3 border-t border-white/60 pt-3">
