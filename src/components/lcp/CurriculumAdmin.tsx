@@ -42,48 +42,53 @@ function buildCompletionMap(sessions: CurriculumSessionDetail[], resources: Reso
   return map;
 }
 
+// Kept in sync with PHASE_COLORS in PhaseProgressBar.tsx — that array is the
+// single source of truth for the 6 phase hex values; Tailwind's JIT scanner
+// needs these as literal arbitrary-value classes (it can't see a value built
+// from a JS import at the class-name level), so the same 6 hex codes are
+// hand-mirrored here rather than generated.
 const PHASE_COLORS = [
-  // Phase 1 — Groundwork: Sparrow brand green
+  // Phase 1 — Groundwork
   {
-    badge: 'bg-sparrow-green text-white',
-    cardAccent: 'border-l-4 border-l-sparrow-green',
-    sessionHover: 'hover:bg-sparrow-sage/20',
-    sessionSelected: 'bg-sparrow-sage/30',
+    badge: 'bg-[#8B7355] text-white',
+    cardAccent: 'border-l-4 border-l-[#8B7355]',
+    sessionHover: 'hover:bg-[#8B7355]/5',
+    sessionSelected: 'bg-[#8B7355]/10',
   },
-  // Phase 2 — Heart of the Home: warm, nurturing, hearth-like
+  // Phase 2 — Heart of the Home
   {
-    badge: 'bg-rose-700 text-white',
-    cardAccent: 'border-l-4 border-l-rose-300',
-    sessionHover: 'hover:bg-rose-50',
-    sessionSelected: 'bg-rose-100',
+    badge: 'bg-[#C2697A] text-white',
+    cardAccent: 'border-l-4 border-l-[#C2697A]',
+    sessionHover: 'hover:bg-[#C2697A]/5',
+    sessionSelected: 'bg-[#C2697A]/10',
   },
-  // Phase 3 — Rest & Restoration: royal blue
+  // Phase 3 — Rest & Restoration
   {
-    badge: 'bg-blue-600 text-white',
-    cardAccent: 'border-l-4 border-l-blue-400',
-    sessionHover: 'hover:bg-blue-50',
-    sessionSelected: 'bg-blue-100',
+    badge: 'bg-[#7BA8BF] text-white',
+    cardAccent: 'border-l-4 border-l-[#7BA8BF]',
+    sessionHover: 'hover:bg-[#7BA8BF]/5',
+    sessionSelected: 'bg-[#7BA8BF]/10',
   },
-  // Phase 4 — Purpose & Vision: deep violet
+  // Phase 4 — Purpose & Vision
   {
-    badge: 'bg-violet-700 text-white',
-    cardAccent: 'border-l-4 border-l-violet-400',
-    sessionHover: 'hover:bg-violet-50',
-    sessionSelected: 'bg-violet-100',
+    badge: 'bg-[#E8A030] text-white',
+    cardAccent: 'border-l-4 border-l-[#E8A030]',
+    sessionHover: 'hover:bg-[#E8A030]/5',
+    sessionSelected: 'bg-[#E8A030]/10',
   },
-  // Phase 5 — Outer Life: natural, outward, community-facing emerald
+  // Phase 5 — Outer Life
   {
-    badge: 'bg-emerald-700 text-white',
-    cardAccent: 'border-l-4 border-l-emerald-400',
-    sessionHover: 'hover:bg-emerald-50',
-    sessionSelected: 'bg-emerald-100',
+    badge: 'bg-[#5A8F6A] text-white',
+    cardAccent: 'border-l-4 border-l-[#5A8F6A]',
+    sessionHover: 'hover:bg-[#5A8F6A]/5',
+    sessionSelected: 'bg-[#5A8F6A]/10',
   },
-  // Phase 6 — Whole House & Graduation: warm achievement gold
+  // Phase 6 — Whole House & Graduation
   {
-    badge: 'bg-amber-700 text-white',
-    cardAccent: 'border-l-4 border-l-amber-400',
-    sessionHover: 'hover:bg-amber-50',
-    sessionSelected: 'bg-amber-100',
+    badge: 'bg-[#7B6FA8] text-white',
+    cardAccent: 'border-l-4 border-l-[#7B6FA8]',
+    sessionHover: 'hover:bg-[#7B6FA8]/5',
+    sessionSelected: 'bg-[#7B6FA8]/10',
   },
 ] as const;
 

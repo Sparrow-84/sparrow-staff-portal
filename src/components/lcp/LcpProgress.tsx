@@ -62,18 +62,20 @@ export function LcpProgress({
     <div className="mt-6 space-y-6">
       {/* Program position card */}
       <div className="rounded-2xl border border-sparrow-rule bg-white p-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-sparrow-gold">
-          Program is currently on
-        </p>
-        {position ? (
+        {position && track.currentUnit ? (
           <>
-            <p className="mt-1 font-serif text-xl font-semibold text-sparrow-green">
-              {position.phase_name}
+            <p
+              className="font-serif text-xl font-semibold"
+              style={{ color: track.currentUnit.color }}
+            >
+              {position.phase_number}. {position.phase_name}
             </p>
-            <p className="text-sm text-sparrow-gray">{position.unit_name}</p>
+            <p className="mb-1.5 text-sm font-medium text-sparrow-ink">
+              {track.currentUnit.globalUnitIndex}. {position.unit_name}
+            </p>
           </>
         ) : (
-          <p className="mt-1 text-sm text-sparrow-gray">
+          <p className="text-sm text-sparrow-gray">
             Not set yet — use the controls below to set the starting unit.
           </p>
         )}

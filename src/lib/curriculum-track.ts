@@ -21,6 +21,12 @@ export interface CurrentTrackUnit extends TrackUnit {
   /** 1-based position within this unit, or null if a session hasn't been pinned down
    *  (e.g. right after a manual "set position" unit-only override). */
   localIndex: number | null;
+  /** The unit's real phase number (lcp_phases.number), for "3. Rest & Restoration" headers. */
+  phaseNumber: number;
+  /** 1-based position among all 13 units program-wide, for "6. Kids' Bedroom" headers. */
+  globalUnitIndex: number;
+  /** True once we're on the last session of the last unit — nothing left after this. */
+  isFinalSession: boolean;
 }
 
 export interface CurriculumTrack {
@@ -41,7 +47,7 @@ export function computeCurriculumTrack(
   const allUnits = orderedPhases.flatMap((phase, phaseIndex) =>
     [...phase.units]
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((unit) => ({ unit, color: PHASE_COLORS[phaseIndex] ?? '#888' })),
+      .map((unit) => ({ unit, color: PHASE_COLORS[phaseIndex] ?? '#888', phaseNumber: phase.number })),
   );
 
   const currentIndex = programUnitId != null ? allUnits.findIndex((u) => u.unit.id === programUnitId) : -1;
@@ -57,9 +63,10 @@ export function computeCurriculumTrack(
     return { doneUnits: [], currentUnit: null, upcomingUnits: allUnits.map(toTrackUnit) };
   }
 
-  const { unit: currentUnitRaw, color: currentColor } = allUnits[currentIndex];
+  const { unit: currentUnitRaw, color: currentColor, phaseNumber } = allUnits[currentIndex];
   const sessions = [...currentUnitRaw.sessions].sort((a, b) => a.session_number - b.session_number);
   const currentSessionIdx = programSessionId != null ? sessions.findIndex((s) => s.id === programSessionId) : -1;
+  const upcomingUnits = allUnits.slice(currentIndex + 1).map(toTrackUnit);
 
   return {
     doneUnits: allUnits.slice(0, currentIndex).map(toTrackUnit),
@@ -69,13 +76,16 @@ export function computeCurriculumTrack(
       color: currentColor,
       sessionCount: sessions.length,
       localIndex: currentSessionIdx === -1 ? null : currentSessionIdx + 1,
+      phaseNumber,
+      globalUnitIndex: currentIndex + 1,
+      isFinalSession: upcomingUnits.length === 0 && currentSessionIdx === sessions.length - 1,
       sessions: sessions.map((s, i) => ({
         id: s.id,
         sessionNumber: s.session_number,
         state: currentSessionIdx === -1 ? 'upcoming' : i < currentSessionIdx ? 'done' : i === currentSessionIdx ? 'current' : 'upcoming',
       })),
     },
-    upcomingUnits: allUnits.slice(currentIndex + 1).map(toTrackUnit),
+    upcomingUnits,
   };
 }
 
