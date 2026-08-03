@@ -1,4 +1,4 @@
--- Migration 0120: Fix creator attribution on the two recurring LCP Session Cal
+-- Migration 0121: Fix creator attribution on the two recurring LCP Session Cal
 -- series (Monday Mentoring + LCP Group / Thursday Group Meeting).
 --
 -- Both series have created_by = Susanna's account on the lcp_events rows,
