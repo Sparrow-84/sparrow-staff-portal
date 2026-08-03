@@ -97,6 +97,8 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
             ? {
                 sessionNumber: s.session_number,
                 sessionTitle: s.title,
+                unitName: s.unit_name,
+                phaseName: s.phase_name,
                 brief: s.mentor_brief,
                 handoutEcho: s.mentor_handout_echo,
                 goingDeeper: s.mentor_going_deeper,

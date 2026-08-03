@@ -828,15 +828,28 @@ export async function fetchAllResources(): Promise<Resource[]> {
 }
 
 // The one session Monday Mentoring needs — whatever the group most recently
-// covered in Thursday Group (lcp_program_position.session_id).
-export async function fetchSessionMentorContent(sessionId: number): Promise<CurriculumSessionDetail | null> {
+// covered in Thursday Group (lcp_program_position.session_id). Includes the
+// unit/phase so the mentor can see which room they're in, not just a bare
+// session number — easy to lose track of otherwise, since Monday Mentoring
+// is opened independently of the Thursday session that set the position.
+export async function fetchSessionMentorContent(
+  sessionId: number,
+): Promise<(CurriculumSessionDetail & { unit_name: string; phase_name: string }) | null> {
   const { data, error } = await supabase
     .from('lcp_sessions')
-    .select('id, session_number, title, focus, scripture, mentor_brief, mentor_handout_echo, mentor_going_deeper')
+    .select(
+      'id, session_number, title, focus, scripture, mentor_brief, mentor_handout_echo, mentor_going_deeper, unit:lcp_units(name, phase:lcp_phases(name))',
+    )
     .eq('id', sessionId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as CurriculumSessionDetail) ?? null;
+  if (!data) return null;
+  const unit = data.unit as unknown as { name: string; phase: { name: string } } | null;
+  return {
+    ...(data as unknown as CurriculumSessionDetail),
+    unit_name: unit?.name ?? '',
+    phase_name: unit?.phase?.name ?? '',
+  };
 }
 
 export async function updateCurriculumUnit(

@@ -15,6 +15,8 @@ function formatDateHeader(iso: string) {
 export interface MondayMentorContent {
   sessionNumber: number;
   sessionTitle: string;
+  unitName: string;
+  phaseName: string;
   brief: string | null;
   handoutEcho: string | null;
   goingDeeper: string | null;
@@ -129,6 +131,9 @@ export function SessionSplitLayout({
                     <p className="text-sm text-sparrow-gray">Loading this week's session…</p>
                   ) : mondayContent ? (
                     <>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-sparrow-gold">
+                        {mondayContent.phaseName} · {mondayContent.unitName}
+                      </p>
                       <p className="mb-3 text-sm font-semibold text-sparrow-green">
                         Session {mondayContent.sessionNumber} · {mondayContent.sessionTitle}
                       </p>
