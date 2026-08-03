@@ -795,7 +795,8 @@ export async function fetchCurriculum(): Promise<CurriculumPhase[]> {
         sessions:lcp_sessions(id, session_number, title, focus, scripture, mentor_brief, mentor_handout_echo, mentor_going_deeper)
       )
     `)
-    .order('number');
+    .order('number')
+    .order('sort_order', { referencedTable: 'lcp_units' });
   if (error) throw new Error(error.message);
   return ((data ?? []) as unknown as CurriculumPhase[]).map((phase) => ({
     ...phase,
