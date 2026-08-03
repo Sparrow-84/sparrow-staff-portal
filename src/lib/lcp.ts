@@ -27,6 +27,7 @@ import type {
   LcpPhaseWithUnits,
   LcpUnitSlim,
   Message,
+  MessageReaction,
   MondayBucket,
   ProgramFeeMethod,
   ProgramFeePayment,
@@ -443,7 +444,14 @@ export async function fetchMessages(familyId: string): Promise<Message[]> {
   return (data ?? []) as Message[];
 }
 
-export async function sendStaffMessage(familyId: string, body: string, senderId: string, imageUrl?: string): Promise<void> {
+export async function sendStaffMessage(
+  familyId: string,
+  body: string,
+  senderId: string,
+  voice?: { url: string; duration: number },
+  imageUrl?: string,
+  replyToId?: string,
+): Promise<void> {
   const { error } = await supabase
     .from('lcp_messages')
     .insert({
@@ -451,8 +459,23 @@ export async function sendStaffMessage(familyId: string, body: string, senderId:
       sender_kind: 'staff',
       sender_id: senderId,
       body,
+      ...(voice ? { voice_url: voice.url, voice_duration: voice.duration } : {}),
       ...(imageUrl ? { image_url: imageUrl } : {}),
+      ...(replyToId ? { reply_to_id: replyToId } : {}),
     });
+  if (error) throw new Error(error.message);
+}
+
+export async function editStaffMessage(messageId: string, newBody: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_messages')
+    .update({ body: newBody, edited_at: new Date().toISOString() })
+    .eq('id', messageId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteStaffMessage(messageId: string): Promise<void> {
+  const { error } = await supabase.from('lcp_messages').delete().eq('id', messageId);
   if (error) throw new Error(error.message);
 }
 
@@ -465,6 +488,47 @@ export async function uploadStaffLcpImage(file: File, familyId: string): Promise
   if (error) throw new Error(error.message);
   const { data } = supabase.storage.from('lcp-images').getPublicUrl(path);
   return { url: data.publicUrl };
+}
+
+export async function uploadStaffLcpVoice(blob: Blob, familyId: string): Promise<{ url: string }> {
+  const ext = blob.type.includes('mpeg')
+    ? 'mp3'
+    : blob.type.includes('mp4') || blob.type.includes('aac')
+      ? 'm4a'
+      : 'webm';
+  const path = `${familyId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from('lcp-voice-messages')
+    .upload(path, blob, { contentType: blob.type || 'audio/webm' });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('lcp-voice-messages').getPublicUrl(path);
+  return { url: data.publicUrl };
+}
+
+export async function fetchLcpReactions(familyId: string): Promise<MessageReaction[]> {
+  const { data, error } = await supabase
+    .from('lcp_message_reactions')
+    .select('id, message_id, user_id, emoji')
+    .eq('family_id', familyId);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as MessageReaction[];
+}
+
+export async function addLcpReaction(familyId: string, messageId: string, emoji: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_message_reactions')
+    .upsert({ family_id: familyId, message_id: messageId, emoji, user_id: userId }, { onConflict: 'message_id,user_id,emoji' });
+  if (error) throw new Error(error.message);
+}
+
+export async function removeLcpReaction(messageId: string, emoji: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_message_reactions')
+    .delete()
+    .eq('message_id', messageId)
+    .eq('user_id', userId)
+    .eq('emoji', emoji);
+  if (error) throw new Error(error.message);
 }
 
 // ── Staff notes (full LCP staff only) ────────────────────────────────

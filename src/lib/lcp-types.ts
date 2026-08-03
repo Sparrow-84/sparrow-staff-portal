@@ -180,6 +180,17 @@ export interface Message {
   created_at: string;
   read_at: string | null;
   image_url: string | null;
+  voice_url: string | null;
+  voice_duration: number | null;
+  reply_to_id: string | null;
+  edited_at: string | null;
+}
+
+export interface MessageReaction {
+  id: string;
+  message_id: string;
+  user_id: string;
+  emoji: string;
 }
 
 export interface StaffNote {

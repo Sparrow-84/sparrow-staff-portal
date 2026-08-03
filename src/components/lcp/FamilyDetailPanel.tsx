@@ -60,7 +60,6 @@ import {
   markGoalMet,
   reopenGoal,
   saveHouseholdAdult,
-  sendStaffMessage,
   fetchMoveInRequestForFamily,
   requestOrSyncLcpToc,
   setFamilyActive,
@@ -68,7 +67,6 @@ import {
   uncompleteMilestone,
   updateFamily,
   updateHouseholdChild,
-  uploadStaffLcpImage,
 } from '@/lib/lcp';
 import { money, dayLabel, dueLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
@@ -254,16 +252,10 @@ export function FamilyDetailPanel({
       {tab === 'messages' && (
         <div className="h-[60vh]">
           <StaffThread
+            familyId={family.id}
+            currentUserId={currentUserId}
             messages={messages}
-            onSend={async (body) => {
-              await sendStaffMessage(family.id, body, currentUserId);
-              await reloadDetail();
-            }}
-            onSendImage={async (file) => {
-              const { url } = await uploadStaffLcpImage(file, family.id);
-              await sendStaffMessage(family.id, '', currentUserId, url);
-              await reloadDetail();
-            }}
+            onChanged={() => void reloadDetail()}
           />
         </div>
       )}
