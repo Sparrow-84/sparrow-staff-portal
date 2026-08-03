@@ -5,6 +5,7 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   staff: ChatPerson[];
   disabled?: boolean;
   placeholder?: string;
@@ -18,7 +19,7 @@ interface MentionState {
 
 const MAX_HEIGHT = 128; // matches max-h-32 = 8rem
 
-export function MentionInput({ value, onChange, onKeyDown, staff, disabled, placeholder, className }: Props) {
+export function MentionInput({ value, onChange, onKeyDown, onPaste, staff, disabled, placeholder, className }: Props) {
   const [mention, setMention] = useState<MentionState | null>(null);
   const [selected, setSelected] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -167,6 +168,7 @@ export function MentionInput({ value, onChange, onKeyDown, staff, disabled, plac
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
+        onPaste={onPaste}
         onBlur={() => setTimeout(() => setMention(null), 150)}
         rows={1}
         placeholder={placeholder}

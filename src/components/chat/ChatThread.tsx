@@ -121,6 +121,14 @@ export function ChatThread({
     setDroppedFile(f);
     setPickingImage(true);
   }
+  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith('image/'));
+    const f = item?.getAsFile();
+    if (!f) return;
+    e.preventDefault();
+    setDroppedFile(f);
+    setPickingImage(true);
+  }
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
@@ -427,6 +435,7 @@ export function ChatThread({
               value={draft}
               onChange={setDraft}
               onKeyDown={onKeyDown}
+              onPaste={handlePaste}
               staff={staff}
               disabled={busy}
               placeholder="Write a message… (@ mention · ⌘B bold · ⌘I italic · ⌘↵ send)"
