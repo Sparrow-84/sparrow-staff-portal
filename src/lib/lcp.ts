@@ -796,7 +796,7 @@ export async function fetchCurriculum(): Promise<CurriculumPhase[]> {
       )
     `)
     .order('number')
-    .order('sort_order', { referencedTable: 'lcp_units' });
+    .order('sort_order', { referencedTable: 'units' });
   if (error) throw new Error(error.message);
   return ((data ?? []) as unknown as CurriculumPhase[]).map((phase) => ({
     ...phase,
