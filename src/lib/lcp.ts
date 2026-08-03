@@ -443,11 +443,28 @@ export async function fetchMessages(familyId: string): Promise<Message[]> {
   return (data ?? []) as Message[];
 }
 
-export async function sendStaffMessage(familyId: string, body: string, senderId: string): Promise<void> {
+export async function sendStaffMessage(familyId: string, body: string, senderId: string, imageUrl?: string): Promise<void> {
   const { error } = await supabase
     .from('lcp_messages')
-    .insert({ family_id: familyId, sender_kind: 'staff', sender_id: senderId, body });
+    .insert({
+      family_id: familyId,
+      sender_kind: 'staff',
+      sender_id: senderId,
+      body,
+      ...(imageUrl ? { image_url: imageUrl } : {}),
+    });
   if (error) throw new Error(error.message);
+}
+
+export async function uploadStaffLcpImage(file: File, familyId: string): Promise<{ url: string }> {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const path = `${familyId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from('lcp-images')
+    .upload(path, file, { contentType: file.type || 'image/jpeg' });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('lcp-images').getPublicUrl(path);
+  return { url: data.publicUrl };
 }
 
 // ── Staff notes (full LCP staff only) ────────────────────────────────
