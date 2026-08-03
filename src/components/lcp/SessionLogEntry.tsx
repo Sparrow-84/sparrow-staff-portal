@@ -32,6 +32,8 @@ import {
   upsertSessionAttendance,
 } from '@/lib/lcp';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+import { computeCurriculumTrack } from '@/lib/curriculum-track';
+import { CurriculumTrackHorizontal } from './CurriculumTrack';
 
 const STATUSES: AttendanceStatus[] = ['on_time', 'late', 'no_show'];
 
@@ -334,10 +336,19 @@ export function SessionLogEntry({
   const showVouchers = !isAdHoc;
 
   if (filed && nextUnit) {
+    // programSessionId (the prop) is still last week's position here -- the
+    // real advance only happens if "Complete unit" below is clicked. Tonight's
+    // session was just filed though, so treat it as current for this screen.
+    const track = computeCurriculumTrack(phases, sessionToTeach!.unit_id, sessionToTeach!.id);
     return (
       <div className="space-y-4">
         <div className="rounded-2xl border border-sparrow-rule bg-white p-5 shadow-card">
           <p className="text-sm font-medium text-sparrow-green">Session filed ✓</p>
+          {track.currentUnit && (
+            <div className="mt-3">
+              <CurriculumTrackHorizontal track={track} />
+            </div>
+          )}
           <p className="mt-3 text-sm text-sparrow-ink">
             Complete unit and advance curriculum to{' '}
             <span className="font-semibold">{nextUnit.name}</span>?

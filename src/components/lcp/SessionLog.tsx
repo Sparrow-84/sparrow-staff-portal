@@ -11,6 +11,8 @@ import {
 } from '@/lib/lcp-types';
 import { fetchNotePreviewsForSessionLogs, fetchRecentSessionLogs, fetchSessionMentorContent, fetchSessionResources, fetchTodayEvents } from '@/lib/lcp';
 import { timeLabel } from '@/lib/lcp-format';
+import { computeCurriculumTrack } from '@/lib/curriculum-track';
+import { CurriculumTrackVertical } from './CurriculumTrack';
 import { MondaySessionPanel } from './MondaySessionPanel';
 import { SessionLogByBucket } from './SessionLogByBucket';
 import { SessionLogByParticipant } from './SessionLogByParticipant';
@@ -211,9 +213,12 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
   if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading session log…</p>;
 
+  const track = computeCurriculumTrack(phases, programUnitId, programSessionId);
+
   return (
     <div>
 
+      <div className="grid gap-4 md:grid-cols-[1fr_11rem]">
       {/* ── Section 1: what you can log right now ───────────────────── */}
       <section className="rounded-2xl bg-sparrow-sage/40 p-4 sm:p-5">
         <h2 className="font-serif text-lg font-semibold text-sparrow-ink">Log tonight's session</h2>
@@ -304,6 +309,16 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
           )}
         </div>
       </section>
+
+      {track.currentUnit && (
+        <div className="rounded-2xl border border-sparrow-rule bg-white p-4">
+          <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
+            Where we are
+          </p>
+          <CurriculumTrackVertical track={track} />
+        </div>
+      )}
+      </div>
 
       {/* ── Section 2: what's already been logged ───────────────────── */}
       <section className="mt-10">

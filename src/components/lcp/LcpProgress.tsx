@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { deleteProgramPosition, updateProgramPosition } from '@/lib/lcp';
 import type { Family, LcpPhaseWithUnits, ProgramPosition } from '@/lib/lcp-types';
+import { computeCurriculumTrack } from '@/lib/curriculum-track';
+import { CurriculumTrackHorizontal } from './CurriculumTrack';
 import { PHASE_COLORS, PhaseProgressBar } from './PhaseProgressBar';
 
 export function LcpProgress({
@@ -23,6 +25,7 @@ export function LcpProgress({
   const allUnits = phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order);
   const currentIndex = position ? allUnits.findIndex((u) => u.id === position.unit_id) : -1;
   const nextUnit = currentIndex === -1 ? allUnits[0] : allUnits[currentIndex + 1];
+  const track = computeCurriculumTrack(phases, position?.unit_id ?? null, position?.session_id ?? null);
 
   async function moveTo(unitId: number) {
     setBusy(true);
@@ -73,6 +76,12 @@ export function LcpProgress({
           <p className="mt-1 text-sm text-sparrow-gray">
             Not set yet — use the controls below to set the starting unit.
           </p>
+        )}
+
+        {(track.doneUnits.length > 0 || track.currentUnit) && (
+          <div className="mt-4">
+            <CurriculumTrackHorizontal track={track} />
+          </div>
         )}
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
