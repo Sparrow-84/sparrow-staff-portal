@@ -44,19 +44,17 @@ function UnitHeaderDot({ color, filled }: { color: string; filled: boolean }) {
  *  on each side is the same color (same phase), hard-split exactly at the
  *  boundary when it isn't. This is what lets a phase transition read on the
  *  line itself even where there's no dot marking it (e.g. the current unit
- *  expanding into small dots with no separate big dot of its own). Vertical
- *  connectors flex to fill whatever height the sidebar track is given
- *  (see CurriculumTrackVertical) rather than a fixed length, so the track
- *  stretches to match its neighbor without pushing anything below it. */
+ *  expanding into small dots with no separate big dot of its own). Every
+ *  spacing between two dots is one of these — never a flex `gap` — so the
+ *  line can never have a blank break in it. */
 function Segment({ from, to, vertical }: { from: string; to: string; vertical: boolean }) {
   const direction = vertical ? 'to bottom' : 'to right';
   const background = from === to ? from : `linear-gradient(${direction}, ${from} 50%, ${to} 50%)`;
-  return (
-    <span
-      className={vertical ? 'w-0.5 min-h-[0.875rem] flex-1 shrink-0' : 'h-0.5 w-3.5 shrink-0'}
-      style={{ background }}
-    />
-  );
+  // A modest, fixed bump over the original length -- deliberately not
+  // stretched to fill the sidebar's neighbor column, since that column's
+  // own height varies with unrelated content and stretching to match it
+  // produced long, empty-looking runs of line instead of a longer track.
+  return <span className={vertical ? 'w-0.5 h-6 shrink-0' : 'h-0.5 w-3.5 shrink-0'} style={{ background }} />;
 }
 
 /** The actual dot track, shared by both orientations so they can never drift
@@ -69,12 +67,13 @@ function Segment({ from, to, vertical }: { from: string; to: string; vertical: b
  *  previewing the unit after it too early is misleading). The header dot
  *  sits *beside* its session dots on the horizontal track and *above* them
  *  on the vertical one — both driven by the same `cluster` direction so
- *  nothing ever floats onto its own row on the horizontal arc. */
+ *  nothing ever floats onto its own row on the horizontal arc. No flex
+ *  `gap` is used anywhere in here — every dot-to-dot space is an explicit
+ *  Segment, so the connecting line is never broken by unfilled spacing. */
 function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: boolean }) {
   const { doneUnits, currentUnit, upcomingUnits } = track;
-  const row = vertical ? 'flex flex-1 flex-col items-center' : 'flex flex-wrap items-center';
+  const row = vertical ? 'flex flex-col items-center' : 'flex flex-wrap items-center';
   const cluster = vertical ? 'flex flex-col items-center' : 'flex items-center';
-  const gap = vertical ? 'gap-3' : 'gap-1.5';
 
   const currentUnitDone = currentUnit != null && currentUnit.localIndex != null && currentUnit.localIndex >= currentUnit.sessionCount;
   const [nextUnit, ...restUnits] = currentUnit == null || currentUnitDone ? upcomingUnits : [];
@@ -91,29 +90,30 @@ function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: bool
         <Segment from={doneUnits[doneUnits.length - 1].color} to={currentUnit.color} vertical={vertical} />
       )}
       {currentUnit && (
-        <div className={`${cluster} ${gap} rounded-2xl bg-sparrow-sage px-2.5 py-2`}>
+        <div className={`${cluster} rounded-2xl bg-sparrow-sage px-2.5 py-2`}>
           <UnitHeaderDot color={currentUnit.color} filled={currentUnitDone} />
-          <div className={`${cluster} ${gap}`}>
-            {currentUnit.sessions.map((s) => (
-              <SessionDot key={s.id} color={currentUnit.color} state={s.state} />
-            ))}
-          </div>
+          <Segment from={currentUnit.color} to={currentUnit.color} vertical={vertical} />
+          {currentUnit.sessions.map((s, i) => (
+            <span key={s.id} className={cluster}>
+              {i > 0 && <Segment from={currentUnit.color} to={currentUnit.color} vertical={vertical} />}
+              <SessionDot color={currentUnit.color} state={s.state} />
+            </span>
+          ))}
         </div>
       )}
       {currentUnit && nextUnit && (
         <Segment from={currentUnit.color} to={tintColor(nextUnit.color)} vertical={vertical} />
       )}
       {nextUnit && (
-        <div className={`${cluster} ${gap}`}>
+        <div className={cluster}>
           <BigDot color={tintColor(nextUnit.color)} />
-          <div className={`${cluster} ${gap}`}>
-            {Array.from({ length: Math.min(2, nextUnit.sessionCount) }).map((_, i) => (
-              <span key={i} className={cluster}>
-                {i > 0 && <Segment from={tintColor(nextUnit.color)} to={tintColor(nextUnit.color)} vertical={vertical} />}
-                <SessionDot color={nextUnit.color} state="upcoming" />
-              </span>
-            ))}
-          </div>
+          <Segment from={tintColor(nextUnit.color)} to={tintColor(nextUnit.color)} vertical={vertical} />
+          {Array.from({ length: Math.min(2, nextUnit.sessionCount) }).map((_, i) => (
+            <span key={i} className={cluster}>
+              {i > 0 && <Segment from={tintColor(nextUnit.color)} to={tintColor(nextUnit.color)} vertical={vertical} />}
+              <SessionDot color={nextUnit.color} state="upcoming" />
+            </span>
+          ))}
         </div>
       )}
       {restUnits.length > 0 && !vertical && (
@@ -154,24 +154,20 @@ export function CurriculumTrackHorizontal({ track }: { track: CurriculumTrack })
 
 /** Same dots, rotated — Session Log home, "off to the side." Deliberately
  *  quieter on naming than the Progress tab version (no phase/unit numbers,
- *  already shown prominently there) but the same completed/now-on pair.
- *  Fills whatever height its parent grid cell stretches it to (matching
- *  Section 1's own natural height) via `h-full` + the flexible Segments
- *  above, rather than a fixed length — so it can look "longer" without
- *  growing taller than its neighbor and pushing later content down. */
+ *  already shown prominently there) but the same completed/now-on pair. */
 export function CurriculumTrackVertical({ track }: { track: CurriculumTrack }) {
   const done = completed(track);
   const current = nowOn(track);
   return (
-    <div className="flex h-full flex-col">
+    <div>
       {done && (
-        <p className="mb-2 shrink-0 text-center text-[11px] font-medium text-sparrow-gray">
+        <p className="mb-2 text-center text-[11px] font-medium text-sparrow-gray">
           Completed: {done.name} {done.index}/{done.total}
         </p>
       )}
       <TrackDots track={track} vertical />
       {current && (
-        <p className="mt-2 shrink-0 text-center text-[11px] font-semibold text-sparrow-ink">
+        <p className="mt-2 text-center text-[11px] font-semibold text-sparrow-ink">
           Now on: {current.name} {current.index}/{current.total}
         </p>
       )}
