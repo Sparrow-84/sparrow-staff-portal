@@ -312,9 +312,6 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
       {track.currentUnit && (
         <div className="rounded-2xl border border-sparrow-rule bg-white p-4">
-          <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
-            Where we are
-          </p>
           <CurriculumTrackVertical track={track} />
         </div>
       )}

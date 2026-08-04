@@ -38,108 +38,84 @@ export function GhostDot() {
  *  boundary when it isn't. This is what lets a phase transition read on the
  *  line itself even where there's no dot marking it (e.g. the current unit
  *  expanding into small dots with no separate big dot of its own). */
-function Segment({ from, to }: { from: string; to: string }) {
-  const background = from === to ? from : `linear-gradient(to right, ${from} 50%, ${to} 50%)`;
-  return <span className="h-0.5 w-3.5 shrink-0" style={{ background }} />;
+function Segment({ from, to, vertical }: { from: string; to: string; vertical: boolean }) {
+  const direction = vertical ? 'to bottom' : 'to right';
+  const background = from === to ? from : `linear-gradient(${direction}, ${from} 50%, ${to} 50%)`;
+  return <span className={vertical ? 'w-0.5 h-3.5 shrink-0' : 'h-0.5 w-3.5 shrink-0'} style={{ background }} />;
 }
 
-function Connector({ vertical }: { vertical?: boolean }) {
-  return vertical ? (
-    <div className="h-2.5 w-px shrink-0 bg-sparrow-rule" />
-  ) : (
-    <div className="h-px w-4 shrink-0 bg-sparrow-rule" />
+/** The actual dot track, shared by both orientations so they can never drift
+ *  apart the way the old hand-duplicated vertical version did (missing the
+ *  threaded line, a stale duplicate caption, etc). Done units collapse to
+ *  one big dot each; the current unit expands session-by-session; only the
+ *  next upcoming unit gets a couple of preview ghost dots before the rest
+ *  of the program folds away. */
+function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: boolean }) {
+  const [nextUnit, ...restUnits] = track.upcomingUnits;
+  const { doneUnits, currentUnit } = track;
+  const row = vertical ? 'flex flex-col items-center' : 'flex flex-wrap items-center';
+  const cluster = vertical ? 'flex flex-col items-center' : 'flex items-center';
+
+  return (
+    <div className={row}>
+      {doneUnits.map((u, i) => (
+        <span key={u.id} className={cluster}>
+          {i > 0 && <Segment from={doneUnits[i - 1].color} to={u.color} vertical={vertical} />}
+          <BigDot color={u.color} />
+        </span>
+      ))}
+      {doneUnits.length > 0 && currentUnit && (
+        <Segment from={doneUnits[doneUnits.length - 1].color} to={currentUnit.color} vertical={vertical} />
+      )}
+      {currentUnit && (
+        <div className={`${cluster} gap-1.5 rounded-full bg-sparrow-sage px-2.5 py-1`}>
+          {currentUnit.sessions.map((s) => (
+            <SessionDot key={s.id} color={currentUnit.color} state={s.state} />
+          ))}
+        </div>
+      )}
+      {currentUnit && nextUnit && <Segment from={currentUnit.color} to={GHOST_COLOR} vertical={vertical} />}
+      {nextUnit && (
+        <div className={cluster}>
+          {Array.from({ length: Math.min(2, nextUnit.sessionCount) }).map((_, i) => (
+            <span key={i} className={cluster}>
+              {i > 0 && <Segment from={GHOST_COLOR} to={GHOST_COLOR} vertical={vertical} />}
+              <GhostDot />
+            </span>
+          ))}
+        </div>
+      )}
+      {restUnits.length > 0 && !vertical && (
+        <span className="ml-2 whitespace-nowrap text-xs text-sparrow-gray">+{restUnits.length} more units</span>
+      )}
+    </div>
   );
 }
 
-/** Full horizontal arc — Progress tab. Done units collapse to one big dot
- *  each, threaded together by a line that shifts color at every phase
- *  boundary; the current unit expands session-by-session; only the very
- *  next upcoming unit gets a couple of preview ghost dots before the rest
- *  of the program folds into a single "+N more units" tail. */
+/** Full horizontal arc — Progress tab. */
 export function CurriculumTrackHorizontal({ track }: { track: CurriculumTrack }) {
-  const [nextUnit, ...restUnits] = track.upcomingUnits;
-  const { doneUnits, currentUnit } = track;
-
   return (
     <div>
-      <div className="flex flex-wrap items-center">
-        {doneUnits.map((u, i) => (
-          <span key={u.id} className="flex items-center">
-            {i > 0 && <Segment from={doneUnits[i - 1].color} to={u.color} />}
-            <BigDot color={u.color} />
-          </span>
-        ))}
-        {doneUnits.length > 0 && currentUnit && (
-          <Segment from={doneUnits[doneUnits.length - 1].color} to={currentUnit.color} />
-        )}
-        {currentUnit && (
-          <div className="flex items-center gap-1.5 rounded-full bg-sparrow-sage px-2.5 py-1">
-            {currentUnit.sessions.map((s) => (
-              <SessionDot key={s.id} color={currentUnit.color} state={s.state} />
-            ))}
-          </div>
-        )}
-        {currentUnit && nextUnit && <Segment from={currentUnit.color} to={GHOST_COLOR} />}
-        {nextUnit && (
-          <div className="flex items-center">
-            {Array.from({ length: Math.min(2, nextUnit.sessionCount) }).map((_, i) => (
-              <span key={i} className="flex items-center">
-                {i > 0 && <Segment from={GHOST_COLOR} to={GHOST_COLOR} />}
-                <GhostDot />
-              </span>
-            ))}
-          </div>
-        )}
-        {restUnits.length > 0 && (
-          <span className="ml-2 whitespace-nowrap text-xs text-sparrow-gray">+{restUnits.length} more units</span>
-        )}
-      </div>
+      <TrackDots track={track} vertical={false} />
       <TrackCaption track={track} />
     </div>
   );
 }
 
-/** Compact vertical stack — Session Log home, "off to the side." Same
- *  done/current/upcoming picture, just rotated for a narrow sidebar. */
+/** Same dots, rotated — Session Log home, "off to the side." Deliberately
+ *  quieter on text than the Progress tab version: no phase/unit naming
+ *  (already shown prominently there), just what's coming up next. */
 export function CurriculumTrackVertical({ track }: { track: CurriculumTrack }) {
-  const lastDone = track.doneUnits[track.doneUnits.length - 1];
   const [nextUnit] = track.upcomingUnits;
-
   return (
-    <div className="flex flex-col items-center gap-1">
-      {lastDone && (
-        <>
-          <div className="flex flex-col items-center gap-1">
-            <BigDot color={lastDone.color} />
-            <p className="text-[11px] text-sparrow-gray">{lastDone.name}</p>
-          </div>
-          {track.currentUnit && <Connector vertical />}
-        </>
-      )}
-      {track.currentUnit && (
-        <div className="flex flex-col items-center gap-1 rounded-xl bg-sparrow-sage px-2.5 py-2">
-          <div className="flex items-center gap-1">
-            {track.currentUnit.sessions.map((s) => (
-              <SessionDot key={s.id} color={track.currentUnit!.color} state={s.state} />
-            ))}
-          </div>
-          <p className="text-center text-[11px] font-semibold text-sparrow-ink">
-            {track.currentUnit.name}
-            <br />
-            {track.currentUnit.localIndex != null ? `${track.currentUnit.localIndex} of ${track.currentUnit.sessionCount}` : 'position not set'}
-          </p>
-        </div>
-      )}
-      {track.currentUnit && nextUnit && <Connector vertical />}
+    <div>
+      <TrackDots track={track} vertical />
       {nextUnit && (
-        <div className="flex flex-col items-center gap-1">
-          <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(2, nextUnit.sessionCount) }).map((_, i) => (
-              <GhostDot key={i} />
-            ))}
-          </div>
-          <p className="text-center text-[11px] italic text-sparrow-gray">{nextUnit.name}<br />up next</p>
-        </div>
+        <p className="mt-2 text-center text-[11px] italic text-sparrow-gray">
+          {nextUnit.name}
+          <br />
+          up next
+        </p>
       )}
     </div>
   );
