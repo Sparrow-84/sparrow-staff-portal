@@ -1,5 +1,5 @@
 import type { CurriculumTrack, TrackSessionState } from '@/lib/curriculum-track';
-import { tintColor } from '@/lib/curriculum-track';
+import { tintColor, upNextSession } from '@/lib/curriculum-track';
 
 const GHOST_COLOR = '#C7C7C0';
 
@@ -7,18 +7,13 @@ export function BigDot({ color }: { color: string }) {
   return <span className="relative z-10 inline-block h-5 w-5 shrink-0 rounded-full" style={{ backgroundColor: color }} />;
 }
 
+// No ring here -- a session that's the position pointer is exactly as
+// finished as the ones before it, not "in progress." Ringing it used to
+// make the most recently completed session look unfinished.
 export function SessionDot({ color, state }: { color: string; state: TrackSessionState }) {
-  if (state === 'current') {
-    return (
-      <span
-        className="relative z-10 inline-block h-[13px] w-[13px] shrink-0 rounded-full"
-        style={{ backgroundColor: color, boxShadow: `0 0 0 2px white, 0 0 0 3px ${color}` }}
-      />
-    );
-  }
   return (
     <span
-      className="relative z-10 inline-block h-[7px] w-[7px] shrink-0 rounded-full"
+      className="relative z-10 inline-block h-[9px] w-[9px] shrink-0 rounded-full"
       style={{ backgroundColor: state === 'done' ? color : tintColor(color) }}
     />
   );
@@ -55,10 +50,16 @@ function Segment({ from, to, vertical }: { from: string; to: string; vertical: b
  *  next upcoming unit gets a couple of preview ghost dots before the rest
  *  of the program folds away. */
 function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: boolean }) {
-  const [nextUnit, ...restUnits] = track.upcomingUnits;
-  const { doneUnits, currentUnit } = track;
+  const { doneUnits, currentUnit, upcomingUnits } = track;
   const row = vertical ? 'flex flex-col items-center' : 'flex flex-wrap items-center';
   const cluster = vertical ? 'flex flex-col items-center' : 'flex items-center';
+
+  // Only preview the next unit's ghost dots once the current unit is
+  // actually exhausted -- otherwise its own remaining (tinted) sessions
+  // already show what's next, and previewing the unit after it too early
+  // reads as "that's what's coming" when really more of this one is left.
+  const currentUnitDone = currentUnit != null && currentUnit.localIndex != null && currentUnit.localIndex >= currentUnit.sessionCount;
+  const [nextUnit, ...restUnits] = currentUnit == null || currentUnitDone ? upcomingUnits : [];
 
   return (
     <div className={row}>
@@ -127,8 +128,8 @@ function mostRecentlyCompleted(track: CurriculumTrack): { name: string; index: n
  *  (already shown prominently there), just what was just finished and
  *  what's coming up next. */
 export function CurriculumTrackVertical({ track }: { track: CurriculumTrack }) {
-  const [nextUnit] = track.upcomingUnits;
   const recent = mostRecentlyCompleted(track);
+  const next = upNextSession(track);
   return (
     <div>
       {recent && (
@@ -137,9 +138,9 @@ export function CurriculumTrackVertical({ track }: { track: CurriculumTrack }) {
         </p>
       )}
       <TrackDots track={track} vertical />
-      {nextUnit && (
+      {next && (
         <p className="mt-2 text-center text-[11px] italic text-sparrow-gray">
-          {nextUnit.name}
+          {next.unitName} session {next.sessionNumber}
           <br />
           up next
         </p>
@@ -150,7 +151,7 @@ export function CurriculumTrackVertical({ track }: { track: CurriculumTrack }) {
 
 function TrackCaption({ track }: { track: CurriculumTrack }) {
   if (!track.currentUnit) return null;
-  const [nextUnit] = track.upcomingUnits;
+  const next = upNextSession(track);
 
   if (track.currentUnit.isFinalSession) {
     return (
@@ -168,7 +169,11 @@ function TrackCaption({ track }: { track: CurriculumTrack }) {
           ? `Session ${track.currentUnit.localIndex} of ${track.currentUnit.sessionCount}`
           : 'Position within unit not set'}
       </span>
-      {nextUnit && <span className="italic text-sparrow-gray">{nextUnit.name} next</span>}
+      {next && (
+        <span className="italic text-sparrow-gray">
+          {next.unitName} session {next.sessionNumber} next
+        </span>
+      )}
     </div>
   );
 }
