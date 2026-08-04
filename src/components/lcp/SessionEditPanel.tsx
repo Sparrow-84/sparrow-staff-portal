@@ -10,6 +10,8 @@ import {
   addResource,
   deleteResource,
   fetchSessionResources,
+  markCurriculumNotesReviewed,
+  updateCurriculumNotes,
   updateCurriculumSession,
   updateResource,
 } from '@/lib/lcp';
@@ -49,6 +51,10 @@ export function SessionEditPanel({
   const [mentorGoingDeeper, setMentorGoingDeeper] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [curriculumNotes, setCurriculumNotes] = useState('');
+  const [curriculumNotesReviewedAt, setCurriculumNotesReviewedAt] = useState<string | null>(null);
+  const [notesSaving, setNotesSaving] = useState(false);
 
   const [resources, setResources] = useState<Resource[]>([]);
   const [resLoading, setResLoading] = useState(false);
@@ -94,6 +100,8 @@ export function SessionEditPanel({
     setMentorBrief(session.mentor_brief ?? '');
     setMentorHandoutEcho(session.mentor_handout_echo ?? '');
     setMentorGoingDeeper(session.mentor_going_deeper ?? '');
+    setCurriculumNotes(session.curriculum_notes ?? '');
+    setCurriculumNotesReviewedAt(session.curriculum_notes_reviewed_at);
     setSaveError(null);
     setEditMode({ kind: 'none' });
     setResError(null);
@@ -130,6 +138,31 @@ export function SessionEditPanel({
       setSaveError(e instanceof Error ? e.message : 'Could not save session.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveCurriculumNotes() {
+    if (!session) return;
+    setNotesSaving(true);
+    try {
+      await updateCurriculumNotes(session.id, curriculumNotes.trim() || null);
+      setCurriculumNotesReviewedAt(null);
+      onSaved({ ...session, curriculum_notes: curriculumNotes.trim() || null, curriculum_notes_reviewed_at: null });
+    } finally {
+      setNotesSaving(false);
+    }
+  }
+
+  async function markNotesReviewed() {
+    if (!session) return;
+    setNotesSaving(true);
+    try {
+      await markCurriculumNotesReviewed(session.id);
+      const reviewedAt = new Date().toISOString();
+      setCurriculumNotesReviewedAt(reviewedAt);
+      onSaved({ ...session, curriculum_notes_reviewed_at: reviewedAt });
+    } finally {
+      setNotesSaving(false);
     }
   }
 
@@ -360,6 +393,41 @@ export function SessionEditPanel({
                 onEdit={() => studentHandout && openEdit(studentHandout)}
                 onRemove={() => studentHandout && handleDeleteResource(studentHandout.id)}
               />
+            </div>
+
+            <div className="mt-4 rounded-lg border border-sparrow-rule p-2.5">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-sparrow-ink">
+                  Curriculum Notes{' '}
+                  <span className="font-normal text-sparrow-gray">— written by staff from the Session Log while teaching</span>
+                </p>
+                {curriculumNotes.trim() && !curriculumNotesReviewedAt && (
+                  <span className="shrink-0 rounded-full bg-sparrow-cream px-2 py-0.5 text-[11px] font-bold text-sparrow-gold">
+                    🔔 Unreviewed
+                  </span>
+                )}
+              </div>
+              <textarea
+                value={curriculumNotes}
+                onChange={(e) => setCurriculumNotes(e.target.value)}
+                rows={3}
+                className="field-input mt-2 resize-none"
+                placeholder="Nothing added yet."
+              />
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={saveCurriculumNotes}
+                  disabled={notesSaving || curriculumNotes === (session.curriculum_notes ?? '')}
+                  className="btn-ghost border border-sparrow-rule text-xs"
+                >
+                  {notesSaving ? 'Saving…' : 'Save notes'}
+                </button>
+                {curriculumNotes.trim() && !curriculumNotesReviewedAt && (
+                  <button onClick={markNotesReviewed} disabled={notesSaving} className="text-xs font-semibold text-sparrow-green">
+                    Mark reviewed
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

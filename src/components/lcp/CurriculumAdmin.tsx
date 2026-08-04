@@ -395,6 +395,14 @@ function UnitSection({
                 >
                   {c?.devotionalCount ?? 0}/5
                 </span>
+                {s.curriculum_notes?.trim() && !s.curriculum_notes_reviewed_at && (
+                  <span
+                    className="rounded-full bg-sparrow-cream px-1.5 py-0.5 text-[10px] font-bold text-sparrow-gold"
+                    title="Unreviewed curriculum note"
+                  >
+                    🔔
+                  </span>
+                )}
               </div>
               <span className="mt-px shrink-0 text-xs text-sparrow-gray">›</span>
             </button>
