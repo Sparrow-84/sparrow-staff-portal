@@ -29,14 +29,22 @@ import {
   fetchHomeworkForFamily,
   fetchNotesForSessionLog,
   fetchStaffNotesWithSession,
+  fetchVouchers,
   findOrCreateMondaySessionLog,
   markGoalMet,
+  revokeVoucher,
   setHomeworkStatus,
   upsertBucketNote,
   upsertSessionAttendance,
 } from '@/lib/lcp';
 
 const STATUSES: AttendanceStatus[] = ['on_time', 'late', 'no_show'];
+
+// A voucher awarded before this fix (or on a re-load) whose exact row we
+// couldn't confidently identify -- still shown as checked, but revoking it
+// needs a real id, so this is a distinct state from "not awarded" (null).
+const UNKNOWN_VOUCHER = '__unknown__';
+type VoucherState = string | typeof UNKNOWN_VOUCHER | null;
 
 const BUCKET_CARD_BORDER: Record<MondayBucket, string> = {
   finance: 'border-t-4 border-t-[#2F6B4F]',
@@ -96,7 +104,8 @@ export function MondaySessionPanel({
   }
 
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
-  const [vouchers, setVouchers] = useState<Record<string, boolean>>({});
+  const [vouchers, setVouchers] = useState<Record<string, VoucherState>>({});
+  const [voucherError, setVoucherError] = useState<string | null>(null);
 
   const [notesByBucket, setNotesByBucket] = useState<Record<MondayBucket, Record<string, string>>>({
     finance: {},
@@ -140,11 +149,26 @@ export function MondaySessionPanel({
       if (cancelled) return;
 
       const attMap: Record<string, AttendanceStatus> = {};
-      const voucherMap: Record<string, boolean> = {};
+      const voucherMap: Record<string, VoucherState> = {};
       for (const f of families) attMap[f.id] = 'on_time';
       for (const row of attRows as SessionAttendance[]) {
         attMap[row.family_id] = row.status;
-        voucherMap[row.family_id] = row.voucher_awarded;
+        voucherMap[row.family_id] = row.voucher_awarded ? UNKNOWN_VOUCHER : null;
+      }
+      // Try to resolve "awarded but which one" to a real, revokable id --
+      // the one unspent voucher earned tonight, if there's exactly one.
+      const awardedFamilyIds = Object.entries(voucherMap)
+        .filter(([, v]) => v === UNKNOWN_VOUCHER)
+        .map(([familyId]) => familyId);
+      if (awardedFamilyIds.length > 0) {
+        const resolved = await Promise.all(
+          awardedFamilyIds.map(async (familyId) => {
+            const list = await fetchVouchers(familyId);
+            const match = list.find((v) => v.redemption_id == null && v.earned_at.slice(0, 10) === sessionDate);
+            return [familyId, match?.id ?? UNKNOWN_VOUCHER] as const;
+          }),
+        );
+        for (const [familyId, id] of resolved) voucherMap[familyId] = id;
       }
       setAttendance(attMap);
       setVouchers(voucherMap);
@@ -180,18 +204,49 @@ export function MondaySessionPanel({
   async function setStatus(familyId: string, status: AttendanceStatus) {
     setAttendance((prev) => ({ ...prev, [familyId]: status }));
     if (!sessionLogId) return;
-    await upsertSessionAttendance(sessionLogId, familyId, status, vouchers[familyId] ?? false, currentUserId);
+    await upsertSessionAttendance(sessionLogId, familyId, status, vouchers[familyId] != null, currentUserId);
   }
 
   function markAllPresent() {
     for (const f of families) void setStatus(f.id, 'on_time');
   }
 
-  async function awardFamilyVoucher(familyId: string) {
-    if (vouchers[familyId] || !sessionLogId) return;
-    setVouchers((prev) => ({ ...prev, [familyId]: true }));
-    await upsertSessionAttendance(sessionLogId, familyId, attendance[familyId] ?? 'on_time', true, currentUserId);
-    await awardVoucher(familyId, 'Session attendance — Monday Mentoring', currentUserId);
+  async function toggleFamilyVoucher(familyId: string) {
+    if (!sessionLogId) return;
+    setVoucherError(null);
+    const current = vouchers[familyId] ?? null;
+
+    if (current == null) {
+      // Award it.
+      const previous = current;
+      setVouchers((prev) => ({ ...prev, [familyId]: UNKNOWN_VOUCHER }));
+      try {
+        const voucherId = await awardVoucher(familyId, 'Session attendance — Monday Mentoring', currentUserId);
+        await upsertSessionAttendance(sessionLogId, familyId, attendance[familyId] ?? 'on_time', true, currentUserId);
+        setVouchers((prev) => ({ ...prev, [familyId]: voucherId }));
+      } catch (e) {
+        setVouchers((prev) => ({ ...prev, [familyId]: previous }));
+        setVoucherError(e instanceof Error ? e.message : 'Could not award voucher.');
+      }
+      return;
+    }
+
+    if (current === UNKNOWN_VOUCHER) {
+      setVoucherError(
+        "Can't undo this one automatically — it was awarded before this fix (or on a previous visit) and the exact record can't be identified safely. Ask Byron to remove it directly if it was a mistake.",
+      );
+      return;
+    }
+
+    // Revoke it.
+    setVouchers((prev) => ({ ...prev, [familyId]: null }));
+    try {
+      await revokeVoucher(current);
+      await upsertSessionAttendance(sessionLogId, familyId, attendance[familyId] ?? 'on_time', false, currentUserId);
+    } catch (e) {
+      setVouchers((prev) => ({ ...prev, [familyId]: current }));
+      setVoucherError(e instanceof Error ? e.message : 'Could not undo voucher.');
+    }
   }
 
   function setNoteDraft(bucket: MondayBucket, familyId: string, body: string) {
@@ -325,9 +380,8 @@ export function MondaySessionPanel({
               <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray">
                 <input
                   type="checkbox"
-                  checked={vouchers[f.id] ?? false}
-                  disabled={vouchers[f.id]}
-                  onChange={() => awardFamilyVoucher(f.id)}
+                  checked={vouchers[f.id] != null}
+                  onChange={() => void toggleFamilyVoucher(f.id)}
                   className="h-3.5 w-3.5 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
                 />
                 Voucher
@@ -335,6 +389,7 @@ export function MondaySessionPanel({
             </li>
           ))}
         </ul>
+        {voucherError && <p className="mt-2 text-xs text-priority-p1">{voucherError}</p>}
       </section>
 
       {/* Bucket picker / active bucket */}

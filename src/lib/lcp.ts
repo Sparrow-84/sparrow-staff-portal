@@ -815,11 +815,27 @@ export async function fetchVouchers(familyId: string): Promise<Voucher[]> {
   return (data ?? []) as Voucher[];
 }
 
-export async function awardVoucher(familyId: string, earnedFor: string, awardedBy: string): Promise<void> {
-  const { error } = await supabase
+export async function awardVoucher(familyId: string, earnedFor: string, awardedBy: string): Promise<string> {
+  const { data, error } = await supabase
     .from('lcp_vouchers')
-    .insert({ family_id: familyId, kind: 'gift_card', earned_for: earnedFor, awarded_by: awardedBy });
+    .insert({ family_id: familyId, kind: 'gift_card', earned_for: earnedFor, awarded_by: awardedBy })
+    .select('id')
+    .single();
   if (error) throw new Error(error.message);
+  return (data as { id: string }).id;
+}
+
+// Undo a voucher awarded by mistake -- guarded to refuse if it's already
+// been spent, so a real reward already converted to a gift card can never
+// be silently erased by an unrelated UI toggle.
+export async function revokeVoucher(voucherId: string): Promise<void> {
+  const { error, count } = await supabase
+    .from('lcp_vouchers')
+    .delete({ count: 'exact' })
+    .eq('id', voucherId)
+    .is('redemption_id', null);
+  if (error) throw new Error(error.message);
+  if (!count) throw new Error('This voucher has already been redeemed and can\'t be undone here.');
 }
 
 export async function fetchRedemptions(): Promise<Redemption[]> {
