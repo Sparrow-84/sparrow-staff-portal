@@ -27,7 +27,7 @@ import {
   type SessionLog as SessionLogRecord,
   type TocSpaceSlim,
 } from '@/lib/lcp-types';
-import { isFeeOverdue, isOverdue } from '@/lib/lcp-format';
+import { dayLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
 import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { FamilyDetailPanel, type FamilyDetailTab } from './FamilyDetailPanel';
 import { SessionBriefPanel } from './SessionBriefPanel';
@@ -100,6 +100,9 @@ export function LcpRoom() {
   const [error, setError] = useState<string | null>(null);
 
   const [tab, setTab] = useState<'families' | 'progress' | 'session-log' | 'session-cal' | 'team-cal' | 'curriculum'>('families');
+  const [familiesView, setFamiliesView] = useState<'active' | 'past'>('active');
+  const [pastFamilies, setPastFamilies] = useState<Family[]>([]);
+  const [pastLoaded, setPastLoaded] = useState(false);
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [familyOpenTab, setFamilyOpenTab] = useState<FamilyDetailTab | undefined>(undefined);
@@ -146,6 +149,14 @@ export function LcpRoom() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (familiesView !== 'past' || pastLoaded) return;
+    fetchFamilies(false).then((f) => {
+      setPastFamilies(f);
+      setPastLoaded(true);
+    });
+  }, [familiesView, pastLoaded]);
 
   const homeworkByFamily = useMemo(() => {
     const map = new Map<string, Homework[]>();
@@ -204,7 +215,7 @@ export function LcpRoom() {
             {stats.feeOverdue > 0 && <span className="text-priority-p1"> · {stats.feeOverdue} program fee overdue</span>}
           </p>
         </div>
-        {tab === 'families' && (
+        {tab === 'families' && familiesView === 'active' && (
           <button onClick={() => setAddOpen(true)} className="btn-primary shrink-0">
             + Add family
           </button>
@@ -257,74 +268,119 @@ export function LcpRoom() {
         </div>
       ) : tab === 'families' ? (
         <div className="mt-6 space-y-3">
-          {families.map((f) => {
-            const fhw = homeworkByFamily.get(f.id) ?? [];
-            const open = fhw.filter((h) => h.status !== 'complete').length;
-            return (
+          <div className="inline-flex rounded-lg border border-sparrow-rule bg-sparrow-mist p-1 text-sm">
+            {(['active', 'past'] as const).map((v) => (
               <button
-                key={f.id}
-                onClick={() => openFamily(f.id)}
-                className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 text-left shadow-card transition hover:border-sparrow-green/40"
+                key={v}
+                onClick={() => setFamiliesView(v)}
+                className={`rounded-md px-3 py-1 font-medium capitalize transition ${
+                  familiesView === v ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
+                }`}
               >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-medium text-sparrow-ink">{f.display_name}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${FAMILY_STATUS[f.status].chip}`}>
-                      {FAMILY_STATUS[f.status].label}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-sparrow-gray">
-                    {open} open homework
-                  </p>
-                  <div className="mt-2">
-                    <PhaseProgressBar
-                      phases={phases}
-                      programUnitId={programPosition?.unit_id ?? null}
-                      joinedUnitId={f.joined_unit_id}
-                    />
-                  </div>
-                </div>
-                {feeOverdue(f) && (
-                  <span className="shrink-0 rounded-full bg-priority-p1/10 px-2 py-0.5 text-[10px] font-medium text-priority-p1">
-                    Program fee overdue
-                  </span>
-                )}
-                <span className="shrink-0 text-sparrow-gray">›</span>
+                {v}
               </button>
-            );
-          })}
+            ))}
+          </div>
 
-          {/* Homework board — this week, one column per family */}
-          <section className="mt-4">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Homework board</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {families.map((f) => {
-                const open = (homeworkByFamily.get(f.id) ?? []).filter((h) => h.status !== 'complete');
-                return (
-                  <div key={f.id} className="rounded-xl border border-sparrow-rule bg-white p-3">
-                    <p className="text-sm font-medium text-sparrow-ink">{f.display_name}</p>
-                    <ul className="mt-2 space-y-1.5">
-                      {open.length === 0 && <li className="text-xs text-sparrow-gray">All clear ✓</li>}
-                      {open.map((h) => (
-                        <li key={h.id} className="flex items-center gap-2 text-xs text-sparrow-ink">
-                          <span
-                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                              h.status === 'submitted' ? 'bg-sparrow-gold'
-                              : isOverdue(h.due_date) ? 'bg-priority-p1'
-                              : 'bg-sparrow-rule'
-                            }`}
-                          />
-                          <span className={`truncate ${isOverdue(h.due_date) ? 'text-priority-p1' : ''}`}>
-                            {h.title}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+          {familiesView === 'past' ? (
+            !pastLoaded ? (
+              <p className="text-sm text-sparrow-gray">Loading…</p>
+            ) : pastFamilies.length === 0 ? (
+              <p className="text-sm text-sparrow-gray">No families have left the program or graduated yet.</p>
+            ) : (
+              pastFamilies.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => openFamily(f.id)}
+                  className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 text-left shadow-card transition hover:border-sparrow-green/40"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-medium text-sparrow-ink">{f.display_name}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${FAMILY_STATUS[f.status].chip}`}>
+                        {FAMILY_STATUS[f.status].label}
+                      </span>
+                    </div>
+                    {f.program_end_date && (
+                      <p className="mt-0.5 text-xs text-sparrow-gray">Program ended {dayLabel(f.program_end_date)}</p>
+                    )}
                   </div>
+                  <span className="shrink-0 text-sparrow-gray">›</span>
+                </button>
+              ))
+            )
+          ) : (
+            <>
+              {families.map((f) => {
+                const fhw = homeworkByFamily.get(f.id) ?? [];
+                const open = fhw.filter((h) => h.status !== 'complete').length;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => openFamily(f.id)}
+                    className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 text-left shadow-card transition hover:border-sparrow-green/40"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-medium text-sparrow-ink">{f.display_name}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${FAMILY_STATUS[f.status].chip}`}>
+                          {FAMILY_STATUS[f.status].label}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-sparrow-gray">
+                        {open} open homework
+                      </p>
+                      <div className="mt-2">
+                        <PhaseProgressBar
+                          phases={phases}
+                          programUnitId={programPosition?.unit_id ?? null}
+                          joinedUnitId={f.joined_unit_id}
+                        />
+                      </div>
+                    </div>
+                    {feeOverdue(f) && (
+                      <span className="shrink-0 rounded-full bg-priority-p1/10 px-2 py-0.5 text-[10px] font-medium text-priority-p1">
+                        Program fee overdue
+                      </span>
+                    )}
+                    <span className="shrink-0 text-sparrow-gray">›</span>
+                  </button>
                 );
               })}
-            </div>
-          </section>
+
+              {/* Homework board — this week, one column per family */}
+              <section className="mt-4">
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Homework board</h2>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {families.map((f) => {
+                    const open = (homeworkByFamily.get(f.id) ?? []).filter((h) => h.status !== 'complete');
+                    return (
+                      <div key={f.id} className="rounded-xl border border-sparrow-rule bg-white p-3">
+                        <p className="text-sm font-medium text-sparrow-ink">{f.display_name}</p>
+                        <ul className="mt-2 space-y-1.5">
+                          {open.length === 0 && <li className="text-xs text-sparrow-gray">All clear ✓</li>}
+                          {open.map((h) => (
+                            <li key={h.id} className="flex items-center gap-2 text-xs text-sparrow-ink">
+                              <span
+                                className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                  h.status === 'submitted' ? 'bg-sparrow-gold'
+                                  : isOverdue(h.due_date) ? 'bg-priority-p1'
+                                  : 'bg-sparrow-rule'
+                                }`}
+                              />
+                              <span className={`truncate ${isOverdue(h.due_date) ? 'text-priority-p1' : ''}`}>
+                                {h.title}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            </>
+          )}
         </div>
       ) : tab === 'progress' ? (
         <LcpProgress
@@ -366,7 +422,7 @@ export function LcpRoom() {
 
       <FamilyDetailPanel
         open={familyOpen}
-        family={familyId ? families.find((f) => f.id === familyId) ?? null : null}
+        family={familyId ? (families.find((f) => f.id === familyId) ?? pastFamilies.find((f) => f.id === familyId) ?? null) : null}
         sessions={sessions}
         phases={phases}
         programUnitId={programPosition?.unit_id ?? null}

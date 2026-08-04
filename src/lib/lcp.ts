@@ -49,20 +49,22 @@ import type {
 // tier (Shelly, Audrey, Andrew); the participant app uses its own narrower client.
 
 // ── Families ─────────────────────────────────────────────────────────
-export async function fetchFamilies(): Promise<Family[]> {
+/** `active` toggles between the day-to-day roster and families who've left/
+ *  graduated -- kept separate views so the two never blend together. */
+export async function fetchFamilies(active = true): Promise<Family[]> {
   const { data, error } = await supabase
     .from('families')
     .select(
       'id, display_name, login_email, status, current_session_number, joined_unit_id, housing_savings_cents, active, created_at, toc_space_id, toc_tenant_id, move_in_date, program_end_date, emergency_contact_notes, toc_synced_at',
     )
-    .eq('active', true)
+    .eq('active', active)
     .order('display_name');
   if (error) {
     // joined_unit_id column missing (migration 0034 not yet applied) — fall back
     const { data: d2, error: e2 } = await supabase
       .from('families')
       .select('id, display_name, login_email, status, current_session_number, housing_savings_cents, active, created_at')
-      .eq('active', true)
+      .eq('active', active)
       .order('display_name');
     if (e2) throw new Error(e2.message);
     return ((d2 ?? []) as Omit<
