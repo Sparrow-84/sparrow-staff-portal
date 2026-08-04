@@ -25,6 +25,7 @@ import {
   awardVoucher,
   createGoal,
   fetchAttendanceForSessionLog,
+  fetchBucketStatus,
   fetchGoalsForFamily,
   fetchHomeworkForFamily,
   fetchNotesForSessionLog,
@@ -33,6 +34,7 @@ import {
   findOrCreateMondaySessionLog,
   markGoalMet,
   revokeVoucher,
+  setBucketStatus,
   setHomeworkStatus,
   upsertBucketNote,
   upsertSessionAttendance,
@@ -122,6 +124,16 @@ export function MondaySessionPanel({
   const [bucketSaveState, setBucketSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [bucketSaveError, setBucketSaveError] = useState<string | null>(null);
 
+  // Visibility only -- "is this bucket wrapped up for tonight" -- never a
+  // lock. Lets Andrew/Audrey/Shelly see who's finished without asking.
+  const [bucketStatus, setBucketStatusState] = useState<
+    Record<MondayBucket, { completedBy: string | null; completedAt: string | null }>
+  >({
+    finance: { completedBy: null, completedAt: null },
+    life_skills: { completedBy: null, completedAt: null },
+    mentoring: { completedBy: null, completedAt: null },
+  });
+
   const [liveGoals, setLiveGoals] = useState<Record<string, Goal[]>>({});
   const [liveHomework, setLiveHomework] = useState<Record<string, Homework[]>>({});
   const [addGoalOpen, setAddGoalOpen] = useState<Record<string, boolean>>({});
@@ -179,6 +191,7 @@ export function MondaySessionPanel({
       }
       setNotesByBucket(grouped);
       setSavedNotesByBucket(structuredClone(grouped));
+      setBucketStatusState(await fetchBucketStatus(logId));
 
       const goalUpdates: Record<string, Goal[]> = {};
       const hwUpdates: Record<string, Homework[]> = {};
@@ -276,6 +289,25 @@ export function MondaySessionPanel({
     }
   }
 
+  // Visibility signal, not a lock -- the bucket stays fully editable either
+  // way. Whoever's currently viewing it can flip it back off just as easily.
+  async function toggleBucketDone(bucket: MondayBucket) {
+    if (!sessionLogId) return;
+    const wasDone = bucketStatus[bucket].completedAt != null;
+    const previous = bucketStatus[bucket];
+    setBucketStatusState((prev) => ({
+      ...prev,
+      [bucket]: wasDone
+        ? { completedBy: null, completedAt: null }
+        : { completedBy: 'You', completedAt: new Date().toISOString() },
+    }));
+    try {
+      await setBucketStatus(sessionLogId, bucket, !wasDone, currentUserId);
+    } catch {
+      setBucketStatusState((prev) => ({ ...prev, [bucket]: previous }));
+    }
+  }
+
   async function toggleHistory(familyId: string) {
     setHistoryOpen((prev) => ({ ...prev, [familyId]: !prev[familyId] }));
     if (!historyByFamily[familyId]) {
@@ -336,12 +368,13 @@ export function MondaySessionPanel({
           onClick={onBack}
           className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green transition hover:bg-sparrow-sage/70"
         >
-          ← Back
+          Done for now
         </button>
         <div>
           <h2 className="font-serif text-xl font-semibold text-sparrow-ink">{SESSION_LOG_LABEL.monday_mentoring}</h2>
           <p className="mt-0.5 text-sm text-sparrow-gray">
-            {formatDateHeader(sessionDate)} · Shared log — any LCP staff can add to it tonight
+            {formatDateHeader(sessionDate)} · Shared log — everything above is already saved. Leaving
+            doesn't finish or lock anything for the others tonight.
           </p>
         </div>
       </div>
@@ -400,6 +433,7 @@ export function MondaySessionPanel({
             <div className="mt-2 grid gap-3 sm:grid-cols-3">
               {MONDAY_BUCKETS.map((bucket) => {
                 const { done, total } = bucketCompletion(bucket);
+                const status = bucketStatus[bucket];
                 return (
                   <button
                     key={bucket}
@@ -417,6 +451,11 @@ export function MondaySessionPanel({
                     >
                       {done} of {total} logged
                     </span>
+                    {status.completedAt && (
+                      <span className="text-[11px] font-medium text-sparrow-green">
+                        ✓ Done for tonight{status.completedBy ? ` — ${status.completedBy}` : ''}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -487,7 +526,7 @@ export function MondaySessionPanel({
               ))}
             </div>
 
-            <div className="mt-4 flex items-center gap-3 border-t border-sparrow-rule pt-4">
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-sparrow-rule pt-4">
               <button
                 onClick={() => void saveBucketNotes(selectedBucket)}
                 disabled={bucketSaveState === 'saving'}
@@ -499,6 +538,15 @@ export function MondaySessionPanel({
               {bucketSaveState === 'error' && (
                 <span className="text-sm font-medium text-priority-p1">{bucketSaveError}</span>
               )}
+              <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray">
+                <input
+                  type="checkbox"
+                  checked={bucketStatus[selectedBucket].completedAt != null}
+                  onChange={() => void toggleBucketDone(selectedBucket)}
+                  className="h-3.5 w-3.5 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                />
+                Done with {MONDAY_BUCKET_LABEL[selectedBucket]} for tonight
+              </label>
             </div>
           </>
         )}

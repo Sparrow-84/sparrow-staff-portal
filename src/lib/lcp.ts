@@ -675,6 +675,49 @@ export async function upsertBucketNote(
   }
 }
 
+// A visibility signal only -- "is Finance/Life Skills/Mentoring wrapped up
+// for tonight" -- never a lock. The bucket stays fully editable either way.
+export async function fetchBucketStatus(
+  sessionLogId: string,
+): Promise<Record<MondayBucket, { completedBy: string | null; completedAt: string | null }>> {
+  const { data, error } = await supabase
+    .from('lcp_monday_bucket_status')
+    .select('bucket, completed_by, completed_at, profiles(full_name)')
+    .eq('session_log_id', sessionLogId);
+  if (error) throw new Error(error.message);
+  const result: Record<MondayBucket, { completedBy: string | null; completedAt: string | null }> = {
+    finance: { completedBy: null, completedAt: null },
+    life_skills: { completedBy: null, completedAt: null },
+    mentoring: { completedBy: null, completedAt: null },
+  };
+  for (const row of (data ?? []) as unknown as {
+    bucket: MondayBucket;
+    completed_at: string | null;
+    profiles: { full_name: string } | { full_name: string }[] | null;
+  }[]) {
+    if (row.completed_at) {
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      result[row.bucket] = { completedBy: profile?.full_name ?? null, completedAt: row.completed_at };
+    }
+  }
+  return result;
+}
+
+export async function setBucketStatus(
+  sessionLogId: string,
+  bucket: MondayBucket,
+  done: boolean,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase.from('lcp_monday_bucket_status').upsert({
+    session_log_id: sessionLogId,
+    bucket,
+    completed_by: done ? userId : null,
+    completed_at: done ? new Date().toISOString() : null,
+  });
+  if (error) throw new Error(error.message);
+}
+
 // ── Session logs ──────────────────────────────────────────────────────
 export async function fetchRecentSessionLogs(weeksBack = 8): Promise<SessionLog[]> {
   const since = new Date();
