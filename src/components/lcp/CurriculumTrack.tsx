@@ -50,11 +50,10 @@ function UnitHeaderDot({ color, filled }: { color: string; filled: boolean }) {
 function Segment({ from, to, vertical }: { from: string; to: string; vertical: boolean }) {
   const direction = vertical ? 'to bottom' : 'to right';
   const background = from === to ? from : `linear-gradient(${direction}, ${from} 50%, ${to} 50%)`;
-  // Kept short -- every dot-to-dot gap is now its own Segment (there used
-  // to be far fewer of these, only between big unit dots), so the same
-  // per-segment length that looked right before adds up much faster now
-  // that session-to-session gaps are included too.
-  return <span className={vertical ? 'w-0.5 h-2 shrink-0' : 'h-0.5 w-3.5 shrink-0'} style={{ background }} />;
+  // Back to the original length on both axes -- lengthening the vertical
+  // track was tried a few different ways this round and each one ended up
+  // looking worse than just leaving it matched to the horizontal version.
+  return <span className={vertical ? 'w-0.5 h-3.5 shrink-0' : 'h-0.5 w-3.5 shrink-0'} style={{ background }} />;
 }
 
 /** The actual dot track, shared by both orientations so they can never drift
