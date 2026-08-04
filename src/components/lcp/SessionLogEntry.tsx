@@ -27,6 +27,7 @@ import {
   fetchGoalsForFamily,
   fetchHomeworkForFamily,
   fetchSessionResources,
+  finalizeThursdaySessionLog,
   markGoalMet,
   setHomeworkStatus,
   upsertSessionAttendance,
@@ -53,6 +54,7 @@ interface Props {
   sessionType: SessionLogType;
   sessionDate: string;
   eventId: string | null;
+  sessionLogId: string | null;
   label: string;
   families: Family[];
   homeworkByFamily: Map<string, Homework[]>;
@@ -77,6 +79,7 @@ export function SessionLogEntry({
   sessionType,
   sessionDate,
   eventId,
+  sessionLogId,
   label,
   families,
   homeworkByFamily,
@@ -200,13 +203,21 @@ export function SessionLogEntry({
     setFiling(true);
     setError(null);
     try {
-      const logId = await createSessionLog({
-        session_date: sessionDate,
-        session_type: sessionType,
-        event_id: eventId,
-        group_note: groupNote.trim() || null,
-        created_by: currentUserId,
-      });
+      // Thursday's log row already exists (created as soon as this screen was
+      // opened, so prep notes had somewhere to save) -- finalize it in place
+      // rather than inserting a second row for the same evening. Ad-hoc keeps
+      // the old one-row-per-filing behavior; filing IS creation for it.
+      const logId =
+        sessionType === 'thursday_group' && sessionLogId
+          ? await finalizeThursdaySessionLog(sessionLogId, groupNote.trim() || null).then(() => sessionLogId)
+          : await createSessionLog({
+              session_date: sessionDate,
+              session_type: sessionType,
+              event_id: eventId,
+              group_note: groupNote.trim() || null,
+              created_by: currentUserId,
+              filed_at: new Date().toISOString(),
+            });
 
       for (const family of activeFamilies) {
         const status = attendance[family.id] ?? 'on_time';

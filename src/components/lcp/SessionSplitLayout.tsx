@@ -29,6 +29,13 @@ export interface ThursdayGuideContent {
   teacherGuideDriveUrl: string | null;
 }
 
+export interface ThursdayNotes {
+  prepNotes: string;
+  curriculumNotes: string;
+  onPrepNotesSave: (text: string) => void;
+  onCurriculumNotesSave: (text: string) => void;
+}
+
 export function SessionSplitLayout({
   sessionLabel,
   sessionDate,
@@ -37,6 +44,7 @@ export function SessionSplitLayout({
   mondayLoading,
   thursdayGuideContent,
   thursdayGuideLoading,
+  thursdayNotes,
   children,
 }: {
   sessionLabel: string;
@@ -46,6 +54,7 @@ export function SessionSplitLayout({
   mondayLoading?: boolean;
   thursdayGuideContent?: ThursdayGuideContent | null;
   thursdayGuideLoading?: boolean;
+  thursdayNotes?: ThursdayNotes | null;
   children: ReactNode;
 }) {
   const [notesOpen, setNotesOpen] = useState(true);
@@ -205,15 +214,22 @@ export function SessionSplitLayout({
                     </p>
                   )}
                 </div>
-                <div className="shrink-0 border-t border-sparrow-rule">
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={3}
-                    className="w-full resize-none bg-white p-3 text-xs leading-relaxed text-sparrow-ink outline-none placeholder:text-sparrow-rule"
-                    placeholder="Personal scratch notes — visible only here, not saved"
-                  />
-                </div>
+                {thursdayNotes && (
+                  <div className="shrink-0 border-t border-sparrow-rule">
+                    <NotesAccordion
+                      label="Prep notes"
+                      value={thursdayNotes.prepNotes}
+                      onSave={thursdayNotes.onPrepNotesSave}
+                      placeholder="Want to add or reorganize something before this session? Write it here — visible to whoever else is prepping too."
+                    />
+                    <NotesAccordion
+                      label="Curriculum notes"
+                      value={thursdayNotes.curriculumNotes}
+                      onSave={thursdayNotes.onCurriculumNotesSave}
+                      placeholder="Notes about the curriculum itself — also shows up in Curriculum Admin next to this session's Teacher Guide."
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -259,6 +275,53 @@ export function SessionSplitLayout({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Collapsed by default so the Teacher Guide keeps most of the screen --
+// expand only when actually reading/writing one of these. Saves on blur
+// rather than a separate button, same "just works" feel as the rest of the
+// always-saving Thursday/Monday panels.
+function NotesAccordion({
+  label,
+  value,
+  onSave,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onSave: (text: string) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  return (
+    <div className="border-t border-sparrow-rule first:border-t-0">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-sparrow-gray hover:text-sparrow-ink"
+      >
+        <span>{open ? '▾' : '▸'} {label}</span>
+        {!open && value.trim() && <span className="normal-case text-[10px] font-medium text-sparrow-green">has notes</span>}
+      </button>
+      {open && (
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            if (draft !== value) onSave(draft);
+          }}
+          rows={3}
+          className="w-full resize-none bg-white px-3 pb-3 text-xs leading-relaxed text-sparrow-ink outline-none placeholder:text-sparrow-rule"
+          placeholder={placeholder}
+        />
+      )}
     </div>
   );
 }

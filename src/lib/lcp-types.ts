@@ -221,6 +221,8 @@ export interface SessionLog {
   session_type: SessionLogType;
   event_id: string | null;
   group_note: string | null;
+  prep_notes: string | null;
+  filed_at: string | null;
   created_by: string | null;
   created_by_name: string | null;
   created_at: string;
@@ -465,6 +467,8 @@ export interface CurriculumSessionDetail {
   mentor_brief: string | null;
   mentor_handout_echo: string | null;
   mentor_going_deeper: string | null;
+  curriculum_notes: string | null;
+  curriculum_notes_reviewed_at: string | null;
 }
 
 // Shelly's fixed instructions — identical for every Monday Mentoring session,

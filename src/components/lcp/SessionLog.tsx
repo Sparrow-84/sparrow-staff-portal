@@ -9,7 +9,18 @@ import {
   type SessionLog,
   type SessionLogType,
 } from '@/lib/lcp-types';
-import { fetchNotePreviewsForSessionLogs, fetchRecentSessionLogs, fetchSessionMentorContent, fetchSessionResources, fetchTodayEvents } from '@/lib/lcp';
+import {
+  fetchNotePreviewsForSessionLogs,
+  fetchRecentSessionLogs,
+  fetchSessionCurriculumNotes,
+  fetchSessionLogPrepNotes,
+  fetchSessionMentorContent,
+  fetchSessionResources,
+  fetchTodayEvents,
+  findOrCreateThursdaySessionLog,
+  updateCurriculumNotes,
+  updatePrepNotes,
+} from '@/lib/lcp';
 import { timeLabel } from '@/lib/lcp-format';
 import { computeCurriculumTrack } from '@/lib/curriculum-track';
 import { CurriculumTrackVertical } from './CurriculumTrack';
@@ -18,7 +29,7 @@ import { SessionLogByBucket } from './SessionLogByBucket';
 import { SessionLogByParticipant } from './SessionLogByParticipant';
 import { SessionLogEntry } from './SessionLogEntry';
 import { SessionLogViewer } from './SessionLogViewer';
-import { SessionSplitLayout, type MondayMentorContent, type ThursdayGuideContent } from './SessionSplitLayout';
+import { SessionSplitLayout, type MondayMentorContent, type ThursdayGuideContent, type ThursdayNotes } from './SessionSplitLayout';
 
 type PastView = 'recent' | 'group' | 'participant' | 'bucket';
 
@@ -66,6 +77,10 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
   const [mondayLoading, setMondayLoading] = useState(false);
   const [thursdayGuideContent, setThursdayGuideContent] = useState<ThursdayGuideContent | null>(null);
   const [thursdayGuideLoading, setThursdayGuideLoading] = useState(false);
+  const [thursdaySessionLogId, setThursdaySessionLogId] = useState<string | null>(null);
+  const [thursdaySessionId, setThursdaySessionId] = useState<number | null>(null);
+  const [thursdayPrepNotes, setThursdayPrepNotes] = useState('');
+  const [thursdayCurriculumNotes, setThursdayCurriculumNotes] = useState('');
   const [pastView, setPastView] = useState<PastView>('recent');
   const [adHocPreviews, setAdHocPreviews] = useState<Record<string, string>>({});
 
@@ -113,20 +128,30 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
   // Thursday Group's left pane shows the actual Teacher Guide for tonight's
   // session — "whatever comes right after the last one filed," same rule
-  // SessionLogEntry uses to decide what it's about to file.
+  // SessionLogEntry uses to decide what it's about to file. Also creates (or
+  // finds) tonight's log row right away, so prep notes have somewhere to
+  // save before the session is actually filed.
   useEffect(() => {
     if (!entry || entry.sessionType !== 'thursday_group') return;
     const allUnits = phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order);
     const allSessions = allUnits.flatMap((u) => u.sessions).sort((a, b) => a.session_number - b.session_number);
     const lastCompletedIndex = programSessionId != null ? allSessions.findIndex((s) => s.id === programSessionId) : -1;
     const sessionToTeach = allSessions[lastCompletedIndex + 1] ?? null;
+    setThursdaySessionId(sessionToTeach?.id ?? null);
     if (!sessionToTeach) {
       setThursdayGuideContent(null);
+      setThursdaySessionLogId(null);
+      setThursdayPrepNotes('');
+      setThursdayCurriculumNotes('');
       return;
     }
     setThursdayGuideLoading(true);
-    fetchSessionResources(sessionToTeach.id)
-      .then((resources) => {
+    Promise.all([
+      fetchSessionResources(sessionToTeach.id),
+      fetchSessionCurriculumNotes(sessionToTeach.id),
+      findOrCreateThursdaySessionLog(entry.sessionDate, entry.eventId, currentUserId),
+    ])
+      .then(([resources, curriculumNotes, logId]) => {
         const guide = resources.find((r) => r.kind === 'teacher_guide') ?? null;
         setThursdayGuideContent({
           sessionNumber: sessionToTeach.session_number,
@@ -134,9 +159,13 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
           teacherGuide: guide?.content ?? null,
           teacherGuideDriveUrl: guide?.drive_url ?? null,
         });
+        setThursdayCurriculumNotes(curriculumNotes.notes ?? '');
+        setThursdaySessionLogId(logId);
+        return fetchSessionLogPrepNotes(logId);
       })
+      .then((prepNotes) => setThursdayPrepNotes(prepNotes ?? ''))
       .finally(() => setThursdayGuideLoading(false));
-  }, [entry, phases, programSessionId]);
+  }, [entry, phases, programSessionId, currentUserId]);
 
   function handleFiled() {
     setEntry(null);
@@ -145,6 +174,22 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
   }
 
   if (entry) {
+    const thursdayNotes: ThursdayNotes | null =
+      entry.sessionType === 'thursday_group'
+        ? {
+            prepNotes: thursdayPrepNotes,
+            curriculumNotes: thursdayCurriculumNotes,
+            onPrepNotesSave: (text) => {
+              setThursdayPrepNotes(text);
+              if (thursdaySessionLogId) void updatePrepNotes(thursdaySessionLogId, text || null);
+            },
+            onCurriculumNotesSave: (text) => {
+              setThursdayCurriculumNotes(text);
+              if (thursdaySessionId != null) void updateCurriculumNotes(thursdaySessionId, text || null);
+            },
+          }
+        : null;
+
     return (
       <SessionSplitLayout
         sessionLabel={entry.label}
@@ -154,6 +199,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         mondayLoading={mondayLoading}
         thursdayGuideContent={thursdayGuideContent}
         thursdayGuideLoading={thursdayGuideLoading}
+        thursdayNotes={thursdayNotes}
       >
         {entry.sessionType === 'monday_mentoring' ? (
           <MondaySessionPanel
@@ -168,6 +214,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         ) : (
           <SessionLogEntry
             {...entry}
+            sessionLogId={entry.sessionType === 'thursday_group' ? thursdaySessionLogId : null}
             families={families}
             homeworkByFamily={homeworkByFamily}
             currentUserId={currentUserId}
@@ -401,6 +448,7 @@ function SessionLogList({
               log.session_type === 'thursday_group' ? log.group_note
               : log.session_type === 'ad_hoc' ? adHocPreviews[log.id]
               : null;
+            const draft = !log.filed_at;
             return (
               <button
                 key={log.id}
@@ -410,14 +458,20 @@ function SessionLogList({
                 <span className="shrink-0 text-sm font-medium text-sparrow-ink">
                   {SESSION_LOG_LABEL[log.session_type]}
                 </span>
+                {draft && preview == null && (
+                  <span className="text-xs font-medium text-sparrow-gold">Draft — prep notes started, not filed</span>
+                )}
                 {preview && (
                   <span className="min-w-0 flex-1 truncate text-sm text-sparrow-gray">"{preview}"</span>
                 )}
-                {!preview && <span className="flex-1" />}
+                {!preview && !draft && <span className="flex-1" />}
                 <span className="shrink-0 text-xs text-sparrow-gray">
                   {log.attendance.length} {log.attendance.length === 1 ? 'family' : 'families'}
                 </span>
-                <span className="h-2 w-2 shrink-0 rounded-full bg-sparrow-green" title="Filed" />
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${draft ? 'bg-sparrow-gold' : 'bg-sparrow-green'}`}
+                  title={draft ? 'Draft' : 'Filed'}
+                />
               </button>
             );
           })}

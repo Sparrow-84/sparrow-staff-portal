@@ -766,7 +766,7 @@ export async function fetchRecentSessionLogs(weeksBack = 8): Promise<SessionLog[
   const { data, error } = await supabase
     .from('lcp_session_logs')
     .select(`
-      id, session_date, session_type, event_id, group_note, created_by, created_at,
+      id, session_date, session_type, event_id, group_note, prep_notes, filed_at, created_by, created_at,
       created_by_profile:profiles!lcp_session_logs_created_by_fkey(full_name),
       attendance:lcp_session_attendance(id, session_log_id, family_id, status, voucher_awarded, marked_by, marked_at)
     `)
@@ -801,6 +801,7 @@ export async function createSessionLog(input: {
   event_id: string | null;
   group_note: string | null;
   created_by: string;
+  filed_at: string | null;
 }): Promise<string> {
   const { data, error } = await supabase
     .from('lcp_session_logs')
@@ -815,7 +816,8 @@ export async function createSessionLog(input: {
 // opens it first creates the row; everyone after reuses the same one. This is
 // what lets Finance/Life Skills/Mentoring be filled in independently by
 // different staff without producing 3 separate, partially-overlapping logs for
-// the same night (Thursday/ad-hoc keep the old one-row-per-filing behavior).
+// the same night. Monday has no separate "filing" step (always-saving), so
+// filed_at is set the moment the row exists, same as it always effectively was.
 export async function findOrCreateMondaySessionLog(
   sessionDate: string,
   eventId: string | null,
@@ -836,7 +838,76 @@ export async function findOrCreateMondaySessionLog(
     event_id: eventId,
     group_note: null,
     created_by: createdBy,
+    filed_at: new Date().toISOString(),
   });
+}
+
+// Thursday Group now creates its log row as soon as staff open the entry
+// screen -- not just at final filing -- so prep notes have somewhere to save
+// before the session actually happens. filed_at stays null until fileSession()
+// explicitly finalizes it; that's what tells a draft apart from a filed log
+// now that existence alone no longer means "filed" for this type.
+export async function findOrCreateThursdaySessionLog(
+  sessionDate: string,
+  eventId: string | null,
+  createdBy: string,
+): Promise<string> {
+  const { data: existing, error: findErr } = await supabase
+    .from('lcp_session_logs')
+    .select('id')
+    .eq('session_date', sessionDate)
+    .eq('session_type', 'thursday_group')
+    .maybeSingle();
+  if (findErr) throw new Error(findErr.message);
+  if (existing) return (existing as { id: string }).id;
+
+  return createSessionLog({
+    session_date: sessionDate,
+    session_type: 'thursday_group',
+    event_id: eventId,
+    group_note: null,
+    created_by: createdBy,
+    filed_at: null,
+  });
+}
+
+export async function updatePrepNotes(sessionLogId: string, prepNotes: string | null): Promise<void> {
+  const { error } = await supabase.from('lcp_session_logs').update({ prep_notes: prepNotes }).eq('id', sessionLogId);
+  if (error) throw new Error(error.message);
+}
+
+/** Finalizes an early-created Thursday log at actual filing time -- sets the
+ *  group note (may not have existed yet when the row was first created) and
+ *  stamps filed_at, without inserting a second row for the same evening. */
+export async function finalizeThursdaySessionLog(sessionLogId: string, groupNote: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_session_logs')
+    .update({ group_note: groupNote, filed_at: new Date().toISOString() })
+    .eq('id', sessionLogId);
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchSessionLogPrepNotes(sessionLogId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('lcp_session_logs')
+    .select('prep_notes')
+    .eq('id', sessionLogId)
+    .single();
+  if (error) throw new Error(error.message);
+  return (data as { prep_notes: string | null }).prep_notes;
+}
+
+export async function fetchSessionCurriculumNotes(
+  sessionId: number,
+): Promise<{ notes: string | null; reviewedAt: string | null }> {
+  const { data, error } = await supabase
+    .from('lcp_sessions')
+    .select('curriculum_notes, curriculum_notes_reviewed_at')
+    .eq('id', sessionId)
+    .single();
+  if (error) throw new Error(error.message);
+  const row = data as { curriculum_notes: string | null; curriculum_notes_reviewed_at: string | null };
+  return { notes: row.curriculum_notes, reviewedAt: row.curriculum_notes_reviewed_at };
 }
 
 export async function upsertSessionAttendance(
@@ -1041,7 +1112,7 @@ export async function fetchCurriculum(): Promise<CurriculumPhase[]> {
       id, number, name,
       units:lcp_units(
         id, name, month_label, artifact, supplement, encouragement_text,
-        sessions:lcp_sessions(id, session_number, title, focus, scripture, mentor_brief, mentor_handout_echo, mentor_going_deeper)
+        sessions:lcp_sessions(id, session_number, title, focus, scripture, mentor_brief, mentor_handout_echo, mentor_going_deeper, curriculum_notes, curriculum_notes_reviewed_at)
       )
     `)
     .order('number')
@@ -1061,6 +1132,25 @@ export async function updateCurriculumSession(
   patch: Partial<Pick<CurriculumSessionDetail, 'title' | 'focus' | 'scripture' | 'mentor_brief' | 'mentor_handout_echo' | 'mentor_going_deeper'>>,
 ): Promise<void> {
   const { error } = await supabase.from('lcp_sessions').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/** Writing new curriculum notes clears the reviewed flag -- if the note
+ *  changes after a prior round was already marked reviewed, the "unreviewed"
+ *  badge should come back rather than silently staying dismissed. */
+export async function updateCurriculumNotes(sessionId: number, notes: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_sessions')
+    .update({ curriculum_notes: notes, curriculum_notes_reviewed_at: null })
+    .eq('id', sessionId);
+  if (error) throw new Error(error.message);
+}
+
+export async function markCurriculumNotesReviewed(sessionId: number): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_sessions')
+    .update({ curriculum_notes_reviewed_at: new Date().toISOString() })
+    .eq('id', sessionId);
   if (error) throw new Error(error.message);
 }
 
