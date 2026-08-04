@@ -1,12 +1,7 @@
 import type { LcpPhaseWithUnits } from './lcp-types';
 import { PHASE_COLORS } from '@/components/lcp/PhaseProgressBar';
 
-// No "in progress" state exists in this data model -- the position pointer
-// only ever marks the last session that was actually completed, exactly as
-// done as everything before it. A separate ringed "current" state used to
-// exist here and made the most recently finished session look unfinished,
-// which is exactly backwards.
-export type TrackSessionState = 'done' | 'upcoming';
+export type TrackSessionState = 'done' | 'current' | 'upcoming';
 
 export interface TrackSession {
   id: number;
@@ -87,24 +82,11 @@ export function computeCurriculumTrack(
       sessions: sessions.map((s, i) => ({
         id: s.id,
         sessionNumber: s.session_number,
-        state: currentSessionIdx !== -1 && i <= currentSessionIdx ? 'done' : 'upcoming',
+        state: currentSessionIdx === -1 ? 'upcoming' : i < currentSessionIdx ? 'done' : i === currentSessionIdx ? 'current' : 'upcoming',
       })),
     },
     upcomingUnits,
   };
-}
-
-/** The literal next session to happen — same unit if it has one left,
- *  otherwise the first session of whatever unit comes after. Never just
- *  "the next unit" when the current one still has sessions to go; that's
- *  what previously made a same-unit case look like a unit crossing. */
-export function upNextSession(track: CurriculumTrack): { unitName: string; sessionNumber: number } | null {
-  const cu = track.currentUnit;
-  if (cu && cu.localIndex != null && cu.localIndex < cu.sessionCount) {
-    return { unitName: cu.name, sessionNumber: cu.localIndex + 1 };
-  }
-  const [nextUnit] = track.upcomingUnits;
-  return nextUnit ? { unitName: nextUnit.name, sessionNumber: 1 } : null;
 }
 
 /** A lighter tint of a unit's own color, for "not reached yet" sessions

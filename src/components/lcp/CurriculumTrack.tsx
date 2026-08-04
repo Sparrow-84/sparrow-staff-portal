@@ -1,5 +1,5 @@
 import type { CurriculumTrack, TrackSessionState } from '@/lib/curriculum-track';
-import { tintColor, upNextSession } from '@/lib/curriculum-track';
+import { tintColor } from '@/lib/curriculum-track';
 
 const GHOST_COLOR = '#C7C7C0';
 
@@ -7,13 +7,18 @@ export function BigDot({ color }: { color: string }) {
   return <span className="relative z-10 inline-block h-5 w-5 shrink-0 rounded-full" style={{ backgroundColor: color }} />;
 }
 
-// No ring here -- a session that's the position pointer is exactly as
-// finished as the ones before it, not "in progress." Ringing it used to
-// make the most recently completed session look unfinished.
 export function SessionDot({ color, state }: { color: string; state: TrackSessionState }) {
+  if (state === 'current') {
+    return (
+      <span
+        className="relative z-10 inline-block h-[13px] w-[13px] shrink-0 rounded-full"
+        style={{ backgroundColor: color, boxShadow: `0 0 0 2px white, 0 0 0 3px ${color}` }}
+      />
+    );
+  }
   return (
     <span
-      className="relative z-10 inline-block h-[9px] w-[9px] shrink-0 rounded-full"
+      className="relative z-10 inline-block h-[7px] w-[7px] shrink-0 rounded-full"
       style={{ backgroundColor: state === 'done' ? color : tintColor(color) }}
     />
   );
@@ -44,20 +49,17 @@ function Segment({ from, to, vertical }: { from: string; to: string; vertical: b
 }
 
 /** The actual dot track, shared by both orientations so they can never drift
- *  apart the way the old hand-duplicated vertical version did (missing the
- *  threaded line, a stale duplicate caption, etc). Done units collapse to
- *  one big dot each; the current unit expands session-by-session; only the
- *  next upcoming unit gets a couple of preview ghost dots before the rest
- *  of the program folds away. */
+ *  apart the way the old hand-duplicated vertical version did. Done units
+ *  collapse to one big dot each; the current unit expands session-by-
+ *  session with the position pointer ringed; only the next upcoming unit
+ *  gets a couple of preview ghost dots, and only once the current unit is
+ *  actually exhausted (otherwise its own remaining sessions already show
+ *  what's next, and previewing the unit after it too early is misleading). */
 function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: boolean }) {
   const { doneUnits, currentUnit, upcomingUnits } = track;
   const row = vertical ? 'flex flex-col items-center' : 'flex flex-wrap items-center';
   const cluster = vertical ? 'flex flex-col items-center' : 'flex items-center';
 
-  // Only preview the next unit's ghost dots once the current unit is
-  // actually exhausted -- otherwise its own remaining (tinted) sessions
-  // already show what's next, and previewing the unit after it too early
-  // reads as "that's what's coming" when really more of this one is left.
   const currentUnitDone = currentUnit != null && currentUnit.localIndex != null && currentUnit.localIndex >= currentUnit.sessionCount;
   const [nextUnit, ...restUnits] = currentUnit == null || currentUnitDone ? upcomingUnits : [];
 
@@ -99,6 +101,25 @@ function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: bool
   );
 }
 
+/** Sessions strictly before the ring — "Completed: X". */
+function completed(track: CurriculumTrack): { name: string; index: number; total: number } | null {
+  const cu = track.currentUnit;
+  if (cu) {
+    const doneCount = cu.sessions.filter((s) => s.state === 'done').length;
+    if (doneCount > 0) return { name: cu.name, index: doneCount, total: cu.sessionCount };
+  }
+  const lastDone = track.doneUnits[track.doneUnits.length - 1];
+  return lastDone ? { name: lastDone.name, index: lastDone.sessionCount, total: lastDone.sessionCount } : null;
+}
+
+/** The ringed session itself — "Now on: Y". Distinct from "completed" so the
+ *  ring never reads as skipped over between a completed-count and whatever
+ *  comes after it. */
+function nowOn(track: CurriculumTrack): { name: string; index: number; total: number } | null {
+  const cu = track.currentUnit;
+  return cu && cu.localIndex != null ? { name: cu.name, index: cu.localIndex, total: cu.sessionCount } : null;
+}
+
 /** Full horizontal arc — Progress tab. */
 export function CurriculumTrackHorizontal({ track }: { track: CurriculumTrack }) {
   return (
@@ -109,40 +130,23 @@ export function CurriculumTrackHorizontal({ track }: { track: CurriculumTrack })
   );
 }
 
-/** The most recently *completed* session — not necessarily in the current
- *  unit. If the current unit has a done session, that's it; if the current
- *  unit hasn't completed any yet (position just crossed into it), it's the
- *  final session of whichever unit finished right before. */
-function mostRecentlyCompleted(track: CurriculumTrack): { name: string; index: number; total: number } | null {
-  const cu = track.currentUnit;
-  if (cu) {
-    const doneCount = cu.sessions.filter((s) => s.state === 'done').length;
-    if (doneCount > 0) return { name: cu.name, index: doneCount, total: cu.sessionCount };
-  }
-  const lastDone = track.doneUnits[track.doneUnits.length - 1];
-  return lastDone ? { name: lastDone.name, index: lastDone.sessionCount, total: lastDone.sessionCount } : null;
-}
-
 /** Same dots, rotated — Session Log home, "off to the side." Deliberately
- *  quieter on text than the Progress tab version: no phase/unit naming
- *  (already shown prominently there), just what was just finished and
- *  what's coming up next. */
+ *  quieter on naming than the Progress tab version (no phase/unit numbers,
+ *  already shown prominently there) but the same completed/now-on pair. */
 export function CurriculumTrackVertical({ track }: { track: CurriculumTrack }) {
-  const recent = mostRecentlyCompleted(track);
-  const next = upNextSession(track);
+  const done = completed(track);
+  const current = nowOn(track);
   return (
     <div>
-      {recent && (
+      {done && (
         <p className="mb-2 text-center text-[11px] font-medium text-sparrow-gray">
-          {recent.name} {recent.index}/{recent.total} completed
+          Completed: {done.name} {done.index}/{done.total}
         </p>
       )}
       <TrackDots track={track} vertical />
-      {next && (
-        <p className="mt-2 text-center text-[11px] italic text-sparrow-gray">
-          {next.unitName} session {next.sessionNumber}
-          <br />
-          up next
+      {current && (
+        <p className="mt-2 text-center text-[11px] font-semibold text-sparrow-ink">
+          Now on: {current.name} {current.index}/{current.total}
         </p>
       )}
     </div>
@@ -151,7 +155,6 @@ export function CurriculumTrackVertical({ track }: { track: CurriculumTrack }) {
 
 function TrackCaption({ track }: { track: CurriculumTrack }) {
   if (!track.currentUnit) return null;
-  const next = upNextSession(track);
 
   if (track.currentUnit.isFinalSession) {
     return (
@@ -162,18 +165,14 @@ function TrackCaption({ track }: { track: CurriculumTrack }) {
     );
   }
 
+  const done = completed(track);
+  const current = nowOn(track);
+
   return (
-    <div className="mt-2 flex items-center justify-between text-xs">
-      <span className="font-semibold text-sparrow-ink">
-        {track.currentUnit.localIndex != null
-          ? `Session ${track.currentUnit.localIndex} of ${track.currentUnit.sessionCount}`
-          : 'Position within unit not set'}
-      </span>
-      {next && (
-        <span className="italic text-sparrow-gray">
-          {next.unitName} session {next.sessionNumber} next
-        </span>
-      )}
+    <div className="mt-2 text-xs">
+      {done && <span className="text-sparrow-gray">Completed: {done.name} {done.index}/{done.total}</span>}
+      {done && current && <span className="mx-1.5 text-sparrow-rule">·</span>}
+      {current && <span className="font-semibold text-sparrow-ink">Now on: {current.name} {current.index}/{current.total}</span>}
     </div>
   );
 }
