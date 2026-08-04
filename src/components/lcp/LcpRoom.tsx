@@ -204,9 +204,11 @@ export function LcpRoom() {
             {stats.feeOverdue > 0 && <span className="text-priority-p1"> · {stats.feeOverdue} program fee overdue</span>}
           </p>
         </div>
-        <button onClick={() => setAddOpen(true)} className="btn-primary shrink-0">
-          + Add family
-        </button>
+        {tab === 'families' && (
+          <button onClick={() => setAddOpen(true)} className="btn-primary shrink-0">
+            + Add family
+          </button>
+        )}
       </div>
 
       {pendingRedemptions.length > 0 && (

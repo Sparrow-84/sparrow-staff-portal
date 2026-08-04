@@ -61,7 +61,9 @@ function UnitHeaderDot({ color, filled, dashed }: { color: string; filled: boole
 function Segment({ from, to, vertical }: { from: string; to: string; vertical: boolean }) {
   const direction = vertical ? 'to bottom' : 'to right';
   const background = from === to ? from : `linear-gradient(${direction}, ${from} 50%, ${to} 50%)`;
-  return <span className={vertical ? 'w-0.5 h-3.5 shrink-0' : 'h-0.5 w-3.5 shrink-0'} style={{ background }} />;
+  // Vertical connectors are deliberately long -- the sidebar track is meant
+  // to visually stretch down the page, not sit as a small cluster at top.
+  return <span className={vertical ? 'w-0.5 h-10 shrink-0' : 'h-0.5 w-3.5 shrink-0'} style={{ background }} />;
 }
 
 /** The actual dot track, shared by both orientations so they can never drift
@@ -91,9 +93,9 @@ function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: bool
         <Segment from={doneUnits[doneUnits.length - 1].color} to={currentUnit.color} vertical={vertical} />
       )}
       {currentUnit && (
-        <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-sparrow-sage px-2.5 py-2">
+        <div className={`flex flex-col items-center ${vertical ? 'gap-3' : 'gap-1.5'} rounded-2xl bg-sparrow-sage px-2.5 py-2`}>
           <UnitHeaderDot color={currentUnit.color} filled={currentUnitDone} />
-          <div className={`${cluster} gap-1.5`}>
+          <div className={`${cluster} ${vertical ? 'gap-3' : 'gap-1.5'}`}>
             {currentUnit.sessions.map((s) => (
               <SessionDot key={s.id} color={currentUnit.color} state={s.state} />
             ))}
@@ -104,9 +106,9 @@ function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: bool
         <Segment from={currentUnit.color} to={tintColor(nextUnit.color)} vertical={vertical} />
       )}
       {nextUnit && (
-        <div className="flex flex-col items-center gap-1.5">
+        <div className={`flex flex-col items-center ${vertical ? 'gap-3' : 'gap-1.5'}`}>
           <UnitHeaderDot color={nextUnit.color} filled={false} dashed />
-          <div className={`${cluster} gap-1.5`}>
+          <div className={`${cluster} ${vertical ? 'gap-3' : 'gap-1.5'}`}>
             {Array.from({ length: Math.min(2, nextUnit.sessionCount) }).map((_, i) => (
               <span key={i} className={cluster}>
                 {i > 0 && <Segment from={tintColor(nextUnit.color)} to={tintColor(nextUnit.color)} vertical={vertical} />}
