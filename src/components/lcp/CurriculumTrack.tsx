@@ -5,37 +5,24 @@ export function BigDot({ color }: { color: string }) {
   return <span className="relative z-10 inline-block h-5 w-5 shrink-0 rounded-full" style={{ backgroundColor: color }} />;
 }
 
-export function SessionDot({ color, state }: { color: string; state: TrackSessionState }) {
+// `big` marks the first session of a unit that's being shown session-by-
+// session (the current unit, and the next unit's preview) -- a size anchor
+// so it's clear where a new unit starts, using the same state-based coloring
+// as every other session dot rather than a separate header mark.
+export function SessionDot({ color, state, big }: { color: string; state: TrackSessionState; big?: boolean }) {
+  const size = big ? 20 : state === 'current' ? 13 : 7;
   if (state === 'current') {
     return (
       <span
-        className="relative z-10 inline-block h-[13px] w-[13px] shrink-0 rounded-full"
-        style={{ backgroundColor: color, boxShadow: `0 0 0 2px white, 0 0 0 3px ${color}` }}
+        className="relative z-10 inline-block shrink-0 rounded-full"
+        style={{ height: size, width: size, backgroundColor: color, boxShadow: `0 0 0 2px white, 0 0 0 3px ${color}` }}
       />
     );
   }
   return (
     <span
-      className="relative z-10 inline-block h-[7px] w-[7px] shrink-0 rounded-full"
-      style={{ backgroundColor: state === 'done' ? color : tintColor(color) }}
-    />
-  );
-}
-
-// A "header" for a whole unit, same size as a finished unit's solid BigDot
-// so the two read as the same kind of mark at different states -- white/
-// unfilled with a colored ring while the unit's still being worked, filling
-// in solid the moment every session in it is done (at which point it's
-// visually identical to a completed unit's dot, since that's what it now
-// is). Only used for the current unit -- a not-yet-started unit's preview
-// is a plain tinted BigDot instead (see TrackDots), so every "not reached
-// yet" mark in the whole track reads as the same faded version of its real
-// color, darkening in place once it's actually done.
-function UnitHeaderDot({ color, filled }: { color: string; filled: boolean }) {
-  return (
-    <span
-      className="relative z-10 inline-block h-5 w-5 shrink-0 rounded-full border-2"
-      style={{ backgroundColor: filled ? color : 'white', borderColor: color }}
+      className="relative z-10 inline-block shrink-0 rounded-full"
+      style={{ height: size, width: size, backgroundColor: state === 'done' ? color : tintColor(color) }}
     />
   );
 }
@@ -59,17 +46,16 @@ function Segment({ from, to, vertical }: { from: string; to: string; vertical: b
 
 /** The actual dot track, shared by both orientations so they can never drift
  *  apart the way the old hand-duplicated vertical version did. Done units
- *  collapse to one big dot each; the current unit expands session-by-
- *  session with the position pointer ringed; only the next upcoming unit
- *  gets a couple of preview dots (same faded color as its unit, no special
- *  ghost styling), and only once the current unit is actually exhausted
- *  (otherwise its own remaining sessions already show what's next, and
- *  previewing the unit after it too early is misleading). The header dot
- *  sits *beside* its session dots on the horizontal track and *above* them
- *  on the vertical one — both driven by the same `cluster` direction so
- *  nothing ever floats onto its own row on the horizontal arc. No flex
- *  `gap` is used anywhere in here — every dot-to-dot space is an explicit
- *  Segment, so the connecting line is never broken by unfilled spacing. */
+ *  collapse to one big dot each. The current unit expands session-by-
+ *  session with its first session drawn big (marking "a unit starts here")
+ *  and the position pointer ringed wherever it actually is -- no separate
+ *  header dot floating above/beside them. The next upcoming unit gets the
+ *  same treatment for a couple of preview sessions (same faded color as its
+ *  unit), only once the current unit is actually exhausted (otherwise its
+ *  own remaining sessions already show what's next, and previewing the unit
+ *  after it too early is misleading). No flex `gap` is used anywhere in
+ *  here — every dot-to-dot space is an explicit Segment, so the connecting
+ *  line is never broken by unfilled spacing. */
 function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: boolean }) {
   const { doneUnits, currentUnit, upcomingUnits } = track;
   const row = vertical ? 'flex flex-col items-center' : 'flex flex-wrap items-center';
@@ -91,12 +77,10 @@ function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: bool
       )}
       {currentUnit && (
         <div className={`${cluster} rounded-2xl bg-sparrow-sage px-2.5 py-2`}>
-          <UnitHeaderDot color={currentUnit.color} filled={currentUnitDone} />
-          <Segment from={currentUnit.color} to={currentUnit.color} vertical={vertical} />
           {currentUnit.sessions.map((s, i) => (
             <span key={s.id} className={cluster}>
               {i > 0 && <Segment from={currentUnit.color} to={currentUnit.color} vertical={vertical} />}
-              <SessionDot color={currentUnit.color} state={s.state} />
+              <SessionDot color={currentUnit.color} state={s.state} big={i === 0} />
             </span>
           ))}
         </div>
@@ -106,12 +90,10 @@ function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: bool
       )}
       {nextUnit && (
         <div className={cluster}>
-          <BigDot color={tintColor(nextUnit.color)} />
-          <Segment from={tintColor(nextUnit.color)} to={tintColor(nextUnit.color)} vertical={vertical} />
           {Array.from({ length: Math.min(2, nextUnit.sessionCount) }).map((_, i) => (
             <span key={i} className={cluster}>
               {i > 0 && <Segment from={tintColor(nextUnit.color)} to={tintColor(nextUnit.color)} vertical={vertical} />}
-              <SessionDot color={nextUnit.color} state="upcoming" />
+              <SessionDot color={nextUnit.color} state="upcoming" big={i === 0} />
             </span>
           ))}
         </div>
