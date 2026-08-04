@@ -18,6 +18,7 @@ import {
   type HomeworkArea,
   type HouseholdAdult,
   type HouseholdChild,
+  type HousingSavingsMonth,
   type LcpMoveInRequest,
   type LcpPhaseWithUnits,
   type Message,
@@ -35,6 +36,7 @@ import {
   addProgramFeePayment,
   addStaffNote,
   updateStaffNote,
+  answerHousingSavingsMonth,
   assignHomework,
   awardVoucher,
   completeMilestone,
@@ -50,6 +52,7 @@ import {
   fetchHomeworkForFamily,
   fetchHouseholdAdult,
   fetchHouseholdChildren,
+  fetchHousingSavingsMonths,
   fetchMessages,
   fetchMilestoneProgressForFamily,
   fetchProgramFeePayments,
@@ -124,12 +127,13 @@ export function FamilyDetailPanel({
   const [feePayments, setFeePayments] = useState<ProgramFeePayment[]>([]);
   const [householdAdult, setHouseholdAdult] = useState<HouseholdAdult | null>(null);
   const [householdChildren, setHouseholdChildren] = useState<HouseholdChild[]>([]);
+  const [housingSavingsMonths, setHousingSavingsMonths] = useState<HousingSavingsMonth[]>([]);
 
   const familyId = family?.id;
 
   const reloadDetail = useCallback(async () => {
     if (!familyId) return;
-    const [hw, msg, nt, vo, red, gl, gr, ms, mp, fp, ha, hc] = await Promise.all([
+    const [hw, msg, nt, vo, red, gl, gr, ms, mp, fp, ha, hc, sm] = await Promise.all([
       fetchHomeworkForFamily(familyId),
       fetchMessages(familyId),
       fetchStaffNotes(familyId),
@@ -142,6 +146,7 @@ export function FamilyDetailPanel({
       fetchProgramFeePayments(familyId),
       fetchHouseholdAdult(familyId),
       fetchHouseholdChildren(familyId),
+      fetchHousingSavingsMonths(familyId),
     ]);
     setHomework(hw);
     setMessages(msg);
@@ -155,6 +160,7 @@ export function FamilyDetailPanel({
     setFeePayments(fp);
     setHouseholdAdult(ha);
     setHouseholdChildren(hc);
+    setHousingSavingsMonths(sm);
   }, [familyId]);
 
   useEffect(() => {
@@ -202,7 +208,10 @@ export function FamilyDetailPanel({
           sessions={sessions}
           phases={phases}
           programUnitId={programUnitId}
+          currentUserId={currentUserId}
+          housingSavingsMonths={housingSavingsMonths}
           onChanged={onChanged}
+          onHousingSavingsChanged={() => void reloadDetail()}
           onRemoved={() => {
             onChanged();
             onClose();
@@ -285,14 +294,20 @@ function ProgressTab({
   sessions,
   phases,
   programUnitId,
+  currentUserId,
+  housingSavingsMonths,
   onChanged,
+  onHousingSavingsChanged,
   onRemoved,
 }: {
   family: Family;
   sessions: CurriculumSession[];
   phases: LcpPhaseWithUnits[];
   programUnitId: number | null;
+  currentUserId: string;
+  housingSavingsMonths: HousingSavingsMonth[];
   onChanged: () => void;
+  onHousingSavingsChanged: () => void;
   onRemoved: () => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -325,13 +340,6 @@ function ProgressTab({
   async function setStatus(status: FamilyStatus) {
     setBusy(true);
     await updateFamily(family.id, { status });
-    setBusy(false);
-    onChanged();
-  }
-  async function bumpHousing(deltaCents: number) {
-    const next = Math.max(0, Math.min(120_000, family.housing_savings_cents + deltaCents));
-    setBusy(true);
-    await updateFamily(family.id, { housing_savings_cents: next });
     setBusy(false);
     onChanged();
   }
@@ -439,22 +447,12 @@ function ProgressTab({
         </div>
       </div>
 
-      <div className="rounded-xl bg-sparrow-cream p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-sparrow-ink">🏡 Housing savings</span>
-          <span className="font-serif text-lg font-semibold text-sparrow-green">
-            {money(family.housing_savings_cents)}
-          </span>
-        </div>
-        <div className="mt-2 flex gap-2">
-          <button disabled={busy} onClick={() => bumpHousing(-10_000)} className="btn-ghost border border-sparrow-rule">
-            − $100
-          </button>
-          <button disabled={busy} onClick={() => bumpHousing(10_000)} className="btn-ghost border border-sparrow-rule">
-            + $100 (perfect month)
-          </button>
-        </div>
-      </div>
+      <HousingSavingsCard
+        family={family}
+        months={housingSavingsMonths}
+        currentUserId={currentUserId}
+        onChanged={onHousingSavingsChanged}
+      />
 
       <div className="border-t border-sparrow-rule pt-4">
         <span className="field-label">Participation</span>
@@ -526,6 +524,139 @@ function ProgressTab({
 
         {err && <p className="mt-2 text-sm text-priority-p1">{err}</p>}
       </div>
+    </div>
+  );
+}
+
+// ── Housing savings ──────────────────────────────────────────────────
+// Replaces the old freeform +/-$100 buttons with a real per-month record:
+// one $100 award per full calendar month in the program, answered yes/no by
+// staff. Open-ended (no cap) -- keeps going until the family leaves the
+// program. A month locks once answered; correcting one requires an explicit
+// confirm step first (never a single misclick away from changing history).
+function monthStartFromIso(iso: string): Date {
+  const [y, m] = iso.slice(0, 7).split('-').map(Number);
+  return new Date(y, m - 1, 1);
+}
+function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+function fullMonthsSince(startIso: string): string[] {
+  const cursor = monthStartFromIso(startIso);
+  const now = new Date();
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const months: string[] = [];
+  while (cursor < thisMonth) {
+    months.push(monthKey(cursor));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
+}
+function monthAbbrev(iso: string): string {
+  return monthStartFromIso(iso).toLocaleDateString('en-US', { month: 'short' });
+}
+function monthFull(iso: string): string {
+  return monthStartFromIso(iso).toLocaleDateString('en-US', { month: 'long' });
+}
+
+function HousingSavingsCard({
+  family,
+  months,
+  currentUserId,
+  onChanged,
+}: {
+  family: Family;
+  months: HousingSavingsMonth[];
+  currentUserId: string;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  // Two-step correction: clicking an already-answered month asks for
+  // confirmation first; only after that does the Yes/No re-answer show.
+  const [correcting, setCorrecting] = useState<{ month: string; confirmed: boolean } | null>(null);
+
+  const byMonth = new Map(months.map((m) => [m.month, m]));
+  const eligible = fullMonthsSince(family.move_in_date ?? family.created_at);
+  const pendingMonth = eligible.find((m) => !byMonth.has(m)) ?? null;
+
+  async function answer(month: string, awarded: boolean) {
+    setBusy(true);
+    await answerHousingSavingsMonth(family.id, month, awarded, currentUserId);
+    setBusy(false);
+    setCorrecting(null);
+    onChanged();
+  }
+
+  return (
+    <div className="rounded-xl bg-sparrow-cream p-4">
+      <span className="font-serif text-base font-semibold text-sparrow-ink">🏡 Housing Savings</span>
+      <p className="mt-1 font-serif text-lg font-semibold text-sparrow-green">{money(family.housing_savings_cents)}</p>
+
+      {pendingMonth && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sparrow-gold/40 bg-sparrow-mist p-2.5 text-sm">
+          <span>
+            Did {family.display_name} have a perfect month in {monthFull(pendingMonth)}?
+          </span>
+          <div className="flex shrink-0 gap-2">
+            <button disabled={busy} onClick={() => answer(pendingMonth, true)} className="btn-primary">
+              Yes, +$100
+            </button>
+            <button disabled={busy} onClick={() => answer(pendingMonth, false)} className="btn-ghost border border-sparrow-rule">
+              No
+            </button>
+          </div>
+        </div>
+      )}
+
+      {eligible.length > 0 && (
+        <div className="mt-3">
+          <span className="field-label">Full months in the program</span>
+          <div className="mt-1 flex flex-wrap gap-3">
+            {eligible.map((m) => {
+              const answered = byMonth.get(m);
+              const isCorrecting = correcting?.month === m;
+              return (
+                <div key={m} className="flex flex-col items-center gap-1 text-[11px] text-sparrow-gray">
+                  {!answered ? (
+                    <span className="grid h-6 w-6 place-items-center rounded-full border-2 border-sparrow-rule" />
+                  ) : isCorrecting && !correcting.confirmed ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <button
+                        onClick={() => setCorrecting({ month: m, confirmed: true })}
+                        className="whitespace-nowrap rounded-full border border-sparrow-rule px-1.5 py-0.5 text-[10px] font-medium text-sparrow-ink"
+                      >
+                        Change?
+                      </button>
+                      <button onClick={() => setCorrecting(null)} className="text-[10px] text-sparrow-gray underline">
+                        Cancel
+                      </button>
+                    </div>
+                  ) : isCorrecting && correcting.confirmed ? (
+                    <div className="flex gap-1">
+                      <button disabled={busy} onClick={() => answer(m, true)} className="rounded-full border border-sparrow-rule px-1.5 py-0.5 text-[10px] font-medium">
+                        Yes
+                      </button>
+                      <button disabled={busy} onClick={() => answer(m, false)} className="rounded-full border border-sparrow-rule px-1.5 py-0.5 text-[10px] font-medium">
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setCorrecting({ month: m, confirmed: false })}
+                      className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${
+                        answered.awarded ? 'bg-sparrow-green text-white' : 'border-2 border-sparrow-rule bg-white text-transparent'
+                      }`}
+                    >
+                      {answered.awarded ? '✓' : ''}
+                    </button>
+                  )}
+                  <span>{monthAbbrev(m)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

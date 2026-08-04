@@ -255,6 +255,17 @@ export interface Redemption {
   fulfilled_at: string | null;
 }
 
+/** One answered (or answerable) calendar month toward housing savings.
+ *  `month` is always the 1st of the month ('YYYY-MM-01'). */
+export interface HousingSavingsMonth {
+  id: string;
+  family_id: string;
+  month: string;
+  awarded: boolean;
+  answered_by: string | null;
+  answered_at: string;
+}
+
 export interface CurriculumSession {
   id: number;
   session_number: number;

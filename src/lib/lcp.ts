@@ -21,6 +21,7 @@ import type {
   HomeworkStatus,
   HouseholdAdult,
   HouseholdChild,
+  HousingSavingsMonth,
   LcpEvent,
   LcpMoveInRequest,
   LcpMoveInRequestDetail,
@@ -95,6 +96,41 @@ export async function updateFamily(
 ): Promise<void> {
   const { error } = await supabase.from('families').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+export async function fetchHousingSavingsMonths(familyId: string): Promise<HousingSavingsMonth[]> {
+  const { data, error } = await supabase
+    .from('lcp_housing_savings_months')
+    .select('id, family_id, month, awarded, answered_by, answered_at')
+    .eq('family_id', familyId)
+    .order('month', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as HousingSavingsMonth[];
+}
+
+/** Answers (or corrects) one month, then recomputes and caches the family's
+ *  running total on `families.housing_savings_cents` so anything reading the
+ *  family record directly still sees a correct number without a join. */
+export async function answerHousingSavingsMonth(
+  familyId: string,
+  month: string,
+  awarded: boolean,
+  staffUserId: string,
+): Promise<number> {
+  const { error } = await supabase.from('lcp_housing_savings_months').upsert(
+    { family_id: familyId, month, awarded, answered_by: staffUserId, answered_at: new Date().toISOString() },
+    { onConflict: 'family_id,month' },
+  );
+  if (error) throw new Error(error.message);
+
+  const { data, error: sumErr } = await supabase
+    .from('lcp_housing_savings_months')
+    .select('awarded')
+    .eq('family_id', familyId);
+  if (sumErr) throw new Error(sumErr.message);
+  const totalCents = (data ?? []).filter((m) => (m as { awarded: boolean }).awarded).length * 10_000;
+  await updateFamily(familyId, { housing_savings_cents: totalCents });
+  return totalCents;
 }
 
 export interface FamilyInput {
