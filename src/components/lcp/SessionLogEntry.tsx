@@ -236,6 +236,7 @@ export function SessionLogEntry({
             {
               family_id: family.id,
               session_id: null,
+              session_type: sessionType,
               area: draft.area,
               title: draft.title.trim(),
               description: null,

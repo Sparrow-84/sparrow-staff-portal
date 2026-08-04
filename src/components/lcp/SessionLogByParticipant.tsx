@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
   AREA_COLOR_CLASS,
-  AREA_LABEL,
+  GOAL_AREAS,
   GOAL_AREA_LABEL,
   SESSION_LOG_LABEL,
   type Family,
   type Goal,
-  type GoalArea,
   type Homework,
-  type HomeworkArea,
+  type SessionLogType,
   type StaffNoteWithSession,
 } from '@/lib/lcp-types';
 import { fetchGoalsForFamily, fetchHomeworkForFamily, fetchStaffNotesWithSession } from '@/lib/lcp';
@@ -61,23 +60,32 @@ function NoteCard({ note }: { note: StaffNoteWithSession }) {
 
 type Subtab = 'notes' | 'goals' | 'homework';
 
-// One line per item (not one line per action) — a status circle (green ✓ once
-// done, grey/empty while open), a color-coded area badge, the title, and a
-// single "Assigned [date]" / "Completed [date]" line — same wording whether
-// it's a goal or a piece of homework.
-function GoalHomeworkRow({
-  title,
-  area,
-  areaLabel,
-  assignedAt,
-  completedAt,
-}: {
+interface DisplayItem {
+  id: string;
   title: string;
-  area: GoalArea | HomeworkArea;
-  areaLabel: string;
   assignedAt: string;
   completedAt: string | null;
-}) {
+}
+
+// Active items always sort above completed ones (so a fresh goal never sits
+// under an old finished one), then most-recent-first within each group.
+function sortDisplay(items: DisplayItem[]): DisplayItem[] {
+  return [...items].sort((a, b) => {
+    const aDone = !!a.completedAt;
+    const bDone = !!b.completedAt;
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    const aKey = a.completedAt ?? a.assignedAt;
+    const bKey = b.completedAt ?? b.assignedAt;
+    return bKey.localeCompare(aKey);
+  });
+}
+
+// One line per item (not one line per action) — a status circle (green ✓ once
+// done, grey/empty while open), the title (struck through once complete), and
+// a single "Assigned [date]" / "Completed [date]" line — same wording whether
+// it's a goal or a piece of homework. No per-row category badge here — the
+// group header above already names the category.
+function GoalHomeworkRow({ title, assignedAt, completedAt }: { title: string; assignedAt: string; completedAt: string | null }) {
   const done = !!completedAt;
   return (
     <div className="flex items-center gap-2 border-t border-sparrow-rule/70 py-2.5 first:border-t-0 first:pt-0">
@@ -88,14 +96,41 @@ function GoalHomeworkRow({
       >
         {done ? '✓' : ''}
       </span>
-      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${AREA_COLOR_CLASS[area]}`}>{areaLabel}</span>
-      <span className="min-w-0 flex-1 truncate text-sm text-sparrow-ink">{title}</span>
+      <span className={`min-w-0 flex-1 truncate text-sm ${done ? 'text-sparrow-gray line-through' : 'text-sparrow-ink'}`}>{title}</span>
       <span className="shrink-0 text-xs text-sparrow-gray">
         {done ? `Completed ${dayLabel(completedAt)}` : `Assigned ${dayLabel(assignedAt)}`}
       </span>
     </div>
   );
 }
+
+// A category of goals or homework — up to 5 shown, most-recent-first, but an
+// active (unchecked) item is never hidden behind "Show more" even past 5;
+// only completed items get pushed behind the button.
+function CategoryGroup({ label, colorClass, items }: { label: string; colorClass: string; items: DisplayItem[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const sorted = sortDisplay(items);
+  const activeCount = sorted.filter((i) => !i.completedAt).length;
+  const visibleCount = expanded ? sorted.length : Math.max(5, activeCount);
+  const visible = sorted.slice(0, visibleCount);
+  const hiddenCount = sorted.length - visible.length;
+
+  return (
+    <div className="mb-4">
+      <span className={`mb-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${colorClass}`}>{label}</span>
+      {visible.map((item) => (
+        <GoalHomeworkRow key={item.id} title={item.title} assignedAt={item.assignedAt} completedAt={item.completedAt} />
+      ))}
+      {hiddenCount > 0 && (
+        <button onClick={() => setExpanded(true)} className="mt-1 text-xs font-semibold text-sparrow-green">
+          Show {hiddenCount} more
+        </button>
+      )}
+    </div>
+  );
+}
+
+const SESSION_TYPE_ORDER: SessionLogType[] = ['monday_mentoring', 'thursday_group', 'ad_hoc'];
 
 export function SessionLogByParticipant({ families }: { families: Family[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(families[0]?.id ?? null);
@@ -168,30 +203,39 @@ export function SessionLogByParticipant({ families }: { families: Family[] }) {
           goals.length === 0 ? (
             <p className="text-sm text-sparrow-gray">No goals yet.</p>
           ) : (
-            goals.map((g) => (
-              <GoalHomeworkRow
-                key={g.id}
-                title={g.title}
-                area={g.area}
-                areaLabel={GOAL_AREA_LABEL[g.area]}
-                assignedAt={g.created_at}
-                completedAt={g.met_at}
+            GOAL_AREAS.filter((area) => goals.some((g) => g.area === area)).map((area) => (
+              <CategoryGroup
+                key={area}
+                label={GOAL_AREA_LABEL[area]}
+                colorClass={AREA_COLOR_CLASS[area]}
+                items={goals
+                  .filter((g) => g.area === area)
+                  .map((g) => ({ id: g.id, title: g.title, assignedAt: g.created_at, completedAt: g.met_at }))}
               />
             ))
           )
         ) : homework.length === 0 ? (
           <p className="text-sm text-sparrow-gray">No homework yet.</p>
         ) : (
-          homework.map((h) => (
-            <GoalHomeworkRow
-              key={h.id}
-              title={h.title}
-              area={h.area}
-              areaLabel={AREA_LABEL[h.area]}
-              assignedAt={h.created_at}
-              completedAt={h.completed_at}
+          SESSION_TYPE_ORDER.filter((t) => homework.some((h) => h.session_type === t)).map((t) => (
+            <CategoryGroup
+              key={t}
+              label={SESSION_LOG_LABEL[t]}
+              colorClass="bg-sparrow-mist text-sparrow-gray"
+              items={homework
+                .filter((h) => h.session_type === t)
+                .map((h) => ({ id: h.id, title: h.title, assignedAt: h.created_at, completedAt: h.completed_at }))}
             />
           ))
+        )}
+        {subtab === 'homework' && homework.length > 0 && homework.some((h) => !h.session_type) && (
+          <CategoryGroup
+            label="Unspecified"
+            colorClass="bg-sparrow-mist text-sparrow-gray"
+            items={homework
+              .filter((h) => !h.session_type)
+              .map((h) => ({ id: h.id, title: h.title, assignedAt: h.created_at, completedAt: h.completed_at }))}
+          />
         )}
       </div>
     </div>

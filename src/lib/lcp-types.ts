@@ -138,6 +138,7 @@ export interface Homework {
   id: string;
   family_id: string;
   session_id: number | null;
+  session_type: SessionLogType | null;
   area: HomeworkArea;
   title: string;
   description: string | null;

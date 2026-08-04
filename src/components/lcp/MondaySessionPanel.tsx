@@ -341,7 +341,15 @@ export function MondaySessionPanel({
     const draft = assignDraft[familyId];
     if (!draft?.title.trim()) return;
     await assignHomework(
-      { family_id: familyId, session_id: null, area: draft.area, title: draft.title.trim(), description: null, due_date: draft.due_date || null },
+      {
+        family_id: familyId,
+        session_id: null,
+        session_type: 'monday_mentoring',
+        area: draft.area,
+        title: draft.title.trim(),
+        description: null,
+        due_date: draft.due_date || null,
+      },
       currentUserId,
     );
     const hw = await fetchHomeworkForFamily(familyId);

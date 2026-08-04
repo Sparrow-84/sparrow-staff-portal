@@ -266,6 +266,7 @@ export async function fetchHomeworkForFamily(familyId: string): Promise<Homework
 export interface HomeworkInput {
   family_id: string;
   session_id: number | null;
+  session_type: SessionLogType | null;
   area: HomeworkArea;
   title: string;
   description: string | null;
@@ -920,6 +921,19 @@ export async function fulfillRedemption(
     .update({ status: 'fulfilled', fulfilled_by: fulfilledBy, fulfilled_at: new Date().toISOString() })
     .eq('id', redemptionId);
   if (error) throw new Error(error.message);
+}
+
+/** Staff-initiated redemption -- same 3-for-1 gift card exchange as the family's
+ *  own portal button, just started here and fulfilled in the same action instead
+ *  of waiting on a separate "mark gift card given" step. */
+export async function redeemVouchersInPerson(familyId: string, staffUserId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('lcp_redemptions')
+    .insert({ family_id: familyId, vouchers_spent: 3, gift_card_value_cents: 2500, status: 'requested' })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  await fulfillRedemption((data as { id: string }).id, familyId, 3, staffUserId);
 }
 
 // ── Curriculum admin (Shelly's editing workflow) ──────────────────────────────

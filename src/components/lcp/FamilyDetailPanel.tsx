@@ -57,6 +57,7 @@ import {
   fetchStaffNotes,
   fetchVouchers,
   fulfillRedemption,
+  redeemVouchersInPerson,
   markGoalMet,
   reopenGoal,
   saveHouseholdAdult,
@@ -1301,6 +1302,7 @@ function HomeworkTab({
         session_id: family.current_session_number
           ? sessions.find((s) => s.session_number === family.current_session_number)?.id ?? null
           : null,
+        session_type: 'ad_hoc',
         area,
         title: title.trim(),
         description: null,
@@ -1512,6 +1514,7 @@ function RewardsTab({
   const [busy, setBusy] = useState(false);
   const unspent = vouchers.filter((v) => !v.redemption_id).length;
   const pending = redemptions.filter((r) => r.status === 'requested');
+  const past = redemptions.filter((r) => r.status === 'fulfilled');
 
   async function award() {
     setBusy(true);
@@ -1525,6 +1528,12 @@ function RewardsTab({
     setBusy(false);
     onChanged();
   }
+  async function redeemInPerson() {
+    setBusy(true);
+    await redeemVouchersInPerson(family.id, currentUserId);
+    setBusy(false);
+    onChanged();
+  }
 
   return (
     <div className="space-y-4">
@@ -1533,9 +1542,14 @@ function RewardsTab({
           <p className="font-serif text-2xl font-semibold text-sparrow-green">{unspent}</p>
           <p className="text-xs text-sparrow-gray">unspent vouchers</p>
         </div>
-        <button onClick={award} disabled={busy} className="btn-primary">
-          + Award voucher
-        </button>
+        <div className="flex gap-2">
+          <button onClick={award} disabled={busy} className="btn-primary">
+            + Award voucher
+          </button>
+          <button onClick={redeemInPerson} disabled={busy || unspent < 3} className="btn-ghost border border-sparrow-rule">
+            Redeem 3 vouchers
+          </button>
+        </div>
       </div>
 
       {pending.length > 0 && (
@@ -1550,6 +1564,22 @@ function RewardsTab({
                 <button onClick={() => fulfill(r)} disabled={busy} className="btn-primary">
                   Mark gift card given
                 </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {past.length > 0 && (
+        <div>
+          <span className="field-label">Past redemptions</span>
+          <ul className="mt-1 space-y-2">
+            {past.map((r) => (
+              <li key={r.id} className="rounded-xl border border-sparrow-rule/70 p-3 text-sm text-sparrow-ink">
+                {money(r.gift_card_value_cents)} gift card · {r.vouchers_spent} vouchers
+                <p className="mt-0.5 text-xs text-sparrow-gray">
+                  Fulfilled {r.fulfilled_at ? dayLabel(r.fulfilled_at) : '—'}
+                </p>
               </li>
             ))}
           </ul>
