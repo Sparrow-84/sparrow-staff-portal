@@ -266,6 +266,29 @@ export interface HousingSavingsMonth {
   answered_at: string;
 }
 
+export type ComplianceLabel = 'men' | 'substances' | 'childcare' | 'custom';
+
+export const COMPLIANCE_LABEL_TEXT: Record<ComplianceLabel, string> = {
+  men: 'Men',
+  substances: 'Substances',
+  childcare: 'Childcare',
+  custom: 'Custom',
+};
+
+export interface ComplianceNote {
+  id: string;
+  family_id: string;
+  label: ComplianceLabel;
+  custom_label: string | null;
+  what_happened: string;
+  how_handled: string;
+  follow_up_needed: boolean;
+  follow_up_note: string | null;
+  created_by: string | null;
+  author_name: string | null;
+  created_at: string;
+}
+
 export interface CurriculumSession {
   id: number;
   session_number: number;

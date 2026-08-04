@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import {
   fetchAllProgramFeePayments,
+  fetchComplianceFollowUpFamilyIds,
   fetchEvents,
   fetchAllHomework,
   fetchFamilies,
@@ -96,6 +97,7 @@ export function LcpRoom() {
   const [tocSpaces, setTocSpaces] = useState<TocSpaceSlim[]>([]);
   const [feePayments, setFeePayments] = useState<Pick<ProgramFeePayment, 'family_id' | 'paid_date'>[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [complianceFollowUps, setComplianceFollowUps] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,7 +117,7 @@ export function LcpRoom() {
 
   const load = useCallback(async () => {
     try {
-      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs] = await Promise.all([
+      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs, cfu] = await Promise.all([
         fetchFamilies(),
         fetchAllHomework(),
         fetchEvents(),
@@ -127,11 +129,13 @@ export function LcpRoom() {
         fetchLcpDesignatedSpaces(),
         fetchAllProgramFeePayments(),
         fetchProfiles(),
+        fetchComplianceFollowUpFamilyIds(),
       ]);
       setFamilies(fam);
       setHomework(hw);
       setEvents(ev);
       setSessionLogs(logs);
+      setComplianceFollowUps(new Set(cfu));
       setSessions(se);
       setRedemptions(red);
       setPhases(ph);
@@ -326,6 +330,11 @@ export function LcpRoom() {
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${FAMILY_STATUS[f.status].chip}`}>
                           {FAMILY_STATUS[f.status].label}
                         </span>
+                        {complianceFollowUps.has(f.id) && (
+                          <span className="rounded-full bg-sparrow-cream px-2 py-0.5 text-[10px] font-bold text-sparrow-gold">
+                            ⚑ Follow-up
+                          </span>
+                        )}
                       </div>
                       <p className="mt-0.5 text-xs text-sparrow-gray">
                         {open} open homework

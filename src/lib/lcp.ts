@@ -4,6 +4,8 @@ import { withTzOffset, toLocalDate } from './calendar';
 import type {
   Attendance,
   AttendanceStatus,
+  ComplianceLabel,
+  ComplianceNote,
   CurriculumPhase,
   CurriculumSession,
   CurriculumSessionDetail,
@@ -883,6 +885,61 @@ export async function updateSessionLog(id: string, groupNote: string | null): Pr
     .from('lcp_session_logs')
     .update({ group_note: groupNote })
     .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Compliance notes ──────────────────────────────────────────────────
+export async function fetchComplianceNotes(familyId: string): Promise<ComplianceNote[]> {
+  const { data, error } = await supabase
+    .from('lcp_compliance_notes')
+    .select(
+      'id, family_id, label, custom_label, what_happened, how_handled, follow_up_needed, follow_up_note, created_by, created_at, author:profiles(full_name)',
+    )
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown[]).map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      ...row,
+      author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
+    } as ComplianceNote;
+  });
+}
+
+/** Room-wide, family_id only -- just enough to flag "this family has an open
+ *  follow-up" on the Families list without fetching every note's full text. */
+export async function fetchComplianceFollowUpFamilyIds(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('lcp_compliance_notes')
+    .select('family_id')
+    .eq('follow_up_needed', true);
+  if (error) throw new Error(error.message);
+  return [...new Set((data ?? []).map((r) => (r as { family_id: string }).family_id))];
+}
+
+export interface ComplianceNoteInput {
+  family_id: string;
+  label: ComplianceLabel;
+  custom_label: string | null;
+  what_happened: string;
+  how_handled: string;
+  follow_up_needed: boolean;
+  follow_up_note: string | null;
+}
+
+export async function addComplianceNote(input: ComplianceNoteInput, createdBy: string): Promise<void> {
+  const { error } = await supabase.from('lcp_compliance_notes').insert({ ...input, created_by: createdBy });
+  if (error) throw new Error(error.message);
+}
+
+/** Clears the follow-up flag without touching the rest of the entry -- the
+ *  note itself stays as a permanent record either way. */
+export async function resolveComplianceFollowUp(noteId: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_compliance_notes')
+    .update({ follow_up_needed: false })
+    .eq('id', noteId);
   if (error) throw new Error(error.message);
 }
 

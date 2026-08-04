@@ -2,15 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { localDate } from '@/lib/date';
 import {
   AREA_LABEL,
+  COMPLIANCE_LABEL_TEXT,
   FAMILY_STATUS,
   GOAL_AREA_LABEL,
   GOAL_AREAS,
   HOMEWORK_AREAS,
+  type ComplianceLabel,
+  type ComplianceNote,
   type CurriculumSession,
   type Family,
-  type FamilyMilestoneProgress,
   type FamilyStatus,
-  type FinanceMilestone,
   type Goal,
   type GoalArea,
   type GoalResponse,
@@ -32,6 +33,7 @@ import {
 } from '@/lib/lcp-types';
 import { PhaseProgressBar } from './PhaseProgressBar';
 import {
+  addComplianceNote,
   addHouseholdChild,
   addProgramFeePayment,
   addStaffNote,
@@ -39,14 +41,13 @@ import {
   answerHousingSavingsMonth,
   assignHomework,
   awardVoucher,
-  completeMilestone,
   createGoal,
   deleteFamily,
   deleteGoal,
   deleteHomework,
   deleteHouseholdChild,
   deleteProgramFeePayment,
-  fetchFinanceMilestones,
+  fetchComplianceNotes,
   fetchGoalResponsesForFamily,
   fetchGoalsForFamily,
   fetchHomeworkForFamily,
@@ -54,7 +55,6 @@ import {
   fetchHouseholdChildren,
   fetchHousingSavingsMonths,
   fetchMessages,
-  fetchMilestoneProgressForFamily,
   fetchProgramFeePayments,
   fetchRedemptions,
   fetchStaffNotes,
@@ -63,12 +63,12 @@ import {
   redeemVouchersInPerson,
   markGoalMet,
   reopenGoal,
+  resolveComplianceFollowUp,
   saveHouseholdAdult,
   fetchMoveInRequestForFamily,
   requestOrSyncLcpToc,
   setFamilyActive,
   setHomeworkStatus,
-  uncompleteMilestone,
   updateFamily,
   updateHouseholdChild,
 } from '@/lib/lcp';
@@ -77,18 +77,17 @@ import { Drawer } from './Drawer';
 import { StaffThread } from './StaffThread';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 
-export type FamilyDetailTab = 'general' | 'progress' | 'goals' | 'milestones' | 'program_fee' | 'homework' | 'messages' | 'notes' | 'rewards';
+export type FamilyDetailTab = 'general' | 'progress' | 'finance' | 'compliance' | 'goals' | 'homework' | 'messages' | 'notes';
 type Tab = FamilyDetailTab;
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General Info' },
   { key: 'progress', label: 'Progress' },
+  { key: 'finance', label: 'Finance' },
+  { key: 'compliance', label: 'Compliance' },
   { key: 'goals', label: 'Goals' },
-  { key: 'milestones', label: 'Finance' },
-  { key: 'program_fee', label: 'Program Fee' },
   { key: 'homework', label: 'Homework' },
   { key: 'messages', label: 'Messages' },
   { key: 'notes', label: 'Notes' },
-  { key: 'rewards', label: 'Perks' },
 ];
 
 export function FamilyDetailPanel({
@@ -122,18 +121,17 @@ export function FamilyDetailPanel({
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [goalResponses, setGoalResponses] = useState<GoalResponse[]>([]);
-  const [milestones, setMilestones] = useState<FinanceMilestone[]>([]);
-  const [milestoneProgress, setMilestoneProgress] = useState<FamilyMilestoneProgress[]>([]);
   const [feePayments, setFeePayments] = useState<ProgramFeePayment[]>([]);
   const [householdAdult, setHouseholdAdult] = useState<HouseholdAdult | null>(null);
   const [householdChildren, setHouseholdChildren] = useState<HouseholdChild[]>([]);
   const [housingSavingsMonths, setHousingSavingsMonths] = useState<HousingSavingsMonth[]>([]);
+  const [complianceNotes, setComplianceNotes] = useState<ComplianceNote[]>([]);
 
   const familyId = family?.id;
 
   const reloadDetail = useCallback(async () => {
     if (!familyId) return;
-    const [hw, msg, nt, vo, red, gl, gr, ms, mp, fp, ha, hc, sm] = await Promise.all([
+    const [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn] = await Promise.all([
       fetchHomeworkForFamily(familyId),
       fetchMessages(familyId),
       fetchStaffNotes(familyId),
@@ -141,12 +139,11 @@ export function FamilyDetailPanel({
       fetchRedemptions(),
       fetchGoalsForFamily(familyId),
       fetchGoalResponsesForFamily(familyId),
-      fetchFinanceMilestones(),
-      fetchMilestoneProgressForFamily(familyId),
       fetchProgramFeePayments(familyId),
       fetchHouseholdAdult(familyId),
       fetchHouseholdChildren(familyId),
       fetchHousingSavingsMonths(familyId),
+      fetchComplianceNotes(familyId),
     ]);
     setHomework(hw);
     setMessages(msg);
@@ -155,12 +152,11 @@ export function FamilyDetailPanel({
     setRedemptions(red.filter((r) => r.family_id === familyId));
     setGoals(gl);
     setGoalResponses(gr);
-    setMilestones(ms);
-    setMilestoneProgress(mp);
     setFeePayments(fp);
     setHouseholdAdult(ha);
     setHouseholdChildren(hc);
     setHousingSavingsMonths(sm);
+    setComplianceNotes(cn);
   }, [familyId]);
 
   useEffect(() => {
@@ -208,14 +204,33 @@ export function FamilyDetailPanel({
           sessions={sessions}
           phases={phases}
           programUnitId={programUnitId}
-          currentUserId={currentUserId}
-          housingSavingsMonths={housingSavingsMonths}
           onChanged={onChanged}
-          onHousingSavingsChanged={() => void reloadDetail()}
           onRemoved={() => {
             onChanged();
             onClose();
           }}
+        />
+      )}
+      {tab === 'finance' && (
+        <FinanceTab
+          family={family}
+          payments={feePayments}
+          vouchers={vouchers}
+          redemptions={redemptions}
+          housingSavingsMonths={housingSavingsMonths}
+          currentUserId={currentUserId}
+          onChanged={() => {
+            void reloadDetail();
+            onChanged();
+          }}
+        />
+      )}
+      {tab === 'compliance' && (
+        <ComplianceTab
+          family={family}
+          notes={complianceNotes}
+          currentUserId={currentUserId}
+          onChanged={() => void reloadDetail()}
         />
       )}
       {tab === 'goals' && (
@@ -225,26 +240,6 @@ export function FamilyDetailPanel({
           goalResponses={goalResponses}
           currentUserId={currentUserId}
           onChanged={() => void reloadDetail()}
-        />
-      )}
-      {tab === 'milestones' && (
-        <MilestonesTab
-          family={family}
-          milestones={milestones}
-          progress={milestoneProgress}
-          currentUserId={currentUserId}
-          onChanged={() => void reloadDetail()}
-        />
-      )}
-      {tab === 'program_fee' && (
-        <ProgramFeeTab
-          family={family}
-          payments={feePayments}
-          currentUserId={currentUserId}
-          onChanged={() => {
-            void reloadDetail();
-            onChanged();
-          }}
         />
       )}
       {tab === 'homework' && (
@@ -272,18 +267,6 @@ export function FamilyDetailPanel({
       {tab === 'notes' && (
         <NotesTab family={family} notes={notes} currentUserId={currentUserId} onChanged={reloadDetail} />
       )}
-      {tab === 'rewards' && (
-        <RewardsTab
-          family={family}
-          vouchers={vouchers}
-          redemptions={redemptions}
-          currentUserId={currentUserId}
-          onChanged={() => {
-            void reloadDetail();
-            onChanged();
-          }}
-        />
-      )}
     </Drawer>
   );
 }
@@ -294,20 +277,14 @@ function ProgressTab({
   sessions,
   phases,
   programUnitId,
-  currentUserId,
-  housingSavingsMonths,
   onChanged,
-  onHousingSavingsChanged,
   onRemoved,
 }: {
   family: Family;
   sessions: CurriculumSession[];
   phases: LcpPhaseWithUnits[];
   programUnitId: number | null;
-  currentUserId: string;
-  housingSavingsMonths: HousingSavingsMonth[];
   onChanged: () => void;
-  onHousingSavingsChanged: () => void;
   onRemoved: () => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -446,13 +423,6 @@ function ProgressTab({
           ))}
         </div>
       </div>
-
-      <HousingSavingsCard
-        family={family}
-        months={housingSavingsMonths}
-        currentUserId={currentUserId}
-        onChanged={onHousingSavingsChanged}
-      />
 
       <div className="border-t border-sparrow-rule pt-4">
         <span className="field-label">Participation</span>
@@ -844,87 +814,6 @@ function GoalsTab({
   );
 }
 
-// ── Finance milestones ────────────────────────────────────────────────
-function MilestonesTab({
-  family,
-  milestones,
-  progress,
-  currentUserId,
-  onChanged,
-}: {
-  family: Family;
-  milestones: FinanceMilestone[];
-  progress: FamilyMilestoneProgress[];
-  currentUserId: string;
-  onChanged: () => void;
-}) {
-  const [busy, setBusy] = useState<number | null>(null);
-  const completedIds = new Set(progress.map((p) => p.milestone_id));
-  const completedCount = completedIds.size;
-
-  async function toggle(milestoneId: number) {
-    setBusy(milestoneId);
-    if (completedIds.has(milestoneId)) {
-      await uncompleteMilestone(family.id, milestoneId);
-    } else {
-      await completeMilestone(family.id, milestoneId, currentUserId);
-    }
-    setBusy(null);
-    onChanged();
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-xl bg-sparrow-mist px-4 py-3">
-        <p className="text-sm text-sparrow-ink">
-          <span className="font-serif text-2xl font-semibold text-sparrow-green">{completedCount}</span>
-          <span className="ml-1.5 text-sparrow-gray">/ {milestones.length} milestones completed</span>
-        </p>
-        <p className="text-xs text-sparrow-gray">Check off with the family as they reach each step</p>
-      </div>
-
-      <ul className="space-y-2">
-        {milestones.map((m) => {
-          const done = completedIds.has(m.id);
-          const prog = progress.find((p) => p.milestone_id === m.id);
-          return (
-            <li
-              key={m.id}
-              className={`flex items-start gap-3 rounded-xl border p-3 transition ${
-                done ? 'border-sparrow-green/30 bg-sparrow-green/5' : 'border-sparrow-rule/70'
-              }`}
-            >
-              <button
-                onClick={() => toggle(m.id)}
-                disabled={busy === m.id}
-                className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 text-white transition ${
-                  done ? 'border-sparrow-green bg-sparrow-green' : 'border-sparrow-rule hover:border-sparrow-green'
-                }`}
-                aria-label={done ? 'Mark incomplete' : 'Mark complete'}
-              >
-                {done && '✓'}
-              </button>
-              <div className="min-w-0 flex-1">
-                <p className={`text-sm font-medium ${done ? 'text-sparrow-gray line-through' : 'text-sparrow-ink'}`}>
-                  {m.sort_order}. {m.title}
-                </p>
-                <p className={`text-xs ${done ? 'text-sparrow-gray' : 'text-sparrow-gray'}`}>
-                  {m.description}
-                  {prog && ` · Completed ${dayLabel(prog.completed_at)}`}
-                </p>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      <p className="text-xs text-sparrow-gray">
-        Circle back with Andrew and Shelly on these milestones — this list will be refined.
-      </p>
-    </div>
-  );
-}
-
 // ── Program fee ──────────────────────────────────────────────────────
 // Digitizes Audrey's paper log: a running payment log (date, amount, method,
 // comment). Deliberately no totals or balance-owed math — Audrey wants a
@@ -980,44 +869,43 @@ function ProgramFeeTab({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-sparrow-rule p-3">
-        <span className="field-label">Log a payment</span>
-        <div className="mt-2 grid gap-2 sm:grid-cols-4">
-          <input
-            id="fee-date"
-            type="date"
-            value={paidDate}
-            onChange={(e) => { setPaidDate(e.target.value); clear('fee-date'); }}
-            className={fieldClass('fee-date', 'field-input mt-0')}
-          />
-          <input
-            id="fee-amount"
-            type="number"
-            step="0.01"
-            min="0"
-            value={amount}
-            onChange={(e) => { setAmount(e.target.value); clear('fee-amount'); }}
-            placeholder="Amount"
-            className={fieldClass('fee-amount', 'field-input mt-0')}
-          />
-          <select value={method} onChange={(e) => setMethod(e.target.value as ProgramFeeMethod)} className="field-input mt-0">
-            {(Object.keys(PROGRAM_FEE_METHOD_LABEL) as ProgramFeeMethod[]).map((m) => (
-              <option key={m} value={m}>{PROGRAM_FEE_METHOD_LABEL[m]}</option>
-            ))}
-          </select>
-          <button onClick={addPayment} disabled={busy} className="btn-primary">
-            Add
-          </button>
-        </div>
+      <span className="field-label">Log a payment</span>
+      <div className="grid gap-2 sm:grid-cols-4">
         <input
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder="Comment (optional)"
-          className="field-input mt-2"
+          id="fee-date"
+          type="date"
+          value={paidDate}
+          onChange={(e) => { setPaidDate(e.target.value); clear('fee-date'); }}
+          className={fieldClass('fee-date', 'field-input mt-0')}
         />
-        {missingMessage && <p className="mt-2 text-sm text-priority-p1">{missingMessage}</p>}
+        <input
+          id="fee-amount"
+          type="number"
+          step="0.01"
+          min="0"
+          value={amount}
+          onChange={(e) => { setAmount(e.target.value); clear('fee-amount'); }}
+          placeholder="Amount"
+          className={fieldClass('fee-amount', 'field-input mt-0')}
+        />
+        <select value={method} onChange={(e) => setMethod(e.target.value as ProgramFeeMethod)} className="field-input mt-0">
+          {(Object.keys(PROGRAM_FEE_METHOD_LABEL) as ProgramFeeMethod[]).map((m) => (
+            <option key={m} value={m}>{PROGRAM_FEE_METHOD_LABEL[m]}</option>
+          ))}
+        </select>
+        <button onClick={addPayment} disabled={busy} className="btn-primary">
+          Add
+        </button>
       </div>
+      <input
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Comment (optional)"
+        className="field-input"
+      />
+      {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
 
+      <span className="field-label">Payment history</span>
       {payments.length === 0 && <p className="text-sm text-sparrow-gray">No payments logged yet.</p>}
 
       <ul className="space-y-2">
@@ -1033,6 +921,226 @@ function ProgramFeeTab({
             <button onClick={() => remove(p.id)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
               Delete
             </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ── Finance (Program Fee + Housing Savings + Perks, all in one place) ──
+function FinanceTab({
+  family,
+  payments,
+  vouchers,
+  redemptions,
+  housingSavingsMonths,
+  currentUserId,
+  onChanged,
+}: {
+  family: Family;
+  payments: ProgramFeePayment[];
+  vouchers: Voucher[];
+  redemptions: Redemption[];
+  housingSavingsMonths: HousingSavingsMonth[];
+  currentUserId: string;
+  onChanged: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="mb-2 font-serif text-base font-semibold text-sparrow-ink">Program Fee</h3>
+        <ProgramFeeTab family={family} payments={payments} currentUserId={currentUserId} onChanged={onChanged} />
+      </div>
+
+      <div className="border-t border-sparrow-rule pt-4">
+        <HousingSavingsCard family={family} months={housingSavingsMonths} currentUserId={currentUserId} onChanged={onChanged} />
+      </div>
+
+      <div className="border-t border-sparrow-rule pt-4">
+        <h3 className="mb-2 font-serif text-base font-semibold text-sparrow-ink">Perks</h3>
+        <RewardsTab family={family} vouchers={vouchers} redemptions={redemptions} currentUserId={currentUserId} onChanged={onChanged} />
+      </div>
+    </div>
+  );
+}
+
+// ── Compliance ────────────────────────────────────────────────────────
+const COMPLIANCE_LABELS: ComplianceLabel[] = ['men', 'substances', 'childcare', 'custom'];
+
+function ComplianceTab({
+  family,
+  notes,
+  currentUserId,
+  onChanged,
+}: {
+  family: Family;
+  notes: ComplianceNote[];
+  currentUserId: string;
+  onChanged: () => void;
+}) {
+  const [label, setLabel] = useState<ComplianceLabel>('men');
+  const [customLabel, setCustomLabel] = useState('');
+  const [whatHappened, setWhatHappened] = useState('');
+  const [howHandled, setHowHandled] = useState('');
+  const [followUpNeeded, setFollowUpNeeded] = useState(false);
+  const [followUpNote, setFollowUpNote] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    if (!whatHappened.trim() || !howHandled.trim()) return;
+    setBusy(true);
+    await addComplianceNote(
+      {
+        family_id: family.id,
+        label,
+        custom_label: label === 'custom' ? customLabel.trim() || null : null,
+        what_happened: whatHappened.trim(),
+        how_handled: howHandled.trim(),
+        follow_up_needed: followUpNeeded,
+        follow_up_note: followUpNeeded ? followUpNote.trim() || null : null,
+      },
+      currentUserId,
+    );
+    setLabel('men');
+    setCustomLabel('');
+    setWhatHappened('');
+    setHowHandled('');
+    setFollowUpNeeded(false);
+    setFollowUpNote('');
+    setBusy(false);
+    onChanged();
+  }
+
+  async function resolve(noteId: string) {
+    setBusy(true);
+    await resolveComplianceFollowUp(noteId);
+    setBusy(false);
+    onChanged();
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-sparrow-gray">
+        Internal only. The log for compliance issues and program rules broken by the participant — men on the
+        property, substance use, childcare requirements — so there's a clear record of what happened and how it
+        was handled.
+      </p>
+
+      <div>
+        <span className="field-label">Label</span>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {COMPLIANCE_LABELS.map((l) => (
+            <button
+              key={l}
+              onClick={() => setLabel(l)}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                label === l ? 'bg-sparrow-green text-white' : 'bg-sparrow-mist text-sparrow-gray'
+              }`}
+            >
+              {COMPLIANCE_LABEL_TEXT[l]}
+            </button>
+          ))}
+        </div>
+        {label === 'custom' && (
+          <input
+            value={customLabel}
+            onChange={(e) => setCustomLabel(e.target.value)}
+            placeholder="Custom label"
+            className="field-input mt-2"
+          />
+        )}
+      </div>
+
+      <div>
+        <span className="field-label">What happened</span>
+        <textarea
+          value={whatHappened}
+          onChange={(e) => setWhatHappened(e.target.value)}
+          placeholder="e.g. Missed the scheduled drug test on Tuesday, no notice given."
+          rows={2}
+          className="field-input mt-1"
+        />
+      </div>
+
+      <div>
+        <span className="field-label">How it was handled</span>
+        <textarea
+          value={howHandled}
+          onChange={(e) => setHowHandled(e.target.value)}
+          placeholder="e.g. Met with her Wednesday, rescheduled for Friday, told her a second miss means a written warning per the handbook."
+          rows={2}
+          className="field-input mt-1"
+        />
+      </div>
+
+      <div>
+        <span className="field-label">Follow-up needed?</span>
+        <div className="mt-1 flex gap-2">
+          <button
+            onClick={() => setFollowUpNeeded(true)}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              followUpNeeded ? 'bg-sparrow-gold text-white' : 'bg-sparrow-mist text-sparrow-gray'
+            }`}
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => setFollowUpNeeded(false)}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              !followUpNeeded ? 'bg-sparrow-green text-white' : 'bg-sparrow-mist text-sparrow-gray'
+            }`}
+          >
+            No
+          </button>
+        </div>
+        {followUpNeeded && (
+          <input
+            value={followUpNote}
+            onChange={(e) => setFollowUpNote(e.target.value)}
+            placeholder="e.g. Confirm Friday's test actually happened."
+            className="field-input mt-2"
+          />
+        )}
+      </div>
+
+      <button onClick={save} disabled={busy || !whatHappened.trim() || !howHandled.trim()} className="btn-primary">
+        Save note
+      </button>
+
+      {notes.length === 0 && <p className="text-sm text-sparrow-gray">No compliance notes yet.</p>}
+
+      <ul className="space-y-2">
+        {notes.map((n) => (
+          <li key={n.id} className="rounded-xl border border-sparrow-rule/70 p-3">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-sparrow-mist px-2 py-0.5 text-[11px] font-bold text-sparrow-gray">
+                {n.label === 'custom' ? n.custom_label || 'Custom' : COMPLIANCE_LABEL_TEXT[n.label]}
+              </span>
+              {n.follow_up_needed && (
+                <span className="rounded-full bg-sparrow-cream px-2 py-0.5 text-[11px] font-bold text-sparrow-gold">
+                  ⚑ Needs follow-up
+                </span>
+              )}
+              <span className="text-xs text-sparrow-gray">{dayLabel(n.created_at)}</span>
+            </div>
+            <p className="mt-1.5 text-sm text-sparrow-ink">
+              <span className="font-semibold">What happened:</span> {n.what_happened}
+            </p>
+            <p className="mt-1 text-sm text-sparrow-ink">
+              <span className="font-semibold">Handled:</span> {n.how_handled}
+            </p>
+            {n.follow_up_needed && n.follow_up_note && (
+              <p className="mt-1 text-sm text-sparrow-ink">
+                <span className="font-semibold">Follow-up:</span> {n.follow_up_note}
+              </p>
+            )}
+            {n.author_name && <p className="mt-1 text-xs text-sparrow-gray">Logged by {n.author_name}</p>}
+            {n.follow_up_needed && (
+              <button onClick={() => resolve(n.id)} disabled={busy} className="mt-2 text-xs font-semibold text-sparrow-green">
+                Mark follow-up resolved
+              </button>
+            )}
           </li>
         ))}
       </ul>
