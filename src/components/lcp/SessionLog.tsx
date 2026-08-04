@@ -311,7 +311,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
       </section>
 
       {track.currentUnit && (
-        <div className="rounded-2xl border border-sparrow-rule bg-white p-4">
+        <div className="p-4">
           <CurriculumTrackVertical track={track} />
         </div>
       )}

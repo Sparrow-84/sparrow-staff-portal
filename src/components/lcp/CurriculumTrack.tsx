@@ -24,11 +24,15 @@ export function SessionDot({ color, state }: { color: string; state: TrackSessio
   );
 }
 
-export function GhostDot() {
+// Faded to that unit's own real phase color, not a flat neutral grey --
+// with a dashed border still marking it as preview/not-started, since the
+// current-unit "not reached yet" dots already read as "same color, no
+// dash" and this needs to look like a different, lesser-certain state.
+export function GhostDot({ color }: { color: string }) {
   return (
     <span
       className="relative z-10 inline-block h-[7px] w-[7px] shrink-0 rounded-full border border-dashed"
-      style={{ backgroundColor: '#E5E5E0', borderColor: GHOST_COLOR }}
+      style={{ backgroundColor: tintColor(color), borderColor: GHOST_COLOR }}
     />
   );
 }
@@ -74,13 +78,15 @@ function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: bool
           ))}
         </div>
       )}
-      {currentUnit && nextUnit && <Segment from={currentUnit.color} to={GHOST_COLOR} vertical={vertical} />}
+      {currentUnit && nextUnit && (
+        <Segment from={currentUnit.color} to={tintColor(nextUnit.color)} vertical={vertical} />
+      )}
       {nextUnit && (
         <div className={cluster}>
           {Array.from({ length: Math.min(2, nextUnit.sessionCount) }).map((_, i) => (
             <span key={i} className={cluster}>
-              {i > 0 && <Segment from={GHOST_COLOR} to={GHOST_COLOR} vertical={vertical} />}
-              <GhostDot />
+              {i > 0 && <Segment from={tintColor(nextUnit.color)} to={tintColor(nextUnit.color)} vertical={vertical} />}
+              <GhostDot color={nextUnit.color} />
             </span>
           ))}
         </div>
@@ -102,13 +108,34 @@ export function CurriculumTrackHorizontal({ track }: { track: CurriculumTrack })
   );
 }
 
+/** The most recently *completed* session — not necessarily in the current
+ *  unit. If the current unit has a done session, that's it; if the current
+ *  unit hasn't completed any yet (position just crossed into it), it's the
+ *  final session of whichever unit finished right before. */
+function mostRecentlyCompleted(track: CurriculumTrack): { name: string; index: number; total: number } | null {
+  const cu = track.currentUnit;
+  if (cu) {
+    const doneCount = cu.sessions.filter((s) => s.state === 'done').length;
+    if (doneCount > 0) return { name: cu.name, index: doneCount, total: cu.sessionCount };
+  }
+  const lastDone = track.doneUnits[track.doneUnits.length - 1];
+  return lastDone ? { name: lastDone.name, index: lastDone.sessionCount, total: lastDone.sessionCount } : null;
+}
+
 /** Same dots, rotated — Session Log home, "off to the side." Deliberately
  *  quieter on text than the Progress tab version: no phase/unit naming
- *  (already shown prominently there), just what's coming up next. */
+ *  (already shown prominently there), just what was just finished and
+ *  what's coming up next. */
 export function CurriculumTrackVertical({ track }: { track: CurriculumTrack }) {
   const [nextUnit] = track.upcomingUnits;
+  const recent = mostRecentlyCompleted(track);
   return (
     <div>
+      {recent && (
+        <p className="mb-2 text-center text-[11px] font-medium text-sparrow-gray">
+          {recent.name} {recent.index}/{recent.total} completed
+        </p>
+      )}
       <TrackDots track={track} vertical />
       {nextUnit && (
         <p className="mt-2 text-center text-[11px] italic text-sparrow-gray">
