@@ -37,6 +37,22 @@ export function GhostDot({ color }: { color: string }) {
   );
 }
 
+// A "header" for a whole unit, same size as a finished unit's solid BigDot
+// so the two read as the same kind of mark at different states -- white/
+// unfilled with a colored ring while the unit's still being worked, filling
+// in solid the moment every session in it is done (at which point it's
+// visually identical to a completed unit's dot, since that's what it now
+// is). The dashed variant is for the next unit's own header, previewed
+// before it's even started.
+function UnitHeaderDot({ color, filled, dashed }: { color: string; filled: boolean; dashed?: boolean }) {
+  return (
+    <span
+      className={`relative z-10 inline-block h-5 w-5 shrink-0 rounded-full border-2 ${dashed ? 'border-dashed' : ''}`}
+      style={{ backgroundColor: filled ? color : 'white', borderColor: dashed ? GHOST_COLOR : color }}
+    />
+  );
+}
+
 /** A segment of the line threading through every dot — solid when the unit
  *  on each side is the same color (same phase), hard-split exactly at the
  *  boundary when it isn't. This is what lets a phase transition read on the
@@ -75,23 +91,29 @@ function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: bool
         <Segment from={doneUnits[doneUnits.length - 1].color} to={currentUnit.color} vertical={vertical} />
       )}
       {currentUnit && (
-        <div className={`${cluster} gap-1.5 rounded-full bg-sparrow-sage px-2.5 py-1`}>
-          {currentUnit.sessions.map((s) => (
-            <SessionDot key={s.id} color={currentUnit.color} state={s.state} />
-          ))}
+        <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-sparrow-sage px-2.5 py-2">
+          <UnitHeaderDot color={currentUnit.color} filled={currentUnitDone} />
+          <div className={`${cluster} gap-1.5`}>
+            {currentUnit.sessions.map((s) => (
+              <SessionDot key={s.id} color={currentUnit.color} state={s.state} />
+            ))}
+          </div>
         </div>
       )}
       {currentUnit && nextUnit && (
         <Segment from={currentUnit.color} to={tintColor(nextUnit.color)} vertical={vertical} />
       )}
       {nextUnit && (
-        <div className={cluster}>
-          {Array.from({ length: Math.min(2, nextUnit.sessionCount) }).map((_, i) => (
-            <span key={i} className={cluster}>
-              {i > 0 && <Segment from={tintColor(nextUnit.color)} to={tintColor(nextUnit.color)} vertical={vertical} />}
-              <GhostDot color={nextUnit.color} />
-            </span>
-          ))}
+        <div className="flex flex-col items-center gap-1.5">
+          <UnitHeaderDot color={nextUnit.color} filled={false} dashed />
+          <div className={`${cluster} gap-1.5`}>
+            {Array.from({ length: Math.min(2, nextUnit.sessionCount) }).map((_, i) => (
+              <span key={i} className={cluster}>
+                {i > 0 && <Segment from={tintColor(nextUnit.color)} to={tintColor(nextUnit.color)} vertical={vertical} />}
+                <GhostDot color={nextUnit.color} />
+              </span>
+            ))}
+          </div>
         </div>
       )}
       {restUnits.length > 0 && !vertical && (
