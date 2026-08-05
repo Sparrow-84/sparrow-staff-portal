@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  fetchAllComplianceFollowUps,
-  fetchAllGoals,
-  fetchAllHousingSavingsMonths,
   fetchMaterialsPreppedSessionIds,
-  fetchOpenLcpMoveInRequests,
   fetchUnreviewedCurriculumNotes,
   markMaterialsPrepped,
   unmarkMaterialsPrepped,
@@ -52,6 +48,10 @@ interface Props {
   phases: LcpPhaseWithUnits[];
   programPosition: ProgramPosition | null;
   feeDatesByFamily: Map<string, string[]>;
+  complianceFollowUps: ComplianceNote[];
+  goals: Goal[];
+  housingMonths: HousingSavingsMonth[];
+  tocRequests: LcpMoveInRequest[];
   currentUserId: string;
   onOpenFamily: (familyId: string, tab?: FamilyDetailTab) => void;
   onGoToSessionLog: () => void;
@@ -67,39 +67,42 @@ export function LcpHome({
   phases,
   programPosition,
   feeDatesByFamily,
+  complianceFollowUps: complianceFollowUpNotes,
+  goals,
+  housingMonths,
+  tocRequests,
   currentUserId,
   onOpenFamily,
   onGoToSessionLog,
   onGoToCurriculum,
   onGoToTwinOaks,
 }: Props) {
-  const [complianceFollowUps, setComplianceFollowUps] = useState<ComplianceNote[]>([]);
+  // Compliance follow-ups, goals, housing savings, and TOC requests all come
+  // in as props (room-level state, refreshed by the same onChanged={load}
+  // chain the family drawer already triggers) rather than being fetched
+  // here -- this component used to fetch them itself, which meant they'd go
+  // stale the moment a change was made through the drawer (which doesn't
+  // unmount this component, unlike a real tab switch to Curriculum Admin).
+  const complianceFollowUps = useMemo(
+    () => complianceFollowUpNotes.filter((n) => n.follow_up_needed),
+    [complianceFollowUpNotes],
+  );
   const [curriculumNotes, setCurriculumNotes] = useState<{ id: number; session_number: number; title: string; curriculum_notes: string }[]>([]);
-  const [housingMonths, setHousingMonths] = useState<HousingSavingsMonth[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [tocRequests, setTocRequests] = useState<LcpMoveInRequest[]>([]);
   const [preppedSessionIds, setPreppedSessionIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [justPrepped, setJustPrepped] = useState<number | null>(null);
 
   async function load() {
     // Each card's data loads independently -- one section failing (e.g. a
     // migration that hasn't run yet) must never leave the whole page stuck
     // on "Loading…" or block the sections that CAN load.
     try {
-      const [cf, cn, hm, gl, mir, mp] = await Promise.all([
-        fetchAllComplianceFollowUps().catch(() => []),
+      const [cn, mp] = await Promise.all([
         fetchUnreviewedCurriculumNotes().catch(() => []),
-        fetchAllHousingSavingsMonths().catch(() => []),
-        fetchAllGoals().catch(() => []),
-        fetchOpenLcpMoveInRequests().catch(() => []),
         fetchMaterialsPreppedSessionIds().catch(() => new Set<number>()),
       ]);
-      setComplianceFollowUps(cf);
       setCurriculumNotes(cn);
-      setHousingMonths(hm);
-      setGoals(gl);
-      setTocRequests(mir.filter((r) => r.status === 'needs_info'));
       setPreppedSessionIds(mp);
     } finally {
       setLoading(false);
@@ -123,10 +126,11 @@ export function LcpHome({
   // Program fee overdue, room-wide (same logic already used per-family elsewhere).
   const feeOverdueFamilies = families.filter((f) => isFeeOverdue(f.move_in_date, f.status, feeDatesByFamily.get(f.id) ?? []));
 
-  // Overdue/due homework and goals -- "due" here means it has a due date at all
-  // and isn't done yet; isOverdue() further flags the ones actually past it.
-  const openHomework = homework.filter((h) => h.status !== 'complete' && h.due_date);
-  const openGoals = goals.filter((g) => g.status !== 'met' && g.due_date);
+  // Due today or overdue, not just "has a due date at all" -- a goal pushed
+  // out to a future date (e.g. after a staff/participant conversation) is
+  // meant to come OFF this list, not sit on it with its new date attached.
+  const openHomework = homework.filter((h) => h.status !== 'complete' && h.due_date && h.due_date <= today);
+  const openGoals = goals.filter((g) => g.status !== 'met' && g.due_date && g.due_date <= today);
 
   // Housing savings: which families have a completed month nobody's answered.
   const pendingSavingsPrompts = useMemo(() => {
@@ -160,17 +164,24 @@ export function LcpHome({
 
   const materialsNeedPrep = nextThursdaySession != null && !preppedSessionIds.has(nextThursdaySession.id);
 
-  async function toggleMaterialsPrepped() {
+  async function markMaterialsDone() {
     if (!nextThursdaySession) return;
     setBusy(true);
-    if (preppedSessionIds.has(nextThursdaySession.id)) {
-      await unmarkMaterialsPrepped(nextThursdaySession.id);
-      setPreppedSessionIds((prev) => { const next = new Set(prev); next.delete(nextThursdaySession.id); return next; });
-    } else {
-      await markMaterialsPrepped(nextThursdaySession.id, currentUserId);
-      setPreppedSessionIds((prev) => new Set(prev).add(nextThursdaySession.id));
-    }
+    await markMaterialsPrepped(nextThursdaySession.id, currentUserId);
+    setPreppedSessionIds((prev) => new Set(prev).add(nextThursdaySession.id));
     setBusy(false);
+    // The card disappears once checked (by design) -- show a brief undo
+    // affordance in its place so a mistaken click isn't unrecoverable.
+    setJustPrepped(nextThursdaySession.id);
+    setTimeout(() => setJustPrepped(null), 6000);
+  }
+
+  async function undoMaterialsDone(sessionId: number) {
+    setBusy(true);
+    await unmarkMaterialsPrepped(sessionId);
+    setPreppedSessionIds((prev) => { const next = new Set(prev); next.delete(sessionId); return next; });
+    setBusy(false);
+    setJustPrepped(null);
   }
 
   function respondToToc(requestId: string) {
@@ -192,7 +203,7 @@ export function LcpHome({
 
   if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading…</p>;
 
-  if (totalOpen === 0) {
+  if (totalOpen === 0 && justPrepped == null) {
     return (
       <div className="mt-6 flex items-center gap-3 rounded-2xl border border-sparrow-rule bg-sparrow-sage/60 p-5 text-sm font-semibold text-sparrow-green">
         🎉 You're all caught up.
@@ -325,21 +336,30 @@ export function LcpHome({
       {materialsNeedPrep && nextThursdaySession && (
         <div className="rounded-2xl border border-sparrow-rule bg-white p-4">
           <p className="mb-2 text-sm font-bold text-sparrow-ink">📦 Materials prep</p>
-          <label className="flex items-center gap-3">
+          <div className="flex items-start gap-3">
             <input
               type="checkbox"
               disabled={busy}
               checked={false}
-              onChange={() => void toggleMaterialsPrepped()}
-              className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+              onChange={() => void markMaterialsDone()}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
             />
-            <span className="text-sm text-sparrow-ink">
+            <div className="text-sm text-sparrow-ink">
               Gather materials for Session {nextThursdaySession.session_number} — {nextThursdaySession.title}
               <span className="block text-xs text-sparrow-gray">
-                Check the Teacher Guide's "Materials Needed" list · disappears once checked, comes back for the next session
+                Check the Teacher Guide's "Materials Needed" list · check the box once gathered, comes back for the next session
               </span>
-            </span>
-          </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {justPrepped != null && nextThursdaySession?.id === justPrepped && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-sparrow-rule bg-sparrow-sage/40 p-4 text-sm">
+          <span className="font-medium text-sparrow-green">📦 Materials marked gathered ✓</span>
+          <button onClick={() => void undoMaterialsDone(justPrepped)} className="shrink-0 text-xs font-semibold text-sparrow-gray hover:text-sparrow-ink">
+            Undo
+          </button>
         </div>
       )}
     </div>

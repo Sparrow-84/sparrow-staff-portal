@@ -246,7 +246,10 @@ export function FamilyDetailPanel({
           family={family}
           notes={complianceNotes}
           currentUserId={currentUserId}
-          onChanged={() => void reloadDetail()}
+          onChanged={() => {
+            void reloadDetail();
+            onChanged();
+          }}
         />
       )}
       {tab === 'goals' && (
@@ -255,7 +258,10 @@ export function FamilyDetailPanel({
           goals={goals}
           goalResponses={goalResponses}
           currentUserId={currentUserId}
-          onChanged={() => void reloadDetail()}
+          onChanged={() => {
+            void reloadDetail();
+            onChanged();
+          }}
         />
       )}
       {tab === 'homework' && (

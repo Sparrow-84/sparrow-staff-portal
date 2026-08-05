@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import {
   fetchAllAttendanceWithSessionDate,
+  fetchAllComplianceFollowUps,
   fetchAllGoals,
+  fetchAllHousingSavingsMonths,
   fetchAllProgramFeePayments,
-  fetchComplianceFollowUpFamilyIds,
   fetchEvents,
   fetchAllHomework,
   fetchFamilies,
   fetchLcpDesignatedSpaces,
+  fetchOpenLcpMoveInRequests,
   fetchPhasesWithUnits,
   fetchProgramPosition,
   fetchRedemptions,
@@ -22,11 +24,14 @@ import { computeFamilyStatus, dayLabel, isFeeOverdue, isOverdue } from '@/lib/lc
 import {
   FAMILY_STATUS,
   type AttendanceStatus,
+  type ComplianceNote,
   type CurriculumSession,
   type Family,
   type Goal,
   type Homework,
+  type HousingSavingsMonth,
   type LcpEvent,
+  type LcpMoveInRequest,
   type LcpPhaseWithUnits,
   type ProgramFeePayment,
   type ProgramPosition,
@@ -143,7 +148,10 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
   const [tocSpaces, setTocSpaces] = useState<TocSpaceSlim[]>([]);
   const [feePayments, setFeePayments] = useState<Pick<ProgramFeePayment, 'family_id' | 'paid_date'>[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [complianceFollowUps, setComplianceFollowUps] = useState<Set<string>>(new Set());
+  const [complianceFollowUpNotes, setComplianceFollowUpNotes] = useState<ComplianceNote[]>([]);
+  const [allGoals, setAllGoals] = useState<Goal[]>([]);
+  const [housingMonths, setHousingMonths] = useState<HousingSavingsMonth[]>([]);
+  const [tocRequests, setTocRequests] = useState<LcpMoveInRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -163,7 +171,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
 
   const load = useCallback(async () => {
     try {
-      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs, cfu, goals, attendance] = await Promise.all([
+      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs, cf, goals, attendance, hm, mir] = await Promise.all([
         fetchFamilies(),
         fetchAllHomework(),
         fetchEvents(),
@@ -175,16 +183,24 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
         fetchLcpDesignatedSpaces(),
         fetchAllProgramFeePayments(),
         fetchProfiles(),
-        fetchComplianceFollowUpFamilyIds(),
+        // These three back LCP Home's live signal cards -- resilient to a
+        // pending migration or one bad row so they never block the rest of
+        // the room's own data (families, homework, etc.) from loading.
+        fetchAllComplianceFollowUps().catch(() => []),
         fetchAllGoals(),
         fetchAllAttendanceWithSessionDate(),
+        fetchAllHousingSavingsMonths().catch(() => []),
+        fetchOpenLcpMoveInRequests().catch(() => []),
       ]);
       const correctedFam = await recomputeFamilyStatuses(fam, hw, goals, attendance);
       setFamilies(correctedFam);
       setHomework(hw);
       setEvents(ev);
       setSessionLogs(logs);
-      setComplianceFollowUps(new Set(cfu));
+      setComplianceFollowUpNotes(cf);
+      setAllGoals(goals);
+      setHousingMonths(hm);
+      setTocRequests(mir.filter((r) => r.status === 'needs_info'));
       setSessions(se);
       setRedemptions(red);
       setPhases(ph);
@@ -220,6 +236,11 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
     }
     return map;
   }, [homework]);
+
+  const complianceFollowUps = useMemo(
+    () => new Set(complianceFollowUpNotes.filter((n) => n.follow_up_needed).map((n) => n.family_id)),
+    [complianceFollowUpNotes],
+  );
 
   const feeDatesByFamily = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -299,6 +320,10 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
           phases={phases}
           programPosition={programPosition}
           feeDatesByFamily={feeDatesByFamily}
+          complianceFollowUps={complianceFollowUpNotes}
+          goals={allGoals}
+          housingMonths={housingMonths}
+          tocRequests={tocRequests}
           currentUserId={profile?.id ?? ''}
           onOpenFamily={openFamily}
           onGoToSessionLog={() => setTab('session-log')}
