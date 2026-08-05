@@ -720,22 +720,28 @@ function FamilySection({
               className="field-input"
             />
             <div className="grid grid-cols-2 gap-2">
-              <select
-                value={goalDraft.area}
-                onChange={(e) => onGoalDraftChange({ ...goalDraft, area: e.target.value as GoalArea })}
-                className="field-input"
-              >
-                {GOAL_AREAS.map((a) => (
-                  <option key={a} value={a}>{GOAL_AREA_LABEL[a]}</option>
-                ))}
-              </select>
-              <input
-                type="date"
-                value={goalDraft.due_date}
-                onChange={(e) => onGoalDraftChange({ ...goalDraft, due_date: e.target.value })}
-                className="field-input"
-                placeholder="Due date (optional)"
-              />
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Goal area</label>
+                <select
+                  value={goalDraft.area}
+                  onChange={(e) => onGoalDraftChange({ ...goalDraft, area: e.target.value as GoalArea })}
+                  className="field-input mt-0 w-full"
+                >
+                  {GOAL_AREAS.map((a) => (
+                    <option key={a} value={a}>{GOAL_AREA_LABEL[a]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Due date</label>
+                <input
+                  type="date"
+                  value={goalDraft.due_date}
+                  onChange={(e) => onGoalDraftChange({ ...goalDraft, due_date: e.target.value })}
+                  className="field-input mt-0 w-full"
+                  placeholder="Optional"
+                />
+              </div>
             </div>
             <p className="text-xs text-sparrow-gray">Saved when you file the session.</p>
           </div>
@@ -789,22 +795,28 @@ function FamilySection({
               className="field-input"
             />
             <div className="grid grid-cols-2 gap-2">
-              <select
-                value={assignDraft.area}
-                onChange={(e) => onAssignChange({ ...assignDraft, area: e.target.value as HomeworkArea })}
-                className="field-input"
-              >
-                {HOMEWORK_AREAS.map((a) => (
-                  <option key={a} value={a}>{AREA_LABEL[a]}</option>
-                ))}
-              </select>
-              <input
-                type="date"
-                value={assignDraft.due_date}
-                onChange={(e) => onAssignChange({ ...assignDraft, due_date: e.target.value })}
-                className="field-input"
-                placeholder="Due date (optional)"
-              />
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Homework area</label>
+                <select
+                  value={assignDraft.area}
+                  onChange={(e) => onAssignChange({ ...assignDraft, area: e.target.value as HomeworkArea })}
+                  className="field-input mt-0 w-full"
+                >
+                  {HOMEWORK_AREAS.map((a) => (
+                    <option key={a} value={a}>{AREA_LABEL[a]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Due date</label>
+                <input
+                  type="date"
+                  value={assignDraft.due_date}
+                  onChange={(e) => onAssignChange({ ...assignDraft, due_date: e.target.value })}
+                  className="field-input mt-0 w-full"
+                  placeholder="Optional"
+                />
+              </div>
             </div>
             <p className="text-xs text-sparrow-gray">Saved when you file the session.</p>
           </div>

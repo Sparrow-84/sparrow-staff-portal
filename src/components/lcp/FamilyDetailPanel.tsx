@@ -2,16 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { localDate } from '@/lib/date';
 import {
   AREA_LABEL,
-  COMPLIANCE_LABEL_TEXT,
   FAMILY_STATUS,
   GOAL_AREA_LABEL,
   GOAL_AREAS,
   HOMEWORK_AREAS,
-  type ComplianceLabel,
   type ComplianceNote,
   type CurriculumSession,
   type Family,
-  type FamilyStatus,
   type Goal,
   type GoalArea,
   type GoalResponse,
@@ -60,6 +57,7 @@ import {
   fetchStaffNotes,
   fetchVouchers,
   fulfillRedemption,
+  graduateFamily,
   redeemVouchersInPerson,
   markGoalMet,
   reopenGoal,
@@ -70,12 +68,15 @@ import {
   setFamilyActive,
   setHomeworkStatus,
   updateFamily,
+  updateHomework,
   updateHouseholdChild,
 } from '@/lib/lcp';
 import { money, dayLabel, dueLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
 import { StaffThread } from './StaffThread';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+import { ComplianceLabelPicker } from './ComplianceLabelPicker';
+import { LabelPill } from '@/components/LabelPill';
 
 export type FamilyDetailTab = 'general' | 'progress' | 'finance' | 'compliance' | 'goals' | 'homework' | 'messages' | 'notes';
 type Tab = FamilyDetailTab;
@@ -289,6 +290,7 @@ function ProgressTab({
 }) {
   const [busy, setBusy] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmGraduate, setConfirmGraduate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -314,12 +316,6 @@ function ProgressTab({
     setBusy(false);
     onChanged();
   }
-  async function setStatus(status: FamilyStatus) {
-    setBusy(true);
-    await updateFamily(family.id, { status });
-    setBusy(false);
-    onChanged();
-  }
   async function cancelParticipation() {
     setBusy(true);
     setErr(null);
@@ -328,6 +324,17 @@ function ProgressTab({
       onRemoved();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not cancel participation.');
+      setBusy(false);
+    }
+  }
+  async function graduate() {
+    setBusy(true);
+    setErr(null);
+    try {
+      await graduateFamily(family.id);
+      onRemoved();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not mark as graduated.');
       setBusy(false);
     }
   }
@@ -408,32 +415,50 @@ function ProgressTab({
 
       <div>
         <span className="field-label">Status</span>
-        <div className="mt-1 flex flex-wrap gap-2">
-          {(Object.keys(FAMILY_STATUS) as FamilyStatus[]).map((s) => (
-            <button
-              key={s}
-              disabled={busy}
-              onClick={() => setStatus(s)}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                family.status === s ? FAMILY_STATUS[s].chip : 'bg-sparrow-mist text-sparrow-gray'
-              }`}
-            >
-              {FAMILY_STATUS[s].label}
-            </button>
-          ))}
+        <div className="mt-1">
+          <span className={`rounded-full px-3 py-1 text-xs font-medium ${FAMILY_STATUS[family.status].chip}`}>
+            {FAMILY_STATUS[family.status].label}
+          </span>
         </div>
+        <p className="mt-1.5 text-xs text-sparrow-gray">
+          Set automatically — onboarding until a move-in date is entered below, then on track unless
+          something's overdue or she's missed 2+ of her last 4 sessions.
+        </p>
       </div>
 
       <div className="border-t border-sparrow-rule pt-4">
         <span className="field-label">Participation</span>
         <p className="mt-1 text-xs text-sparrow-gray">
-          Marks {family.display_name} as having left the program before graduating — sets their
-          program end date, removes them from the active roster, but keeps their records.
-          Deleting erases everything permanently.
+          Graduating and leaving early both remove {family.display_name} from the active roster but
+          keep every record. Deleting erases everything permanently.
         </p>
 
-        <div className="mt-2">
-          {!confirmCancel ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {!confirmGraduate ? (
+            <button
+              disabled={busy}
+              onClick={() => {
+                setConfirmCancel(false);
+                setConfirmDelete(false);
+                setConfirmGraduate(true);
+              }}
+              className="btn-primary"
+            >
+              🎓 Graduate
+            </button>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-sparrow-ink">Mark {family.display_name} as graduated?</span>
+              <button disabled={busy} onClick={graduate} className="btn-primary">
+                {busy ? 'Working…' : 'Yes, graduated'}
+              </button>
+              <button disabled={busy} onClick={() => setConfirmGraduate(false)} className="btn-ghost">
+                Not yet
+              </button>
+            </div>
+          )}
+
+          {!confirmCancel && !confirmGraduate && (
             <button
               disabled={busy}
               onClick={() => {
@@ -444,7 +469,11 @@ function ProgressTab({
             >
               Left the program
             </button>
-          ) : (
+          )}
+        </div>
+
+        <div className="mt-2">
+          {confirmCancel && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="text-sparrow-ink">Mark as having left the program before graduating?</span>
               <button disabled={busy} onClick={cancelParticipation} className="btn-primary">
@@ -713,13 +742,19 @@ function GoalsTab({
           placeholder="What is the participant working toward?"
           className="field-input"
         />
-        <div className="mt-2 flex gap-2">
-          <select value={area} onChange={(e) => setArea(e.target.value as GoalArea)} className="field-input mt-0 flex-1">
-            {GOAL_AREAS.map((a) => (
-              <option key={a} value={a}>{GOAL_AREA_LABEL[a]}</option>
-            ))}
-          </select>
-          <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="field-input mt-0" />
+        <div className="mt-2 flex items-end gap-2">
+          <div className="flex-1">
+            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Goal area</label>
+            <select value={area} onChange={(e) => setArea(e.target.value as GoalArea)} className="field-input mt-0 w-full">
+              {GOAL_AREAS.map((a) => (
+                <option key={a} value={a}>{GOAL_AREA_LABEL[a]}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Due date</label>
+            <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="field-input mt-0" />
+          </div>
           <button onClick={add} disabled={busy || !title.trim()} className="btn-primary shrink-0">Add</button>
         </div>
       </div>
@@ -966,8 +1001,6 @@ function FinanceTab({
 }
 
 // ── Compliance ────────────────────────────────────────────────────────
-const COMPLIANCE_LABELS: ComplianceLabel[] = ['men', 'substances', 'childcare', 'custom'];
-
 function ComplianceTab({
   family,
   notes,
@@ -979,8 +1012,7 @@ function ComplianceTab({
   currentUserId: string;
   onChanged: () => void;
 }) {
-  const [label, setLabel] = useState<ComplianceLabel>('men');
-  const [customLabel, setCustomLabel] = useState('');
+  const [labelId, setLabelId] = useState<string | null>(null);
   const [whatHappened, setWhatHappened] = useState('');
   const [howHandled, setHowHandled] = useState('');
   const [followUpNeeded, setFollowUpNeeded] = useState(false);
@@ -988,13 +1020,12 @@ function ComplianceTab({
   const [busy, setBusy] = useState(false);
 
   async function save() {
-    if (!whatHappened.trim() || !howHandled.trim()) return;
+    if (!labelId || !whatHappened.trim() || !howHandled.trim()) return;
     setBusy(true);
     await addComplianceNote(
       {
         family_id: family.id,
-        label,
-        custom_label: label === 'custom' ? customLabel.trim() || null : null,
+        label_id: labelId,
         what_happened: whatHappened.trim(),
         how_handled: howHandled.trim(),
         follow_up_needed: followUpNeeded,
@@ -1002,8 +1033,7 @@ function ComplianceTab({
       },
       currentUserId,
     );
-    setLabel('men');
-    setCustomLabel('');
+    setLabelId(null);
     setWhatHappened('');
     setHowHandled('');
     setFollowUpNeeded(false);
@@ -1014,7 +1044,7 @@ function ComplianceTab({
 
   async function resolve(noteId: string) {
     setBusy(true);
-    await resolveComplianceFollowUp(noteId);
+    await resolveComplianceFollowUp(noteId, currentUserId);
     setBusy(false);
     onChanged();
   }
@@ -1027,30 +1057,7 @@ function ComplianceTab({
         was handled.
       </p>
 
-      <div>
-        <span className="field-label">Label</span>
-        <div className="mt-1 flex flex-wrap gap-2">
-          {COMPLIANCE_LABELS.map((l) => (
-            <button
-              key={l}
-              onClick={() => setLabel(l)}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                label === l ? 'bg-sparrow-green text-white' : 'bg-sparrow-mist text-sparrow-gray'
-              }`}
-            >
-              {COMPLIANCE_LABEL_TEXT[l]}
-            </button>
-          ))}
-        </div>
-        {label === 'custom' && (
-          <input
-            value={customLabel}
-            onChange={(e) => setCustomLabel(e.target.value)}
-            placeholder="Custom label"
-            className="field-input mt-2"
-          />
-        )}
-      </div>
+      <ComplianceLabelPicker value={labelId} currentUserId={currentUserId} onChange={setLabelId} />
 
       <div>
         <span className="field-label">What happened</span>
@@ -1104,7 +1111,7 @@ function ComplianceTab({
         )}
       </div>
 
-      <button onClick={save} disabled={busy || !whatHappened.trim() || !howHandled.trim()} className="btn-primary">
+      <button onClick={save} disabled={busy || !labelId || !whatHappened.trim() || !howHandled.trim()} className="btn-primary">
         Save note
       </button>
 
@@ -1114,14 +1121,17 @@ function ComplianceTab({
         {notes.map((n) => (
           <li key={n.id} className="rounded-xl border border-sparrow-rule/70 p-3">
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-sparrow-mist px-2 py-0.5 text-[11px] font-bold text-sparrow-gray">
-                {n.label === 'custom' ? n.custom_label || 'Custom' : COMPLIANCE_LABEL_TEXT[n.label]}
-              </span>
-              {n.follow_up_needed && (
+              {n.label_name && <LabelPill label={n.label_name} color={n.label_color ?? 'blue'} />}
+              {n.follow_up_needed ? (
                 <span className="rounded-full bg-sparrow-cream px-2 py-0.5 text-[11px] font-bold text-sparrow-gold">
                   ⚑ Needs follow-up
                 </span>
-              )}
+              ) : n.follow_up_resolved_at ? (
+                <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-[11px] font-bold text-sparrow-green">
+                  ✓ Resolved {dayLabel(n.follow_up_resolved_at)}
+                  {n.follow_up_resolved_by_name ? ` by ${n.follow_up_resolved_by_name}` : ''}
+                </span>
+              ) : null}
               <span className="text-xs text-sparrow-gray">{dayLabel(n.created_at)}</span>
             </div>
             <p className="mt-1.5 text-sm text-sparrow-ink">
@@ -1130,7 +1140,7 @@ function ComplianceTab({
             <p className="mt-1 text-sm text-sparrow-ink">
               <span className="font-semibold">Handled:</span> {n.how_handled}
             </p>
-            {n.follow_up_needed && n.follow_up_note && (
+            {n.follow_up_note && (
               <p className="mt-1 text-sm text-sparrow-ink">
                 <span className="font-semibold">Follow-up:</span> {n.follow_up_note}
               </p>
@@ -1531,6 +1541,8 @@ function HomeworkTab({
   const [area, setArea] = useState<HomeworkArea>('general');
   const [due, setDue] = useState('');
   const [busy, setBusy] = useState(false);
+  const [extendingId, setExtendingId] = useState<string | null>(null);
+  const [newDue, setNewDue] = useState('');
 
   async function add() {
     if (!title.trim()) return;
@@ -1564,6 +1576,13 @@ function HomeworkTab({
     await deleteHomework(id);
     onChanged();
   }
+  async function extendDue(hw: Homework) {
+    if (!newDue) return;
+    await updateHomework(hw.id, { due_date: newDue });
+    setExtendingId(null);
+    setNewDue('');
+    onChanged();
+  }
 
   return (
     <div className="space-y-4">
@@ -1575,15 +1594,21 @@ function HomeworkTab({
           placeholder="What should they do this week?"
           className="field-input"
         />
-        <div className="mt-2 flex gap-2">
-          <select value={area} onChange={(e) => setArea(e.target.value as HomeworkArea)} className="field-input mt-0 flex-1">
-            {HOMEWORK_AREAS.map((a) => (
-              <option key={a} value={a}>
-                {AREA_LABEL[a]}
-              </option>
-            ))}
-          </select>
-          <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="field-input mt-0" />
+        <div className="mt-2 flex items-end gap-2">
+          <div className="flex-1">
+            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Homework area</label>
+            <select value={area} onChange={(e) => setArea(e.target.value as HomeworkArea)} className="field-input mt-0 w-full">
+              {HOMEWORK_AREAS.map((a) => (
+                <option key={a} value={a}>
+                  {AREA_LABEL[a]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Due date</label>
+            <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="field-input mt-0" />
+          </div>
           <button onClick={add} disabled={busy || !title.trim()} className="btn-primary shrink-0">
             Add
           </button>
@@ -1615,8 +1640,28 @@ function HomeworkTab({
                 {AREA_LABEL[hw.area]} · {dueLabel(hw.due_date)}
                 {hw.status === 'submitted' && ' · submitted online'}
               </p>
+              {extendingId === hw.id && (
+                <div className="mt-2 flex items-center gap-1">
+                  <input
+                    type="date"
+                    value={newDue}
+                    onChange={(e) => setNewDue(e.target.value)}
+                    className="field-input mt-0 w-36 text-xs"
+                  />
+                  <button onClick={() => extendDue(hw)} disabled={!newDue} className="btn-primary text-xs">Save</button>
+                  <button onClick={() => setExtendingId(null)} className="btn-ghost text-xs">×</button>
+                </div>
+              )}
             </div>
-            <button onClick={() => remove(hw.id)} className="text-xs text-sparrow-gray hover:text-priority-p1">
+            {extendingId !== hw.id && (
+              <button
+                onClick={() => { setExtendingId(hw.id); setNewDue(hw.due_date ?? ''); }}
+                className="shrink-0 text-xs text-sparrow-gray hover:text-sparrow-green"
+              >
+                Adjust date
+              </button>
+            )}
+            <button onClick={() => remove(hw.id)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
               Delete
             </button>
           </li>

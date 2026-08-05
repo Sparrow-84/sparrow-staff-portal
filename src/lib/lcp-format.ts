@@ -47,6 +47,29 @@ export function isFeeOverdue(
   });
 }
 
+/**
+ * Family status is computed, never staff-clicked. Onboarding = no move-in
+ * date yet. Graduated is sticky -- once a family's graduated, nothing here
+ * ever auto-changes it back (that only happens through the explicit
+ * "Graduate"/"Left the program" actions). Otherwise: needs_attention if
+ * they've got anything actually overdue (not just assigned with a future
+ * date), or 2+ no-shows in their last 4 logged sessions -- otherwise
+ * on_track. The no-show count is a live rolling window, not a one-time flag,
+ * so attending again naturally clears it once older no-shows fall out of
+ * the last-4 window.
+ */
+export function computeFamilyStatus(
+  moveInDate: string | null,
+  currentStatus: 'onboarding' | 'on_track' | 'needs_attention' | 'graduated',
+  hasOverdueHomeworkOrGoal: boolean,
+  recentNoShowCount: number,
+): 'onboarding' | 'on_track' | 'needs_attention' | 'graduated' {
+  if (currentStatus === 'graduated') return 'graduated';
+  if (!moveInDate) return 'onboarding';
+  if (hasOverdueHomeworkOrGoal || recentNoShowCount >= 2) return 'needs_attention';
+  return 'on_track';
+}
+
 export function dueLabel(iso: string | null): string {
   if (!iso) return 'no due date';
   if (isOverdue(iso)) {

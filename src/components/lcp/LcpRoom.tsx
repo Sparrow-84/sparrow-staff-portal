@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import {
+  fetchAllAttendanceWithSessionDate,
+  fetchAllGoals,
   fetchAllProgramFeePayments,
   fetchComplianceFollowUpFamilyIds,
   fetchEvents,
@@ -12,13 +14,17 @@ import {
   fetchRedemptions,
   fetchRecentSessionLogs,
   fetchSessions,
+  updateFamily,
 } from '@/lib/lcp';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
+import { computeFamilyStatus, dayLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
 import {
   FAMILY_STATUS,
+  type AttendanceStatus,
   type CurriculumSession,
   type Family,
+  type Goal,
   type Homework,
   type LcpEvent,
   type LcpPhaseWithUnits,
@@ -28,7 +34,6 @@ import {
   type SessionLog as SessionLogRecord,
   type TocSpaceSlim,
 } from '@/lib/lcp-types';
-import { dayLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
 import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { FamilyDetailPanel, type FamilyDetailTab } from './FamilyDetailPanel';
 import { SessionBriefPanel } from './SessionBriefPanel';
@@ -85,6 +90,45 @@ const LCP_TOUR_STEPS: TourStep[] = [
   },
 ];
 
+/** Status is computed, never staff-clicked (see computeFamilyStatus). Runs on
+ *  every room load, updates only the families whose computed status actually
+ *  changed, and returns the corrected array so the UI reflects it immediately
+ *  without waiting on a second round-trip. */
+async function recomputeFamilyStatuses(
+  families: Family[],
+  homework: Homework[],
+  goals: Goal[],
+  attendance: { family_id: string; status: AttendanceStatus; session_date: string }[],
+): Promise<Family[]> {
+  const attendanceByFamily = new Map<string, { status: AttendanceStatus; session_date: string }[]>();
+  for (const a of attendance) {
+    const list = attendanceByFamily.get(a.family_id) ?? [];
+    list.push(a);
+    attendanceByFamily.set(a.family_id, list);
+  }
+
+  const updates: Promise<void>[] = [];
+  const corrected = families.map((f) => {
+    if (f.status === 'graduated') return f;
+    const hasOverdue =
+      homework.some((h) => h.family_id === f.id && h.status !== 'complete' && isOverdue(h.due_date)) ||
+      goals.some((g) => g.family_id === f.id && g.status !== 'met' && isOverdue(g.due_date));
+    const recent = (attendanceByFamily.get(f.id) ?? [])
+      .sort((a, b) => b.session_date.localeCompare(a.session_date))
+      .slice(0, 4);
+    const noShows = recent.filter((a) => a.status === 'no_show').length;
+    const computed = computeFamilyStatus(f.move_in_date, f.status, hasOverdue, noShows);
+    if (computed !== f.status) {
+      updates.push(updateFamily(f.id, { status: computed }));
+      return { ...f, status: computed };
+    }
+    return f;
+  });
+
+  if (updates.length > 0) await Promise.all(updates);
+  return corrected;
+}
+
 export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
   const { tourOpen, dismissTour } = useRoomTour('sparrow_lcp_toured_v1');
   const { profile } = useAuth();
@@ -119,7 +163,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
 
   const load = useCallback(async () => {
     try {
-      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs, cfu] = await Promise.all([
+      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs, cfu, goals, attendance] = await Promise.all([
         fetchFamilies(),
         fetchAllHomework(),
         fetchEvents(),
@@ -132,8 +176,11 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
         fetchAllProgramFeePayments(),
         fetchProfiles(),
         fetchComplianceFollowUpFamilyIds(),
+        fetchAllGoals(),
+        fetchAllAttendanceWithSessionDate(),
       ]);
-      setFamilies(fam);
+      const correctedFam = await recomputeFamilyStatuses(fam, hw, goals, attendance);
+      setFamilies(correctedFam);
       setHomework(hw);
       setEvents(ev);
       setSessionLogs(logs);

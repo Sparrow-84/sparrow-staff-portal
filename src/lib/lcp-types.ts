@@ -269,24 +269,30 @@ export interface HousingSavingsMonth {
   answered_at: string;
 }
 
-export type ComplianceLabel = 'men' | 'substances' | 'childcare' | 'custom';
-
-export const COMPLIANCE_LABEL_TEXT: Record<ComplianceLabel, string> = {
-  men: 'Men',
-  substances: 'Substances',
-  childcare: 'Childcare',
-  custom: 'Custom',
-};
+// Reusable, shared label library (mirrors the Calendar/Tasks label picker
+// pattern) — starts seeded with Men/Substances/Childcare, grows as staff
+// create custom ones, never a one-off typed string on the note itself.
+export interface ComplianceLabelRow {
+  id: string;
+  name: string;
+  color: string; // matches a LABEL_COLORS id
+  created_by: string | null;
+  created_at: string;
+}
 
 export interface ComplianceNote {
   id: string;
   family_id: string;
-  label: ComplianceLabel;
-  custom_label: string | null;
+  label_id: string | null;
+  label_name: string | null;
+  label_color: string | null;
   what_happened: string;
   how_handled: string;
   follow_up_needed: boolean;
   follow_up_note: string | null;
+  follow_up_resolved_at: string | null;
+  follow_up_resolved_by: string | null;
+  follow_up_resolved_by_name: string | null;
   created_by: string | null;
   author_name: string | null;
   created_at: string;

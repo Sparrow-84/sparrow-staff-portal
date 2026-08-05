@@ -4,7 +4,7 @@ import { withTzOffset, toLocalDate } from './calendar';
 import type {
   Attendance,
   AttendanceStatus,
-  ComplianceLabel,
+  ComplianceLabelRow,
   ComplianceNote,
   CurriculumPhase,
   CurriculumSession,
@@ -183,6 +183,15 @@ export async function setFamilyActive(id: string, active: boolean): Promise<void
   if (error) throw new Error(error.message);
 }
 
+/** The intentional, positive way a family leaves the program -- as opposed to
+ *  setFamilyActive(id, false) alone, which is "left early." A DB trigger
+ *  stamps program_end_date automatically the moment status becomes
+ *  'graduated', so this just needs to set the two fields. */
+export async function graduateFamily(id: string): Promise<void> {
+  const { error } = await supabase.from('families').update({ status: 'graduated', active: false }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 /**
  * Hard delete: removes the family and cascades to all their LCP data (homework,
  * attendance, messages, notes, vouchers). Irreversible. Their auth login, if they
@@ -322,6 +331,16 @@ export async function setHomeworkStatus(id: string, status: HomeworkStatus): Pro
   const patch: { status: HomeworkStatus; completed_at?: string | null } = { status };
   if (status === 'complete') patch.completed_at = new Date().toISOString();
   else if (status === 'assigned') patch.completed_at = null;
+  const { error } = await supabase.from('lcp_homework').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/** Editing an existing assignment -- most often a due date pushed out after
+ *  a real conversation with the family, not a new item being created. */
+export async function updateHomework(
+  id: string,
+  patch: Partial<Pick<Homework, 'title' | 'area' | 'due_date'>>,
+): Promise<void> {
   const { error } = await supabase.from('lcp_homework').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 }
@@ -981,6 +1000,24 @@ export async function fetchAttendanceForSessionLog(sessionLogId: string): Promis
   return (data ?? []) as SessionAttendance[];
 }
 
+/** Room-wide, joined to the real session date (not marked_at) -- for
+ *  automatic family-status computation's "no-shows in their last few
+ *  sessions" check. */
+export async function fetchAllAttendanceWithSessionDate(): Promise<
+  { family_id: string; status: AttendanceStatus; session_date: string }[]
+> {
+  const { data, error } = await supabase
+    .from('lcp_session_attendance')
+    .select('family_id, status, session_log:lcp_session_logs(session_date)');
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown[])
+    .map((r) => {
+      const row = r as { family_id: string; status: AttendanceStatus; session_log: { session_date: string } | null };
+      return { family_id: row.family_id, status: row.status, session_date: row.session_log?.session_date ?? '' };
+    })
+    .filter((r) => r.session_date);
+}
+
 export async function fetchNotesForSessionLog(sessionLogId: string): Promise<StaffNote[]> {
   const { data, error } = await supabase
     .from('lcp_staff_notes')
@@ -1005,23 +1042,51 @@ export async function updateSessionLog(id: string, groupNote: string | null): Pr
   if (error) throw new Error(error.message);
 }
 
+// ── Compliance labels (reusable, shared library -- mirrors Calendar/Tasks) ──
+export async function fetchComplianceLabels(): Promise<ComplianceLabelRow[]> {
+  const { data, error } = await supabase
+    .from('lcp_compliance_labels')
+    .select('id, name, color, created_by, created_at')
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ComplianceLabelRow[];
+}
+
+export async function createComplianceLabel(name: string, color: string, createdBy: string): Promise<ComplianceLabelRow> {
+  const { data, error } = await supabase
+    .from('lcp_compliance_labels')
+    .insert({ name, color, created_by: createdBy })
+    .select('id, name, color, created_by, created_at')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as ComplianceLabelRow;
+}
+
 // ── Compliance notes ──────────────────────────────────────────────────
+const COMPLIANCE_NOTE_COLUMNS =
+  'id, family_id, label_id, what_happened, how_handled, follow_up_needed, follow_up_note, follow_up_resolved_at, follow_up_resolved_by, created_by, created_at, ' +
+  'label:lcp_compliance_labels(name, color), author:profiles!lcp_compliance_notes_created_by_fkey(full_name), resolver:profiles!lcp_compliance_notes_follow_up_resolved_by_fkey(full_name)';
+
+function mapComplianceNote(r: unknown): ComplianceNote {
+  const row = r as Record<string, unknown>;
+  const label = row.label as { name: string; color: string } | null;
+  return {
+    ...row,
+    label_name: label?.name ?? null,
+    label_color: label?.color ?? null,
+    author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
+    follow_up_resolved_by_name: (row.resolver as { full_name: string } | null)?.full_name ?? null,
+  } as ComplianceNote;
+}
+
 export async function fetchComplianceNotes(familyId: string): Promise<ComplianceNote[]> {
   const { data, error } = await supabase
     .from('lcp_compliance_notes')
-    .select(
-      'id, family_id, label, custom_label, what_happened, how_handled, follow_up_needed, follow_up_note, created_by, created_at, author:profiles(full_name)',
-    )
+    .select(COMPLIANCE_NOTE_COLUMNS)
     .eq('family_id', familyId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown[]).map((r) => {
-    const row = r as Record<string, unknown>;
-    return {
-      ...row,
-      author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
-    } as ComplianceNote;
-  });
+  return ((data ?? []) as unknown[]).map(mapComplianceNote);
 }
 
 /** Room-wide, family_id only -- just enough to flag "this family has an open
@@ -1039,25 +1104,16 @@ export async function fetchComplianceFollowUpFamilyIds(): Promise<string[]> {
 export async function fetchAllComplianceFollowUps(): Promise<ComplianceNote[]> {
   const { data, error } = await supabase
     .from('lcp_compliance_notes')
-    .select(
-      'id, family_id, label, custom_label, what_happened, how_handled, follow_up_needed, follow_up_note, created_by, created_at, author:profiles(full_name)',
-    )
+    .select(COMPLIANCE_NOTE_COLUMNS)
     .eq('follow_up_needed', true)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown[]).map((r) => {
-    const row = r as Record<string, unknown>;
-    return {
-      ...row,
-      author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
-    } as ComplianceNote;
-  });
+  return ((data ?? []) as unknown[]).map(mapComplianceNote);
 }
 
 export interface ComplianceNoteInput {
   family_id: string;
-  label: ComplianceLabel;
-  custom_label: string | null;
+  label_id: string;
   what_happened: string;
   how_handled: string;
   follow_up_needed: boolean;
@@ -1069,12 +1125,13 @@ export async function addComplianceNote(input: ComplianceNoteInput, createdBy: s
   if (error) throw new Error(error.message);
 }
 
-/** Clears the follow-up flag without touching the rest of the entry -- the
- *  note itself stays as a permanent record either way. */
-export async function resolveComplianceFollowUp(noteId: string): Promise<void> {
+/** Clears the follow-up flag but keeps the note (and its follow-up text)
+ *  fully visible -- now with who resolved it and when, so nothing about
+ *  what took place gets lost once it's closed out. */
+export async function resolveComplianceFollowUp(noteId: string, resolvedBy: string): Promise<void> {
   const { error } = await supabase
     .from('lcp_compliance_notes')
-    .update({ follow_up_needed: false })
+    .update({ follow_up_needed: false, follow_up_resolved_at: new Date().toISOString(), follow_up_resolved_by: resolvedBy })
     .eq('id', noteId);
   if (error) throw new Error(error.message);
 }

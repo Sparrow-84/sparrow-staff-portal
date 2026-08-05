@@ -10,7 +10,6 @@ import {
   unmarkMaterialsPrepped,
 } from '@/lib/lcp';
 import {
-  COMPLIANCE_LABEL_TEXT,
   type ComplianceNote,
   type Family,
   type Goal,
@@ -230,7 +229,7 @@ export function LcpHome({
           {complianceFollowUps.map((n) => (
             <SignalRow
               key={n.id}
-              who={`${familyName(n.family_id)} — ${n.label === 'custom' ? n.custom_label || 'Custom' : COMPLIANCE_LABEL_TEXT[n.label]}`}
+              who={`${familyName(n.family_id)} — ${n.label_name ?? 'Compliance'}`}
               detail={n.follow_up_note ?? undefined}
               cta="Open →"
               onClick={() => onOpenFamily(n.family_id, 'compliance')}
