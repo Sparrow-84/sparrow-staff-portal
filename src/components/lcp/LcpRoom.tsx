@@ -42,6 +42,8 @@ import { CurriculumAdmin } from './CurriculumAdmin';
 import { DeptCalendar } from '@/components/calendar/DeptCalendar';
 import { LcpProgress } from './LcpProgress';
 import { PhaseProgressBar } from './PhaseProgressBar';
+import { LcpHome } from './LcpHome';
+import type { View } from '@/components/Sidebar';
 
 const LCP_TOUR_STEPS: TourStep[] = [
   {
@@ -83,7 +85,7 @@ const LCP_TOUR_STEPS: TourStep[] = [
   },
 ];
 
-export function LcpRoom() {
+export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
   const { tourOpen, dismissTour } = useRoomTour('sparrow_lcp_toured_v1');
   const { profile } = useAuth();
   const [families, setFamilies] = useState<Family[]>([]);
@@ -101,7 +103,7 @@ export function LcpRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'families' | 'progress' | 'session-log' | 'session-cal' | 'team-cal' | 'curriculum'>('families');
+  const [tab, setTab] = useState<'home' | 'families' | 'progress' | 'session-log' | 'session-cal' | 'team-cal' | 'curriculum'>('home');
   const [familiesView, setFamiliesView] = useState<'active' | 'past'>('active');
   const [pastFamilies, setPastFamilies] = useState<Family[]>([]);
   const [pastLoaded, setPastLoaded] = useState(false);
@@ -172,9 +174,6 @@ export function LcpRoom() {
     return map;
   }, [homework]);
 
-  const pendingRedemptions = redemptions.filter((r) => r.status === 'requested');
-  const familyName = (id: string) => families.find((f) => f.id === id)?.display_name ?? 'Family';
-
   const feeDatesByFamily = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const p of feePayments) {
@@ -226,21 +225,9 @@ export function LcpRoom() {
         )}
       </div>
 
-      {pendingRedemptions.length > 0 && (
-        <div className="mt-4 flex items-center justify-between rounded-xl border border-sparrow-gold/40 bg-sparrow-cream px-4 py-3 text-sm">
-          <span>
-            ✨ {pendingRedemptions.length} voucher redemption{pendingRedemptions.length > 1 ? 's' : ''} waiting to be
-            fulfilled.
-          </span>
-          <button onClick={() => openFamily(pendingRedemptions[0].family_id)} className="font-medium text-sparrow-green">
-            Open {familyName(pendingRedemptions[0].family_id)} →
-          </button>
-        </div>
-      )}
-
       {/* Tabs */}
       <div className="mt-6 inline-flex flex-wrap rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
-        {(['families', 'progress', 'session-log', 'session-cal', 'team-cal', 'curriculum'] as const).map((t) => (
+        {(['home', 'families', 'progress', 'session-log', 'session-cal', 'team-cal', 'curriculum'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -256,7 +243,22 @@ export function LcpRoom() {
         ))}
       </div>
 
-      {tab === 'session-log' ? (
+      {tab === 'home' ? (
+        <LcpHome
+          families={families}
+          homework={homework}
+          redemptions={redemptions}
+          sessionLogs={sessionLogs}
+          phases={phases}
+          programPosition={programPosition}
+          feeDatesByFamily={feeDatesByFamily}
+          currentUserId={profile?.id ?? ''}
+          onOpenFamily={openFamily}
+          onGoToSessionLog={() => setTab('session-log')}
+          onGoToCurriculum={() => setTab('curriculum')}
+          onGoToTwinOaks={() => onNavigate?.('twin-oaks')}
+        />
+      ) : tab === 'session-log' ? (
         <div className="mt-6">
           <SessionLog
             families={families}

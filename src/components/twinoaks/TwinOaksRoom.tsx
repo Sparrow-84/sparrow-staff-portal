@@ -132,6 +132,21 @@ export function TwinOaksRoom() {
     void refreshNoticeMap();
   }, [load, refreshNoticeMap]);
 
+  // Deep-link from LCP Home's "TOC has a question" card -- same
+  // sessionStorage one-shot-consume pattern already used by Tasks/Calendar,
+  // just checked once the data it needs to match against has loaded.
+  useEffect(() => {
+    if (moveInRequests.length === 0) return;
+    const pendingId = sessionStorage.getItem('sparrow.pendingTocRequestOpen');
+    if (!pendingId) return;
+    sessionStorage.removeItem('sparrow.pendingTocRequestOpen');
+    const match = moveInRequests.find((r) => r.id === pendingId);
+    if (match) {
+      setReviewRequest(match);
+      setTab('property');
+    }
+  }, [moveInRequests]);
+
   const canManage = profile?.role === 'admin' || profile?.department === 'toc';
 
   const tenantBySpace = useMemo(() => {

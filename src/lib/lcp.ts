@@ -911,6 +911,51 @@ export async function fetchSessionCurriculumNotes(
   return { notes: row.curriculum_notes, reviewedAt: row.curriculum_notes_reviewed_at };
 }
 
+// Room-wide, for LCP Home's unreviewed-curriculum-notes card.
+export async function fetchUnreviewedCurriculumNotes(): Promise<
+  { id: number; session_number: number; title: string; curriculum_notes: string }[]
+> {
+  const { data, error } = await supabase
+    .from('lcp_sessions')
+    .select('id, session_number, title, curriculum_notes')
+    .not('curriculum_notes', 'is', null)
+    .is('curriculum_notes_reviewed_at', null)
+    .order('session_number');
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { id: number; session_number: number; title: string; curriculum_notes: string | null }[])
+    .filter((s) => s.curriculum_notes?.trim())
+    .map((s) => ({ ...s, curriculum_notes: s.curriculum_notes as string }));
+}
+
+// Room-wide, for LCP Home's housing-savings-prompt card (which families have
+// a completed month nobody's answered yet).
+export async function fetchAllHousingSavingsMonths(): Promise<HousingSavingsMonth[]> {
+  const { data, error } = await supabase
+    .from('lcp_housing_savings_months')
+    .select('id, family_id, month, awarded, answered_by, answered_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as HousingSavingsMonth[];
+}
+
+// ── Materials-prep checklist (LCP Home) ────────────────────────────────
+export async function fetchMaterialsPreppedSessionIds(): Promise<Set<number>> {
+  const { data, error } = await supabase.from('lcp_materials_prep_status').select('session_id');
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((r) => (r as { session_id: number }).session_id));
+}
+
+export async function markMaterialsPrepped(sessionId: number, completedBy: string): Promise<void> {
+  const { error } = await supabase
+    .from('lcp_materials_prep_status')
+    .insert({ session_id: sessionId, completed_by: completedBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function unmarkMaterialsPrepped(sessionId: number): Promise<void> {
+  const { error } = await supabase.from('lcp_materials_prep_status').delete().eq('session_id', sessionId);
+  if (error) throw new Error(error.message);
+}
+
 export async function upsertSessionAttendance(
   sessionLogId: string,
   familyId: string,
@@ -988,6 +1033,25 @@ export async function fetchComplianceFollowUpFamilyIds(): Promise<string[]> {
     .eq('follow_up_needed', true);
   if (error) throw new Error(error.message);
   return [...new Set((data ?? []).map((r) => (r as { family_id: string }).family_id))];
+}
+
+// Room-wide, full detail (not just family ids) -- for LCP Home's card.
+export async function fetchAllComplianceFollowUps(): Promise<ComplianceNote[]> {
+  const { data, error } = await supabase
+    .from('lcp_compliance_notes')
+    .select(
+      'id, family_id, label, custom_label, what_happened, how_handled, follow_up_needed, follow_up_note, created_by, created_at, author:profiles(full_name)',
+    )
+    .eq('follow_up_needed', true)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown[]).map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      ...row,
+      author_name: (row.author as { full_name: string } | null)?.full_name ?? null,
+    } as ComplianceNote;
+  });
 }
 
 export interface ComplianceNoteInput {
@@ -1262,6 +1326,16 @@ export async function fetchGoalsForFamily(familyId: string): Promise<Goal[]> {
     .select('id, family_id, area, title, due_date, status, created_by, created_at, updated_at, met_at')
     .eq('family_id', familyId)
     .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Goal[];
+}
+
+// Room-wide, for LCP Home's overdue-goals card -- mirrors fetchAllHomework.
+export async function fetchAllGoals(): Promise<Goal[]> {
+  const { data, error } = await supabase
+    .from('lcp_goals')
+    .select('id, family_id, area, title, due_date, status, created_by, created_at, updated_at, met_at')
+    .order('due_date', { ascending: true, nullsFirst: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as Goal[];
 }

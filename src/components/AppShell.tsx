@@ -82,7 +82,7 @@ export function AppShell() {
             {view === 'notes' && <NotesView />}
             {view === 'settings' && <SettingsView />}
             {view === 'twin-oaks' && <TwinOaksRoom />}
-            {view === 'lcp' && <LcpRoom />}
+            {view === 'lcp' && <LcpRoom onNavigate={handleNavigate} />}
             {view === 'partnerships' && <PartnershipsRoom />}
             {view === 'operations' && <OperationsRoom />}
             {view === 'documents' && <DocumentsRoom />}
