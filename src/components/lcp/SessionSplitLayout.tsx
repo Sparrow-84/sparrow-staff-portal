@@ -60,8 +60,22 @@ export function SessionSplitLayout({
   const [notesOpen, setNotesOpen] = useState(true);
   const [leftPct, setLeftPct] = useState(38);
   const [notes, setNotes] = useState('');
+  const [prepDraft, setPrepDraft] = useState(thursdayNotes?.prepNotes ?? '');
+  const [curriculumDraft, setCurriculumDraft] = useState(thursdayNotes?.curriculumNotes ?? '');
+  const [justSaved, setJustSaved] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
+
+  useEffect(() => { setPrepDraft(thursdayNotes?.prepNotes ?? ''); }, [thursdayNotes?.prepNotes]);
+  useEffect(() => { setCurriculumDraft(thursdayNotes?.curriculumNotes ?? ''); }, [thursdayNotes?.curriculumNotes]);
+
+  function saveBothNotes() {
+    if (!thursdayNotes) return;
+    if (prepDraft !== thursdayNotes.prepNotes) thursdayNotes.onPrepNotesSave(prepDraft);
+    if (curriculumDraft !== thursdayNotes.curriculumNotes) thursdayNotes.onCurriculumNotesSave(curriculumDraft);
+    setJustSaved(true);
+    setTimeout(() => setJustSaved(false), 2000);
+  }
 
   // Lock body scroll while session overlay is active
   useEffect(() => {
@@ -218,16 +232,26 @@ export function SessionSplitLayout({
                   <div className="shrink-0 border-t border-sparrow-rule">
                     <NotesAccordion
                       label="Prep notes"
-                      value={thursdayNotes.prepNotes}
-                      onSave={thursdayNotes.onPrepNotesSave}
+                      draft={prepDraft}
+                      onDraftChange={setPrepDraft}
+                      onBlurSave={() => {
+                        if (prepDraft !== thursdayNotes.prepNotes) thursdayNotes.onPrepNotesSave(prepDraft);
+                      }}
                       placeholder="Want to add or reorganize something before this session? Write it here — visible to whoever else is prepping too."
                     />
                     <NotesAccordion
                       label="Curriculum notes"
-                      value={thursdayNotes.curriculumNotes}
-                      onSave={thursdayNotes.onCurriculumNotesSave}
+                      draft={curriculumDraft}
+                      onDraftChange={setCurriculumDraft}
+                      onBlurSave={() => {
+                        if (curriculumDraft !== thursdayNotes.curriculumNotes) thursdayNotes.onCurriculumNotesSave(curriculumDraft);
+                      }}
                       placeholder="Notes about the curriculum itself — also shows up in Curriculum Admin next to this session's Teacher Guide."
                     />
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <button onClick={saveBothNotes} className="btn-primary text-xs">Save notes</button>
+                      {justSaved && <span className="text-xs font-medium text-sparrow-green">Saved ✓</span>}
+                    </div>
                   </div>
                 )}
               </div>
@@ -280,26 +304,25 @@ export function SessionSplitLayout({
 }
 
 // Collapsed by default so the Teacher Guide keeps most of the screen --
-// expand only when actually reading/writing one of these. Saves on blur
-// rather than a separate button, same "just works" feel as the rest of the
-// always-saving Thursday/Monday panels.
+// expand only when actually reading/writing one of these. Still autosaves on
+// blur, same "just works" feel as the rest of the always-saving Thursday/
+// Monday panels -- the "Save notes" button below both accordions (in the
+// parent) is purely a peace-of-mind action covering whichever of the two
+// fields has unsaved text, for staff about to navigate away.
 function NotesAccordion({
   label,
-  value,
-  onSave,
+  draft,
+  onDraftChange,
+  onBlurSave,
   placeholder,
 }: {
   label: string;
-  value: string;
-  onSave: (text: string) => void;
+  draft: string;
+  onDraftChange: (text: string) => void;
+  onBlurSave: () => void;
   placeholder: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(value);
-
-  useEffect(() => {
-    setDraft(value);
-  }, [value]);
 
   return (
     <div className="border-t border-sparrow-rule first:border-t-0">
@@ -308,15 +331,13 @@ function NotesAccordion({
         className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-sparrow-gray hover:text-sparrow-ink"
       >
         <span>{open ? '▾' : '▸'} {label}</span>
-        {!open && value.trim() && <span className="normal-case text-[10px] font-medium text-sparrow-green">has notes</span>}
+        {!open && draft.trim() && <span className="normal-case text-[10px] font-medium text-sparrow-green">has notes</span>}
       </button>
       {open && (
         <textarea
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => {
-            if (draft !== value) onSave(draft);
-          }}
+          onChange={(e) => onDraftChange(e.target.value)}
+          onBlur={onBlurSave}
           rows={3}
           className="w-full resize-none bg-white px-3 pb-3 text-xs leading-relaxed text-sparrow-ink outline-none placeholder:text-sparrow-rule"
           placeholder={placeholder}

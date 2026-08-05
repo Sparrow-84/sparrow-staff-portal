@@ -173,6 +173,24 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
     onChanged();
   }
 
+  // A filed session opens the read-only summary. A draft (started but not
+  // filed -- whether prep notes for a future date, or a past date that
+  // hasn't been filed yet) reopens the same full editing panel "Log tonight's
+  // session" uses, picking back up exactly where it was left, instead of a
+  // dead end that only "Log a different session" could get back into.
+  function selectLog(log: SessionLog) {
+    if (log.filed_at) {
+      setViewing(log);
+    } else {
+      setEntry({
+        sessionType: log.session_type,
+        sessionDate: log.session_date,
+        eventId: log.event_id,
+        label: SESSION_LOG_LABEL[log.session_type],
+      });
+    }
+  }
+
   if (entry) {
     const thursdayNotes: ThursdayNotes | null =
       entry.sessionType === 'thursday_group'
@@ -250,12 +268,18 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
     setShowDatePicker(false);
   }
 
-  // Group logs by date for display
+  // Group logs by date for display -- split into Upcoming (drafts dated
+  // after today, e.g. prep notes started ahead of time) vs Past (everything
+  // that's already happened, filed or not) so a session that hasn't run yet
+  // doesn't read as an overdue/unfiled past session.
+  const today = todayISO();
   const logsByDate = new Map<string, SessionLog[]>();
+  const upcomingByDate = new Map<string, SessionLog[]>();
   for (const log of logs) {
-    const list = logsByDate.get(log.session_date) ?? [];
+    const target = log.session_date > today ? upcomingByDate : logsByDate;
+    const list = target.get(log.session_date) ?? [];
     list.push(log);
-    logsByDate.set(log.session_date, list);
+    target.set(log.session_date, list);
   }
 
   if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading session log…</p>;
@@ -272,6 +296,13 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         <p className="mt-0.5 text-sm text-sparrow-gray">
           Today's scheduled sessions, or start one for a different date.
         </p>
+        {todayEvents.length === 0 && (
+          <p className="mt-1 text-xs text-sparrow-gray">
+            There is no session scheduled for tonight on the Session Cal — that's why there's no "Log this
+            session" button below. Add tonight's session to the Session Cal, or use "+ Log a different
+            session" below instead.
+          </p>
+        )}
 
         {todayEvents.length > 0 && (
           <div className="mt-4 space-y-3">
@@ -364,6 +395,22 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
       )}
       </div>
 
+      {/* ── Section 1.5: prep started for a date that hasn't happened yet ── */}
+      {upcomingByDate.size > 0 && (
+        <section className="mt-10">
+          <h2 className="font-serif text-lg font-semibold text-sparrow-ink">Upcoming sessions</h2>
+          <p className="mt-0.5 text-sm text-sparrow-gray">Prep started ahead of time for a date that hasn't happened yet.</p>
+          <div className="mt-4">
+            <SessionLogList
+              logsByDate={new Map(Array.from(upcomingByDate.entries()).sort(([a], [b]) => a.localeCompare(b)))}
+              adHocPreviews={adHocPreviews}
+              onSelect={selectLog}
+              emptyMessage=""
+            />
+          </div>
+        </section>
+      )}
+
       {/* ── Section 2: what's already been logged ───────────────────── */}
       <section className="mt-10">
         <h2 className="font-serif text-lg font-semibold text-sparrow-ink">Past sessions</h2>
@@ -393,7 +440,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
             <SessionLogList
               logsByDate={logsByDate}
               adHocPreviews={adHocPreviews}
-              onSelect={setViewing}
+              onSelect={selectLog}
               emptyMessage="No sessions logged in the past 8 weeks."
             />
           )}
@@ -401,7 +448,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
             <SessionLogList
               logsByDate={filterLogsByDate(logsByDate, (l) => l.session_type === 'thursday_group')}
               adHocPreviews={adHocPreviews}
-              onSelect={setViewing}
+              onSelect={selectLog}
               emptyMessage="No Thursday Group sessions logged in the past 8 weeks."
             />
           )}

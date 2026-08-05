@@ -127,12 +127,16 @@ export function FamilyDetailPanel({
   const [householdChildren, setHouseholdChildren] = useState<HouseholdChild[]>([]);
   const [housingSavingsMonths, setHousingSavingsMonths] = useState<HousingSavingsMonth[]>([]);
   const [complianceNotes, setComplianceNotes] = useState<ComplianceNote[]>([]);
+  const [reloadError, setReloadError] = useState<string | null>(null);
 
   const familyId = family?.id;
 
+  // Each tab's data loads independently -- one failing fetch (e.g. a table/
+  // column not live yet because a migration hasn't run) must never block the
+  // other 11 from refreshing, or a save on one tab looks broken on every tab.
   const reloadDetail = useCallback(async () => {
     if (!familyId) return;
-    const [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn] = await Promise.all([
+    const [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn] = await Promise.allSettled([
       fetchHomeworkForFamily(familyId),
       fetchMessages(familyId),
       fetchStaffNotes(familyId),
@@ -146,18 +150,25 @@ export function FamilyDetailPanel({
       fetchHousingSavingsMonths(familyId),
       fetchComplianceNotes(familyId),
     ]);
-    setHomework(hw);
-    setMessages(msg);
-    setNotes(nt);
-    setVouchers(vo);
-    setRedemptions(red.filter((r) => r.family_id === familyId));
-    setGoals(gl);
-    setGoalResponses(gr);
-    setFeePayments(fp);
-    setHouseholdAdult(ha);
-    setHouseholdChildren(hc);
-    setHousingSavingsMonths(sm);
-    setComplianceNotes(cn);
+    if (hw.status === 'fulfilled') setHomework(hw.value);
+    if (msg.status === 'fulfilled') setMessages(msg.value);
+    if (nt.status === 'fulfilled') setNotes(nt.value);
+    if (vo.status === 'fulfilled') setVouchers(vo.value);
+    if (red.status === 'fulfilled') setRedemptions(red.value.filter((r) => r.family_id === familyId));
+    if (gl.status === 'fulfilled') setGoals(gl.value);
+    if (gr.status === 'fulfilled') setGoalResponses(gr.value);
+    if (fp.status === 'fulfilled') setFeePayments(fp.value);
+    if (ha.status === 'fulfilled') setHouseholdAdult(ha.value);
+    if (hc.status === 'fulfilled') setHouseholdChildren(hc.value);
+    if (sm.status === 'fulfilled') setHousingSavingsMonths(sm.value);
+    if (cn.status === 'fulfilled') setComplianceNotes(cn.value);
+
+    const failed = [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn].filter((r) => r.status === 'rejected');
+    setReloadError(
+      failed.length > 0
+        ? `${failed.length} part${failed.length > 1 ? 's' : ''} of this family's record didn't load — probably a database update still pending. Other tabs are unaffected.`
+        : null,
+    );
   }, [familyId]);
 
   useEffect(() => {
@@ -184,6 +195,10 @@ export function FamilyDetailPanel({
           </button>
         ))}
       </div>
+
+      {reloadError && (
+        <p className="mb-4 rounded-lg bg-sparrow-gold/10 px-3 py-2 text-xs text-sparrow-gold">{reloadError}</p>
+      )}
 
       {tab === 'general' && (
         <GeneralInfoTab

@@ -83,21 +83,27 @@ export function LcpHome({
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    const [cf, cn, hm, gl, mir, mp] = await Promise.all([
-      fetchAllComplianceFollowUps(),
-      fetchUnreviewedCurriculumNotes(),
-      fetchAllHousingSavingsMonths(),
-      fetchAllGoals(),
-      fetchOpenLcpMoveInRequests().catch(() => []),
-      fetchMaterialsPreppedSessionIds(),
-    ]);
-    setComplianceFollowUps(cf);
-    setCurriculumNotes(cn);
-    setHousingMonths(hm);
-    setGoals(gl);
-    setTocRequests(mir.filter((r) => r.status === 'needs_info'));
-    setPreppedSessionIds(mp);
-    setLoading(false);
+    // Each card's data loads independently -- one section failing (e.g. a
+    // migration that hasn't run yet) must never leave the whole page stuck
+    // on "Loading…" or block the sections that CAN load.
+    try {
+      const [cf, cn, hm, gl, mir, mp] = await Promise.all([
+        fetchAllComplianceFollowUps().catch(() => []),
+        fetchUnreviewedCurriculumNotes().catch(() => []),
+        fetchAllHousingSavingsMonths().catch(() => []),
+        fetchAllGoals().catch(() => []),
+        fetchOpenLcpMoveInRequests().catch(() => []),
+        fetchMaterialsPreppedSessionIds().catch(() => new Set<number>()),
+      ]);
+      setComplianceFollowUps(cf);
+      setCurriculumNotes(cn);
+      setHousingMonths(hm);
+      setGoals(gl);
+      setTocRequests(mir.filter((r) => r.status === 'needs_info'));
+      setPreppedSessionIds(mp);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
