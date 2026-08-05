@@ -336,7 +336,7 @@ export async function fetchEvents(): Promise<LcpEvent[]> {
   const { data, error } = await supabase
     .from('lcp_events')
     // NOTE: add show_on_org_calendar here after Byron runs migration 0039
-    .select('id, kind, session_id, title, starts_at, ends_at, location, mandatory, rsvp_enabled, recurrence_id')
+    .select('id, kind, session_id, title, starts_at, ends_at, location, mandatory, rsvp_enabled, recurrence_id, lcp_family_visible')
     .order('starts_at', { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as LcpEvent[];
@@ -409,6 +409,7 @@ export async function createEvents(
     mandatory: boolean;
     recurrence_id: string | null;
     // NOTE: add show_on_org_calendar here after Byron runs migration 0039
+    lcp_family_visible: boolean;
     created_by: string;
   }>,
 ): Promise<string[]> {

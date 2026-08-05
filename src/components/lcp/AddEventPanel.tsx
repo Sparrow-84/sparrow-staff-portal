@@ -80,6 +80,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
   const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
   const [mandatory, setMandatory] = useState(true);
+  const [familyVisible, setFamilyVisible] = useState(false);
   // NOTE: restore showOnOrgCal state after Byron runs migration 0039
   // const [showOnOrgCal, setShowOnOrgCal] = useState(false);
 
@@ -153,6 +154,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
         location: location.trim() || null,
         mandatory,
         recurrence_id: recurrenceId,
+        lcp_family_visible: familyVisible,
         // NOTE: restore show_on_org_calendar: showOnOrgCal after Byron runs migration 0039
         created_by: currentUserId,
       }));
@@ -305,6 +307,18 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
             className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
           />
           Mandatory attendance
+        </label>
+
+        {/* Family visibility */}
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+          <input
+            type="checkbox"
+            checked={familyVisible}
+            onChange={(e) => setFamilyVisible(e.target.checked)}
+            className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+          />
+          Show to LCP families{' '}
+          <span className="font-normal text-sparrow-gray">(just the name, date, and time — nothing else)</span>
         </label>
 
         {/* Attendees — mirrors AddOrgEventPanel's picker */}

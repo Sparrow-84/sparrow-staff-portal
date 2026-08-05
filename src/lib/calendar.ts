@@ -213,12 +213,13 @@ export interface CalendarEventInput {
   room_id?: string | null;
   is_private_meeting?: boolean;
   label_id?: string | null;
+  lcp_family_visible?: boolean;
 }
 
 export async function createCalendarEvents(inputs: CalendarEventInput[]): Promise<string[]> {
   // recurrence_id is omitted from non-recurring rows until migration 0035 is applied;
   // once the column exists, recurring events include it so series deletes work.
-  const rows = inputs.map(({ recurrence_id, department, is_personal, room_id, is_private_meeting, label_id, ...rest }) => {
+  const rows = inputs.map(({ recurrence_id, department, is_personal, room_id, is_private_meeting, label_id, lcp_family_visible, ...rest }) => {
     const row: Record<string, unknown> = { ...rest };
     if (recurrence_id) row.recurrence_id = recurrence_id;
     if (department) row.department = department;
@@ -226,6 +227,7 @@ export async function createCalendarEvents(inputs: CalendarEventInput[]): Promis
     if (room_id) row.room_id = room_id;
     if (is_private_meeting) row.is_private_meeting = true;
     if (label_id) row.label_id = label_id;
+    if (lcp_family_visible) row.lcp_family_visible = true;
     return row;
   });
   const { data, error } = await supabase.from('calendar_events').insert(rows).select('id');

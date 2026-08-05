@@ -147,6 +147,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
   const [roomId, setRoomId] = useState<string>('');
   const [isPrivateMeeting, setIsPrivateMeeting] = useState(false);
   const [labels, setLabels] = useState<CalendarLabel[]>([]);
+  const [familyVisible, setFamilyVisible] = useState(false);
 
   // Checked synchronously so a rapid double-click (or retry before the "saving" state
   // has committed a render) can't fire submit() twice and create two full series.
@@ -231,6 +232,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
         room_id: roomId || null,
         is_private_meeting: selectedRoom?.blocks_whole_office ? isPrivateMeeting : false,
         label_id: labelId,
+        lcp_family_visible: !isPersonal && department === 'lcp' ? familyVisible : false,
       }));
 
       const createdIds = await createCalendarEvents(inputs);
@@ -553,6 +555,20 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
             )}
             <p className="mt-1 text-xs text-sparrow-gray">You're always added as attending. Selected staff will be notified.</p>
           </div>
+        )}
+
+        {/* LCP family visibility — only relevant for LCP dept events */}
+        {!isPersonal && department === 'lcp' && (
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+            <input
+              type="checkbox"
+              checked={familyVisible}
+              onChange={(e) => setFamilyVisible(e.target.checked)}
+              className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+            />
+            Show to LCP families{' '}
+            <span className="font-normal text-sparrow-gray">(just the name, date, and time — nothing else)</span>
+          </label>
         )}
 
         {/* Recurrence */}
