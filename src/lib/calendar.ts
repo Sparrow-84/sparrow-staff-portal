@@ -579,7 +579,13 @@ export async function fetchCalendar(): Promise<CalendarEvent[]> {
 export function expandEvents(events: CalendarEvent[], from: Date, to: Date): EventOccurrence[] {
   const out: EventOccurrence[] = [];
   for (const ev of events) {
-    const base = new Date(ev.starts_at);
+    // All-day events are stored as literal UTC midnight of the picked date
+    // (see AddOrgEventPanel) -- reading that straight through `new Date()`
+    // and then a local getFullYear/getMonth/getDate lands one calendar day
+    // early for anyone in a timezone behind UTC. Anchor to local noon of the
+    // same date string instead, matching how CalendarView/DeptCalendar/
+    // OrgEventDetailPanel already read all-day events correctly.
+    const base = ev.all_day ? new Date(ev.starts_at.slice(0, 10) + 'T12:00:00') : new Date(ev.starts_at);
     const stepDays = ev.recurrence === 'weekly' ? 7 : ev.recurrence === 'biweekly' ? 14 : 0;
     if (stepDays === 0) {
       if (base >= from && base <= to) out.push({ event: ev, occursAt: base });
