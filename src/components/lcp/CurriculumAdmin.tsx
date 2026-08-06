@@ -124,6 +124,17 @@ export function CurriculumAdmin() {
 
   const allSessions = useMemo(() => phases.flatMap((p) => p.units).flatMap((u) => u.sessions), [phases]);
   const completion = useMemo(() => buildCompletionMap(allSessions, resources), [allSessions, resources]);
+  // Phase numbers restart each phase; this is the running count across the
+  // WHOLE curriculum (Foundation = 1, ... Whole House = 13) -- the number
+  // staff actually mean when they say "unit 4."
+  const unitGlobalIndex = useMemo(() => {
+    const map = new Map<number, number>();
+    let i = 0;
+    for (const phase of phases) {
+      for (const unit of phase.units) map.set(unit.id, ++i);
+    }
+    return map;
+  }, [phases]);
 
   function handleSessionSaved(updated: CurriculumSessionDetail) {
     setPhases((prev) =>
@@ -185,6 +196,7 @@ export function CurriculumAdmin() {
                 <UnitSection
                   key={unit.id}
                   unit={unit}
+                  unitNumber={unitGlobalIndex.get(unit.id) ?? null}
                   phaseColor={color}
                   completion={completion}
                   isEditing={editingUnitId === unit.id}
@@ -221,6 +233,7 @@ export function CurriculumAdmin() {
 
 function UnitSection({
   unit,
+  unitNumber,
   phaseColor,
   completion,
   isEditing,
@@ -230,6 +243,7 @@ function UnitSection({
   onSelectSession,
 }: {
   unit: CurriculumUnit;
+  unitNumber: number | null;
   phaseColor: PhaseColor;
   completion: Map<number, SessionCompletion>;
   isEditing: boolean;
@@ -277,6 +291,9 @@ function UnitSection({
       <div className="flex items-start justify-between px-4 py-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            {unitNumber != null && (
+              <span className="text-xs font-semibold text-sparrow-gray">Unit {unitNumber}</span>
+            )}
             <span className="font-medium text-sparrow-ink">{unit.name}</span>
             {unit.month_label && (
               <span className="text-xs text-sparrow-gray">{unit.month_label}</span>
