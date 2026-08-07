@@ -32,6 +32,30 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'documents', label: 'Documents' },
 ];
 
+// Click-to-reveal helper text for fields that aren't self-explanatory to someone new
+// to grant compliance. A "?" rather than a hover title so it works on touch devices too.
+function InfoTip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label="What does this mean?"
+        className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-sparrow-rule text-[10px] font-bold text-sparrow-gray hover:bg-sparrow-green hover:text-white"
+      >
+        ?
+      </button>
+      {open && (
+        <span className="absolute left-0 top-5 z-10 w-64 rounded-lg border border-sparrow-rule bg-white p-2.5 text-xs font-normal leading-snug text-sparrow-ink shadow-card">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function GrantPanel({
   open,
   grant,
@@ -148,7 +172,10 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
     <div className="space-y-4">
       <div className="rounded-xl border border-sparrow-rule/70 p-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-sparrow-ink">Annual OHCS certification</span>
+          <span className="text-sm font-medium text-sparrow-ink">
+            Annual OHCS certification
+            <InfoTip text="Once a year you tell the funder (OHCS) that you're still meeting the grant's rules — e.g. that enough spaces are still rented to qualifying low-income households. The date below is when that's due." />
+          </span>
           {tone.label && <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`}>{tone.label}</span>}
         </div>
         <p className="mt-1 text-xs text-sparrow-gray">
@@ -166,6 +193,10 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
             Mark certified today
           </button>
         </div>
+        <p className="mt-2 text-[11px] text-sparrow-gray">
+          Only click "Mark certified today" once this year's certification has actually been filed with
+          OHCS — it records today as done and automatically pushes the due date forward one year.
+        </p>
       </div>
 
       <label className="block" htmlFor="grant-funder-name">
@@ -190,7 +221,10 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
 
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray">Placed in service</span>
+          <span className="text-xs font-medium text-sparrow-gray">
+            Placed in service
+            <InfoTip text="Roughly: the date the funded property started being used for its purpose — for an acquisition (like Twin Oaks), that's usually the closing/effective date, not a separate construction date." />
+          </span>
           <input
             type="date"
             value={form.placed_in_service_date ?? ''}
@@ -199,7 +233,10 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
           />
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray">Affordability period end</span>
+          <span className="text-xs font-medium text-sparrow-gray">
+            Affordability period end
+            <InfoTip text="The date the grant's income restrictions expire — after this, the funder's rules on renting to low-income households no longer apply. Often decades out; check the agreement for the exact formula." />
+          </span>
           <input
             type="date"
             value={form.affordability_period_end ?? ''}
@@ -210,7 +247,10 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
       </div>
 
       <div className="rounded-xl border border-sparrow-rule/70 p-3">
-        <p className="mb-2 text-xs font-medium text-sparrow-gray">OHCS contact</p>
+        <p className="mb-2 text-xs font-medium text-sparrow-gray">
+          OHCS contact
+          <InfoTip text="Who to reach at the funder with questions or required notices. Not every funder assigns a specific person — some, like OHCS on this grant, route everything through a general compliance address instead." />
+        </p>
         <div className="space-y-2">
           <input
             value={form.ohcs_contact_name ?? ''}
@@ -240,7 +280,10 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
           onChange={(e) => set('prior_consent_required', e.target.checked)}
           className="h-4 w-4"
         />
-        <span className="text-sm font-medium text-priority-p1">Prior consent required before acting</span>
+        <span className="text-sm font-medium text-priority-p1">
+          Prior consent required before acting
+          <InfoTip text="Check this if the funder's agreement says Sparrow must get their written OK before certain actions — commonly: selling/transferring the property, changing the management company, or taking on new debt against it. Acting without asking first can be a real compliance violation, not just a formality." />
+        </span>
       </label>
 
       <label className="block">
@@ -305,6 +348,10 @@ function NotificationsTab({
         Record of funder notifications actually sent — append-only, this is the compliance history.
       </p>
       <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
+        <span className="flex items-center text-xs font-medium text-sparrow-gray">
+          What are you notifying OHCS about?
+          <InfoTip text="These are notices sent TO the funder about changes at the property — not Sparrow's own insurance shopping. Insurance change: a policy was cancelled, non-renewed, or swapped. Management change: a new property manager. Ownership/transfer: any change in who owns the property or Sparrow itself. Debt: any new loan that could create a lien on the property." />
+        </span>
         <select value={category} onChange={(e) => setCategory(e.target.value as GrantNotificationCategory)} className="field-input mt-0">
           {GRANT_NOTIFICATION_CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>
