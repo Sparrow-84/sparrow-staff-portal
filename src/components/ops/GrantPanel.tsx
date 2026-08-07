@@ -8,6 +8,7 @@ import {
   getGrantDocumentUrl,
   markCertified,
   updateGrant,
+  updateGrantDocumentSummary,
   uploadGrantDocument,
   type GrantInput,
 } from '@/lib/grants';
@@ -408,17 +409,98 @@ function DocumentsTab({
       <ul className="divide-y divide-sparrow-rule/70 rounded-xl border border-sparrow-rule">
         {docs.length === 0 && <li className="p-3 text-sm text-sparrow-gray">No documents yet.</li>}
         {docs.map((d) => (
-          <li key={d.id} className="flex items-center gap-2 p-3 text-sm">
-            <button onClick={() => open(d)} className="flex-1 truncate text-left font-medium text-sparrow-green underline">
-              {d.label}
-            </button>
-            <span className="text-xs text-sparrow-gray">{formatDate(d.created_at)}</span>
-            <button onClick={() => deleteGrantDocument(d).then(onChanged)} className="text-xs text-sparrow-gray hover:text-priority-p1">
-              Delete
-            </button>
+          <li key={d.id} className="p-3 text-sm">
+            <div className="flex items-center gap-2">
+              <button onClick={() => open(d)} className="flex-1 truncate text-left font-medium text-sparrow-green underline">
+                {d.label}
+              </button>
+              <span className="text-xs text-sparrow-gray">{formatDate(d.created_at)}</span>
+              <button onClick={() => deleteGrantDocument(d).then(onChanged)} className="text-xs text-sparrow-gray hover:text-priority-p1">
+                Delete
+              </button>
+            </div>
+            <DocumentSummary doc={d} onChanged={onChanged} />
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+// A plain-English summary lives on the same row as its document — one record, so
+// "this is a summary of this doc" is automatic rather than needing a separate link.
+function DocumentSummary({ doc, onChanged }: { doc: GrantDocument; onChanged: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(doc.summary ?? '');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setDraft(doc.summary ?? '');
+  }, [doc.summary]);
+
+  async function save() {
+    setBusy(true);
+    try {
+      await updateGrantDocumentSummary(doc.id, draft.trim() || null);
+      setEditing(false);
+      setExpanded(true);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="mt-2 space-y-2">
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={5}
+          placeholder="Plain-English summary of what this document covers…"
+          className="field-input mt-0 text-xs"
+        />
+        <div className="flex gap-2">
+          <button onClick={save} disabled={busy} className="btn-primary text-xs">
+            Save summary
+          </button>
+          <button
+            onClick={() => { setDraft(doc.summary ?? ''); setEditing(false); }}
+            className="text-xs text-sparrow-gray hover:text-sparrow-ink"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!doc.summary) {
+    return (
+      <button onClick={() => setEditing(true)} className="mt-1 text-xs text-sparrow-green hover:underline">
+        + Add plain-English summary
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-1">
+      <button
+        onClick={() => setExpanded((e) => !e)}
+        className="flex items-center gap-1 text-xs font-medium text-sparrow-green hover:underline"
+      >
+        <span aria-hidden>{expanded ? '▾' : '▸'}</span>
+        Plain-English summary
+      </button>
+      {expanded && (
+        <div className="mt-2 rounded-lg bg-sparrow-mist p-3">
+          <p className="whitespace-pre-wrap text-xs text-sparrow-ink">{doc.summary}</p>
+          <button onClick={() => setEditing(true)} className="mt-2 text-xs text-sparrow-gray hover:text-sparrow-ink">
+            Edit
+          </button>
+        </div>
+      )}
     </div>
   );
 }

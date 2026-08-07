@@ -127,6 +127,11 @@ export async function getGrantDocumentUrl(storagePath: string): Promise<string> 
   return data.signedUrl;
 }
 
+export async function updateGrantDocumentSummary(id: string, summary: string | null): Promise<void> {
+  const { error } = await supabase.from('grant_documents').update({ summary }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export async function deleteGrantDocument(doc: GrantDocument): Promise<void> {
   const { error: storageErr } = await supabase.storage.from('grant-documents').remove([doc.storage_path]);
   if (storageErr) throw new Error(storageErr.message);

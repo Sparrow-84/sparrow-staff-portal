@@ -58,6 +58,7 @@ export interface GrantDocument {
   grant_id: string;
   label: string;
   storage_path: string;
+  summary: string | null;
   created_by: string | null;
   created_at: string;
 }
