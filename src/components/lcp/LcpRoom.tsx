@@ -317,6 +317,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
           homework={homework}
           redemptions={redemptions}
           sessionLogs={sessionLogs}
+          events={events}
           phases={phases}
           programPosition={programPosition}
           feeDatesByFamily={feeDatesByFamily}

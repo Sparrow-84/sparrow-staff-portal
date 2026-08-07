@@ -11,6 +11,7 @@ import {
   type Goal,
   type Homework,
   type HousingSavingsMonth,
+  type LcpEvent,
   type LcpMoveInRequest,
   type LcpPhaseWithUnits,
   type ProgramPosition,
@@ -39,12 +40,17 @@ function todayISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+function localDateOf(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 interface Props {
   families: Family[];
   homework: Homework[];
   redemptions: Redemption[];
   sessionLogs: SessionLog[];
+  events: LcpEvent[];
   phases: LcpPhaseWithUnits[];
   programPosition: ProgramPosition | null;
   feeDatesByFamily: Map<string, string[]>;
@@ -64,6 +70,7 @@ export function LcpHome({
   homework,
   redemptions,
   sessionLogs,
+  events,
   phases,
   programPosition,
   feeDatesByFamily,
@@ -118,9 +125,17 @@ export function LcpHome({
 
   const today = todayISO();
 
-  // Thursday sessions whose date has passed with no filing.
-  const unfiledSessions = sessionLogs.filter(
-    (l) => l.session_type === 'thursday_group' && !l.filed_at && l.session_date < today,
+  // Thursday sessions whose date has passed with no filing -- checked against
+  // the Session Cal event itself, not just existing session_logs rows. A log
+  // row only gets created once someone actually opens the Thursday Group
+  // screen; if nobody ever logged in that night (e.g. a forgotten password),
+  // there's no draft row to find at all, so checking sessionLogs alone missed
+  // this entirely. The calendar event is the one thing guaranteed to exist.
+  const filedThursdayDates = new Set(
+    sessionLogs.filter((l) => l.session_type === 'thursday_group' && l.filed_at).map((l) => l.session_date),
+  );
+  const unfiledSessions = events.filter(
+    (ev) => ev.kind === 'curriculum' && localDateOf(ev.starts_at) < today && !filedThursdayDates.has(localDateOf(ev.starts_at)),
   );
 
   // Program fee overdue, room-wide (same logic already used per-family elsewhere).
@@ -215,10 +230,10 @@ export function LcpHome({
     <div className="mt-6 space-y-3">
       {unfiledSessions.length > 0 && (
         <SignalCard title="📅 Thursday sessions never filed" count={unfiledSessions.length} tone="urgent">
-          {unfiledSessions.map((l) => (
+          {unfiledSessions.map((ev) => (
             <SignalRow
-              key={l.id}
-              who={`${dayLabel(l.session_date)} — Thursday Group`}
+              key={ev.id}
+              who={`${dayLabel(ev.starts_at)} — Thursday Group`}
               detail="Session date has passed, no log was ever filed"
               cta="File it →"
               onClick={onGoToSessionLog}
