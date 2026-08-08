@@ -14,6 +14,7 @@ import {
 import { fetchInterests, fetchPartnerInterestMap, type PartnershipInterest } from '@/lib/partnership-interests';
 import { PartnerDetailPanel } from './PartnerDetailPanel';
 import { AddPartnerPanel } from './AddPartnerPanel';
+import { BatchTouchpointModal } from './BatchTouchpointModal';
 import { PartnershipsHelpModal } from './PartnershipsHelpModal';
 import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { PartnerTableView } from './PartnerTableView';
@@ -27,6 +28,7 @@ import { PartnershipCollateralTab } from './PartnershipCollateralTab';
 import { PartnershipSocialTab } from './PartnershipSocialTab';
 import { PartnershipEventsTab } from './PartnershipEventsTab';
 import { PrayerMeetingTab } from './PrayerMeetingTab';
+import { PartnershipContactsTab } from './PartnershipContactsTab';
 import { fetchComms } from '@/lib/partnerships-tabs';
 import { DeptCalendar } from '@/components/calendar/DeptCalendar';
 
@@ -69,7 +71,7 @@ const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
   },
 ];
 
-type Tab = 'home' | 'directory' | 'comms' | 'collateral' | 'social' | 'events' | 'prayer' | 'calendar';
+type Tab = 'home' | 'directory' | 'comms' | 'collateral' | 'social' | 'events' | 'prayer' | 'calendar' | 'contacts';
 type View = 'table' | 'tile';
 type Filter = 'all' | 'archived' | PartnerType;
 
@@ -82,6 +84,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'events', label: 'Events' },
   { key: 'prayer', label: 'Prayer' },
   { key: 'calendar', label: 'Calendar' },
+  { key: 'contacts', label: 'All Staff Contacts' },
 ];
 
 const FILTERS: { key: Filter; label: string }[] = [
@@ -125,6 +128,7 @@ export function PartnershipsRoom() {
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
   // Deep-link: open a partner panel on load via ?partner=<id>
@@ -265,6 +269,9 @@ export function PartnershipsRoom() {
           >
             ?
           </button>
+          <button onClick={() => setBatchOpen(true)} className="btn-secondary">
+            Log touchpoint for multiple partners
+          </button>
           <button onClick={() => setAddOpen(true)} className="btn-primary">
             + Add partner
           </button>
@@ -303,6 +310,7 @@ export function PartnershipsRoom() {
           {activeTab === 'social' && <PartnershipSocialTab profiles={profiles} />}
           {activeTab === 'events' && <PartnershipEventsTab />}
           {activeTab === 'prayer' && <PrayerMeetingTab />}
+          {activeTab === 'contacts' && <PartnershipContactsTab profiles={profiles} />}
           {activeTab === 'calendar' && (
             <div>
               <DeptCalendar department="partnerships" />
@@ -454,6 +462,13 @@ export function PartnershipsRoom() {
         onCreated={load}
         interests={interests}
         onInterestsCreated={load}
+      />
+      <BatchTouchpointModal
+        open={batchOpen}
+        partners={partners}
+        currentUserId={profile?.id ?? ''}
+        onClose={() => setBatchOpen(false)}
+        onLogged={load}
       />
       <PartnershipsHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>

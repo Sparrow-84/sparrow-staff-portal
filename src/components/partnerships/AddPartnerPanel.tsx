@@ -45,6 +45,8 @@ export function AddPartnerPanel({
   onCreated,
   interests = [],
   onInterestsCreated,
+  initialValues,
+  onCreatedFromContact,
 }: {
   open: boolean;
   profiles: Profile[];
@@ -53,6 +55,8 @@ export function AddPartnerPanel({
   onCreated: () => void;
   interests?: PartnershipInterest[];
   onInterestsCreated?: () => void;
+  initialValues?: { name: string; phone: string; email: string; notes: string | null } | null;
+  onCreatedFromContact?: (partnerId: string) => void;
 }) {
   const [name, setName] = useState('');
   const [type, setType] = useState<PartnerType>('donor');
@@ -72,15 +76,15 @@ export function AddPartnerPanel({
 
   useEffect(() => {
     if (open) {
-      setName('');
+      setName(initialValues?.name ?? '');
       setType('donor');
       setSecondaryTypes([]);
       setInterestIds([]);
       setStage('prospect');
       setOwnerId(defaultOwnerId ?? '');
       setContactName('');
-      setEmail('');
-      setPhone('');
+      setEmail(initialValues?.email ?? '');
+      setPhone(initialValues?.phone ?? '');
       setAddress('');
       setSource('');
       setCadence(DEFAULT_CADENCE.donor);
@@ -89,7 +93,7 @@ export function AddPartnerPanel({
       setBusy(false);
       resetValidation();
     }
-  }, [open, defaultOwnerId]);
+  }, [open, defaultOwnerId, initialValues]);
 
   // Cadence + lead time are required (migration 0080 — NOT NULL at the DB level). Validate here
   // so a save attempt never hits the DB constraint as its only feedback.
@@ -127,11 +131,12 @@ export function AddPartnerPanel({
         cadence_days: cadence,
         lead_time_days: leadTime,
         source: source.trim() || null,
-        notes: null,
+        notes: initialValues?.notes || null,
       });
-      // Fetch the new partner's id — needed for the donor follow-up task and/or saving
-      // any Interests picked before the record existed.
-      if ((type === 'donor' && ownerId) || interestIds.length > 0) {
+      // Fetch the new partner's id — needed for the donor follow-up task, saving any
+      // Interests picked before the record existed, and/or reporting back to a caller
+      // transferring in a My Contacts entry (see onCreatedFromContact).
+      if ((type === 'donor' && ownerId) || interestIds.length > 0 || initialValues) {
         const { data } = await import('@/lib/supabase').then((m) =>
           m.supabase.from('partners').select('id').eq('name', trimmedName).order('created_at', { ascending: false }).limit(1).single()
         );
@@ -141,6 +146,9 @@ export function AddPartnerPanel({
           }
           if (interestIds.length > 0) {
             await setPartnerInterests(data.id, interestIds);
+          }
+          if (initialValues) {
+            onCreatedFromContact?.(data.id);
           }
         }
       }
@@ -169,6 +177,11 @@ export function AddPartnerPanel({
       }
     >
       <div className="space-y-4">
+        {initialValues && (
+          <p className="rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green">
+            Prefilled from {initialValues.name}'s My Contacts entry. Pick a type and confirm the cadence to add them to the Directory.
+          </p>
+        )}
         <div>
           <label className="field-label" htmlFor="pa-name">Name</label>
           <input

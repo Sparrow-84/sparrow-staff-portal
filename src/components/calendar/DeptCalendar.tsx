@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import {
   fetchCalendar,
+  fetchEventIdsWithSharedNotes,
   KIND_LABEL,
   KIND_PILL,
   type CalendarEvent,
@@ -58,6 +59,7 @@ export function DeptCalendar({ department }: Props) {
   const [month, setMonth] = useState(today.getMonth());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [notedEventIds, setNotedEventIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [addDate, setAddDate] = useState(todayStr);
@@ -68,9 +70,10 @@ export function DeptCalendar({ department }: Props) {
 
   const load = useCallback(async () => {
     try {
-      const [evs, profs] = await Promise.all([fetchCalendar(), fetchProfiles()]);
+      const [evs, profs, noted] = await Promise.all([fetchCalendar(), fetchProfiles(), fetchEventIdsWithSharedNotes()]);
       setEvents(evs);
       setProfiles(profs);
+      setNotedEventIds(noted);
     } finally {
       setLoading(false);
     }
@@ -227,9 +230,12 @@ export function DeptCalendar({ department }: Props) {
                         height: 20,
                         borderRadius: bar.isActualStart && bar.isActualEnd ? 4 : bar.isActualStart ? '4px 0 0 4px' : bar.isActualEnd ? '0 4px 4px 0' : 0,
                       }}
-                      className={`z-10 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-75 ${eventPillClass(bar.event)}`}
+                      className={`z-10 flex items-center gap-1 px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-75 ${eventPillClass(bar.event)}`}
                     >
-                      {bar.isActualStart ? bar.event.title : ''}
+                      <span className="min-w-0 truncate">{bar.isActualStart ? bar.event.title : ''}</span>
+                      {bar.isActualStart && notedEventIds.has(bar.event.id) && (
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                      )}
                     </button>
                   ))}
 
@@ -267,9 +273,14 @@ export function DeptCalendar({ department }: Props) {
                                 onClick={() => setDetailEvent(ev)}
                                 onMouseEnter={(e) => setTooltip({ title: ev.title, sub: ev.label?.name ?? KIND_LABEL[ev.kind], time: ev.all_day ? undefined : shortTime(ev.starts_at), x: e.clientX, y: e.clientY })}
                                 onMouseLeave={() => setTooltip(null)}
-                                className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${eventPillClass(ev)}`}
+                                className={`flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${eventPillClass(ev)}`}
                               >
-                                {ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
+                                <span className="min-w-0 truncate">
+                                  {ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
+                                </span>
+                                {notedEventIds.has(ev.id) && (
+                                  <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                                )}
                               </button>
                             ))}
                             {overflow > 0 && (

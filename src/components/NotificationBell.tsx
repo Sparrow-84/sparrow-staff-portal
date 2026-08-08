@@ -13,15 +13,26 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+const SOURCE_SYSTEM_LABELS: Record<string, string> = {
+  lcp: 'LCP',
+  crm: 'Partnerships',
+  toc: 'Twin Oaks',
+};
+
 function describe(n: AppNotification): string {
   const who = n.actor?.full_name ?? 'Someone';
-  if (n.type === 'assigned') return `${who} assigned you a task`;
+  if (n.type === 'assigned') {
+    const sourceSystem = n.task?.source_system;
+    if (sourceSystem) return `New task from ${SOURCE_SYSTEM_LABELS[sourceSystem] ?? sourceSystem}`;
+    return `${who} assigned you a task`;
+  }
   if (n.type === 'pushed_back') return `${who} pushed back "${n.body ?? 'a task'}"`;
   if (n.type === 'edited') return `${who} updated a task assigned to you`;
   if (n.type === 'mentioned') return `${who} mentioned you in a message`;
   if (n.type === 'event_created') return `${who} posted a new All Staff event`;
   if (n.type === 'event_invited') return `${who} added you to an event`;
   if (n.type === 'event_removed') return `${who} removed you from an event`;
+  if (n.type === 'new_contact') return `${who} added a new contact: ${n.body ?? 'a contact'}`;
   if (n.type === 'commented') return `${who} commented on a task`;
   return `${who} commented on a task`;
 }
@@ -29,6 +40,7 @@ function describe(n: AppNotification): string {
 function viewForNotification(n: AppNotification): View {
   if (n.type === 'mentioned') return 'messages';
   if (n.type === 'event_created' || n.type === 'event_invited' || n.type === 'event_removed') return 'calendar';
+  if (n.type === 'new_contact') return 'partnerships';
   return 'tasks';
 }
 
@@ -153,7 +165,7 @@ export function NotificationBell({ onNavigate, currentUserId }: { onNavigate: (v
                       <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? 'bg-sparrow-gray/40' : 'bg-sparrow-green'}`} />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-sparrow-ink">{describe(n)}</p>
-                        {n.body && n.type !== 'pushed_back' && (
+                        {n.body && n.type !== 'pushed_back' && n.type !== 'new_contact' && (
                           <p className="truncate text-xs text-sparrow-gray">{n.body}</p>
                         )}
                         <p className="mt-0.5 text-[11px] text-sparrow-gray/70">{timeAgo(n.created_at)}</p>

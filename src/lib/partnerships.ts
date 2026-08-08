@@ -128,6 +128,24 @@ export async function logTouchpoint(input: TouchpointInput, loggedBy: string): P
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Log the same touchpoint (method, date, summary) against many partners at once — e.g. a
+ * year-end thank-you sent to 30 donors. One bulk insert; the same DB trigger that fires on
+ * single-touchpoint inserts advances last_touchpoint_at and resolves due tasks per row.
+ */
+export async function logTouchpointBatch(
+  partnerIds: string[],
+  method: TouchpointMethod,
+  occurredOn: string,
+  summary: string | null,
+  loggedBy: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('partner_touchpoints')
+    .insert(partnerIds.map((partner_id) => ({ partner_id, method, occurred_on: occurredOn, summary, logged_by: loggedBy })));
+  if (error) throw new Error(error.message);
+}
+
 // ── Spine integration ────────────────────────────────────────────────
 /**
  * Push every overdue touchpoint onto its owner's Incoming Tasks (dedup-safe; re-running just

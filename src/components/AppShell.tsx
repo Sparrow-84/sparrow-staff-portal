@@ -8,6 +8,7 @@ import { WidgetHome } from './home/WidgetHome';
 import { TasksView } from '@/pages/TasksView';
 import { CalendarView } from '@/pages/CalendarView';
 import { NotesView } from '@/pages/NotesView';
+import { MyContactsView } from '@/pages/MyContactsView';
 import { ChatPanel } from './chat/ChatPanel';
 import { SettingsView } from '@/pages/SettingsView';
 import { TwinOaksRoom } from './twinoaks/TwinOaksRoom';
@@ -80,6 +81,7 @@ export function AppShell() {
             {view === 'tasks' && <TasksView />}
             {view === 'calendar' && <CalendarView />}
             {view === 'notes' && <NotesView />}
+            {view === 'contacts' && <MyContactsView />}
             {view === 'settings' && <SettingsView />}
             {view === 'twin-oaks' && <TwinOaksRoom />}
             {view === 'lcp' && <LcpRoom onNavigate={handleNavigate} />}

@@ -8,7 +8,7 @@ export interface Announcement {
   created_at: string;
 }
 
-export type NotificationType = 'assigned' | 'commented' | 'edited' | 'mentioned' | 'event_invited' | 'event_removed' | 'event_created' | 'pushed_back';
+export type NotificationType = 'assigned' | 'commented' | 'edited' | 'mentioned' | 'event_invited' | 'event_removed' | 'event_created' | 'pushed_back' | 'new_contact';
 
 export interface AppNotification {
   id: string;
@@ -23,6 +23,7 @@ export interface AppNotification {
   read: boolean;
   created_at: string;
   actor: { full_name: string } | null;
+  task: { source_system: string | null } | null;
 }
 
 // ── Announcements ────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ export async function dismissAnnouncement(id: string): Promise<void> {
 export async function fetchNotifications(): Promise<AppNotification[]> {
   const { data, error } = await supabase
     .from('notifications')
-    .select('*, actor:profiles!notifications_actor_id_fkey(full_name)')
+    .select('*, actor:profiles!notifications_actor_id_fkey(full_name), task:tasks(source_system)')
     .order('created_at', { ascending: false })
     .limit(30);
   if (error) throw new Error(error.message);

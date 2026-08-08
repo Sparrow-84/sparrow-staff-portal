@@ -18,6 +18,7 @@ export interface WidgetContext {
   notifications: AppNotification[];
   wins: QuickWin[];
   events: CalendarEvent[];
+  notedEventIds: Set<string>;
   reports: Profile[];
   today: string;
   onChanged: () => void;
@@ -476,7 +477,10 @@ function UpcomingMeetingsWidget({ ctx }: { ctx: WidgetContext }) {
                 <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${getLayerPill(o.event)}`}>
                   {timeLabel(o.occursAt, o.event.all_day)}
                 </span>
-                <span className="truncate text-sm text-sparrow-ink">{o.event.title}</span>
+                <span className="min-w-0 truncate text-sm text-sparrow-ink">{o.event.title}</span>
+                {ctx.notedEventIds.has(o.event.id) && (
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                )}
               </li>
             ))}
           </ul>
@@ -621,6 +625,7 @@ function DayDetailPopup({
   date,
   events,
   tasks,
+  notedEventIds,
   onClose,
   onNavigateToTask,
   onOpenEvent,
@@ -628,6 +633,7 @@ function DayDetailPopup({
   date: string;
   events: { event: CalendarEvent; occursAt: Date }[];
   tasks: TaskWithPeople[];
+  notedEventIds: Set<string>;
   onClose: () => void;
   onNavigateToTask: (id: string) => void;
   onOpenEvent: (e: CalendarEvent) => void;
@@ -659,7 +665,12 @@ function DayDetailPopup({
                     onClick={() => { onOpenEvent(o.event); onClose(); }}
                     className="block w-full rounded-lg bg-sparrow-mist px-3 py-2 text-left hover:bg-sparrow-sage/30"
                   >
-                    <p className="text-sm font-medium text-sparrow-ink">{o.event.title}</p>
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-sparrow-ink">
+                      <span className="min-w-0 truncate">{o.event.title}</span>
+                      {notedEventIds.has(o.event.id) && (
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                      )}
+                    </p>
                     <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-sparrow-gray">
                       {!o.event.all_day && (
                         <span>{o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
@@ -803,17 +814,22 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
               {dayEvents.map((o, idx) => (
                 <div
                   key={`${o.event.id}-${idx}`}
-                  className={`mb-0.5 truncate rounded px-1 py-0.5 text-[10px] ${getLayerPill(o.event)}`}
+                  className={`mb-0.5 flex items-center gap-1 rounded px-1 py-0.5 text-[10px] ${getLayerPill(o.event)}`}
                   onMouseEnter={(e) => setTooltip({ kind: 'event', event: o.event, occursAt: o.occursAt, x: e.clientX, y: e.clientY })}
                   onMouseLeave={() => setTooltip(null)}
                 >
-                  {!o.event.all_day && (
-                    <span className="mr-0.5 opacity-70">
-                      {o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                    </span>
+                  <span className="min-w-0 truncate">
+                    {!o.event.all_day && (
+                      <span className="mr-0.5 opacity-70">
+                        {o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                      </span>
+                    )}
+                    {o.event.is_personal && <span className="mr-0.5">·</span>}
+                    {o.event.title}
+                  </span>
+                  {ctx.notedEventIds.has(o.event.id) && (
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
                   )}
-                  {o.event.is_personal && <span className="mr-0.5">·</span>}
-                  {o.event.title}
                 </div>
               ))}
               {dayTasks.map((t) => {
@@ -841,6 +857,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
           date={dayPopup}
           events={weekEvents.filter((o) => isoDate(o.occursAt) === dayPopup)}
           tasks={myTasks.filter((t) => t.due_date === dayPopup)}
+          notedEventIds={ctx.notedEventIds}
           onClose={() => setDayPopup(null)}
           onNavigateToTask={(id) => {
             sessionStorage.setItem('sparrow.pendingTaskOpen', id);

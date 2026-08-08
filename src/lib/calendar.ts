@@ -582,6 +582,16 @@ export async function fetchCalendar(): Promise<CalendarEvent[]> {
   }
 }
 
+/** Event ids that currently carry a non-empty shared meeting note (for the tile dot indicator). */
+export async function fetchEventIdsWithSharedNotes(): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('event_shared_notes')
+    .select('event_id')
+    .neq('notes', '');
+  if (error) return new Set(); // table may not exist yet — degrade gracefully
+  return new Set((data ?? []).map((r) => r.event_id as string));
+}
+
 /**
  * Expand recurring events into concrete occurrences within [from, to]. One-off events
  * are included when their start falls in range; weekly/biweekly events are stepped

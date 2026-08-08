@@ -30,7 +30,7 @@ const CALENDAR_HELP_SECTIONS = [
   },
 ];
 import { useAuth } from '@/auth/AuthContext';
-import { fetchCalendar, KIND_LABEL, KIND_PILL, LAYER_PILL, getLayerPill, type CalendarEvent } from '@/lib/calendar';
+import { fetchCalendar, fetchEventIdsWithSharedNotes, KIND_LABEL, KIND_PILL, LAYER_PILL, getLayerPill, type CalendarEvent } from '@/lib/calendar';
 import { LABEL_COLORS } from '@/components/LabelPill';
 import { AddOrgEventPanel } from '@/components/calendar/AddOrgEventPanel';
 import { OrgEventDetailPanel } from '@/components/calendar/OrgEventDetailPanel';
@@ -107,6 +107,7 @@ export function CalendarView() {
   const [year, setYear]       = useState(today.getFullYear());
   const [month, setMonth]     = useState(today.getMonth());
   const [events, setEvents]   = useState<CalendarEvent[]>([]);
+  const [notedEventIds, setNotedEventIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [addDate, setAddDate] = useState(todayStr);
@@ -158,9 +159,10 @@ export function CalendarView() {
 
   const load = useCallback(async () => {
     try {
-      const [evs, profs] = await Promise.all([fetchCalendar(), fetchProfiles()]);
+      const [evs, profs, noted] = await Promise.all([fetchCalendar(), fetchProfiles(), fetchEventIdsWithSharedNotes()]);
       setEvents(evs);
       setProfiles(profs);
+      setNotedEventIds(noted);
     }
     finally { setLoading(false); }
   }, []);
@@ -537,11 +539,16 @@ export function CalendarView() {
                                   <button
                                     key={ev.id}
                                     onClick={() => setDetailEvent(ev)}
-                                    className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${eventPillClass(ev)}`}
+                                    className={`flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${eventPillClass(ev)}`}
                                     onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: roomName ? `${labelName} · ${roomName}` : labelName, time: ev.all_day ? undefined : shortTime(ev.starts_at), location: ev.location ?? undefined, x: e.clientX, y: e.clientY })}
                                     onMouseLeave={() => setCalTooltip(null)}
                                   >
-                                    {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
+                                    <span className="min-w-0 truncate">
+                                      {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
+                                    </span>
+                                    {notedEventIds.has(ev.id) && (
+                                      <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                                    )}
                                   </button>
                                 );
                               })}
@@ -610,7 +617,7 @@ export function CalendarView() {
                         <button
                           key={`bar-${bar.event.id}-${wi}`}
                           onClick={() => setDetailEvent(bar.event)}
-                          className={`absolute h-5 truncate px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-80 ${roundedClass} ${eventPillClass(bar.event)}`}
+                          className={`absolute flex h-5 items-center gap-1 px-1.5 text-left text-[10px] font-medium leading-5 transition hover:opacity-80 ${roundedClass} ${eventPillClass(bar.event)}`}
                           style={{
                             left: `calc(${leftPct}% + ${leftAdj}px)`,
                             width: `calc(${widthPct}% - ${leftAdj}px - ${rightAdj}px)`,
@@ -619,7 +626,10 @@ export function CalendarView() {
                           onMouseEnter={(e) => setCalTooltip({ title: bar.event.title, sub: bar.event.label?.name ?? (bar.event.is_personal ? 'Personal' : KIND_LABEL[bar.event.kind]), x: e.clientX, y: e.clientY })}
                           onMouseLeave={() => setCalTooltip(null)}
                         >
-                          {bar.event.title}
+                          <span className="min-w-0 truncate">{bar.event.title}</span>
+                          {notedEventIds.has(bar.event.id) && (
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                          )}
                         </button>
                       );
                     })}

@@ -3,7 +3,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { fetchComments, fetchProfiles, fetchTasks } from '@/lib/data';
 import { fetchNotifications, type AppNotification } from '@/lib/social';
 import { fetchQuickWins, type QuickWin } from '@/lib/quickwins';
-import { fetchCalendar, fetchMyAttendance, type CalendarEvent, type EventAttendee } from '@/lib/calendar';
+import { fetchCalendar, fetchEventIdsWithSharedNotes, fetchMyAttendance, type CalendarEvent, type EventAttendee } from '@/lib/calendar';
 import { fetchSettings, saveSettings } from '@/lib/settings';
 import { isoDate } from '@/lib/tasks';
 import type { Profile, TaskComment, TaskWithPeople } from '@/lib/types';
@@ -36,6 +36,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [wins, setWins] = useState<QuickWin[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [notedEventIds, setNotedEventIds] = useState<Set<string>>(new Set());
   const [attendance, setAttendance] = useState<EventAttendee[]>([]);
   const [layout, setLayout] = useState<WidgetKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,13 +71,14 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   const load = useCallback(async () => {
     if (!me) return;
     try {
-      const [p, t, c, n, w, e, att, s] = await Promise.all([
+      const [p, t, c, n, w, e, noted, att, s] = await Promise.all([
         fetchProfiles(),
         fetchTasks(),
         fetchComments(),
         fetchNotifications(),
         fetchQuickWins(),
         fetchCalendar(),
+        fetchEventIdsWithSharedNotes(),
         fetchMyAttendance(me.id),
         fetchSettings(me.id),
       ]);
@@ -86,6 +88,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       setNotifications(n);
       setWins(w);
       setEvents(e);
+      setNotedEventIds(noted);
       setAttendance(att);
       setWeekendVisible((s?.prefs?.show_weekends as boolean) ?? false);
 
@@ -146,6 +149,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       notifications,
       wins,
       events: visibleEvents,
+      notedEventIds,
       reports,
       today: isoDate(new Date()),
       onChanged: load,
@@ -162,7 +166,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
         void saveSettings(me!.id, { prefs: { show_weekends: next } });
       },
     };
-  }, [me, tasks, comments, notifications, wins, visibleEvents, attendance, reports, load, onNavigate, weekendVisible]);
+  }, [me, tasks, comments, notifications, wins, visibleEvents, notedEventIds, attendance, reports, load, onNavigate, weekendVisible]);
 
   if (!me || !ctx) return null;
   if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading your dashboard…</p>;
