@@ -55,7 +55,7 @@ export function AddPartnerPanel({
   onCreated: () => void;
   interests?: PartnershipInterest[];
   onInterestsCreated?: () => void;
-  initialValues?: { name: string; phone: string; email: string; notes: string | null } | null;
+  initialValues?: { name: string; phone: string; email: string; notes: string | null; source?: string } | null;
   onCreatedFromContact?: (partnerId: string) => void;
 }) {
   const [name, setName] = useState('');
@@ -86,7 +86,7 @@ export function AddPartnerPanel({
       setEmail(initialValues?.email ?? '');
       setPhone(initialValues?.phone ?? '');
       setAddress('');
-      setSource('');
+      setSource(initialValues?.source ?? '');
       setCadence(DEFAULT_CADENCE.donor);
       setLeadTime(DEFAULT_LEAD_TIME);
       setError(null);
@@ -116,7 +116,7 @@ export function AddPartnerPanel({
     setError(null);
     try {
       const trimmedName = name.trim();
-      await createPartner({
+      const newPartnerId = await createPartner({
         name: trimmedName,
         type,
         secondary_types: secondaryTypes,
@@ -133,24 +133,14 @@ export function AddPartnerPanel({
         source: source.trim() || null,
         notes: initialValues?.notes || null,
       });
-      // Fetch the new partner's id — needed for the donor follow-up task, saving any
-      // Interests picked before the record existed, and/or reporting back to a caller
-      // transferring in a My Contacts entry (see onCreatedFromContact).
-      if ((type === 'donor' && ownerId) || interestIds.length > 0 || initialValues) {
-        const { data } = await import('@/lib/supabase').then((m) =>
-          m.supabase.from('partners').select('id').eq('name', trimmedName).order('created_at', { ascending: false }).limit(1).single()
-        );
-        if (data?.id) {
-          if (type === 'donor' && ownerId) {
-            void emitFirstTimeDonorTask(data.id, trimmedName, ownerId).catch(() => undefined);
-          }
-          if (interestIds.length > 0) {
-            await setPartnerInterests(data.id, interestIds);
-          }
-          if (initialValues) {
-            onCreatedFromContact?.(data.id);
-          }
-        }
+      if (type === 'donor' && ownerId) {
+        void emitFirstTimeDonorTask(newPartnerId, trimmedName, ownerId).catch(() => undefined);
+      }
+      if (interestIds.length > 0) {
+        await setPartnerInterests(newPartnerId, interestIds);
+      }
+      if (initialValues) {
+        onCreatedFromContact?.(newPartnerId);
       }
       onCreated();
       onClose();
@@ -183,7 +173,7 @@ export function AddPartnerPanel({
           </p>
         )}
         <div>
-          <label className="field-label" htmlFor="pa-name">Name</label>
+          <label className="field-label" htmlFor="pa-name">Name *</label>
           <input
             id="pa-name"
             className={fieldClass('pa-name')}

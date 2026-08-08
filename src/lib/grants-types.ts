@@ -33,9 +33,9 @@ export interface Grant {
   amount: number | null;
   placed_in_service_date: string | null;
   affordability_period_end: string | null;
-  ohcs_contact_name: string | null;
-  ohcs_contact_email: string | null;
-  ohcs_contact_phone: string | null;
+  funder_contact_name: string | null;
+  funder_contact_email: string | null;
+  funder_contact_phone: string | null;
   certification_due_date: string | null;
   last_certified_on: string | null;
   prior_consent_required: boolean;
@@ -54,6 +54,15 @@ export interface GrantNotification {
   category: GrantNotificationCategory;
   sent_on: string;
   notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface GrantLink {
+  id: string;
+  grant_id: string;
+  label: string;
+  url: string;
   created_by: string | null;
   created_at: string;
 }

@@ -209,7 +209,15 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
         onClose={() => setAddingFor(null)}
         onCreated={() => setAddingFor(null)}
         initialValues={
-          addingFor ? { name: addingFor.name, phone: addingFor.phone ?? '', email: addingFor.email ?? '', notes: addingFor.notes || null } : null
+          addingFor
+            ? {
+                name: addingFor.name,
+                phone: addingFor.phone ?? '',
+                email: addingFor.email ?? '',
+                notes: addingFor.notes || null,
+                source: `Connected by ${addingFor.owner?.full_name ?? 'a staff member'} (My Contacts)`,
+              }
+            : null
         }
         onCreatedFromContact={(partnerId) => {
           if (addingFor) void markContactConverted(addingFor.id, partnerId).then(load);

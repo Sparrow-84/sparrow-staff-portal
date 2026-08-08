@@ -59,9 +59,10 @@ export interface PartnerInput {
   notes: string | null;
 }
 
-export async function createPartner(input: PartnerInput): Promise<void> {
-  const { error } = await supabase.from('partners').insert(input);
+export async function createPartner(input: PartnerInput): Promise<string> {
+  const { data, error } = await supabase.from('partners').insert(input).select('id').single();
   if (error) throw new Error(error.message);
+  return data.id as string;
 }
 
 export async function updatePartner(

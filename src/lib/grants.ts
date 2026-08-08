@@ -1,11 +1,23 @@
 import { supabase } from './supabase';
-import type { Grant, GrantDocument, GrantNotification, GrantNotificationCategory } from './grants-types';
+import type { Grant, GrantDocument, GrantLink, GrantNotification, GrantNotificationCategory } from './grants-types';
 
 // All reads/writes are gated by RLS to the ops tier (has_ops_access(): Andrew, Susanna,
 // Shelly). Notifications are append-only (insert + select only — see 0078_grants.sql).
 
+/** Fire-and-forget: ensures certification/deadline reminder tasks exist for anything
+ * inside its owner's lead-time window, same pattern as calendar.ts's sync* helpers —
+ * without this, reminders only ever appeared once a day when pg_cron happened to fire. */
+async function syncGrantReminderTasks(): Promise<void> {
+  try {
+    await supabase.rpc('emit_grant_reminder_tasks');
+  } catch {
+    // best-effort — a failed sync just means reminders wait for the next cron run
+  }
+}
+
 // ── Grants ───────────────────────────────────────────────────────────
 export async function fetchGrants(): Promise<Grant[]> {
+  await syncGrantReminderTasks();
   const { data, error } = await supabase.from('grants').select('*').order('funder_name');
   if (error) throw new Error(error.message);
   return (data ?? []) as Grant[];
@@ -16,9 +28,9 @@ export interface GrantInput {
   amount: number | null;
   placed_in_service_date: string | null;
   affordability_period_end: string | null;
-  ohcs_contact_name: string | null;
-  ohcs_contact_email: string | null;
-  ohcs_contact_phone: string | null;
+  funder_contact_name: string | null;
+  funder_contact_email: string | null;
+  funder_contact_phone: string | null;
   certification_due_date: string | null;
   prior_consent_required: boolean;
   notes: string | null;
@@ -72,6 +84,28 @@ export async function deleteGrant(id: string): Promise<void> {
  * only changes which tab it shows up in. */
 export async function setGrantStatus(id: string, status: Grant['status']): Promise<void> {
   const { error } = await supabase.from('grants').update({ status }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Links (same shape as grant_prospect_links — copied over automatically when a
+// prospect is awarded, see mark_prospect_awarded() in 0144) ─────────────────────
+export async function fetchGrantLinks(grantId: string): Promise<GrantLink[]> {
+  const { data, error } = await supabase
+    .from('grant_links')
+    .select('*')
+    .eq('grant_id', grantId)
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as GrantLink[];
+}
+
+export async function addGrantLink(grantId: string, label: string, url: string, createdBy: string): Promise<void> {
+  const { error } = await supabase.from('grant_links').insert({ grant_id: grantId, label, url, created_by: createdBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteGrantLink(id: string): Promise<void> {
+  const { error } = await supabase.from('grant_links').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 

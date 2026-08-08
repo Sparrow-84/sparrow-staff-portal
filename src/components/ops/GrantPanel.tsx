@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { localDate } from '@/lib/date';
 import {
+  addGrantLink,
   addGrantNotification,
   deleteGrantDocument,
+  deleteGrantLink,
   fetchGrantDocuments,
+  fetchGrantLinks,
   fetchGrantNotifications,
   getGrantDocumentUrl,
   markCertified,
@@ -20,6 +23,7 @@ import {
   notificationCategoryLabel,
   type Grant,
   type GrantDocument,
+  type GrantLink,
   type GrantNotification,
   type GrantNotificationCategory,
 } from '@/lib/grants-types';
@@ -53,14 +57,16 @@ export function GrantPanel({
   const [tab, setTab] = useState<Tab>('details');
   const [notifications, setNotifications] = useState<GrantNotification[]>([]);
   const [documents, setDocuments] = useState<GrantDocument[]>([]);
+  const [links, setLinks] = useState<GrantLink[]>([]);
 
   const grantId = grant?.id;
 
   const reload = useCallback(async () => {
     if (!grantId) return;
-    const [n, d] = await Promise.all([fetchGrantNotifications(grantId), fetchGrantDocuments(grantId)]);
+    const [n, d, l] = await Promise.all([fetchGrantNotifications(grantId), fetchGrantDocuments(grantId), fetchGrantLinks(grantId)]);
     setNotifications(n);
     setDocuments(d);
+    setLinks(l);
   }, [grantId]);
 
   useEffect(() => {
@@ -82,7 +88,7 @@ export function GrantPanel({
         <p className="mb-3 flex items-start gap-2 rounded-lg border border-sparrow-green/40 bg-sparrow-sage px-3 py-2 text-xs font-medium text-sparrow-green">
           <span aria-hidden>⚠️</span>
           Prior consent required — do not take action on this grant (insurance, management,
-          ownership, or debt changes) without OHCS/funder sign-off first.
+          ownership, or debt changes) without the funder's sign-off first.
         </p>
       )}
       <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-sparrow-rule bg-sparrow-mist p-1 text-xs">
@@ -101,6 +107,7 @@ export function GrantPanel({
 
       {tab === 'details' && (
         <DetailsTab grant={grant} profiles={profiles} onChanged={changed}>
+          <LinksTab grantId={grant.id} links={links} currentUserId={currentUserId} onChanged={changed} />
           <DocumentsTab grantId={grant.id} docs={documents} currentUserId={currentUserId} onChanged={changed} />
         </DetailsTab>
       )}
@@ -129,12 +136,19 @@ function DetailsTab({
   const [busy, setBusy] = useState(false);
   const [certBusy, setCertBusy] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
+  const [autoSaveLabel, setAutoSaveLabel] = useState<string | null>(null);
+  const skipNextAutosave = useRef(true);
 
   const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
     { key: 'grant-funder-name', label: 'Funder name', valid: form.funder_name.trim().length > 0 },
   ]);
 
-  useEffect(() => { setForm(toInput(grant)); resetValidation(); }, [grant]);
+  useEffect(() => {
+    setForm(toInput(grant));
+    resetValidation();
+    setAutoSaveLabel(null);
+    skipNextAutosave.current = true;
+  }, [grant]);
 
   function set<K extends keyof GrantInput>(key: K, value: GrantInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -145,11 +159,30 @@ function DetailsTab({
     setBusy(true);
     try {
       await updateGrant(grant.id, form);
+      setAutoSaveLabel(null);
       onChanged();
     } finally {
       setBusy(false);
     }
   }
+
+  // Autosave a few seconds after the last edit — the button stays for anyone who wants
+  // the peace of mind of an explicit save, but nothing is lost if you just click away.
+  useEffect(() => {
+    if (skipNextAutosave.current) {
+      skipNextAutosave.current = false;
+      return;
+    }
+    if (!form.funder_name.trim()) return; // don't autosave over a required field left blank
+    setAutoSaveLabel('Saving…');
+    const t = setTimeout(() => {
+      updateGrant(grant.id, form)
+        .then(() => { setAutoSaveLabel('Saved automatically'); onChanged(); })
+        .catch(() => setAutoSaveLabel(null));
+    }, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]);
 
   async function certify() {
     setCertBusy(true);
@@ -192,8 +225,8 @@ function DetailsTab({
       <div className="rounded-xl border border-sparrow-rule/70 p-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-sparrow-ink">
-            Annual OHCS certification
-            <InfoTip text="Once a year you tell the funder (OHCS) that you're still meeting the grant's rules — e.g. that enough spaces are still rented to qualifying low-income households. The date below is when that's due." />
+            Annual certification
+            <InfoTip text="Once a year you tell the funder that you're still meeting the grant's rules — e.g. that enough spaces are still rented to qualifying low-income households. The date below is when that's due." />
           </span>
           {tone.label && <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`}>{tone.label}</span>}
         </div>
@@ -215,12 +248,12 @@ function DetailsTab({
         <p className="mt-2 text-[11px] text-sparrow-gray">
           "Mark certified today" saves the date in the box above, records today as the completion
           date, and rolls the due date forward exactly one year. Only click it once this year's
-          certification has actually been filed with OHCS — not just to save a typed-in date.
+          certification has actually been filed with the funder — not just to save a typed-in date.
         </p>
       </div>
 
       <label className="block" htmlFor="grant-funder-name">
-        <span className="text-xs font-medium text-sparrow-gray">Funder name</span>
+        <span className="text-xs font-medium text-sparrow-gray">Funder name *</span>
         <input
           id="grant-funder-name"
           value={form.funder_name}
@@ -259,7 +292,7 @@ function DetailsTab({
         <label className="block">
           <span className="text-xs font-medium text-sparrow-gray">
             Reminder lead time (days)
-            <InfoTip text="How many days before the certification is due the owner should get a reminder task. 30 is the default — plenty of time to file through OHCS's portal." />
+            <InfoTip text="How many days before the certification is due the owner should get a reminder task. 30 is the default — plenty of time to file with the funder." />
           </span>
           <input
             type="number"
@@ -299,25 +332,25 @@ function DetailsTab({
 
       <div className="rounded-xl border border-sparrow-rule/70 p-3">
         <p className="mb-2 text-xs font-medium text-sparrow-gray">
-          OHCS contact
-          <InfoTip text="Who to reach at the funder with questions or required notices. Not every funder assigns a specific person — some, like OHCS on this grant, route everything through a general compliance address instead." />
+          Funder contact
+          <InfoTip text="Who to reach at the funder with questions or required notices. Not every funder assigns a specific person — some route everything through a general compliance address instead." />
         </p>
         <div className="space-y-2">
           <input
-            value={form.ohcs_contact_name ?? ''}
-            onChange={(e) => set('ohcs_contact_name', e.target.value || null)}
+            value={form.funder_contact_name ?? ''}
+            onChange={(e) => set('funder_contact_name', e.target.value || null)}
             placeholder="Name"
             className="field-input mt-0"
           />
           <input
-            value={form.ohcs_contact_email ?? ''}
-            onChange={(e) => set('ohcs_contact_email', e.target.value || null)}
+            value={form.funder_contact_email ?? ''}
+            onChange={(e) => set('funder_contact_email', e.target.value || null)}
             placeholder="Email"
             className="field-input mt-0"
           />
           <input
-            value={form.ohcs_contact_phone ?? ''}
-            onChange={(e) => set('ohcs_contact_phone', e.target.value || null)}
+            value={form.funder_contact_phone ?? ''}
+            onChange={(e) => set('funder_contact_phone', e.target.value || null)}
             placeholder="Phone"
             className="field-input mt-0"
           />
@@ -346,6 +379,7 @@ function DetailsTab({
       <button onClick={save} disabled={busy} className="btn-primary w-full">
         Save changes
       </button>
+      {autoSaveLabel && <p className="-mt-2 text-center text-[11px] text-sparrow-gray">{autoSaveLabel} automatically</p>}
 
       <hr className="border-sparrow-rule" />
       {children}
@@ -359,15 +393,72 @@ function toInput(grant: Grant): GrantInput {
     amount: grant.amount,
     placed_in_service_date: grant.placed_in_service_date,
     affordability_period_end: grant.affordability_period_end,
-    ohcs_contact_name: grant.ohcs_contact_name,
-    ohcs_contact_email: grant.ohcs_contact_email,
-    ohcs_contact_phone: grant.ohcs_contact_phone,
+    funder_contact_name: grant.funder_contact_name,
+    funder_contact_email: grant.funder_contact_email,
+    funder_contact_phone: grant.funder_contact_phone,
     certification_due_date: grant.certification_due_date,
     prior_consent_required: grant.prior_consent_required,
     notes: grant.notes,
     owner_id: grant.owner_id,
     lead_time_days: grant.lead_time_days,
   };
+}
+
+// ── Links (mirrors GrantProspectPanel's LinksSection — copied over automatically
+// when a prospect is awarded, so they land here instead of vanishing) ────────────
+function LinksTab({
+  grantId,
+  links,
+  currentUserId,
+  onChanged,
+}: {
+  grantId: string;
+  links: GrantLink[];
+  currentUserId: string;
+  onChanged: () => void;
+}) {
+  const [label, setLabel] = useState('');
+  const [url, setUrl] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function add() {
+    if (!label.trim() || !url.trim() || busy) return;
+    setBusy(true);
+    try {
+      await addGrantLink(grantId, label.trim(), url.trim(), currentUserId);
+      setLabel('');
+      setUrl('');
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-sparrow-ink">Links</p>
+      <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
+        {links.map((l) => (
+          <div key={l.id} className="flex items-center gap-2 text-sm">
+            <a href={l.url} target="_blank" rel="noreferrer" className="flex-1 truncate font-medium text-sparrow-green underline">
+              {l.label}
+            </a>
+            <button onClick={() => deleteGrantLink(l.id).then(onChanged)} className="text-xs text-sparrow-gray hover:text-priority-p1">
+              Remove
+            </button>
+          </div>
+        ))}
+        {links.length === 0 && <p className="text-xs text-sparrow-gray">No links yet.</p>}
+        <div className="flex gap-2 border-t border-dashed border-sparrow-rule pt-2">
+          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Grant agreement portal)" className="field-input mt-0 flex-1 text-xs" />
+          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" className="field-input mt-0 flex-1 text-xs" />
+          <button onClick={add} disabled={busy} className="btn-primary shrink-0 text-xs">
+            + Add
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Notifications (append-only event log) ────────────────────────────
@@ -405,7 +496,7 @@ function NotificationsTab({
       </p>
       <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
         <span className="flex items-center text-xs font-medium text-sparrow-gray">
-          What are you notifying OHCS about?
+          What are you notifying the funder about?
           <InfoTip text="These are notices sent TO the funder about changes at the property — not Sparrow's own insurance shopping. Insurance change: a policy was cancelled, non-renewed, or swapped. Management change: a new property manager. Ownership/transfer: any change in who owns the property or Sparrow itself. Debt: any new loan that could create a lien on the property." />
         </span>
         <select value={category} onChange={(e) => setCategory(e.target.value as GrantNotificationCategory)} className="field-input mt-0">

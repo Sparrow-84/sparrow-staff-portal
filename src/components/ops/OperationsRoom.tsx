@@ -32,7 +32,7 @@ const OPS_TOUR_STEPS: TourStep[] = [
   {
     icon: '📜',
     title: 'Grants tab',
-    body: "Track every active grant — funder details, the annual OHCS certification deadline, and every funder notification actually sent (insurance, management, ownership, or debt changes). Grants marked \"prior consent required\" are flagged so nobody acts without sign-off first.",
+    body: "Track every active grant — funder details, the annual certification deadline, and every funder notification actually sent (insurance, management, ownership, or debt changes). Grants marked \"prior consent required\" are flagged so nobody acts without sign-off first.",
     tag: { icon: '📜', label: 'Grants' },
   },
   {
