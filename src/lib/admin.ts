@@ -8,6 +8,7 @@ export interface StaffInput {
   department: Department;
   manager_email: string | null;
   lcp_role: LcpRole;
+  lcp_curriculum_access: boolean;
   partnerships_access: boolean;
   ops_access: boolean;
   toc_access: boolean;

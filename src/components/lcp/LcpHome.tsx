@@ -63,6 +63,7 @@ interface Props {
   onGoToSessionLog: () => void;
   onGoToCurriculum: () => void;
   onGoToTwinOaks: (requestId: string) => void;
+  canEditCurriculum: boolean;
 }
 
 export function LcpHome({
@@ -83,6 +84,7 @@ export function LcpHome({
   onGoToSessionLog,
   onGoToCurriculum,
   onGoToTwinOaks,
+  canEditCurriculum,
 }: Props) {
   // Compliance follow-ups, goals, housing savings, and TOC requests all come
   // in as props (room-level state, refreshed by the same onChanged={load}
@@ -211,7 +213,7 @@ export function LcpHome({
     feeOverdueFamilies.length +
     openHomework.length +
     openGoals.length +
-    curriculumNotes.length +
+    (canEditCurriculum ? curriculumNotes.length : 0) +
     pendingSavingsPrompts.length +
     pendingRedemptions.length +
     (materialsNeedPrep ? 1 : 0);
@@ -306,7 +308,7 @@ export function LcpHome({
         </SignalCard>
       )}
 
-      {curriculumNotes.length > 0 && (
+      {canEditCurriculum && curriculumNotes.length > 0 && (
         <SignalCard title="🔔 Unreviewed curriculum notes" count={curriculumNotes.length} tone="amber">
           {curriculumNotes.map((s) => (
             <SignalRow

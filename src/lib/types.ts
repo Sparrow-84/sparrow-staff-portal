@@ -43,6 +43,8 @@ export interface Profile {
   active: boolean;
   created_at: string;
   lcp_role: LcpRole;
+  /** Curriculum Admin edit rights (Teacher Guide, devotionals, Drive links, Monday Mentoring) — independent of general lcp_role='full' access. */
+  lcp_curriculum_access: boolean;
   /** Full Partnerships Room access independent of department (admins + dept='partnerships' have it implicitly). */
   partnerships_access: boolean;
   /** Operations Room / staff-management access (Andrew, Susanna, Shelly). */

@@ -137,6 +137,7 @@ async function recomputeFamilyStatuses(
 export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
   const { tourOpen, dismissTour } = useRoomTour('sparrow_lcp_toured_v1');
   const { profile } = useAuth();
+  const canEditCurriculum = profile?.role === 'admin' || (profile?.lcp_role === 'full' && profile?.lcp_curriculum_access === true);
   const [families, setFamilies] = useState<Family[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
   const [events, setEvents] = useState<LcpEvent[]>([]);
@@ -295,7 +296,9 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
 
       {/* Tabs */}
       <div className="mt-6 inline-flex flex-wrap rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
-        {(['home', 'families', 'progress', 'session-log', 'session-cal', 'team-cal', 'curriculum'] as const).map((t) => (
+        {(['home', 'families', 'progress', 'session-log', 'session-cal', 'team-cal', 'curriculum'] as const)
+          .filter((t) => t !== 'curriculum' || canEditCurriculum)
+          .map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -330,6 +333,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
           onGoToSessionLog={() => setTab('session-log')}
           onGoToCurriculum={() => setTab('curriculum')}
           onGoToTwinOaks={() => onNavigate?.('twin-oaks')}
+          canEditCurriculum={canEditCurriculum}
         />
       ) : tab === 'session-log' ? (
         <div className="mt-6">
@@ -474,7 +478,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
           currentUserId={profile?.id ?? ''}
           onChanged={load}
         />
-      ) : tab === 'curriculum' ? (
+      ) : tab === 'curriculum' && canEditCurriculum ? (
         <CurriculumAdmin />
       ) : tab === 'team-cal' ? (
         <div className="mt-6">

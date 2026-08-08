@@ -15,6 +15,12 @@ update profiles set lcp_role = 'full'     where id = '00000000-0000-0000-0000-00
 update profiles set lcp_role = 'extended' where id = '00000000-0000-0000-0000-000000000004'; -- Bethany
 update profiles set lcp_role = 'full'     where id = '00000000-0000-0000-0000-000000000005'; -- Audrey (dual-role)
 
+-- Curriculum edit rights (separate from general LCP access, see 0144) — Shelly + Audrey only.
+update profiles set lcp_curriculum_access = true where id in (
+  '00000000-0000-0000-0000-000000000003', -- Shelly
+  '00000000-0000-0000-0000-000000000005'  -- Audrey
+);
+
 -- ─── Curriculum: "Building Your House" — 6 phases · 13 rooms · 48 sessions · 12 months ──
 -- Content transcribed from Susanna's concept map (INGEST/"LifeChange Program House
 -- Diagram.pdf"). `scripture` is filled only where the diagram explicitly cites a verse;

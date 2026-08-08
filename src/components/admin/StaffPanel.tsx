@@ -29,6 +29,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
   const [active, setActive] = useState(true);
   const [tocAccess, setTocAccess] = useState(false);
   const [lcpFull, setLcpFull] = useState(false);
+  const [lcpCurriculumAccess, setLcpCurriculumAccess] = useState(false);
   const [partnershipsAccess, setPartnershipsAccess] = useState(false);
   const [opsAccess, setOpsAccess] = useState(false);
   const [storiesAccess, setStoriesAccess] = useState(false);
@@ -46,6 +47,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setActive(staff.active);
       setTocAccess(staff.toc_access);
       setLcpFull(staff.lcp_role === 'full');
+      setLcpCurriculumAccess(staff.lcp_curriculum_access);
       setPartnershipsAccess(staff.partnerships_access);
       setOpsAccess(staff.ops_access);
       setStoriesAccess(staff.stories_access);
@@ -59,6 +61,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setActive(true);
       setTocAccess(false);
       setLcpFull(false);
+      setLcpCurriculumAccess(false);
       setPartnershipsAccess(false);
       setOpsAccess(false);
       setStoriesAccess(false);
@@ -81,6 +84,8 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       // `extended` grant (set via SQL / Phase-2 read views) rather than clobbering it.
       toc_access: tocAccess,
       lcp_role: lcpFull ? 'full' : staff?.lcp_role === 'extended' ? 'extended' : null,
+      // Curriculum edit rights are meaningless without full LCP access — clear them if it's revoked.
+      lcp_curriculum_access: lcpFull && lcpCurriculumAccess,
       partnerships_access: partnershipsAccess,
       ops_access: opsAccess,
       stories_access: storiesAccess,
@@ -257,6 +262,25 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
                 Currently has <strong>extended</strong> (read-only, Phase 2) access — leaving this
                 unchecked keeps that.
               </p>
+            )}
+            {lcpFull && (
+              <label className="mt-3 flex items-start gap-2 border-t border-sparrow-gold/30 pt-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={lcpCurriculumAccess}
+                  onChange={(e) => setLcpCurriculumAccess(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-sparrow-green"
+                />
+                <span>
+                  <span className="font-medium">Curriculum edit access</span>
+                  <span className="mt-0.5 block text-xs text-sparrow-gray">
+                    Shows the Curriculum tab and lets this person edit it — Teacher Guides,
+                    devotionals, Monday Mentoring content, Slideshow/Handout links. Leave
+                    unchecked for staff who just run sessions day to day; they won't see the
+                    Curriculum tab at all.
+                  </span>
+                </span>
+              </label>
             )}
           </div>
 
