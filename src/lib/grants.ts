@@ -63,6 +63,13 @@ export async function deleteGrant(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** Flags a grant Past — every field, link, and document stays exactly as it was; this
+ * only changes which tab it shows up in. */
+export async function setGrantStatus(id: string, status: Grant['status']): Promise<void> {
+  const { error } = await supabase.from('grants').update({ status }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // ── Notification event log (append-only) ────────────────────────────
 export async function fetchGrantNotifications(grantId: string): Promise<GrantNotification[]> {
   const { data, error } = await supabase

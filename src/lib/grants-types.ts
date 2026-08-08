@@ -25,6 +25,8 @@ export function notificationCategoryLabel(c: GrantNotificationCategory): string 
   return GRANT_NOTIFICATION_CATEGORIES.find((x) => x.value === c)?.label ?? c;
 }
 
+export type GrantStatus = 'active' | 'past';
+
 export interface Grant {
   id: string;
   funder_name: string;
@@ -38,6 +40,7 @@ export interface Grant {
   last_certified_on: string | null;
   prior_consent_required: boolean;
   notes: string | null;
+  status: GrantStatus;
   created_by: string | null;
   created_at: string;
   updated_at: string;

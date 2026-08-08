@@ -7,6 +7,7 @@ import {
   fetchGrantNotifications,
   getGrantDocumentUrl,
   markCertified,
+  setGrantStatus,
   updateGrant,
   updateGrantDocumentSummary,
   uploadGrantDocument,
@@ -23,6 +24,7 @@ import {
   type GrantNotificationCategory,
 } from '@/lib/grants-types';
 import { Drawer } from '@/components/lcp/Drawer';
+import { InfoTip } from '@/components/InfoTip';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 type Tab = 'details' | 'notifications' | 'documents';
@@ -32,29 +34,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'documents', label: 'Documents' },
 ];
 
-// Click-to-reveal helper text for fields that aren't self-explanatory to someone new
-// to grant compliance. A "?" rather than a hover title so it works on touch devices too.
-function InfoTip({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <span className="relative inline-block">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-label="What does this mean?"
-        className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-sparrow-rule text-[10px] font-bold text-sparrow-gray hover:bg-sparrow-green hover:text-white"
-      >
-        ?
-      </button>
-      {open && (
-        <span className="absolute left-0 top-5 z-10 w-64 rounded-lg border border-sparrow-rule bg-white p-2.5 text-xs font-normal leading-snug text-sparrow-ink shadow-card">
-          {text}
-        </span>
-      )}
-    </span>
-  );
-}
 
 export function GrantPanel({
   open,
@@ -134,6 +113,7 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
   const [form, setForm] = useState<GrantInput>(() => toInput(grant));
   const [busy, setBusy] = useState(false);
   const [certBusy, setCertBusy] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
 
   const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
     { key: 'grant-funder-name', label: 'Funder name', valid: form.funder_name.trim().length > 0 },
@@ -166,10 +146,30 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
     }
   }
 
+  async function toggleStatus() {
+    setStatusBusy(true);
+    try {
+      await setGrantStatus(grant.id, grant.status === 'active' ? 'past' : 'active');
+      onChanged();
+    } finally {
+      setStatusBusy(false);
+    }
+  }
+
   const tone = certificationTone(grant.certification_due_date);
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between rounded-xl border border-sparrow-rule/70 p-3">
+        <span className="text-sm text-sparrow-gray">
+          {grant.status === 'active' ? 'Active grant' : 'Past — wrapped up'}
+          <InfoTip text="Marking a grant Past doesn't delete anything — every field, link, and document stays exactly as it was. It just moves which tab it shows up in." />
+        </span>
+        <button onClick={toggleStatus} disabled={statusBusy} className="btn-ghost text-xs">
+          {grant.status === 'active' ? 'Mark as Past Grant' : 'Reactivate as Active Grant'}
+        </button>
+      </div>
+
       <div className="rounded-xl border border-sparrow-rule/70 p-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-sparrow-ink">
