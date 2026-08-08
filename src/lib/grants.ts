@@ -43,18 +43,21 @@ export async function updateGrant(
 }
 
 /** Mark this year's annual certification done: records the date and rolls the due date
- * forward exactly one year (so next year's reminder is already in place). */
-export async function markCertified(grant: Grant, completedOn: string): Promise<void> {
+ * forward exactly one year (so next year's reminder is already in place). Takes the due
+ * date explicitly (the caller's current form value) rather than reading it off a `Grant`
+ * prop — a typed-but-not-yet-saved due date must still be what gets rolled forward, not
+ * whatever's still in the database. */
+export async function markCertified(grantId: string, currentDueDate: string | null, completedOn: string): Promise<void> {
   let nextDue: string | null = null;
-  if (grant.certification_due_date) {
-    const d = new Date(grant.certification_due_date);
+  if (currentDueDate) {
+    const d = new Date(currentDueDate);
     d.setFullYear(d.getFullYear() + 1);
     nextDue = d.toISOString().slice(0, 10);
   }
   const { error } = await supabase
     .from('grants')
     .update({ last_certified_on: completedOn, certification_due_date: nextDue })
-    .eq('id', grant.id);
+    .eq('id', grantId);
   if (error) throw new Error(error.message);
 }
 

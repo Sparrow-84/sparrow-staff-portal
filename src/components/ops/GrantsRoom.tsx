@@ -263,7 +263,7 @@ function GrantList({ grants, emptyLabel, onOpen }: { grants: Grant[]; emptyLabel
                 <p className="text-xs text-sparrow-gray">{formatMoney(g.amount)}</p>
               </div>
               {g.prior_consent_required && (
-                <span className="rounded-full bg-priority-p1/15 px-2 py-0.5 text-[10px] font-medium text-priority-p1" title="Prior consent required">
+                <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-[10px] font-medium text-sparrow-green" title="Prior consent required">
                   ⚠️ Consent required
                 </span>
               )}

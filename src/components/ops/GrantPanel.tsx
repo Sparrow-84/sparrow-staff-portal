@@ -77,7 +77,7 @@ export function GrantPanel({
   return (
     <Drawer open={open} onClose={onClose} title={grant.funder_name} subtitle="Grant record">
       {grant.prior_consent_required && (
-        <p className="mb-3 flex items-start gap-2 rounded-lg border border-priority-p1/40 bg-priority-p1/10 px-3 py-2 text-xs font-medium text-priority-p1">
+        <p className="mb-3 flex items-start gap-2 rounded-lg border border-sparrow-green/40 bg-sparrow-sage px-3 py-2 text-xs font-medium text-sparrow-green">
           <span aria-hidden>⚠️</span>
           Prior consent required — do not take action on this grant (insurance, management,
           ownership, or debt changes) without OHCS/funder sign-off first.
@@ -139,7 +139,11 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
   async function certify() {
     setCertBusy(true);
     try {
-      await markCertified(grant, localDate());
+      // Save any pending edits first so "mark certified" never clobbers a typed-but-
+      // unsaved date — it rolls forward from whatever's in the box right now, not the DB.
+      if (!validate()) return;
+      await updateGrant(grant.id, form);
+      await markCertified(grant.id, form.certification_due_date, localDate());
       onChanged();
     } finally {
       setCertBusy(false);
@@ -194,8 +198,9 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
           </button>
         </div>
         <p className="mt-2 text-[11px] text-sparrow-gray">
-          Only click "Mark certified today" once this year's certification has actually been filed with
-          OHCS — it records today as done and automatically pushes the due date forward one year.
+          "Mark certified today" saves the date in the box above, records today as the completion
+          date, and rolls the due date forward exactly one year. Only click it once this year's
+          certification has actually been filed with OHCS — not just to save a typed-in date.
         </p>
       </div>
 
@@ -273,14 +278,14 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
         </div>
       </div>
 
-      <label className="flex items-center gap-2 rounded-xl border border-priority-p1/30 bg-priority-p1/5 p-3">
+      <label className="flex items-center gap-2 rounded-xl border border-sparrow-green/30 bg-sparrow-sage/50 p-3">
         <input
           type="checkbox"
           checked={form.prior_consent_required}
           onChange={(e) => set('prior_consent_required', e.target.checked)}
           className="h-4 w-4"
         />
-        <span className="text-sm font-medium text-priority-p1">
+        <span className="text-sm font-medium text-sparrow-green">
           Prior consent required before acting
           <InfoTip text="Check this if the funder's agreement says Sparrow must get their written OK before certain actions — commonly: selling/transferring the property, changing the management company, or taking on new debt against it. Acting without asking first can be a real compliance violation, not just a formality." />
         </span>
