@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { localDate } from '@/lib/date';
 import {
   addGrantNotification,
@@ -28,11 +28,10 @@ import { InfoTip } from '@/components/InfoTip';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import type { Profile } from '@/lib/types';
 
-type Tab = 'details' | 'notifications' | 'documents';
+type Tab = 'details' | 'notifications';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'details', label: 'Details' },
   { key: 'notifications', label: 'Notifications' },
-  { key: 'documents', label: 'Documents' },
 ];
 
 
@@ -100,19 +99,32 @@ export function GrantPanel({
         ))}
       </div>
 
-      {tab === 'details' && <DetailsTab grant={grant} profiles={profiles} onChanged={changed} />}
+      {tab === 'details' && (
+        <DetailsTab grant={grant} profiles={profiles} onChanged={changed}>
+          <DocumentsTab grantId={grant.id} docs={documents} currentUserId={currentUserId} onChanged={changed} />
+        </DetailsTab>
+      )}
       {tab === 'notifications' && (
         <NotificationsTab grantId={grant.id} items={notifications} currentUserId={currentUserId} onChanged={changed} />
-      )}
-      {tab === 'documents' && (
-        <DocumentsTab grantId={grant.id} docs={documents} currentUserId={currentUserId} onChanged={changed} />
       )}
     </Drawer>
   );
 }
 
 // ── Details ──────────────────────────────────────────────────────────
-function DetailsTab({ grant, profiles, onChanged }: { grant: Grant; profiles: Profile[]; onChanged: () => void }) {
+// Documents render inline at the bottom of this same tab (not a separate one) — no need
+// to click over to see what's already on file while reading everything else about a grant.
+function DetailsTab({
+  grant,
+  profiles,
+  onChanged,
+  children,
+}: {
+  grant: Grant;
+  profiles: Profile[];
+  onChanged: () => void;
+  children: ReactNode;
+}) {
   const [form, setForm] = useState<GrantInput>(() => toInput(grant));
   const [busy, setBusy] = useState(false);
   const [certBusy, setCertBusy] = useState(false);
@@ -334,6 +346,9 @@ function DetailsTab({ grant, profiles, onChanged }: { grant: Grant; profiles: Pr
       <button onClick={save} disabled={busy} className="btn-primary w-full">
         Save changes
       </button>
+
+      <hr className="border-sparrow-rule" />
+      {children}
     </div>
   );
 }
@@ -473,6 +488,7 @@ function DocumentsTab({
 
   return (
     <div className="space-y-3">
+      <p className="text-sm font-medium text-sparrow-ink">Documents</p>
       <p className="text-xs text-sparrow-gray">Grant agreements and correspondence — stored privately, ops tier only.</p>
       <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
         <input
