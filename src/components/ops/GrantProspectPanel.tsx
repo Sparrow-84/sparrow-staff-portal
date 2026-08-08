@@ -24,6 +24,7 @@ import {
   type GrantProspectStatus,
 } from '@/lib/grant-prospects-types';
 import { formatDate } from '@/lib/grants-types';
+import type { Profile } from '@/lib/types';
 import { GrantProspectLabelPicker } from './GrantProspectLabelPicker';
 
 const MOVE_MESSAGE: Partial<Record<GrantProspectStatus, string>> = {
@@ -35,6 +36,7 @@ export function GrantProspectPanel({
   open,
   prospect,
   currentUserId,
+  profiles,
   onClose,
   onChanged,
   onAwarded,
@@ -42,6 +44,7 @@ export function GrantProspectPanel({
   open: boolean;
   prospect: GrantProspect | null;
   currentUserId: string;
+  profiles: Profile[];
   onClose: () => void;
   onChanged: () => void;
   onAwarded: (newGrantId: string) => void;
@@ -140,6 +143,37 @@ export function GrantProspectPanel({
             className={fieldClass('prospect-name')}
           />
         </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-xs font-medium text-sparrow-gray">
+              Owner
+              <InfoTip text="Who's responsible for making sure this prospect actually gets researched and, if pursued, applied for on time. Reminders go to this person." />
+            </span>
+            <select
+              value={form.owner_id ?? ''}
+              onChange={(e) => set('owner_id', e.target.value || null)}
+              className="field-input"
+            >
+              <option value="">Unassigned</option>
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>{p.full_name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-sparrow-gray">
+              Reminder lead time (days)
+              <InfoTip text="How many days before the application deadline the owner should get a reminder task. 30 is the default." />
+            </span>
+            <input
+              type="number"
+              value={form.lead_time_days}
+              onChange={(e) => set('lead_time_days', Number(e.target.value) || 0)}
+              className="field-input"
+            />
+          </label>
+        </div>
 
         <div>
           <p className="mb-2 text-xs font-medium text-sparrow-gray">Status</p>
@@ -265,6 +299,8 @@ function toInput(prospect: GrantProspect | null): ProspectInput {
       findings: null,
       decision_reasoning: null,
       action_steps: null,
+      owner_id: null,
+      lead_time_days: 30,
     };
   }
   return {
@@ -278,6 +314,8 @@ function toInput(prospect: GrantProspect | null): ProspectInput {
     findings: prospect.findings,
     decision_reasoning: prospect.decision_reasoning,
     action_steps: prospect.action_steps,
+    owner_id: prospect.owner_id,
+    lead_time_days: prospect.lead_time_days,
   };
 }
 

@@ -62,6 +62,8 @@ export interface ProspectInput {
   findings: string | null;
   decision_reasoning: string | null;
   action_steps: string | null;
+  owner_id: string | null;
+  lead_time_days: number;
 }
 
 export async function createProspect(input: ProspectInput, createdBy: string): Promise<GrantProspect> {

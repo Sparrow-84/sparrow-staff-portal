@@ -41,6 +41,8 @@ export interface Grant {
   prior_consent_required: boolean;
   notes: string | null;
   status: GrantStatus;
+  owner_id: string | null;
+  lead_time_days: number;
   created_by: string | null;
   created_at: string;
   updated_at: string;

@@ -26,6 +26,7 @@ import {
 import { Drawer } from '@/components/lcp/Drawer';
 import { InfoTip } from '@/components/InfoTip';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+import type { Profile } from '@/lib/types';
 
 type Tab = 'details' | 'notifications' | 'documents';
 const TABS: { key: Tab; label: string }[] = [
@@ -39,12 +40,14 @@ export function GrantPanel({
   open,
   grant,
   currentUserId,
+  profiles,
   onClose,
   onChanged,
 }: {
   open: boolean;
   grant: Grant | null;
   currentUserId: string;
+  profiles: Profile[];
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -97,7 +100,7 @@ export function GrantPanel({
         ))}
       </div>
 
-      {tab === 'details' && <DetailsTab grant={grant} onChanged={changed} />}
+      {tab === 'details' && <DetailsTab grant={grant} profiles={profiles} onChanged={changed} />}
       {tab === 'notifications' && (
         <NotificationsTab grantId={grant.id} items={notifications} currentUserId={currentUserId} onChanged={changed} />
       )}
@@ -109,7 +112,7 @@ export function GrantPanel({
 }
 
 // ── Details ──────────────────────────────────────────────────────────
-function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void }) {
+function DetailsTab({ grant, profiles, onChanged }: { grant: Grant; profiles: Profile[]; onChanged: () => void }) {
   const [form, setForm] = useState<GrantInput>(() => toInput(grant));
   const [busy, setBusy] = useState(false);
   const [certBusy, setCertBusy] = useState(false);
@@ -227,6 +230,37 @@ function DetailsTab({ grant, onChanged }: { grant: Grant; onChanged: () => void 
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="text-xs font-medium text-sparrow-gray">
+            Owner
+            <InfoTip text="Who's responsible for making sure this grant's to-dos actually happen — filing the certification, watching for funder emails, etc. Reminders go to this person." />
+          </span>
+          <select
+            value={form.owner_id ?? ''}
+            onChange={(e) => set('owner_id', e.target.value || null)}
+            className="field-input"
+          >
+            <option value="">Unassigned</option>
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>{p.full_name}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-sparrow-gray">
+            Reminder lead time (days)
+            <InfoTip text="How many days before the certification is due the owner should get a reminder task. 30 is the default — plenty of time to file through OHCS's portal." />
+          </span>
+          <input
+            type="number"
+            value={form.lead_time_days}
+            onChange={(e) => set('lead_time_days', Number(e.target.value) || 0)}
+            className="field-input"
+          />
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-xs font-medium text-sparrow-gray">
             Placed in service
             <InfoTip text="Roughly: the date the funded property started being used for its purpose — for an acquisition (like Twin Oaks), that's usually the closing/effective date, not a separate construction date." />
           </span>
@@ -316,6 +350,8 @@ function toInput(grant: Grant): GrantInput {
     certification_due_date: grant.certification_due_date,
     prior_consent_required: grant.prior_consent_required,
     notes: grant.notes,
+    owner_id: grant.owner_id,
+    lead_time_days: grant.lead_time_days,
   };
 }
 

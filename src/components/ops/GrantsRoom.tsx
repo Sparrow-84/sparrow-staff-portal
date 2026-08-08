@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { fetchProfiles } from '@/lib/data';
+import type { Profile } from '@/lib/types';
 import { createGrant, fetchGrants } from '@/lib/grants';
 import { certificationTone, formatMoney, type Grant } from '@/lib/grants-types';
 import { createProspect, fetchProspects } from '@/lib/grant-prospects';
@@ -7,6 +9,8 @@ import { PROSPECT_ACTIVE_STATUSES, prospectStatusChip, prospectStatusLabel, type
 import { GrantPanel } from './GrantPanel';
 import { GrantProspectPanel } from './GrantProspectPanel';
 import { GrantsHelpModal } from './GrantsHelpModal';
+
+const DEFAULT_LEAD_TIME_DAYS = 30;
 
 type ModuleTab = 'active' | 'prospects' | 'no' | 'past';
 const MODULE_TABS: { key: ModuleTab; label: string; desc: string }[] = [
@@ -20,6 +24,7 @@ export function GrantsRoom() {
   const { profile } = useAuth();
   const [grants, setGrants] = useState<Grant[]>([]);
   const [prospects, setProspects] = useState<GrantProspect[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,9 +45,10 @@ export function GrantsRoom() {
 
   const load = useCallback(async () => {
     try {
-      const [g, p] = await Promise.all([fetchGrants(), fetchProspects()]);
+      const [g, p, pr] = await Promise.all([fetchGrants(), fetchProspects(), fetchProfiles()]);
       setGrants(g);
       setProspects(p);
+      setProfiles(pr.filter((x) => x.ops_access));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load grants.');
     } finally {
@@ -80,6 +86,8 @@ export function GrantsRoom() {
           certification_due_date: null,
           prior_consent_required: false,
           notes: null,
+          owner_id: profile.id, // default to whoever creates it — reassignable via the Owner dropdown
+          lead_time_days: DEFAULT_LEAD_TIME_DAYS,
         },
         profile.id,
       );
@@ -108,6 +116,8 @@ export function GrantsRoom() {
           findings: null,
           decision_reasoning: null,
           action_steps: null,
+          owner_id: profile.id, // default to whoever creates it — reassignable via the Owner dropdown
+          lead_time_days: DEFAULT_LEAD_TIME_DAYS,
         },
         profile.id,
       );
@@ -190,13 +200,13 @@ export function GrantsRoom() {
               </button>
             </div>
           )}
-          <GrantList grants={activeGrants} emptyLabel="No active grants yet." onOpen={openGrant} />
+          <GrantList grants={activeGrants} profiles={profiles} emptyLabel="No active grants yet." onOpen={openGrant} />
         </>
       )}
 
       {moduleTab === 'past' && (
         <div className="mt-4">
-          <GrantList grants={pastGrants} emptyLabel="No past grants yet — nothing's wrapped up so far. When one does, it lands here with every field, link, and document intact." onOpen={openGrant} />
+          <GrantList grants={pastGrants} profiles={profiles} emptyLabel="No past grants yet — nothing's wrapped up so far. When one does, it lands here with every field, link, and document intact." onOpen={openGrant} />
         </div>
       )}
 
@@ -216,13 +226,13 @@ export function GrantsRoom() {
               </button>
             </div>
           )}
-          <ProspectList prospects={pursuedProspects} emptyLabel="No prospects yet." onOpen={openProspect} />
+          <ProspectList prospects={pursuedProspects} profiles={profiles} emptyLabel="No prospects yet." onOpen={openProspect} />
         </>
       )}
 
       {moduleTab === 'no' && (
         <div className="mt-4">
-          <ProspectList prospects={notMovingProspects} emptyLabel="Nothing here yet." onOpen={openProspect} />
+          <ProspectList prospects={notMovingProspects} profiles={profiles} emptyLabel="Nothing here yet." onOpen={openProspect} />
         </div>
       )}
 
@@ -230,6 +240,7 @@ export function GrantsRoom() {
         open={grantPanelOpen}
         grant={selectedGrantId ? grants.find((g) => g.id === selectedGrantId) ?? null : null}
         currentUserId={profile?.id ?? ''}
+        profiles={profiles}
         onClose={() => setGrantPanelOpen(false)}
         onChanged={load}
       />
@@ -237,6 +248,7 @@ export function GrantsRoom() {
         open={prospectPanelOpen}
         prospect={selectedProspectId ? prospects.find((p) => p.id === selectedProspectId) ?? null : null}
         currentUserId={profile?.id ?? ''}
+        profiles={profiles}
         onClose={() => setProspectPanelOpen(false)}
         onChanged={load}
         onAwarded={handleAwarded}
@@ -246,12 +258,13 @@ export function GrantsRoom() {
   );
 }
 
-function GrantList({ grants, emptyLabel, onOpen }: { grants: Grant[]; emptyLabel: string; onOpen: (id: string) => void }) {
+function GrantList({ grants, profiles, emptyLabel, onOpen }: { grants: Grant[]; profiles: Profile[]; emptyLabel: string; onOpen: (id: string) => void }) {
   return (
     <ul className="mt-4 space-y-2">
       {grants.length === 0 && <li className="text-sm text-sparrow-gray">{emptyLabel}</li>}
       {grants.map((g) => {
         const tone = certificationTone(g.certification_due_date);
+        const owner = profiles.find((p) => p.id === g.owner_id);
         return (
           <li key={g.id}>
             <button
@@ -260,7 +273,11 @@ function GrantList({ grants, emptyLabel, onOpen }: { grants: Grant[]; emptyLabel
             >
               <div className="min-w-0 flex-1">
                 <span className="font-medium text-sparrow-ink">{g.funder_name}</span>
-                <p className="text-xs text-sparrow-gray">{formatMoney(g.amount)}</p>
+                <p className="text-xs text-sparrow-gray">
+                  {formatMoney(g.amount)}
+                  {owner && ` · ${owner.full_name}`}
+                  {!owner && ' · Unassigned'}
+                </p>
               </div>
               {g.prior_consent_required && (
                 <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-[10px] font-medium text-sparrow-green" title="Prior consent required">
@@ -281,11 +298,13 @@ function GrantList({ grants, emptyLabel, onOpen }: { grants: Grant[]; emptyLabel
   );
 }
 
-function ProspectList({ prospects, emptyLabel, onOpen }: { prospects: GrantProspect[]; emptyLabel: string; onOpen: (id: string) => void }) {
+function ProspectList({ prospects, profiles, emptyLabel, onOpen }: { prospects: GrantProspect[]; profiles: Profile[]; emptyLabel: string; onOpen: (id: string) => void }) {
   return (
     <ul className="mt-4 space-y-2">
       {prospects.length === 0 && <li className="text-sm text-sparrow-gray">{emptyLabel}</li>}
-      {prospects.map((p) => (
+      {prospects.map((p) => {
+        const owner = profiles.find((x) => x.id === p.owner_id);
+        return (
         <li key={p.id}>
           <button
             onClick={() => onOpen(p.id)}
@@ -293,7 +312,10 @@ function ProspectList({ prospects, emptyLabel, onOpen }: { prospects: GrantProsp
           >
             <div className="min-w-0 flex-1">
               <span className="font-medium text-sparrow-ink">{p.name}</span>
-              {p.application_deadline && <p className="text-xs text-sparrow-gray">Due {p.application_deadline}</p>}
+              <p className="text-xs text-sparrow-gray">
+                {p.application_deadline ? `Due ${p.application_deadline}` : 'No deadline set'}
+                {owner ? ` · ${owner.full_name}` : ' · Unassigned'}
+              </p>
             </div>
             <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${prospectStatusChip(p.status)}`}>
               {prospectStatusLabel(p.status)}
@@ -301,7 +323,8 @@ function ProspectList({ prospects, emptyLabel, onOpen }: { prospects: GrantProsp
             <span className="shrink-0 text-sparrow-gray">›</span>
           </button>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

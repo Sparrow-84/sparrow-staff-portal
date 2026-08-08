@@ -22,6 +22,8 @@ export interface GrantInput {
   certification_due_date: string | null;
   prior_consent_required: boolean;
   notes: string | null;
+  owner_id: string | null;
+  lead_time_days: number;
 }
 
 export async function createGrant(input: GrantInput, createdBy: string): Promise<Grant> {

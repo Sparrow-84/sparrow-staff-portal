@@ -139,7 +139,7 @@ export function toLocalTime(iso: string): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-export type CalendarKind = 'meeting' | 'closure' | 'holiday' | 'ooo' | 'lcp_session' | 'toc' | 'other' | 'birthday';
+export type CalendarKind = 'meeting' | 'closure' | 'holiday' | 'ooo' | 'lcp_session' | 'toc' | 'other' | 'birthday' | 'grant';
 
 export interface CalendarEvent {
   id: string;
@@ -178,6 +178,7 @@ export const KIND_PILL: Record<CalendarKind, string> = {
   toc:         'bg-teal-600 text-white',
   other:       'bg-sparrow-gold text-sparrow-ink',
   birthday:    'bg-pink-500 text-white',
+  grant:       'bg-orange-500 text-white',
 };
 
 export const KIND_LABEL: Record<CalendarKind, string> = {
@@ -189,6 +190,7 @@ export const KIND_LABEL: Record<CalendarKind, string> = {
   toc:         'TOC',
   other:       'Org event',
   birthday:    'Birthday',
+  grant:       'Grant',
 };
 
 /** Kinds available when creating an org-wide event. */
@@ -549,9 +551,19 @@ async function syncStatHolidayEvents(): Promise<void> {
   }
 }
 
+/** Fire-and-forget: ensures grant certification/application dates are on the calendar. */
+async function syncGrantCalendarEvents(): Promise<void> {
+  try {
+    await supabase.rpc('emit_grant_calendar_events');
+  } catch {
+    // best-effort — a failed sync just means grant dates wait for the next calendar load
+  }
+}
+
 export async function fetchCalendar(): Promise<CalendarEvent[]> {
   await syncStaffBirthdayEvents();
   await syncStatHolidayEvents();
+  await syncGrantCalendarEvents();
   try {
     const { data, error } = await supabase
       .from('calendar_events')

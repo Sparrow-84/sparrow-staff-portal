@@ -74,6 +74,8 @@ export interface GrantProspect {
   decision_reasoning: string | null;
   action_steps: string | null;
   converted_grant_id: string | null;
+  owner_id: string | null;
+  lead_time_days: number;
   created_by: string | null;
   created_at: string;
   updated_at: string;
