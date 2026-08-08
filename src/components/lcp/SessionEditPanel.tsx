@@ -60,6 +60,8 @@ export function SessionEditPanel({
   const [resLoading, setResLoading] = useState(false);
 
   const [editMode, setEditMode] = useState<EditMode>({ kind: 'none' });
+  const [activeSlotKey, setActiveSlotKey] = useState<string | null>(null);
+  const [mondayOpen, setMondayOpen] = useState(true);
 
   // Unified resource form state (shared between add and edit, for every kind)
   const [resTitle, setResTitle] = useState('');
@@ -104,6 +106,10 @@ export function SessionEditPanel({
     setCurriculumNotesReviewedAt(session.curriculum_notes_reviewed_at);
     setSaveError(null);
     setEditMode({ kind: 'none' });
+    setActiveSlotKey(null);
+    setMondayOpen(
+      !(session.mentor_brief?.trim() && session.mentor_handout_echo?.trim() && session.mentor_going_deeper?.trim())
+    );
     setResError(null);
     resetSessionValidation();
     resetResValidation();
@@ -171,7 +177,7 @@ export function SessionEditPanel({
     setResources((prev) => prev.filter((r) => r.id !== id));
   }
 
-  function openAdd(defaults: AddDefaults) {
+  function openAdd(defaults: AddDefaults, slotKey: string) {
     setResTitle(defaults.title);
     setResKind(defaults.kind);
     setResAudience(defaults.audience);
@@ -181,9 +187,10 @@ export function SessionEditPanel({
     setResError(null);
     resetResValidation();
     setEditMode({ kind: 'add' });
+    setActiveSlotKey(slotKey);
   }
 
-  function openEdit(r: Resource) {
+  function openEdit(r: Resource, slotKey: string) {
     setResTitle(r.title);
     setResKind(r.kind);
     setResAudience(r.audience);
@@ -193,6 +200,14 @@ export function SessionEditPanel({
     setResError(null);
     resetResValidation();
     setEditMode({ kind: 'edit', resource: r });
+    setActiveSlotKey(slotKey);
+  }
+
+  function closeResourceForm() {
+    setEditMode({ kind: 'none' });
+    setActiveSlotKey(null);
+    setResError(null);
+    resetResValidation();
   }
 
   async function handleSaveResource() {
@@ -217,6 +232,7 @@ export function SessionEditPanel({
         await updateResource(editMode.resource.id, patch);
       }
       setEditMode({ kind: 'none' });
+      setActiveSlotKey(null);
       await loadResources(session.id);
     } catch (e) {
       setResError(e instanceof Error ? e.message : 'Could not save material.');
@@ -248,6 +264,107 @@ export function SessionEditPanel({
   const slideshowReady = !!slideshow && !!slideshow.drive_url;
   const studentHandoutReady = !!studentHandout && !!studentHandout.drive_url;
   const devotionalsReady = devotionalByDay.every(Boolean);
+
+  function renderResourceForm() {
+    return (
+      <div className="space-y-3 rounded-xl border border-sparrow-green/30 bg-sparrow-sage/20 p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+          {editMode.kind === 'add' ? `New ${RESOURCE_LABEL[resKind]}` : `Edit ${RESOURCE_LABEL[resKind]}`}
+        </p>
+
+        <div>
+          <label className="field-label" htmlFor="res-title">Title</label>
+          <input
+            id="res-title"
+            type="text"
+            value={resTitle}
+            onChange={(e) => { setResTitle(e.target.value); clearResField('res-title'); }}
+            className={resFieldClass('res-title')}
+          />
+        </div>
+
+        {resKind === 'devotional' && (
+          <div>
+            <label className="field-label">Audience</label>
+            <select
+              value={resAudience}
+              onChange={(e) => setResAudience(e.target.value as ResourceAudience)}
+              className="field-input"
+            >
+              <option value="participant">{RESOURCE_AUDIENCE_LABEL.participant}</option>
+              <option value="staff">{RESOURCE_AUDIENCE_LABEL.staff}</option>
+            </select>
+          </div>
+        )}
+
+        {resKind === 'teacher_guide' && (
+          <div>
+            <label className="field-label">
+              Content{' '}
+              <span className="font-normal text-sparrow-gray">
+                (format it in Claude or a Google Doc, then paste — the formatting comes with it)
+              </span>
+            </label>
+            <RichTextField
+              key={editMode.kind === 'edit' ? editMode.resource.id : `new-${resKind}`}
+              initialValue={resContent}
+              onChange={setResContent}
+              placeholder="Read directly in the app — no file to open."
+              minHeightRem={16}
+            />
+          </div>
+        )}
+
+        {resKind === 'devotional' && (
+          <div>
+            <label className="field-label">
+              HTML source{' '}
+              <span className="font-normal text-sparrow-gray">
+                (paste Shelly's raw HTML file source — exactly as she designed it, fonts and colors included; participants see it rendered as-is)
+              </span>
+            </label>
+            <textarea
+              value={resContent}
+              onChange={(e) => setResContent(e.target.value)}
+              rows={10}
+              className="field-input resize-y font-mono text-xs"
+              placeholder="&lt;!DOCTYPE html&gt;…"
+            />
+          </div>
+        )}
+
+        <div>
+          <label className="field-label">
+            Google Drive URL{' '}
+            <span className="font-normal text-sparrow-gray">
+              {resKind === 'ppt' || resKind === 'handout' ? '' : '(optional — use instead of, or alongside, content)'}
+            </span>
+          </label>
+          <input
+            type="url"
+            value={resUrl}
+            onChange={(e) => setResUrl(e.target.value)}
+            placeholder="https://drive.google.com/…"
+            className="field-input"
+          />
+        </div>
+
+        {(resError || resMissing) && <p className="text-sm text-priority-p1">{resError ?? resMissing}</p>}
+        <div className="flex gap-2">
+          <button
+            onClick={handleSaveResource}
+            disabled={resSaving}
+            className="btn-primary flex-1"
+          >
+            {resSaving ? 'Saving…' : editMode.kind === 'add' ? 'Add' : 'Save changes'}
+          </button>
+          <button onClick={closeResourceForm} className="btn-ghost">
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Drawer
@@ -323,45 +440,58 @@ export function SessionEditPanel({
 
           {/* Monday Mentoring */}
           <div className="border-t border-sparrow-rule pt-5">
-            <h3 className="mb-1 text-sm font-semibold text-sparrow-ink">Monday Mentoring</h3>
-            <p className="mb-3 text-xs text-sparrow-gray">
-              Read one-on-one with the participant who recently attended this session. Shelly's
-              fixed how-to-use instructions show automatically above this every Monday — only the
-              three fields below change week to week. Format it wherever you like (Claude, a
-              Google Doc) and paste it in — the formatting comes with it.
-            </p>
-            <div className="space-y-3">
-              <div>
-                <label className="field-label">Mentor Brief</label>
-                <RichTextField
-                  key={`brief-${session.id}`}
-                  initialValue={session.mentor_brief ?? ''}
-                  onChange={setMentorBrief}
-                  placeholder="Context for the mentor — what this session covered and what to watch for."
-                  minHeightRem={5}
-                />
-              </div>
-              <div>
-                <label className="field-label">From Her Handout</label>
-                <RichTextField
-                  key={`handout-${session.id}`}
-                  initialValue={session.mentor_handout_echo ?? ''}
-                  onChange={setMentorHandoutEcho}
-                  placeholder="The questions she already worked through in group — echoed here so the mentor can follow up naturally."
-                  minHeightRem={5}
-                />
-              </div>
-              <div>
-                <label className="field-label">Going Deeper</label>
-                <RichTextField
-                  key={`deeper-${session.id}`}
-                  initialValue={session.mentor_going_deeper ?? ''}
-                  onChange={setMentorGoingDeeper}
-                  placeholder="Questions for when she's ready to go further than the group context allowed."
-                  minHeightRem={5}
-                />
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => setMondayOpen((v) => !v)}
+              className="flex w-full items-center justify-between text-left"
+            >
+              <h3 className="text-sm font-semibold text-sparrow-ink">
+                Monday Mentoring {mondayReady && <span className="text-sparrow-green">✓</span>}
+              </h3>
+              <span className="text-xs font-medium text-sparrow-gray">{mondayOpen ? 'Hide ▲' : 'Show ▼'}</span>
+            </button>
+            {mondayOpen && (
+              <>
+                <p className="mb-3 mt-1 text-xs text-sparrow-gray">
+                  Read one-on-one with the participant who recently attended this session. Shelly's
+                  fixed how-to-use instructions show automatically above this every Monday — only the
+                  three fields below change week to week. Format it wherever you like (Claude, a
+                  Google Doc) and paste it in — the formatting comes with it.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="field-label">Mentor Brief</label>
+                    <RichTextField
+                      key={`brief-${session.id}`}
+                      initialValue={session.mentor_brief ?? ''}
+                      onChange={setMentorBrief}
+                      placeholder="Context for the mentor — what this session covered and what to watch for."
+                      minHeightRem={5}
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">From Her Handout</label>
+                    <RichTextField
+                      key={`handout-${session.id}`}
+                      initialValue={session.mentor_handout_echo ?? ''}
+                      onChange={setMentorHandoutEcho}
+                      placeholder="The questions she already worked through in group — echoed here so the mentor can follow up naturally."
+                      minHeightRem={5}
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Going Deeper</label>
+                    <RichTextField
+                      key={`deeper-${session.id}`}
+                      initialValue={session.mentor_going_deeper ?? ''}
+                      onChange={setMentorGoingDeeper}
+                      placeholder="Questions for when she's ready to go further than the group context allowed."
+                      minHeightRem={5}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Thursday Group Materials */}
@@ -373,26 +503,29 @@ export function SessionEditPanel({
                 label="Teacher Guide"
                 hint="The full script staff read live — devotional included, no separate file"
                 resource={teacherGuide}
-                onAdd={() => openAdd({ kind: 'teacher_guide', audience: 'staff', title: 'Teacher Guide' })}
-                onEdit={() => teacherGuide && openEdit(teacherGuide)}
+                onAdd={() => openAdd({ kind: 'teacher_guide', audience: 'staff', title: 'Teacher Guide' }, 'teacher_guide')}
+                onEdit={() => teacherGuide && openEdit(teacherGuide, 'teacher_guide')}
                 onRemove={() => teacherGuide && handleDeleteResource(teacherGuide.id)}
               />
+              {activeSlotKey === 'teacher_guide' && renderResourceForm()}
               <MaterialSlot
                 label="Slideshow"
                 hint="Drive link — projected during the session"
                 resource={slideshow}
-                onAdd={() => openAdd({ kind: 'ppt', audience: 'staff', title: 'Slideshow' })}
-                onEdit={() => slideshow && openEdit(slideshow)}
+                onAdd={() => openAdd({ kind: 'ppt', audience: 'staff', title: 'Slideshow' }, 'ppt')}
+                onEdit={() => slideshow && openEdit(slideshow, 'ppt')}
                 onRemove={() => slideshow && handleDeleteResource(slideshow.id)}
               />
+              {activeSlotKey === 'ppt' && renderResourceForm()}
               <MaterialSlot
                 label="Student Handout"
                 hint="Drive link — print before the meeting"
                 resource={studentHandout}
-                onAdd={() => openAdd({ kind: 'handout', audience: 'participant', title: 'Student Handout' })}
-                onEdit={() => studentHandout && openEdit(studentHandout)}
+                onAdd={() => openAdd({ kind: 'handout', audience: 'participant', title: 'Student Handout' }, 'handout')}
+                onEdit={() => studentHandout && openEdit(studentHandout, 'handout')}
                 onRemove={() => studentHandout && handleDeleteResource(studentHandout.id)}
               />
+              {activeSlotKey === 'handout' && renderResourceForm()}
             </div>
 
             <div className="mt-4 rounded-lg border border-sparrow-rule p-2.5">
@@ -439,16 +572,19 @@ export function SessionEditPanel({
             <div className="space-y-2.5">
               {DEVOTIONAL_DAYS.map((day, i) => {
                 const r = devotionalByDay[i];
+                const slotKey = `devotional-${i}`;
                 return (
-                  <MaterialSlot
-                    key={day}
-                    label={day}
-                    hint="Not added yet"
-                    resource={r}
-                    onAdd={() => openAdd({ kind: 'devotional', audience: 'participant', title: `${day} Reading`, sortOrder: i })}
-                    onEdit={() => r && openEdit(r)}
-                    onRemove={() => r && handleDeleteResource(r.id)}
-                  />
+                  <div key={day}>
+                    <MaterialSlot
+                      label={day}
+                      hint="Not added yet"
+                      resource={r}
+                      onAdd={() => openAdd({ kind: 'devotional', audience: 'participant', title: `${day} Reading`, sortOrder: i }, slotKey)}
+                      onEdit={() => r && openEdit(r, slotKey)}
+                      onRemove={() => r && handleDeleteResource(r.id)}
+                    />
+                    {activeSlotKey === slotKey && <div className="mt-2.5">{renderResourceForm()}</div>}
+                  </div>
                 );
               })}
             </div>
@@ -459,135 +595,39 @@ export function SessionEditPanel({
               </p>
               {!isEditing && (
                 <button
-                  onClick={() => openAdd({ kind: 'devotional', audience: 'participant', title: '', sortOrder: resources.length })}
+                  onClick={() => openAdd({ kind: 'devotional', audience: 'participant', title: '', sortOrder: resources.length }, 'devotional-extra-new')}
                   className="text-sm text-sparrow-green hover:underline"
                 >
                   + Add extra
                 </button>
               )}
             </div>
+            {activeSlotKey === 'devotional-extra-new' && <div className="mt-2">{renderResourceForm()}</div>}
             {extraDevotionals.length > 0 && (
               <ul className="mt-2 space-y-2">
-                {extraDevotionals.map((r) => (
-                  <li key={r.id} className="flex items-start gap-2 rounded-lg border border-sparrow-rule p-2.5 text-sm">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sparrow-ink">{r.title}</p>
-                      <p className="mt-0.5 text-xs text-sparrow-gray">
-                        {r.content ? 'Has content' : r.drive_url ? 'Drive link' : 'No content yet'}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <button onClick={() => openEdit(r)} className="text-xs text-sparrow-green hover:underline">Edit</button>
-                      <button onClick={() => handleDeleteResource(r.id)} className="text-xs text-sparrow-gray hover:text-priority-p1">Remove</button>
-                    </div>
-                  </li>
-                ))}
+                {extraDevotionals.map((r) => {
+                  const slotKey = `devotional-extra-${r.id}`;
+                  return (
+                    <li key={r.id} className="space-y-2">
+                      <div className="flex items-start gap-2 rounded-lg border border-sparrow-rule p-2.5 text-sm">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sparrow-ink">{r.title}</p>
+                          <p className="mt-0.5 text-xs text-sparrow-gray">
+                            {r.content ? 'Has content' : r.drive_url ? 'Drive link' : 'No content yet'}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <button onClick={() => openEdit(r, slotKey)} className="text-xs text-sparrow-green hover:underline">Edit</button>
+                          <button onClick={() => handleDeleteResource(r.id)} className="text-xs text-sparrow-gray hover:text-priority-p1">Remove</button>
+                        </div>
+                      </div>
+                      {activeSlotKey === slotKey && renderResourceForm()}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
-
-          {/* Shared add/edit form for any material — appears wherever a slot or +Add was clicked */}
-          {isEditing && (
-            <div className="space-y-3 rounded-xl border border-sparrow-green/30 bg-sparrow-sage/20 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
-                {editMode.kind === 'add' ? `New ${RESOURCE_LABEL[resKind]}` : `Edit ${RESOURCE_LABEL[resKind]}`}
-              </p>
-
-              <div>
-                <label className="field-label" htmlFor="res-title">Title</label>
-                <input
-                  id="res-title"
-                  type="text"
-                  value={resTitle}
-                  onChange={(e) => { setResTitle(e.target.value); clearResField('res-title'); }}
-                  className={resFieldClass('res-title')}
-                />
-              </div>
-
-              {resKind === 'devotional' && (
-                <div>
-                  <label className="field-label">Audience</label>
-                  <select
-                    value={resAudience}
-                    onChange={(e) => setResAudience(e.target.value as ResourceAudience)}
-                    className="field-input"
-                  >
-                    <option value="participant">{RESOURCE_AUDIENCE_LABEL.participant}</option>
-                    <option value="staff">{RESOURCE_AUDIENCE_LABEL.staff}</option>
-                  </select>
-                </div>
-              )}
-
-              {resKind === 'teacher_guide' && (
-                <div>
-                  <label className="field-label">
-                    Content{' '}
-                    <span className="font-normal text-sparrow-gray">
-                      (format it in Claude or a Google Doc, then paste — the formatting comes with it)
-                    </span>
-                  </label>
-                  <RichTextField
-                    key={editMode.kind === 'edit' ? editMode.resource.id : `new-${resKind}`}
-                    initialValue={resContent}
-                    onChange={setResContent}
-                    placeholder="Read directly in the app — no file to open."
-                    minHeightRem={16}
-                  />
-                </div>
-              )}
-
-              {resKind === 'devotional' && (
-                <div>
-                  <label className="field-label">
-                    HTML source{' '}
-                    <span className="font-normal text-sparrow-gray">
-                      (paste Shelly's raw HTML file source — exactly as she designed it, fonts and colors included; participants see it rendered as-is)
-                    </span>
-                  </label>
-                  <textarea
-                    value={resContent}
-                    onChange={(e) => setResContent(e.target.value)}
-                    rows={10}
-                    className="field-input resize-y font-mono text-xs"
-                    placeholder="&lt;!DOCTYPE html&gt;…"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="field-label">
-                  Google Drive URL{' '}
-                  <span className="font-normal text-sparrow-gray">
-                    {resKind === 'ppt' || resKind === 'handout' ? '' : '(optional — use instead of, or alongside, content)'}
-                  </span>
-                </label>
-                <input
-                  type="url"
-                  value={resUrl}
-                  onChange={(e) => setResUrl(e.target.value)}
-                  placeholder="https://drive.google.com/…"
-                  className="field-input"
-                />
-              </div>
-
-              {(resError || resMissing) && <p className="text-sm text-priority-p1">{resError ?? resMissing}</p>}
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSaveResource}
-                  disabled={resSaving}
-                  className="btn-primary flex-1"
-                >
-                  {resSaving ? 'Saving…' : editMode.kind === 'add' ? 'Add' : 'Save changes'}
-                </button>
-                <button
-                  onClick={() => { setEditMode({ kind: 'none' }); setResError(null); resetResValidation(); }}
-                  className="btn-ghost"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </Drawer>
