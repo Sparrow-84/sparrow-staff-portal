@@ -15,7 +15,7 @@ import { bucketFor } from './tasks';
 export type HomeItemKind = 'touchpoint' | 'collateral' | 'connection' | 'social_post' | 'newsletter';
 
 /** Which existing Partnerships tab a "view" click on this item should jump to. */
-export type HomeNavTarget = 'collateral' | 'events' | 'social' | 'comms';
+export type HomeNavTarget = 'collateral' | 'events' | 'social' | 'comms' | 'contacts';
 
 export interface HomeItem {
   key: string;

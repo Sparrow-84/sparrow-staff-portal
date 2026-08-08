@@ -15,6 +15,7 @@ import {
   resolveDonationLink,
   type NeedsReviewDonation,
 } from '@/lib/partnerships';
+import { fetchAllContacts, type PersonalContactWithOwner } from '@/lib/personalContacts';
 import { WidgetCard } from '@/components/home/widgets';
 
 const KIND_ICON: Record<HomeItemKind, string> = {
@@ -35,6 +36,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
   const [items, setItems] = useState<HomeItem[]>([]);
   const [needsReview, setNeedsReview] = useState<NeedsReviewDonation[]>([]);
   const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
+  const [newContacts, setNewContacts] = useState<PersonalContactWithOwner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,11 +47,12 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([fetchHomeItems(), fetchNeedsReviewDonations()])
-      .then(([homeItems, review]) => {
+    Promise.all([fetchHomeItems(), fetchNeedsReviewDonations(), fetchAllContacts()])
+      .then(([homeItems, review, contacts]) => {
         if (!cancelled) {
           setItems(homeItems);
           setNeedsReview(review);
+          setNewContacts(contacts.filter((c) => !c.converted_to_partner_id));
         }
       })
       .catch((e) => {
@@ -158,6 +161,30 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
               </li>
             ))}
           </ul>
+        </WidgetCard>
+      )}
+
+      {newContacts.length > 0 && (
+        <WidgetCard title={`👋 New contacts to review (${newContacts.length})`}>
+          <ul className="space-y-2">
+            {newContacts.map((c) => (
+              <li key={c.id}>
+                <button
+                  onClick={() => onNavigateTab('contacts')}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50"
+                >
+                  <span className="min-w-0 truncate text-sparrow-ink">
+                    <span className="font-medium">{c.name}</span>
+                    {c.organization && <span className="text-sparrow-gray"> · {c.organization}</span>}
+                  </span>
+                  <span className="shrink-0 text-xs text-sparrow-gray">logged by {c.owner?.full_name ?? 'staff'}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-sparrow-gray">
+            Not a to-do — just everything logged in My Contacts that hasn't been added to the Directory yet.
+          </p>
         </WidgetCard>
       )}
 
