@@ -459,7 +459,7 @@ export function PartnershipsRoom() {
         profiles={profiles}
         defaultOwnerId={profile?.id ?? null}
         onClose={() => setAddOpen(false)}
-        onCreated={load}
+        onCreated={async (id) => { await load(); openPartner(id); }}
         interests={interests}
         onInterestsCreated={load}
       />

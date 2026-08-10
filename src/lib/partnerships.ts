@@ -65,6 +65,35 @@ export async function createPartner(input: PartnerInput): Promise<string> {
   return data.id as string;
 }
 
+/** Soft duplicate check before creating a partner — same active name or same active email. */
+export async function findPossibleDuplicatePartner(
+  name: string,
+  email: string | null,
+): Promise<{ id: string; name: string } | null> {
+  const trimmedName = name.trim();
+  const { data: byName, error: nameErr } = await supabase
+    .from('partners')
+    .select('id, name')
+    .eq('active', true)
+    .ilike('name', trimmedName)
+    .limit(1);
+  if (nameErr) throw new Error(nameErr.message);
+  if (byName && byName.length > 0) return byName[0] as { id: string; name: string };
+
+  const trimmedEmail = email?.trim();
+  if (trimmedEmail) {
+    const { data: byEmail, error: emailErr } = await supabase
+      .from('partners')
+      .select('id, name')
+      .eq('active', true)
+      .ilike('email', trimmedEmail)
+      .limit(1);
+    if (emailErr) throw new Error(emailErr.message);
+    if (byEmail && byEmail.length > 0) return byEmail[0] as { id: string; name: string };
+  }
+  return null;
+}
+
 export async function updatePartner(
   id: string,
   patch: Partial<

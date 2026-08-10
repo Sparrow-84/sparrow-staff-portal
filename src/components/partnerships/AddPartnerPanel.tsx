@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Profile } from '@/lib/types';
-import { createPartner, emitFirstTimeDonorTask } from '@/lib/partnerships';
+import { createPartner, emitFirstTimeDonorTask, findPossibleDuplicatePartner } from '@/lib/partnerships';
 import {
   PARTNER_STAGE,
   PARTNER_TYPE,
@@ -52,7 +52,7 @@ export function AddPartnerPanel({
   profiles: Profile[];
   defaultOwnerId: string | null;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (partnerId: string) => void;
   interests?: PartnershipInterest[];
   onInterestsCreated?: () => void;
   initialValues?: { name: string; phone: string; email: string; notes: string | null; source?: string } | null;
@@ -73,6 +73,7 @@ export function AddPartnerPanel({
   const [leadTime, setLeadTime] = useState<number | null>(DEFAULT_LEAD_TIME);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -91,6 +92,7 @@ export function AddPartnerPanel({
       setLeadTime(DEFAULT_LEAD_TIME);
       setError(null);
       setBusy(false);
+      setDuplicateWarning(null);
       resetValidation();
     }
   }, [open, defaultOwnerId, initialValues]);
@@ -112,10 +114,28 @@ export function AddPartnerPanel({
 
   async function save() {
     if (!validate() || cadence == null || leadTime == null) return;
+    const trimmedName = name.trim();
+
+    // First pass: warn on a likely duplicate rather than silently creating a second record.
+    // A second click while the warning is showing (duplicateWarning still set) proceeds anyway.
+    if (!duplicateWarning) {
+      setBusy(true);
+      try {
+        const dup = await findPossibleDuplicatePartner(trimmedName, email.trim() || null);
+        if (dup) {
+          setDuplicateWarning(`"${dup.name}" is already in the Directory. Click "Add anyway" to add this as a separate record.`);
+          setBusy(false);
+          return;
+        }
+      } catch {
+        // Duplicate check itself failing shouldn't block a real add — fall through.
+      }
+      setBusy(false);
+    }
+
     setBusy(true);
     setError(null);
     try {
-      const trimmedName = name.trim();
       const newPartnerId = await createPartner({
         name: trimmedName,
         type,
@@ -142,7 +162,7 @@ export function AddPartnerPanel({
       if (initialValues) {
         onCreatedFromContact?.(newPartnerId);
       }
-      onCreated();
+      onCreated(newPartnerId);
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not add the partner.');
@@ -160,8 +180,9 @@ export function AddPartnerPanel({
       footer={
         <div className="space-y-2">
           {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
+          {duplicateWarning && <p className="text-sm text-priority-p1">{duplicateWarning}</p>}
           <button onClick={save} disabled={busy} className="btn-primary w-full">
-            {busy ? 'Adding…' : 'Add partner'}
+            {busy ? 'Adding…' : duplicateWarning ? 'Add anyway' : 'Add partner'}
           </button>
         </div>
       }
@@ -178,7 +199,7 @@ export function AddPartnerPanel({
             id="pa-name"
             className={fieldClass('pa-name')}
             value={name}
-            onChange={(e) => { setName(e.target.value); clear('pa-name'); }}
+            onChange={(e) => { setName(e.target.value); clear('pa-name'); setDuplicateWarning(null); }}
             placeholder="Person, church, or organization"
           />
         </div>
@@ -273,7 +294,7 @@ export function AddPartnerPanel({
 
         <div>
           <label className="field-label" htmlFor="pa-email">Email</label>
-          <input id="pa-email" type="email" className="field-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="optional" />
+          <input id="pa-email" type="email" className="field-input" value={email} onChange={(e) => { setEmail(e.target.value); setDuplicateWarning(null); }} placeholder="optional" />
         </div>
 
         <div>

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { Profile } from '@/lib/types';
 import { ContactFields } from '@/components/ContactFields';
 import {
@@ -83,6 +83,24 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
       rows.push({ staffHeader: null, contact: c });
     }
   }
+
+  // Memoized so the object reference only changes when the underlying contact does — a fresh
+  // literal on every render was re-firing AddPartnerPanel's open-reset effect (which depends on
+  // this prop) on any unrelated re-render of this tab, silently flipping its busy state back to
+  // false mid-save and reopening the door to a real double-submit.
+  const addPartnerInitialValues = useMemo(
+    () =>
+      addingFor
+        ? {
+            name: addingFor.name,
+            phone: addingFor.phone ?? '',
+            email: addingFor.email ?? '',
+            notes: addingFor.notes || null,
+            source: `Connected by ${addingFor.owner?.full_name ?? 'a staff member'} (My Contacts)`,
+          }
+        : null,
+    [addingFor],
+  );
 
   return (
     <div className="space-y-4">
@@ -208,17 +226,7 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
         defaultOwnerId={null}
         onClose={() => setAddingFor(null)}
         onCreated={() => setAddingFor(null)}
-        initialValues={
-          addingFor
-            ? {
-                name: addingFor.name,
-                phone: addingFor.phone ?? '',
-                email: addingFor.email ?? '',
-                notes: addingFor.notes || null,
-                source: `Connected by ${addingFor.owner?.full_name ?? 'a staff member'} (My Contacts)`,
-              }
-            : null
-        }
+        initialValues={addPartnerInitialValues}
         onCreatedFromContact={(partnerId) => {
           if (addingFor) void markContactConverted(addingFor.id, partnerId).then(load);
         }}
