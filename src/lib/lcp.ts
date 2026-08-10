@@ -1492,7 +1492,7 @@ export async function uncompleteMilestone(familyId: string, milestoneId: number)
 export async function fetchHouseholdAdult(familyId: string): Promise<HouseholdAdult | null> {
   const { data, error } = await supabase
     .from('lcp_household_adults')
-    .select('id, family_id, full_name, phone, created_at')
+    .select('id, family_id, full_name, phone, date_of_birth, created_at')
     .eq('family_id', familyId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -1506,12 +1506,13 @@ export async function fetchHouseholdAdult(familyId: string): Promise<HouseholdAd
  */
 export async function saveHouseholdAdult(
   familyId: string,
-  adult: { full_name: string; phone: string },
+  adult: { full_name: string; phone: string; date_of_birth?: string | null },
 ): Promise<void> {
   const existing = await fetchHouseholdAdult(familyId);
   const row = {
     full_name: adult.full_name.trim(),
     phone: adult.phone.trim(),
+    date_of_birth: adult.date_of_birth || null,
   };
   if (existing) {
     const { error } = await supabase.from('lcp_household_adults').update(row).eq('id', existing.id);
@@ -1525,24 +1526,24 @@ export async function saveHouseholdAdult(
 export async function fetchHouseholdChildren(familyId: string): Promise<HouseholdChild[]> {
   const { data, error } = await supabase
     .from('lcp_household_children')
-    .select('id, family_id, full_name, created_at')
+    .select('id, family_id, full_name, date_of_birth, created_at')
     .eq('family_id', familyId)
     .order('created_at');
   if (error) throw new Error(error.message);
   return (data ?? []) as HouseholdChild[];
 }
 
-export async function addHouseholdChild(familyId: string, fullName: string): Promise<void> {
+export async function addHouseholdChild(familyId: string, fullName: string, dateOfBirth?: string | null): Promise<void> {
   const { error } = await supabase
     .from('lcp_household_children')
-    .insert({ family_id: familyId, full_name: fullName.trim() });
+    .insert({ family_id: familyId, full_name: fullName.trim(), date_of_birth: dateOfBirth || null });
   if (error) throw new Error(error.message);
 }
 
-export async function updateHouseholdChild(id: string, fullName: string): Promise<void> {
+export async function updateHouseholdChild(id: string, fullName: string, dateOfBirth?: string | null): Promise<void> {
   const { error } = await supabase
     .from('lcp_household_children')
-    .update({ full_name: fullName.trim() })
+    .update({ full_name: fullName.trim(), date_of_birth: dateOfBirth || null })
     .eq('id', id);
   if (error) throw new Error(error.message);
 }

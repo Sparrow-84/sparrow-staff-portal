@@ -37,6 +37,7 @@ export interface HouseholdAdult {
   family_id: string;
   full_name: string;
   phone: string;
+  date_of_birth: string | null;
   created_at: string;
 }
 
@@ -44,6 +45,7 @@ export interface HouseholdChild {
   id: string;
   family_id: string;
   full_name: string;
+  date_of_birth: string | null;
   created_at: string;
 }
 

@@ -71,7 +71,7 @@ import {
   updateHomework,
   updateHouseholdChild,
 } from '@/lib/lcp';
-import { money, dayLabel, dueLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
+import { money, dayLabel, dueLabel, isFeeOverdue, isOverdue, ageFromDob } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
 import { StaffThread } from './StaffThread';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
@@ -1310,7 +1310,10 @@ function GeneralInfoView({
       <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-4">
         <span className="field-label">Household</span>
         {adult ? (
-          <p className="mt-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{adult.full_name} · {adult.phone}</p>
+          <p className="mt-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+            {adult.full_name} · {adult.phone}
+            {adult.date_of_birth && ` · 🎂 ${dayLabel(adult.date_of_birth)} · Age ${ageFromDob(adult.date_of_birth)}`}
+          </p>
         ) : (
           <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No adult on file.</p>
         )}
@@ -1322,7 +1325,10 @@ function GeneralInfoView({
           ) : (
             <ul className="mt-1 space-y-0.5">
               {kids.map((c) => (
-                <li key={c.id} className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{c.full_name}</li>
+                <li key={c.id} className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+                  {c.full_name}
+                  {c.date_of_birth && ` · 🎂 ${dayLabel(c.date_of_birth)} · Age ${ageFromDob(c.date_of_birth)}`}
+                </li>
               ))}
             </ul>
           )}
@@ -1393,8 +1399,9 @@ function GeneralInfoEdit({
 }) {
   const [adultName, setAdultName] = useState(adult?.full_name ?? '');
   const [adultPhone, setAdultPhone] = useState(adult?.phone ?? '');
-  const [childRows, setChildRows] = useState<{ id: string | null; name: string }[]>(
-    kids.length ? kids.map((c) => ({ id: c.id, name: c.full_name })) : [{ id: null, name: '' }],
+  const [adultDob, setAdultDob] = useState(adult?.date_of_birth ?? '');
+  const [childRows, setChildRows] = useState<{ id: string | null; name: string; dob: string }[]>(
+    kids.length ? kids.map((c) => ({ id: c.id, name: c.full_name, dob: c.date_of_birth ?? '' })) : [{ id: null, name: '', dob: '' }],
   );
   const [emergencyContact, setEmergencyContact] = useState(family.emergency_contact_notes ?? '');
   const [moveInDate, setMoveInDate] = useState(family.move_in_date ?? '');
@@ -1405,8 +1412,11 @@ function GeneralInfoEdit({
   function setChildName(i: number, name: string) {
     setChildRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, name } : r)));
   }
+  function setChildDob(i: number, dob: string) {
+    setChildRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, dob } : r)));
+  }
   function addChildRow() {
-    setChildRows((rows) => [...rows, { id: null, name: '' }]);
+    setChildRows((rows) => [...rows, { id: null, name: '', dob: '' }]);
   }
   function removeChildRow(i: number) {
     setChildRows((rows) => rows.filter((_, idx) => idx !== i));
@@ -1415,8 +1425,8 @@ function GeneralInfoEdit({
   async function save() {
     setBusy(true);
     try {
-      if (adultName.trim() || adultPhone.trim()) {
-        await saveHouseholdAdult(family.id, { full_name: adultName, phone: adultPhone });
+      if (adultName.trim() || adultPhone.trim() || adultDob) {
+        await saveHouseholdAdult(family.id, { full_name: adultName, phone: adultPhone, date_of_birth: adultDob || null });
       }
 
       const originalIds = new Set(kids.map((c) => c.id));
@@ -1426,8 +1436,8 @@ function GeneralInfoEdit({
       }
       for (const row of childRows) {
         if (!row.name.trim()) continue;
-        if (row.id) await updateHouseholdChild(row.id, row.name);
-        else await addHouseholdChild(family.id, row.name);
+        if (row.id) await updateHouseholdChild(row.id, row.name, row.dob || null);
+        else await addHouseholdChild(family.id, row.name, row.dob || null);
       }
 
       const patch: Partial<{ emergency_contact_notes: string | null; move_in_date: string | null; toc_space_id: string | null }> = {};
@@ -1451,6 +1461,13 @@ function GeneralInfoEdit({
           <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Adult</span>
           <input value={adultName} onChange={(e) => setAdultName(e.target.value)} placeholder="Full name" className="field-input" />
           <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-2" />
+          <input
+            type="date"
+            value={adultDob}
+            onChange={(e) => setAdultDob(e.target.value)}
+            aria-label="Birthday"
+            className="field-input mt-2"
+          />
           <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Her email is the sign-in email at the top of this panel — no separate email needed here.</p>
         </div>
 
@@ -1469,6 +1486,13 @@ function GeneralInfoEdit({
                   value={row.name}
                   onChange={(e) => setChildName(i, e.target.value)}
                   placeholder="Full name"
+                />
+                <input
+                  type="date"
+                  className="field-input mt-0 w-40 shrink-0"
+                  value={row.dob}
+                  onChange={(e) => setChildDob(i, e.target.value)}
+                  aria-label="Birthday"
                 />
                 {childRows.length > 1 && (
                   <button onClick={() => removeChildRow(i)} className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">

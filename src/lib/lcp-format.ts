@@ -11,6 +11,17 @@ function parseLocalDate(iso: string): Date {
   return new Date(y, m - 1, d);
 }
 
+export function ageFromDob(iso: string | null): number | null {
+  if (!iso) return null;
+  const dob = parseLocalDate(iso);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const hadBirthdayThisYear =
+    today.getMonth() > dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() >= dob.getDate());
+  if (!hadBirthdayThisYear) age -= 1;
+  return age;
+}
+
 export function dayLabel(iso: string): string {
   const d = parseLocalDate(iso);
   const today = new Date();

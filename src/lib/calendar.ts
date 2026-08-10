@@ -542,6 +542,17 @@ async function syncStaffBirthdayEvents(): Promise<void> {
   }
 }
 
+/** Fire-and-forget: ensures LCP participant birthdays are current -- emits this year's +
+ *  next year's occurrence for active families, and prunes any belonging to families
+ *  that have since moved to the "Past" tab -- before reading. */
+async function syncLcpFamilyBirthdayEvents(): Promise<void> {
+  try {
+    await supabase.rpc('emit_lcp_family_birthday_events');
+  } catch {
+    // best-effort — a failed sync just means birthdays wait for the next calendar load
+  }
+}
+
 /** Fire-and-forget: ensures this year's + next year's stat holidays exist before reading. */
 async function syncStatHolidayEvents(): Promise<void> {
   try {
@@ -562,6 +573,7 @@ async function syncGrantCalendarEvents(): Promise<void> {
 
 export async function fetchCalendar(): Promise<CalendarEvent[]> {
   await syncStaffBirthdayEvents();
+  await syncLcpFamilyBirthdayEvents();
   await syncStatHolidayEvents();
   await syncGrantCalendarEvents();
   try {
