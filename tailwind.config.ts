@@ -18,14 +18,16 @@ const config: Config = {
           mist: '#F5F5F5',
           sage: '#E8F2EC',
           cream: '#FFF8E1',
+          // Matches the Notes-tab mockup exactly (notes-tab-mockup.html), not a
+          // generic neutral-gray dark theme — every value has the same green cast.
           dark: {
-            bg: '#141416',
-            surface: '#1C1D1F',
-            surface2: '#242628',
-            border: '#33353A',
-            ink: '#F2F2F0',
-            gray: '#9A9A9E',
-            green: '#5FB37D',
+            bg: '#10150F',
+            surface: '#171E17',
+            surface2: '#1D2620',
+            border: '#29352C',
+            ink: '#E9EFE7',
+            gray: '#8B9A8C',
+            green: '#3E8E5C',
           },
         },
         priority: {
