@@ -3,6 +3,7 @@ import { localDate } from '@/lib/date';
 import {
   addGrantLink,
   addGrantNotification,
+  deleteGrant,
   deleteGrantDocument,
   deleteGrantLink,
   fetchGrantDocuments,
@@ -106,7 +107,7 @@ export function GrantPanel({
       </div>
 
       {tab === 'details' && (
-        <DetailsTab grant={grant} profiles={profiles} onChanged={changed}>
+        <DetailsTab grant={grant} profiles={profiles} onChanged={changed} onDeleted={() => { onChanged(); onClose(); }}>
           <LinksTab grantId={grant.id} links={links} currentUserId={currentUserId} onChanged={changed} />
           <DocumentsTab grantId={grant.id} docs={documents} currentUserId={currentUserId} onChanged={changed} />
         </DetailsTab>
@@ -125,11 +126,13 @@ function DetailsTab({
   grant,
   profiles,
   onChanged,
+  onDeleted,
   children,
 }: {
   grant: Grant;
   profiles: Profile[];
   onChanged: () => void;
+  onDeleted: () => void;
   children: ReactNode;
 }) {
   const [form, setForm] = useState<GrantInput>(() => toInput(grant));
@@ -137,6 +140,8 @@ function DetailsTab({
   const [certBusy, setCertBusy] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [autoSaveLabel, setAutoSaveLabel] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const skipNextAutosave = useRef(true);
 
   const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
@@ -205,6 +210,17 @@ function DetailsTab({
       onChanged();
     } finally {
       setStatusBusy(false);
+    }
+  }
+
+  async function remove() {
+    setDeleteBusy(true);
+    try {
+      await deleteGrant(grant.id);
+      onDeleted();
+    } finally {
+      setDeleteBusy(false);
+      setConfirmDelete(false);
     }
   }
 
@@ -383,6 +399,23 @@ function DetailsTab({
 
       <hr className="border-sparrow-rule" />
       {children}
+
+      <hr className="border-sparrow-rule" />
+      <div className="flex items-center justify-end">
+        {confirmDelete ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-sparrow-ink">Delete this grant permanently?</span>
+            <button onClick={() => setConfirmDelete(false)} className="btn-ghost">Cancel</button>
+            <button onClick={remove} disabled={deleteBusy} className="rounded-lg bg-priority-p1 px-3 py-1.5 text-sm font-medium text-white">
+              Delete
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDelete(true)} className="text-xs font-medium text-sparrow-gray hover:text-priority-p1">
+            Delete this grant
+          </button>
+        )}
+      </div>
     </div>
   );
 }
