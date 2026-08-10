@@ -242,7 +242,7 @@ export function PartnershipsRoom() {
     [visible],
   );
 
-  if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading partnerships…</p>;
+  if (loading) return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading partnerships…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
   const selected = partnerId
@@ -256,7 +256,7 @@ export function PartnershipsRoom() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold">Partnerships</h1>
-          <p className="mt-1 text-sm text-sparrow-gray">
+          <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {stats.total} relationships · {stats.overdue} overdue · {stats.dueSoon} due soon
             {stats.noCadence > 0 && ` · ${stats.noCadence} without a cadence`}
           </p>
@@ -265,7 +265,7 @@ export function PartnershipsRoom() {
           <button
             onClick={() => setHelpOpen(true)}
             title="How this room works"
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule text-sm font-medium text-sparrow-gray transition hover:border-sparrow-green hover:text-sparrow-green"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule dark:border-sparrow-dark-border text-sm font-medium text-sparrow-gray dark:text-sparrow-dark-gray transition hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
           >
             ?
           </button>
@@ -279,15 +279,15 @@ export function PartnershipsRoom() {
       </div>
 
       {/* Tab bar */}
-      <div className="mt-6 flex border-b border-sparrow-rule">
+      <div className="mt-6 flex border-b border-sparrow-rule dark:border-sparrow-dark-border">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
             className={`px-4 py-2 text-sm font-medium transition ${
               activeTab === t.key
-                ? '-mb-px border-b-2 border-sparrow-green text-sparrow-green'
-                : 'text-sparrow-gray hover:text-sparrow-ink'
+                ? '-mb-px border-b-2 border-sparrow-green dark:border-sparrow-dark-green text-sparrow-green dark:text-sparrow-dark-green'
+                : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
             }`}
           >
             {t.label}
@@ -328,7 +328,7 @@ export function PartnershipsRoom() {
                 🔴 {stats.overdue} relationship{stats.overdue > 1 ? 's are' : ' is'} overdue for a touchpoint.
                 They've been added to each owner's Incoming Tasks.
               </span>
-              <button onClick={() => openPartner(firstOverdue.id)} className="shrink-0 font-medium text-sparrow-green">
+              <button onClick={() => openPartner(firstOverdue.id)} className="shrink-0 font-medium text-sparrow-green dark:text-sparrow-dark-green">
                 Open {firstOverdue.name} →
               </button>
             </div>
@@ -353,7 +353,7 @@ export function PartnershipsRoom() {
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-lg leading-none text-sparrow-gray hover:text-sparrow-ink"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-lg leading-none text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                 aria-label="Clear search"
               >
                 ×
@@ -373,8 +373,8 @@ export function PartnershipsRoom() {
                     onClick={() => setFilter(f.key)}
                     className={`rounded-lg border px-3 py-1.5 font-medium transition ${
                       filter === f.key
-                        ? 'border-sparrow-green bg-sparrow-green text-white'
-                        : 'border-sparrow-rule bg-white text-sparrow-gray hover:text-sparrow-ink'
+                        ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green text-white'
+                        : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                     }`}
                   >
                     {f.label} <span className="opacity-70">{count}</span>
@@ -386,8 +386,8 @@ export function PartnershipsRoom() {
                   onClick={() => setFilter(filter === 'archived' ? 'all' : 'archived')}
                   className={`rounded-lg border px-3 py-1.5 font-medium transition ${
                     filter === 'archived'
-                      ? 'border-sparrow-gray bg-sparrow-gray text-white'
-                      : 'border-sparrow-rule bg-white text-sparrow-gray hover:text-sparrow-ink'
+                      ? 'border-sparrow-gray dark:border-sparrow-dark-border bg-sparrow-gray dark:bg-sparrow-dark-border text-white'
+                      : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                   }`}
                 >
                   Archived <span className="opacity-70">{archivedPartners.length}</span>
@@ -396,7 +396,7 @@ export function PartnershipsRoom() {
             </div>
 
             {/* View toggle */}
-            <div className="flex shrink-0 items-center gap-1 rounded-lg border border-sparrow-rule bg-white p-0.5">
+            <div className="flex shrink-0 items-center gap-1 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-0.5">
               {(['table', 'tile'] as View[]).map((v) => (
                 <button
                   key={v}
@@ -404,7 +404,7 @@ export function PartnershipsRoom() {
                   className={`rounded px-2.5 py-1 text-xs font-medium capitalize transition ${
                     view === v
                       ? 'bg-sparrow-green text-white'
-                      : 'text-sparrow-gray hover:text-sparrow-ink'
+                      : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                   }`}
                 >
                   {v}

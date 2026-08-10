@@ -189,7 +189,7 @@ export function AddPartnerPanel({
     >
       <div className="space-y-4">
         {initialValues && (
-          <p className="rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green">
+          <p className="rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green dark:text-sparrow-dark-green">
             Prefilled from {initialValues.name}'s My Contacts entry. Pick a type and confirm the cadence to add them to the Directory.
           </p>
         )}
@@ -235,7 +235,7 @@ export function AddPartnerPanel({
             onChange={(next) => setSecondaryTypes(next as PartnerType[])}
             placeholder="None"
           />
-          <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">
+          <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
             Someone who's more than one thing to Sparrow — e.g. a donor who's also a prayer
             volunteer. Cadence still follows the main Type above; tag the other roles here so
             they also show up under those Directory tabs.
@@ -254,7 +254,7 @@ export function AddPartnerPanel({
                 <option key={p.id} value={p.id}>{p.full_name}</option>
               ))}
           </select>
-          <p className="mt-1 text-xs text-sparrow-gray">
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             Every relationship needs a named owner — it's the precondition for stewardship.
           </p>
         </div>
@@ -276,7 +276,7 @@ export function AddPartnerPanel({
             />
           </div>
         </div>
-        <p className="-mt-2 text-xs text-sparrow-gray">
+        <p className="-mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           Cadence defaulted from the type ({PARTNER_TYPE[type].label}); lead time defaults to {DEFAULT_LEAD_TIME} days'
           advance warning. Both required — adjust to the rhythm this relationship needs.
         </p>

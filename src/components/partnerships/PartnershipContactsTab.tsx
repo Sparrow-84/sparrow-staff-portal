@@ -105,20 +105,20 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-sparrow-gray">
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           Every personal contact staff across Sparrow have logged as worth staying connected to. This is a
           read-only pool for Partnerships to consider reaching out to — not a task list.
         </p>
-        <div className="flex shrink-0 items-center gap-1 rounded-full bg-sparrow-mist p-0.5 text-xs">
+        <div className="flex shrink-0 items-center gap-1 rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-0.5 text-xs">
           <button
             onClick={() => setSortMode('name')}
-            className={`rounded-full px-2.5 py-1 font-medium ${sortMode === 'name' ? 'bg-white text-sparrow-ink shadow-sm' : 'text-sparrow-gray'}`}
+            className={`rounded-full px-2.5 py-1 font-medium ${sortMode === 'name' ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-ink dark:text-sparrow-dark-ink shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}
           >
             Sort: Name
           </button>
           <button
             onClick={() => setSortMode('staff')}
-            className={`rounded-full px-2.5 py-1 font-medium ${sortMode === 'staff' ? 'bg-white text-sparrow-ink shadow-sm' : 'text-sparrow-gray'}`}
+            className={`rounded-full px-2.5 py-1 font-medium ${sortMode === 'staff' ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-ink dark:text-sparrow-dark-ink shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}
           >
             Sort: Staff member
           </button>
@@ -126,51 +126,51 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
       </div>
 
       {loading ? (
-        <p className="py-8 text-center text-sm text-sparrow-gray">Loading…</p>
+        <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
       ) : contacts.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-sparrow-rule p-8 text-center text-sm text-sparrow-gray">
+        <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           No staff contacts logged yet.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-sparrow-rule bg-white">
+        <div className="overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-sparrow-rule text-left">
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Name</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Organization / context</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Connection</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Contact info</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Notes</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Staff member</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Added</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray"></th>
+              <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border text-left">
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Name</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Organization / context</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Connection</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Contact info</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Notes</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Staff member</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Added</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sparrow-rule">
+            <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
               {rows.map(({ staffHeader, contact: c }) => (
                 <Fragment key={c.id}>
                   {staffHeader && (
                     <tr key={`hdr-${c.id}`} className="bg-sparrow-mist/60">
-                      <td colSpan={8} className="px-3 py-1.5 text-xs font-semibold text-sparrow-ink">{staffHeader}</td>
+                      <td colSpan={8} className="px-3 py-1.5 text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{staffHeader}</td>
                     </tr>
                   )}
                   <tr key={c.id}>
-                    <td className="px-3 py-2 font-medium text-sparrow-ink">{c.name}</td>
-                    <td className="px-3 py-2 text-sparrow-gray">{c.organization || '—'}</td>
-                    <td className="px-3 py-2 text-sparrow-gray">{c.relationship || '—'}</td>
-                    <td className="px-3 py-2 text-sparrow-gray">
+                    <td className="px-3 py-2 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{c.name}</td>
+                    <td className="px-3 py-2 text-sparrow-gray dark:text-sparrow-dark-gray">{c.organization || '—'}</td>
+                    <td className="px-3 py-2 text-sparrow-gray dark:text-sparrow-dark-gray">{c.relationship || '—'}</td>
+                    <td className="px-3 py-2 text-sparrow-gray dark:text-sparrow-dark-gray">
                       {c.phone && <div>{c.phone}</div>}
                       {c.email && <div>{c.email}</div>}
                       {!c.phone && !c.email && '—'}
                     </td>
-                    <td className="px-3 py-2 text-sparrow-gray">{c.notes || '—'}</td>
-                    <td className="px-3 py-2 text-sparrow-gray">{c.owner?.full_name ?? 'Unknown'}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sparrow-gray">{formatDate(c.created_at)}</td>
+                    <td className="px-3 py-2 text-sparrow-gray dark:text-sparrow-dark-gray">{c.notes || '—'}</td>
+                    <td className="px-3 py-2 text-sparrow-gray dark:text-sparrow-dark-gray">{c.owner?.full_name ?? 'Unknown'}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sparrow-gray dark:text-sparrow-dark-gray">{formatDate(c.created_at)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => startEdit(c)}
-                          className="rounded p-1 text-sparrow-gray/70 hover:text-sparrow-ink"
+                          className="rounded p-1 text-sparrow-gray/70 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                           title="Edit"
                           aria-label={`Edit ${c.name}`}
                         >
@@ -180,13 +180,13 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
                           </svg>
                         </button>
                         {c.converted_to_partner_id ? (
-                          <span className="rounded-full bg-sparrow-green/10 px-2 py-0.5 text-xs font-medium text-sparrow-green">
+                          <span className="rounded-full bg-sparrow-green/10 px-2 py-0.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
                             ✓ In Directory{c.converted_partner ? `: ${c.converted_partner.name}` : ''}
                           </span>
                         ) : (
                           <button
                             onClick={() => setAddingFor(c)}
-                            className="rounded-md bg-sparrow-mist px-2.5 py-1 text-xs font-medium text-sparrow-ink hover:bg-sparrow-rule"
+                            className="rounded-md bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2.5 py-1 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-rule dark:hover:bg-sparrow-dark-border"
                           >
                             Add to Directory
                           </button>
