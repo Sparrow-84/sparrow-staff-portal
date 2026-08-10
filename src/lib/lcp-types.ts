@@ -46,7 +46,22 @@ export interface HouseholdChild {
   family_id: string;
   full_name: string;
   date_of_birth: string | null;
+  allergies_general: string | null;
+  allergies_food: string | null;
+  physical_limitations: string | null;
+  mental_behavioral: string | null;
+  special_instructions: string | null;
   created_at: string;
+}
+
+export interface ChildInput {
+  full_name: string;
+  date_of_birth?: string | null;
+  allergies_general?: string | null;
+  allergies_food?: string | null;
+  physical_limitations?: string | null;
+  mental_behavioral?: string | null;
+  special_instructions?: string | null;
 }
 
 export interface TocSpaceSlim {

@@ -6,6 +6,7 @@ import {
   GOAL_AREA_LABEL,
   GOAL_AREAS,
   HOMEWORK_AREAS,
+  type ChildInput,
   type ComplianceNote,
   type CurriculumSession,
   type Family,
@@ -78,10 +79,11 @@ import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { ComplianceLabelPicker } from './ComplianceLabelPicker';
 import { LabelPill } from '@/components/LabelPill';
 
-export type FamilyDetailTab = 'general' | 'progress' | 'finance' | 'compliance' | 'goals' | 'homework' | 'messages' | 'notes';
+export type FamilyDetailTab = 'general' | 'children' | 'progress' | 'finance' | 'compliance' | 'goals' | 'homework' | 'messages' | 'notes';
 type Tab = FamilyDetailTab;
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General Info' },
+  { key: 'children', label: 'Children' },
   { key: 'progress', label: 'Progress' },
   { key: 'finance', label: 'Finance' },
   { key: 'compliance', label: 'Compliance' },
@@ -206,8 +208,18 @@ export function FamilyDetailPanel({
           family={family}
           tocSpaces={tocSpaces}
           householdAdult={householdAdult}
-          householdChildren={householdChildren}
           feePayments={feePayments}
+          onChanged={() => {
+            void reloadDetail();
+            onChanged();
+          }}
+        />
+      )}
+      {tab === 'children' && (
+        <ChildrenTab
+          key={family.id}
+          familyId={family.id}
+          kids={householdChildren}
           onChanged={() => {
             void reloadDetail();
             onChanged();
@@ -1190,14 +1202,12 @@ function GeneralInfoTab({
   family,
   tocSpaces,
   householdAdult,
-  householdChildren,
   feePayments,
   onChanged,
 }: {
   family: Family;
   tocSpaces: TocSpaceSlim[];
   householdAdult: HouseholdAdult | null;
-  householdChildren: HouseholdChild[];
   feePayments: ProgramFeePayment[];
   onChanged: () => void;
 }) {
@@ -1227,7 +1237,6 @@ function GeneralInfoTab({
       family={family}
       tocSpaces={tocSpaces}
       adult={householdAdult}
-      kids={householdChildren}
       feePayments={feePayments}
       moveInRequest={moveInRequest}
       onEdit={() => setMode('edit')}
@@ -1237,7 +1246,6 @@ function GeneralInfoTab({
       family={family}
       tocSpaces={tocSpaces}
       adult={householdAdult}
-      kids={householdChildren}
       feePayments={feePayments}
       onDone={async () => {
         await onChanged();
@@ -1282,7 +1290,6 @@ function GeneralInfoView({
   family,
   tocSpaces,
   adult,
-  kids,
   feePayments,
   moveInRequest,
   onEdit,
@@ -1290,7 +1297,6 @@ function GeneralInfoView({
   family: Family;
   tocSpaces: TocSpaceSlim[];
   adult: HouseholdAdult | null;
-  kids: HouseholdChild[];
   feePayments: ProgramFeePayment[];
   moveInRequest: LcpMoveInRequest | null;
   onEdit: () => void;
@@ -1317,22 +1323,7 @@ function GeneralInfoView({
         ) : (
           <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No adult on file.</p>
         )}
-
-        <div className="mt-3">
-          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Children</span>
-          {kids.length === 0 ? (
-            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">None on file.</p>
-          ) : (
-            <ul className="mt-1 space-y-0.5">
-              {kids.map((c) => (
-                <li key={c.id} className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
-                  {c.full_name}
-                  {c.date_of_birth && ` · 🎂 ${dayLabel(c.date_of_birth)} · Age ${ageFromDob(c.date_of_birth)}`}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Children's names, birthdays, and childcare info now live on the Children tab.</p>
 
         <div className="mt-3">
           <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Emergency contact</span>
@@ -1384,7 +1375,6 @@ function GeneralInfoEdit({
   family,
   tocSpaces,
   adult,
-  kids,
   feePayments,
   onDone,
   onCancel,
@@ -1392,7 +1382,6 @@ function GeneralInfoEdit({
   family: Family;
   tocSpaces: TocSpaceSlim[];
   adult: HouseholdAdult | null;
-  kids: HouseholdChild[];
   feePayments: ProgramFeePayment[];
   onDone: () => void;
   onCancel: () => void;
@@ -1400,44 +1389,17 @@ function GeneralInfoEdit({
   const [adultName, setAdultName] = useState(adult?.full_name ?? '');
   const [adultPhone, setAdultPhone] = useState(adult?.phone ?? '');
   const [adultDob, setAdultDob] = useState(adult?.date_of_birth ?? '');
-  const [childRows, setChildRows] = useState<{ id: string | null; name: string; dob: string }[]>(
-    kids.length ? kids.map((c) => ({ id: c.id, name: c.full_name, dob: c.date_of_birth ?? '' })) : [{ id: null, name: '', dob: '' }],
-  );
   const [emergencyContact, setEmergencyContact] = useState(family.emergency_contact_notes ?? '');
   const [moveInDate, setMoveInDate] = useState(family.move_in_date ?? '');
   const [spaceId, setSpaceId] = useState(family.toc_space_id ?? '');
   const [busy, setBusy] = useState(false);
   const overdue = isFeeOverdue(family.move_in_date, family.status, feePayments.map((p) => p.paid_date));
 
-  function setChildName(i: number, name: string) {
-    setChildRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, name } : r)));
-  }
-  function setChildDob(i: number, dob: string) {
-    setChildRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, dob } : r)));
-  }
-  function addChildRow() {
-    setChildRows((rows) => [...rows, { id: null, name: '', dob: '' }]);
-  }
-  function removeChildRow(i: number) {
-    setChildRows((rows) => rows.filter((_, idx) => idx !== i));
-  }
-
   async function save() {
     setBusy(true);
     try {
       if (adultName.trim() || adultPhone.trim() || adultDob) {
         await saveHouseholdAdult(family.id, { full_name: adultName, phone: adultPhone, date_of_birth: adultDob || null });
-      }
-
-      const originalIds = new Set(kids.map((c) => c.id));
-      const keptIds = new Set(childRows.filter((r) => r.id).map((r) => r.id));
-      for (const id of originalIds) {
-        if (!keptIds.has(id)) await deleteHouseholdChild(id!);
-      }
-      for (const row of childRows) {
-        if (!row.name.trim()) continue;
-        if (row.id) await updateHouseholdChild(row.id, row.name, row.dob || null);
-        else await addHouseholdChild(family.id, row.name, row.dob || null);
       }
 
       const patch: Partial<{ emergency_contact_notes: string | null; move_in_date: string | null; toc_space_id: string | null }> = {};
@@ -1469,39 +1431,7 @@ function GeneralInfoEdit({
             className="field-input mt-2"
           />
           <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Her email is the sign-in email at the top of this panel — no separate email needed here.</p>
-        </div>
-
-        <div className="mt-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Children</span>
-            <button onClick={addChildRow} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
-              + Add child
-            </button>
-          </div>
-          <div className="mt-1 space-y-2">
-            {childRows.map((row, i) => (
-              <div key={i} className="flex gap-2">
-                <input
-                  className="field-input mt-0 flex-1"
-                  value={row.name}
-                  onChange={(e) => setChildName(i, e.target.value)}
-                  placeholder="Full name"
-                />
-                <input
-                  type="date"
-                  className="field-input mt-0 w-40 shrink-0"
-                  value={row.dob}
-                  onChange={(e) => setChildDob(i, e.target.value)}
-                  aria-label="Birthday"
-                />
-                {childRows.length > 1 && (
-                  <button onClick={() => removeChildRow(i)} className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
-                    Remove
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+          <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Children's names, birthdays, and childcare info now live on the Children tab.</p>
         </div>
 
         <div className="mt-4">
@@ -1563,6 +1493,245 @@ function GeneralInfoEdit({
         <button onClick={onCancel} disabled={busy} className="btn-ghost">
           Cancel
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Children ─────────────────────────────────────────────────────────
+// Childcare info from the signed Childcare Waiver/Release form. Kept off
+// General Info and off the Twin Oaks sync (see migration 0148) -- this is
+// staff-only, LCP-specific info for whoever's actually supervising the kids.
+function ChildrenTab({
+  familyId,
+  kids,
+  onChanged,
+}: {
+  familyId: string;
+  kids: HouseholdChild[];
+  onChanged: () => void;
+}) {
+  const [editingId, setEditingId] = useState<string | 'new' | null>(null);
+
+  async function afterSave() {
+    setEditingId(null);
+    onChanged();
+    await requestOrSyncLcpToc(familyId);
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+        From the signed Childcare Waiver/Release form. Staff-only — never shown on the participant portal.
+      </p>
+
+      {kids.length === 0 && editingId !== 'new' && (
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No children on file yet.</p>
+      )}
+
+      <div className="space-y-3">
+        {kids.map((child) =>
+          editingId === child.id ? (
+            <ChildEditCard
+              key={child.id}
+              familyId={familyId}
+              child={child}
+              onDone={afterSave}
+              onCancel={() => setEditingId(null)}
+            />
+          ) : (
+            <ChildViewCard key={child.id} child={child} onEdit={() => setEditingId(child.id)} />
+          ),
+        )}
+      </div>
+
+      {editingId === 'new' ? (
+        <ChildEditCard familyId={familyId} onDone={afterSave} onCancel={() => setEditingId(null)} />
+      ) : (
+        <button onClick={() => setEditingId('new')} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+          + Add child
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ChildViewCard({ child, onEdit }: { child: HouseholdChild; onEdit: () => void }) {
+  const fields: [string, string | null][] = [
+    ['Allergies (non-food)', child.allergies_general],
+    ['Food allergies / dietary restrictions', child.allergies_food],
+    ['Physical/sensory limitations', child.physical_limitations],
+    ['Mental/behavioral', child.mental_behavioral],
+    ['Other special instructions', child.special_instructions],
+  ];
+  const filled = fields.filter(([, v]) => v);
+
+  return (
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{child.full_name}</p>
+          {child.date_of_birth && (
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              🎂 {dayLabel(child.date_of_birth)} · Age {ageFromDob(child.date_of_birth)}
+            </p>
+          )}
+        </div>
+        <button onClick={onEdit} className="shrink-0 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+          Edit
+        </button>
+      </div>
+      {filled.length > 0 ? (
+        <dl className="mt-3 space-y-1.5">
+          {filled.map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">{label}</dt>
+              <dd className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No allergies or special instructions on file.</p>
+      )}
+    </div>
+  );
+}
+
+function ChildEditCard({
+  familyId,
+  child,
+  onDone,
+  onCancel,
+}: {
+  familyId: string;
+  child?: HouseholdChild;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [fullName, setFullName] = useState(child?.full_name ?? '');
+  const [dob, setDob] = useState(child?.date_of_birth ?? '');
+  const [allergiesGeneral, setAllergiesGeneral] = useState(child?.allergies_general ?? '');
+  const [allergiesFood, setAllergiesFood] = useState(child?.allergies_food ?? '');
+  const [physicalLimitations, setPhysicalLimitations] = useState(child?.physical_limitations ?? '');
+  const [mentalBehavioral, setMentalBehavioral] = useState(child?.mental_behavioral ?? '');
+  const [specialInstructions, setSpecialInstructions] = useState(child?.special_instructions ?? '');
+  const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function save() {
+    if (!fullName.trim()) return;
+    setBusy(true);
+    const payload: ChildInput = {
+      full_name: fullName,
+      date_of_birth: dob || null,
+      allergies_general: allergiesGeneral || null,
+      allergies_food: allergiesFood || null,
+      physical_limitations: physicalLimitations || null,
+      mental_behavioral: mentalBehavioral || null,
+      special_instructions: specialInstructions || null,
+    };
+    if (child) await updateHouseholdChild(child.id, payload);
+    else await addHouseholdChild(familyId, payload);
+    setBusy(false);
+    onDone();
+  }
+
+  async function remove() {
+    if (!child) return;
+    setBusy(true);
+    await deleteHouseholdChild(child.id);
+    setBusy(false);
+    onDone();
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-sparrow-green/40 dark:border-sparrow-dark-green/40 p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <span className="field-label">Full name</span>
+          <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name" className="field-input" />
+        </div>
+        <div>
+          <span className="field-label">Birthday</span>
+          <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="field-input" />
+        </div>
+      </div>
+      <div>
+        <span className="field-label">Allergies (non-food — bee stings, medications, etc.)</span>
+        <input
+          value={allergiesGeneral}
+          onChange={(e) => setAllergiesGeneral(e.target.value)}
+          placeholder="None on file"
+          className="field-input"
+        />
+      </div>
+      <div>
+        <span className="field-label">Food allergies / dietary restrictions</span>
+        <input
+          value={allergiesFood}
+          onChange={(e) => setAllergiesFood(e.target.value)}
+          placeholder="None on file"
+          className="field-input"
+        />
+      </div>
+      <div>
+        <span className="field-label">Physical/sensory limitations (hearing, sight, mobility, etc.)</span>
+        <input
+          value={physicalLimitations}
+          onChange={(e) => setPhysicalLimitations(e.target.value)}
+          placeholder="None on file"
+          className="field-input"
+        />
+      </div>
+      <div>
+        <span className="field-label">Mental/behavioral</span>
+        <input
+          value={mentalBehavioral}
+          onChange={(e) => setMentalBehavioral(e.target.value)}
+          placeholder="None on file"
+          className="field-input"
+        />
+      </div>
+      <div>
+        <span className="field-label">Other special instructions</span>
+        <textarea
+          value={specialInstructions}
+          onChange={(e) => setSpecialInstructions(e.target.value)}
+          rows={2}
+          placeholder="Anything else staff or a childcare volunteer should know"
+          className="field-input"
+        />
+      </div>
+
+      <div className="flex items-center justify-between pt-1">
+        <div className="flex gap-2">
+          <button onClick={save} disabled={busy || !fullName.trim()} className="btn-primary">
+            {busy ? 'Saving…' : 'Save'}
+          </button>
+          <button onClick={onCancel} disabled={busy} className="btn-ghost">
+            Cancel
+          </button>
+        </div>
+        {child &&
+          (confirmDelete ? (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-sparrow-gray dark:text-sparrow-dark-gray">Remove {child.full_name}?</span>
+              <button onClick={remove} disabled={busy} className="font-medium text-priority-p1">
+                Yes, remove
+              </button>
+              <button onClick={() => setConfirmDelete(false)} disabled={busy} className="text-sparrow-gray dark:text-sparrow-dark-gray">
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              disabled={busy}
+              className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
+            >
+              Remove child
+            </button>
+          ))}
       </div>
     </div>
   );

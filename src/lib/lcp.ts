@@ -21,6 +21,7 @@ import type {
   Homework,
   HomeworkArea,
   HomeworkStatus,
+  ChildInput,
   HouseholdAdult,
   HouseholdChild,
   HousingSavingsMonth,
@@ -173,7 +174,7 @@ export async function createFamily(input: FamilyInput): Promise<void> {
   }
   await saveHouseholdAdult(data.id, input.adult);
   for (const name of input.children) {
-    if (name.trim()) await addHouseholdChild(data.id, name);
+    if (name.trim()) await addHouseholdChild(data.id, { full_name: name });
   }
 }
 
@@ -1526,25 +1527,36 @@ export async function saveHouseholdAdult(
 export async function fetchHouseholdChildren(familyId: string): Promise<HouseholdChild[]> {
   const { data, error } = await supabase
     .from('lcp_household_children')
-    .select('id, family_id, full_name, date_of_birth, created_at')
+    .select(
+      'id, family_id, full_name, date_of_birth, allergies_general, allergies_food, physical_limitations, mental_behavioral, special_instructions, created_at',
+    )
     .eq('family_id', familyId)
     .order('created_at');
   if (error) throw new Error(error.message);
   return (data ?? []) as HouseholdChild[];
 }
 
-export async function addHouseholdChild(familyId: string, fullName: string, dateOfBirth?: string | null): Promise<void> {
+function childRow(child: ChildInput) {
+  return {
+    full_name: child.full_name.trim(),
+    date_of_birth: child.date_of_birth || null,
+    allergies_general: child.allergies_general?.trim() || null,
+    allergies_food: child.allergies_food?.trim() || null,
+    physical_limitations: child.physical_limitations?.trim() || null,
+    mental_behavioral: child.mental_behavioral?.trim() || null,
+    special_instructions: child.special_instructions?.trim() || null,
+  };
+}
+
+export async function addHouseholdChild(familyId: string, child: ChildInput): Promise<void> {
   const { error } = await supabase
     .from('lcp_household_children')
-    .insert({ family_id: familyId, full_name: fullName.trim(), date_of_birth: dateOfBirth || null });
+    .insert({ family_id: familyId, ...childRow(child) });
   if (error) throw new Error(error.message);
 }
 
-export async function updateHouseholdChild(id: string, fullName: string, dateOfBirth?: string | null): Promise<void> {
-  const { error } = await supabase
-    .from('lcp_household_children')
-    .update({ full_name: fullName.trim(), date_of_birth: dateOfBirth || null })
-    .eq('id', id);
+export async function updateHouseholdChild(id: string, child: ChildInput): Promise<void> {
+  const { error } = await supabase.from('lcp_household_children').update(childRow(child)).eq('id', id);
   if (error) throw new Error(error.message);
 }
 
