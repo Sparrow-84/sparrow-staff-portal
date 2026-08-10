@@ -4,8 +4,15 @@ export function money(cents: number): string {
   );
 }
 
+// Date-only strings ("YYYY-MM-DD") must be parsed as local midnight, not UTC
+// midnight -- `new Date(iso)` shifts a day behind in any timezone west of UTC.
+function parseLocalDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export function dayLabel(iso: string): string {
-  const d = new Date(iso);
+  const d = parseLocalDate(iso);
   const today = new Date();
   const tomorrow = new Date();
   tomorrow.setDate(today.getDate() + 1);
@@ -40,9 +47,9 @@ export function isFeeOverdue(
   const today = new Date();
   const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
   const lastMonthStart = new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), 1);
-  if (new Date(moveInDate) > lastMonthEnd) return false;
+  if (parseLocalDate(moveInDate) > lastMonthEnd) return false;
   return !paidDates.some((iso) => {
-    const d = new Date(iso);
+    const d = parseLocalDate(iso);
     return d >= lastMonthStart && d <= lastMonthEnd;
   });
 }
@@ -73,8 +80,7 @@ export function computeFamilyStatus(
 export function dueLabel(iso: string | null): string {
   if (!iso) return 'no due date';
   if (isOverdue(iso)) {
-    const [y, m, d] = iso.split('-').map(Number);
-    const label = new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const label = parseLocalDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     return `overdue · ${label}`;
   }
   return `due ${dayLabel(iso)}`;
