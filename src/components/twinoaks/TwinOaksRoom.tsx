@@ -195,7 +195,7 @@ export function TwinOaksRoom() {
     setWoOpen(true);
   }
 
-  if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading Twin Oaks…</p>;
+  if (loading) return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading Twin Oaks…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
   return (
@@ -204,7 +204,7 @@ export function TwinOaksRoom() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold">Twin Oaks</h1>
-          <p className="mt-1 text-sm text-sparrow-gray">
+          <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {occupied} occupied · {vacant} vacant · {openWorkOrders.length} open work orders
           </p>
         </div>
@@ -227,16 +227,16 @@ export function TwinOaksRoom() {
             >
               <span>
                 🏡 <strong>{r.family_display_name}</strong> from LCP is moving into <strong>{r.space_label}</strong>
-                {r.status === 'needs_info' && <span className="ml-2 text-xs text-sparrow-gray">(you flagged a question)</span>}
+                {r.status === 'needs_info' && <span className="ml-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">(you flagged a question)</span>}
               </span>
-              <span className="font-medium text-sparrow-green">Review →</span>
+              <span className="font-medium text-sparrow-green dark:text-sparrow-dark-green">Review →</span>
             </button>
           ))}
         </div>
       )}
 
       {/* Tabs */}
-      <div className="mt-6 flex flex-wrap gap-1 rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
+      <div className="mt-6 flex flex-wrap gap-1 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-1 text-sm">
         {(
           [
             { key: 'property',   label: 'Property' },
@@ -251,7 +251,7 @@ export function TwinOaksRoom() {
             key={key}
             onClick={() => setTab(key)}
             className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              tab === key ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
+              tab === key ? 'bg-sparrow-green text-white' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
             }`}
           >
             {label}
@@ -285,22 +285,22 @@ export function TwinOaksRoom() {
           <div className="mb-4 flex items-start justify-between gap-4">
             <div className="flex flex-wrap gap-4">
               {LOT_LEGEND.map((l) => (
-                <span key={l.key} className="flex items-center gap-1.5 text-xs text-sparrow-gray">
+                <span key={l.key} className="flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   <span className={`h-3 w-3 rounded border ${l.classes}`} aria-hidden />
                   {l.label}
                 </span>
               ))}
             </div>
-            <div className="flex shrink-0 overflow-hidden rounded-lg border border-sparrow-rule">
+            <div className="flex shrink-0 overflow-hidden rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`px-3 py-1.5 text-xs font-medium transition ${viewMode === 'grid' ? 'bg-gray-800 text-white' : 'bg-white text-sparrow-gray hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 text-xs font-medium transition ${viewMode === 'grid' ? 'bg-gray-800 text-white dark:bg-sparrow-green' : 'bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-gray-50 dark:hover:bg-sparrow-dark-surface2'}`}
               >
                 Grid
               </button>
               <button
                 onClick={() => setViewMode('map')}
-                className={`border-l border-sparrow-rule px-3 py-1.5 text-xs font-medium transition ${viewMode === 'map' ? 'bg-gray-800 text-white' : 'bg-white text-sparrow-gray hover:bg-gray-50'}`}
+                className={`border-l border-sparrow-rule dark:border-sparrow-dark-border px-3 py-1.5 text-xs font-medium transition ${viewMode === 'map' ? 'bg-gray-800 text-white dark:bg-sparrow-green' : 'bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-gray-50 dark:hover:bg-sparrow-dark-surface2'}`}
               >
                 Map
               </button>
@@ -324,7 +324,7 @@ export function TwinOaksRoom() {
             />
           )}
           {workOrders.length === 0 && (
-            <p className="rounded-xl border border-dashed border-sparrow-rule bg-white p-8 text-center text-sm text-sparrow-gray">
+            <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               No work orders.
             </p>
           )}
@@ -379,29 +379,29 @@ function WorkOrderSection({
   if (items.length === 0) return null;
   return (
     <section>
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
         {title} <span className="text-sparrow-gray/70">· {items.length}</span>
       </h2>
-      <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+      <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
         {items.map((w) => {
           const dot = WO_PRIORITIES.find((p) => p.value === w.priority)?.dot ?? 'bg-priority-p4';
           return (
             <li key={w.id}>
               <button
                 onClick={() => onOpen(w)}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sparrow-mist"
+                className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
               >
                 <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot}`} aria-hidden />
                 <span className="flex-1">
-                  <span className="block text-sm font-semibold text-sparrow-green">
+                  <span className="block text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green">
                     {workOrderWhere(w, lotLabelById)}
                   </span>
-                  <span className="block text-sm text-sparrow-ink">{w.description}</span>
+                  <span className="block text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{w.description}</span>
                   {w.assignee && (
-                    <span className="block text-xs text-sparrow-gray">{w.assignee.full_name}</span>
+                    <span className="block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{w.assignee.full_name}</span>
                   )}
                 </span>
-                <span className="shrink-0 text-xs capitalize text-sparrow-gray">
+                <span className="shrink-0 text-xs capitalize text-sparrow-gray dark:text-sparrow-dark-gray">
                   {w.status.replace('_', ' ')}
                 </span>
               </button>

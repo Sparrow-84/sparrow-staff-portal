@@ -110,10 +110,10 @@ export function SessionBriefPanel({
     >
       <div className="space-y-5">
         {sessionLabel && (
-          <div className="rounded-xl bg-sparrow-mist p-3 text-sm">
+          <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3 text-sm">
             <p className="field-label">Curriculum</p>
-            <p className="text-sparrow-ink">{sessionLabel}</p>
-            <p className="mt-1 text-xs text-sparrow-gray">
+            <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{sessionLabel}</p>
+            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               Teacher guide & materials open here once Curriculum Admin is live (Phase 2).
             </p>
           </div>
@@ -122,14 +122,14 @@ export function SessionBriefPanel({
         <div>
           <div className="flex items-center justify-between">
             <span className="field-label">Attendance</span>
-            <button onClick={markAllOnTime} className="text-xs font-medium text-sparrow-green">
+            <button onClick={markAllOnTime} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
               Mark all on time
             </button>
           </div>
           <ul className="mt-2 space-y-2">
             {families.map((f) => (
               <li key={f.id} className="flex items-center gap-2 rounded-xl border border-sparrow-rule/70 p-2">
-                <span className="flex-1 truncate text-sm font-medium text-sparrow-ink">{f.display_name}</span>
+                <span className="flex-1 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
                 {STATUSES.map((s) => (
                   <button
                     key={s}
@@ -141,7 +141,7 @@ export function SessionBriefPanel({
                           : s === 'late'
                             ? 'bg-priority-p2 text-white'
                             : 'bg-sparrow-green text-white'
-                        : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                        : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                     }`}
                   >
                     {ATTENDANCE_LABEL[s]}
@@ -152,12 +152,12 @@ export function SessionBriefPanel({
           </ul>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-sparrow-ink">
+        <label className="flex items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
           <input
             type="checkbox"
             checked={awardVouchers}
             onChange={(e) => setAwardVouchers(e.target.checked)}
-            className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+            className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
           />
           Award a voucher to each on-time family
         </label>

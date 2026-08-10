@@ -109,15 +109,15 @@ export function VoiceRecorder({
 
   if (phase === 'sending') {
     return (
-      <div className="flex items-center gap-3 border-t border-sparrow-rule px-4 py-3">
-        <span className="text-sm text-sparrow-gray">Sending…</span>
+      <div className="flex items-center gap-3 border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
+        <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Sending…</span>
       </div>
     );
   }
 
   if (phase === 'preview') {
     return (
-      <div className="flex items-center gap-3 border-t border-sparrow-rule px-4 py-3">
+      <div className="flex items-center gap-3 border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
         {/* Hidden audio element for preview playback */}
         {previewUrl && (
           <audio
@@ -131,7 +131,7 @@ export function VoiceRecorder({
         <button
           onClick={discard}
           aria-label="Discard recording"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -143,7 +143,7 @@ export function VoiceRecorder({
           <button
             onClick={togglePreview}
             aria-label={previewPlaying ? 'Pause preview' : 'Play preview'}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sparrow-green/10 text-sparrow-green hover:bg-sparrow-green/20 transition"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green hover:bg-sparrow-green/20 transition"
           >
             {previewPlaying ? (
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -156,8 +156,8 @@ export function VoiceRecorder({
               </svg>
             )}
           </button>
-          <span className="text-sm font-medium tabular-nums text-sparrow-ink">{fmt(durationRef.current)}</span>
-          <span className="text-xs text-sparrow-gray">Tap play to preview</span>
+          <span className="text-sm font-medium tabular-nums text-sparrow-ink dark:text-sparrow-dark-ink">{fmt(durationRef.current)}</span>
+          <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Tap play to preview</span>
         </div>
 
         {/* Send */}
@@ -170,12 +170,12 @@ export function VoiceRecorder({
 
   // phase === 'recording'
   return (
-    <div className="flex items-center gap-3 border-t border-sparrow-rule px-4 py-3">
+    <div className="flex items-center gap-3 border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
       {/* Cancel/Discard */}
       <button
         onClick={discard}
         aria-label="Cancel recording"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -185,10 +185,10 @@ export function VoiceRecorder({
       {/* Recording indicator + timer */}
       <div className="flex flex-1 items-center gap-2">
         <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden />
-        <span className={`text-sm font-medium tabular-nums ${seconds >= MAX_SECONDS - 15 ? 'text-red-500' : 'text-sparrow-ink'}`}>
+        <span className={`text-sm font-medium tabular-nums ${seconds >= MAX_SECONDS - 15 ? 'text-red-500' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
           {fmt(seconds)}
         </span>
-        <span className="text-xs text-sparrow-gray">
+        <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           {seconds >= MAX_SECONDS - 15 ? `Stopping at ${fmt(MAX_SECONDS)}` : 'Recording…'}
         </span>
       </div>

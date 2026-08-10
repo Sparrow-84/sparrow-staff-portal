@@ -170,13 +170,13 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold">Good to see you, {firstName}.</h1>
-          <p className="mt-1 text-sm text-sparrow-gray">{dateLabel}</p>
+          <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{dateLabel}</p>
         </div>
         <div className="flex items-center gap-2">
           {onHelp && (
             <button
               onClick={onHelp}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule text-sm font-semibold text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule dark:border-sparrow-dark-border text-sm font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
               aria-label="My Tasks help"
               title="How My Tasks works"
             >
@@ -295,13 +295,13 @@ function Segmented({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="inline-flex rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
+    <div className="inline-flex rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-1 text-sm">
       {options.map((o) => (
         <button
           key={o.value}
           onClick={() => onChange(o.value)}
           className={`rounded-lg px-3 py-1.5 font-medium transition ${
-            value === o.value ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
+            value === o.value ? 'bg-sparrow-green text-white' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
           }`}
         >
           {o.label}
@@ -317,8 +317,8 @@ function PersonTab({ label, active, onClick }: { label: string; active: boolean;
       onClick={onClick}
       className={`rounded-full border px-3 py-1 text-sm transition ${
         active
-          ? 'border-sparrow-green bg-sparrow-green text-white'
-          : 'border-sparrow-rule bg-white text-sparrow-gray hover:text-sparrow-ink'
+          ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green text-white'
+          : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
       }`}
     >
       {label}

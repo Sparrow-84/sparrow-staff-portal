@@ -75,7 +75,7 @@ function NoteList({
   return (
     <div>
       <div className="mb-4 flex items-center gap-2">
-        <div className="flex flex-1 items-center gap-2 rounded-lg border border-sparrow-rule bg-white px-3 py-2">
+        <div className="flex flex-1 items-center gap-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-sparrow-gray/60">
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.5-3.5" />
@@ -91,7 +91,7 @@ function NoteList({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="py-8 text-center text-sm text-sparrow-gray">{search.trim() ? 'No notes match your search.' : emptyLabel}</p>
+        <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{search.trim() ? 'No notes match your search.' : emptyLabel}</p>
       ) : (
         filtered.map((r) => {
           const mk = monthKey(r.startsAt);
@@ -105,19 +105,19 @@ function NoteList({
               )}
               <button
                 onClick={() => onOpen(r)}
-                className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left hover:border-sparrow-rule hover:bg-sparrow-mist"
+                className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left hover:border-sparrow-rule dark:hover:border-sparrow-dark-border hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
               >
                 <div className="w-10 shrink-0 font-mono text-xs text-sparrow-gray/70">
-                  <span className="block text-base font-semibold text-sparrow-ink">{day}</span>
+                  <span className="block text-base font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{day}</span>
                   {weekday}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-sparrow-ink">{r.title}</p>
-                  <p className="truncate text-xs text-sparrow-gray">{r.sub}</p>
+                  <p className="truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{r.title}</p>
+                  <p className="truncate text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{r.sub}</p>
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                    r.badge === 'Your notes' ? 'bg-sparrow-green/10 text-sparrow-green' : 'bg-sparrow-gold/15 text-amber-700'
+                    r.badge === 'Your notes' ? 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green' : 'bg-sparrow-gold/15 text-amber-700'
                   }`}
                 >
                   {r.badge}
@@ -129,8 +129,8 @@ function NoteList({
       )}
 
       {hiddenOlder && (
-        <div className="mt-2 border-t border-sparrow-rule pt-3 text-center">
-          <button onClick={onShowAll} className="text-xs font-medium text-sparrow-gray hover:text-sparrow-green">
+        <div className="mt-2 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-3 text-center">
+          <button onClick={onShowAll} className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green">
             See notes older than 3 months
           </button>
         </div>
@@ -186,19 +186,19 @@ function IdeasTab({ userId }: { userId: string }) {
 
   function Row({ idea }: { idea: Idea }) {
     return (
-      <div className="group flex items-start gap-3 rounded-lg px-2 py-2.5 hover:bg-sparrow-mist">
+      <div className="group flex items-start gap-3 rounded-lg px-2 py-2.5 hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2">
         <input
           type="checkbox"
           checked={Boolean(idea.completed_at)}
           onChange={() => void toggle(idea)}
-          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
         />
         <div className="min-w-0 flex-1">
-          <p className={`text-sm font-medium ${idea.completed_at ? 'text-sparrow-gray line-through' : 'text-sparrow-ink'}`}>
+          <p className={`text-sm font-medium ${idea.completed_at ? 'text-sparrow-gray dark:text-sparrow-dark-gray line-through' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
             {idea.title}
           </p>
           {idea.description && (
-            <p className={`mt-0.5 text-xs ${idea.completed_at ? 'text-sparrow-gray/70 line-through' : 'text-sparrow-gray'}`}>
+            <p className={`mt-0.5 text-xs ${idea.completed_at ? 'text-sparrow-gray/70 line-through' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
               {idea.description}
             </p>
           )}
@@ -222,7 +222,7 @@ function IdeasTab({ userId }: { userId: string }) {
 
   return (
     <div>
-      <form onSubmit={handleSubmit} className="mb-5 rounded-xl border border-sparrow-rule bg-white p-3">
+      <form onSubmit={handleSubmit} className="mb-5 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3">
         <input
           type="text"
           value={title}
@@ -235,9 +235,9 @@ function IdeasTab({ userId }: { userId: string }) {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Add more detail (optional)"
           rows={2}
-          className="w-full resize-none border-none p-1 text-sm text-sparrow-gray outline-none placeholder:text-sparrow-gray/60"
+          className="w-full resize-none border-none p-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray outline-none placeholder:text-sparrow-gray/60"
         />
-        <div className="mt-1 flex items-center justify-between gap-3 border-t border-dashed border-sparrow-rule pt-2">
+        <div className="mt-1 flex items-center justify-between gap-3 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
           {!title.trim() ? (
             <p className="text-xs text-sparrow-gray/70">Add a title to save this idea.</p>
           ) : submitError ? (
@@ -256,9 +256,9 @@ function IdeasTab({ userId }: { userId: string }) {
       </form>
 
       {loading ? (
-        <p className="text-sm text-sparrow-gray">Loading…</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
       ) : ideas.length === 0 ? (
-        <p className="py-8 text-center text-sm text-sparrow-gray">
+        <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           Nothing here yet — drop a quick idea above any time one comes to you.
         </p>
       ) : (
@@ -268,7 +268,7 @@ function IdeasTab({ userId }: { userId: string }) {
           ))}
           {done.length > 0 && (
             <>
-              <p className="mt-3 border-t border-sparrow-rule pt-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray/70">
+              <p className="mt-3 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray/70">
                 Checked off
               </p>
               {done.map((idea) => (
@@ -337,16 +337,16 @@ export function NotesView() {
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="mb-5">
         <h1 className="font-serif text-2xl font-semibold">Notes</h1>
-        <p className="mt-1 text-sm text-sparrow-gray">Everything you've written or been sent, in one place.</p>
+        <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Everything you've written or been sent, in one place.</p>
       </div>
 
-      <div className="mb-5 inline-flex rounded-lg border border-sparrow-rule bg-sparrow-mist p-1">
+      <div className="mb-5 inline-flex rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition ${
-              tab === t.id ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
+              tab === t.id ? 'bg-sparrow-green text-white' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
             }`}
           >
             {t.label}
@@ -355,7 +355,7 @@ export function NotesView() {
       </div>
 
       {tab !== 'ideas' && loading ? (
-        <p className="text-sm text-sparrow-gray">Loading…</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
       ) : tab === 'mine' ? (
         <NoteList
           rows={myRows}

@@ -173,11 +173,11 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
     <div className={`flex ${embedded ? 'h-full' : 'h-[calc(100vh-7.5rem)]'}`}>
       {/* Conversation list */}
       <div
-        className={`flex w-full flex-col border-r border-sparrow-rule bg-white ${
+        className={`flex w-full flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface ${
           embedded ? '' : 'md:w-80 md:shrink-0'
         } ${active ? (embedded ? 'hidden' : 'hidden md:flex') : 'flex'}`}
       >
-        <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-3">
+        <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
           <h1 className="font-serif text-lg font-semibold">Messages</h1>
           <div className="flex items-center gap-2">
             <button onClick={() => setNewOpen(true)} className="btn-primary !px-3 !py-1.5 text-xs">
@@ -186,7 +186,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
             {embedded && onClose && (
               <button
                 onClick={onClose}
-                className="rounded-lg p-1.5 text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+                className="rounded-lg p-1.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                 aria-label="Close messages"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -199,7 +199,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
 
         <ul className="flex-1 overflow-y-auto">
           {conversations.length === 0 && (
-            <li className="px-4 py-10 text-center text-sm text-sparrow-gray">
+            <li className="px-4 py-10 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               No conversations yet. Start one with “New.”
             </li>
           )}
@@ -211,7 +211,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                 <button
                   onClick={() => openConversation(c)}
                   className={`flex w-full items-center gap-3 px-4 py-3 text-left transition ${
-                    isActive ? 'bg-sparrow-sage' : 'hover:bg-sparrow-mist'
+                    isActive ? 'bg-sparrow-sage' : 'hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
                   }`}
                 >
                   <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sparrow-green text-sm font-semibold text-white">
@@ -219,13 +219,13 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium text-sparrow-ink">{label}</span>
-                      <span className="shrink-0 text-[11px] text-sparrow-gray">
+                      <span className="truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{label}</span>
+                      <span className="shrink-0 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
                         {previewTime(c.last_message_at)}
                       </span>
                     </span>
                     <span className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-1 truncate text-xs text-sparrow-gray">
+                      <span className="flex items-center gap-1 truncate text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                         {c.last_attachment_kind === 'voice' ? (
                           <>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0">
@@ -263,13 +263,13 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
       </div>
 
       {/* Thread */}
-      <div className={`min-w-0 flex-1 flex-col bg-white ${active ? 'flex' : (embedded ? 'hidden' : 'hidden md:flex')}`}>
+      <div className={`min-w-0 flex-1 flex-col bg-white dark:bg-sparrow-dark-surface ${active ? 'flex' : (embedded ? 'hidden' : 'hidden md:flex')}`}>
         {active ? (
           <>
-            <div className="flex items-center gap-3 border-b border-sparrow-rule px-4 py-3">
+            <div className="flex items-center gap-3 border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
               <button
                 onClick={() => setActiveId(null)}
-                className={`rounded-lg p-1 text-sparrow-gray hover:bg-sparrow-mist ${embedded ? '' : 'md:hidden'}`}
+                className={`rounded-lg p-1 text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 ${embedded ? '' : 'md:hidden'}`}
                 aria-label="Back to conversations"
               >
                 ←
@@ -288,13 +288,13 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                       if (e.key === 'Enter') void saveRename();
                       if (e.key === 'Escape') setRenaming(false);
                     }}
-                    className="w-full bg-transparent text-sm font-semibold text-sparrow-ink outline-none border-b border-sparrow-green"
+                    className="w-full bg-transparent text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink outline-none border-b border-sparrow-green dark:border-sparrow-dark-green"
                     placeholder="Group name…"
                   />
                 ) : (
-                  <p className="truncate text-sm font-semibold text-sparrow-ink">{conversationLabel(active)}</p>
+                  <p className="truncate text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{conversationLabel(active)}</p>
                 )}
-                <p className="text-xs text-sparrow-gray">
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   {active.kind === 'group' ? 'Group' : 'Direct message'}
                 </p>
               </div>
@@ -302,7 +302,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                 <div className="relative">
                   <button
                     onClick={() => setMenuOpen((o) => !o)}
-                    className="rounded-lg p-1.5 text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+                    className="rounded-lg p-1.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                     aria-label="Group options"
                   >
                     •••
@@ -310,10 +310,10 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                   {menuOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden />
-                      <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-sparrow-rule bg-white shadow-card">
+                      <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-card">
                         <button
                           onClick={() => { setMenuOpen(false); startRename(); }}
-                          className="block w-full px-3 py-2 text-left text-sm hover:bg-sparrow-mist"
+                          className="block w-full px-3 py-2 text-left text-sm hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                         >
                           Rename group
                         </button>
@@ -331,7 +331,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
               {embedded && onClose && (
                 <button
                   onClick={onClose}
-                  className="rounded-lg p-1.5 text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+                  className="rounded-lg p-1.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                   aria-label="Close messages"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -374,7 +374,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
             </div>
           </>
         ) : (
-          <div className="flex flex-1 items-center justify-center text-sm text-sparrow-gray">
+          <div className="flex flex-1 items-center justify-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             Select a conversation, or start a new one.
           </div>
         )}

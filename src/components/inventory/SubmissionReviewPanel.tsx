@@ -59,7 +59,7 @@ function AdditionEditRow({
       <div className="flex items-start gap-2 rounded-lg border border-sparrow-green/20 bg-sparrow-green/5 px-3 py-2.5">
         <div className="flex-1 min-w-0 space-y-0.5">
           <p className="text-sm font-medium truncate">{entry.description}</p>
-          <div className="flex flex-wrap gap-x-3 text-xs text-sparrow-gray">
+          <div className="flex flex-wrap gap-x-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             <span>{displayAdditionCost(entry)}</span>
             {entry.cost_source === 'estimated' && <span className="text-sparrow-gold">est.</span>}
             {entry.ops_edited && <span className="text-sparrow-gold">edited by ops</span>}
@@ -70,10 +70,10 @@ function AdditionEditRow({
           </div>
         </div>
         <div className="flex gap-1 shrink-0">
-          <button onClick={() => { resetValidation(); setEditing(true); }} className="text-xs text-sparrow-gray hover:text-sparrow-green transition px-1">
+          <button onClick={() => { resetValidation(); setEditing(true); }} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition px-1">
             Edit
           </button>
-          <button onClick={remove} className="text-xs text-sparrow-gray hover:text-priority-p1 transition px-1">
+          <button onClick={remove} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 transition px-1">
             ✕
           </button>
         </div>
@@ -161,17 +161,17 @@ function RemovalEditRow({
       <div className="flex items-start gap-2 rounded-lg border border-priority-p1/20 bg-priority-p1/5 px-3 py-2.5">
         <div className="flex-1 min-w-0 space-y-0.5">
           <p className="text-sm font-medium truncate">{entry.description}</p>
-          <div className="flex flex-wrap gap-x-3 text-xs text-sparrow-gray">
+          <div className="flex flex-wrap gap-x-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             {entry.quantity_removed > 1 && <span>Qty: {entry.quantity_removed}</span>}
             <span>{EXIT_METHOD_LABELS[entry.how_it_left]}</span>
             {entry.ops_edited && <span className="text-sparrow-gold">edited by ops</span>}
           </div>
         </div>
         <div className="flex gap-1 shrink-0">
-          <button onClick={() => { resetValidation(); setEditing(true); }} className="text-xs text-sparrow-gray hover:text-sparrow-green transition px-1">
+          <button onClick={() => { resetValidation(); setEditing(true); }} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition px-1">
             Edit
           </button>
-          <button onClick={remove} className="text-xs text-sparrow-gray hover:text-priority-p1 transition px-1">
+          <button onClick={remove} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 transition px-1">
             ✕
           </button>
         </div>
@@ -305,30 +305,30 @@ export function SubmissionReviewPanel({
             >
               {approving ? 'Approving…' : 'Approve & commit to register'}
             </button>
-            <p className="text-xs text-center text-sparrow-gray">
+            <p className="text-xs text-center text-sparrow-gray dark:text-sparrow-dark-gray">
               This updates the asset register. Cannot be undone.
             </p>
           </div>
         ) : sub?.status === 'approved' ? (
-          <p className="text-xs text-center text-sparrow-green">
+          <p className="text-xs text-center text-sparrow-green dark:text-sparrow-dark-green">
             ✓ Approved — changes committed to register
           </p>
         ) : null
       }
     >
       {loading && (
-        <p className="text-sm text-sparrow-gray text-center py-8">Loading…</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray text-center py-8">Loading…</p>
       )}
 
       {sub && !loading && (
         <div className="space-y-5">
           {/* Section A */}
           <section className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Section A — Arrivals
             </h3>
             {sub.nothing_came_in && additions.length === 0 && (
-              <p className="text-sm text-sparrow-gray italic">Nothing came in this month.</p>
+              <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray italic">Nothing came in this month.</p>
             )}
             {additions.map((a) =>
               sub.status === 'submitted' ? (
@@ -336,7 +336,7 @@ export function SubmissionReviewPanel({
               ) : (
                 <div key={a.id} className="rounded-lg border border-sparrow-green/20 bg-sparrow-green/5 px-3 py-2.5">
                   <p className="text-sm font-medium">{a.description}</p>
-                  <div className="flex flex-wrap gap-x-3 text-xs text-sparrow-gray mt-0.5">
+                  <div className="flex flex-wrap gap-x-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
                     <span>{displayAdditionCost(a)}</span>
                     {a.cost_source === 'estimated' && <span className="text-sparrow-gold">est.</span>}
                     <span className="capitalize">{a.condition}</span>
@@ -350,11 +350,11 @@ export function SubmissionReviewPanel({
 
           {/* Section B */}
           <section className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Section B — Removals
             </h3>
             {sub.nothing_left && removals.length === 0 && (
-              <p className="text-sm text-sparrow-gray italic">Nothing left this month.</p>
+              <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray italic">Nothing left this month.</p>
             )}
             {removals.map((r) =>
               sub.status === 'submitted' ? (
@@ -362,7 +362,7 @@ export function SubmissionReviewPanel({
               ) : (
                 <div key={r.id} className="rounded-lg border border-priority-p1/20 bg-priority-p1/5 px-3 py-2.5">
                   <p className="text-sm font-medium">{r.description}</p>
-                  <div className="flex flex-wrap gap-x-3 text-xs text-sparrow-gray mt-0.5">
+                  <div className="flex flex-wrap gap-x-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
                     {r.quantity_removed > 1 && <span>Qty: {r.quantity_removed}</span>}
                     <span>{EXIT_METHOD_LABELS[r.how_it_left]}</span>
                   </div>
@@ -373,17 +373,17 @@ export function SubmissionReviewPanel({
 
           {/* Comments */}
           <section className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Notes to submitter
             </h3>
             {comments.length === 0 && (
-              <p className="text-xs text-sparrow-gray italic">No notes yet.</p>
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray italic">No notes yet.</p>
             )}
             {comments.map((c) => (
-              <div key={c.id} className="rounded-lg bg-sparrow-mist px-3 py-2.5 space-y-0.5">
-                <p className="text-xs font-medium text-sparrow-ink">{c.author?.full_name ?? 'Unknown'}</p>
-                <p className="text-sm text-sparrow-ink">{c.body}</p>
-                <p className="text-xs text-sparrow-gray">
+              <div key={c.id} className="rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2.5 space-y-0.5">
+                <p className="text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{c.author?.full_name ?? 'Unknown'}</p>
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{c.body}</p>
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   {new Date(c.created_at).toLocaleDateString()}
                 </p>
               </div>

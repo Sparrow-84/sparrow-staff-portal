@@ -208,15 +208,15 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
             {selectedLabel.name}
           </span>
         ) : (
-          <span className="text-sparrow-gray">Pick a label…</span>
+          <span className="text-sparrow-gray dark:text-sparrow-dark-gray">Pick a label…</span>
         )}
-        <svg className="ml-2 h-4 w-4 shrink-0 text-sparrow-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="ml-2 h-4 w-4 shrink-0 text-sparrow-gray dark:text-sparrow-dark-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-sparrow-rule bg-white shadow-xl">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-xl">
 
           {/* ── List view ─────────────────────────────────── */}
           {view === 'list' && (
@@ -227,27 +227,27 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                     <button
                       type="button"
                       onClick={() => select(label)}
-                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-sparrow-mist"
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                     >
                       <span className={`h-3 w-3 shrink-0 rounded-full ${labelSwatchClass(label.color)}`} />
-                      <span className="flex-1 truncate text-sparrow-ink">{label.name}</span>
+                      <span className="flex-1 truncate text-sparrow-ink dark:text-sparrow-dark-ink">{label.name}</span>
                       {label.id === value && (
-                        <span className="text-sparrow-green">✓</span>
+                        <span className="text-sparrow-green dark:text-sparrow-dark-green">✓</span>
                       )}
                     </button>
                   </li>
                 ))}
                 {labels.length === 0 && (
-                  <li className="px-3 py-2 text-xs text-sparrow-gray">No labels yet — create one below.</li>
+                  <li className="px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No labels yet — create one below.</li>
                 )}
               </ul>
 
-              <div className="border-t border-sparrow-rule">
+              <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border">
                 {value && (
                   <button
                     type="button"
                     onClick={clearSelection}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-sparrow-gray hover:bg-sparrow-mist"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                   >
                     <span>✕</span> Clear label
                   </button>
@@ -255,7 +255,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                 <button
                   type="button"
                   onClick={() => setView('create')}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-sparrow-green hover:bg-sparrow-mist"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                 >
                   <span>+</span> Create label
                 </button>
@@ -263,7 +263,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                   <button
                     type="button"
                     onClick={() => { setView('manage'); setEditingId(null); }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-sparrow-gray hover:bg-sparrow-mist"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                   >
                     <span>✎</span> Manage labels
                   </button>
@@ -279,11 +279,11 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                 <button
                   type="button"
                   onClick={() => setView('list')}
-                  className="text-xs text-sparrow-gray hover:text-sparrow-ink"
+                  className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                 >
                   ← Back
                 </button>
-                <span className="text-xs font-semibold text-sparrow-ink">New label</span>
+                <span className="text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">New label</span>
               </div>
               <input
                 id="label-create-name"
@@ -297,7 +297,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
               />
               {createMissingMessage && <p className="text-xs text-priority-p1">{createMissingMessage}</p>}
               <div>
-                <p className="mb-1.5 text-xs text-sparrow-gray">Color</p>
+                <p className="mb-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Color</p>
                 <div className="flex flex-wrap gap-2">
                   {LABEL_COLORS.map((c) => (
                     <button
@@ -328,14 +328,14 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                 <button
                   type="button"
                   onClick={() => { setView('list'); setEditingId(null); resetEditValidation(); }}
-                  className="text-xs text-sparrow-gray hover:text-sparrow-ink"
+                  className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                 >
                   ← Back
                 </button>
-                <span className="text-xs font-semibold text-sparrow-ink">Manage labels</span>
+                <span className="text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Manage labels</span>
               </div>
               {manageableLabels.length === 0 && (
-                <p className="text-xs text-sparrow-gray">No labels to manage yet.</p>
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No labels to manage yet.</p>
               )}
               {manageableLabels.map((label) => (
                 <div key={label.id} className="rounded-lg bg-sparrow-mist/50 p-2">
@@ -366,14 +366,14 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                           type="button"
                           onClick={() => void handleSaveEdit(label.id)}
                           disabled={savingEdit}
-                          className="text-xs font-medium text-sparrow-green hover:opacity-70"
+                          className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:opacity-70"
                         >
                           Save
                         </button>
                         <button
                           type="button"
                           onClick={() => { setEditingId(null); resetEditValidation(); }}
-                          className="text-xs text-sparrow-gray hover:text-sparrow-ink"
+                          className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                         >
                           ✕
                         </button>
@@ -383,11 +383,11 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className={`h-3 w-3 shrink-0 rounded-full ${labelSwatchClass(label.color)}`} />
-                      <span className="flex-1 truncate text-xs text-sparrow-ink">{label.name}</span>
+                      <span className="flex-1 truncate text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{label.name}</span>
                       <button
                         type="button"
                         onClick={() => startEdit(label)}
-                        className="text-sparrow-gray hover:text-sparrow-ink"
+                        className="text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                         aria-label="Edit"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -398,7 +398,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                         type="button"
                         onClick={() => void handleDelete(label.id)}
                         disabled={deletingId === label.id}
-                        className="text-sparrow-gray hover:text-priority-p1"
+                        className="text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
                         aria-label="Delete"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -413,7 +413,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
               <button
                 type="button"
                 onClick={() => setView('create')}
-                className="flex w-full items-center gap-2 pt-1 text-xs font-medium text-sparrow-green hover:opacity-70"
+                className="flex w-full items-center gap-2 pt-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:opacity-70"
               >
                 <span>+</span> Create new label
               </button>

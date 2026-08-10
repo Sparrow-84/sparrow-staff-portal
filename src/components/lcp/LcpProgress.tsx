@@ -83,7 +83,7 @@ export function LcpProgress({
   return (
     <div className="mt-6 space-y-6">
       {/* Program position card */}
-      <div className="rounded-2xl border border-sparrow-rule bg-white p-5">
+      <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-5">
         {position && track.currentUnit ? (
           <>
             <p
@@ -92,12 +92,12 @@ export function LcpProgress({
             >
               Phase {position.phase_number}: {position.phase_name}
             </p>
-            <p className="mb-1.5 text-sm font-medium text-sparrow-ink">
+            <p className="mb-1.5 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
               Unit {track.currentUnit.globalUnitIndex}: {position.unit_name}
             </p>
           </>
         ) : (
-          <p className="text-sm text-sparrow-gray">
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             Not set yet — use the controls below to set the starting unit.
           </p>
         )}
@@ -122,7 +122,7 @@ export function LcpProgress({
             <button
               disabled={busy}
               onClick={undoPosition}
-              className="text-xs text-sparrow-gray underline hover:text-sparrow-ink"
+              className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray underline hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
             >
               ← Undo
             </button>
@@ -132,7 +132,7 @@ export function LcpProgress({
               setShowManual((v) => !v);
               setManualUnitId(null);
             }}
-            className="text-xs text-sparrow-gray underline hover:text-sparrow-ink"
+            className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray underline hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
           >
             {showManual ? 'Cancel' : 'Set position manually'}
           </button>
@@ -144,7 +144,7 @@ export function LcpProgress({
               disabled={busy}
               value={manualUnitId ?? ''}
               onChange={(e) => setManualUnitId(e.target.value ? Number(e.target.value) : null)}
-              className="rounded-lg border border-sparrow-rule bg-white px-3 py-1.5 text-sm text-sparrow-ink"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink"
             >
               <option value="" disabled>Choose a unit…</option>
               {phases.map((phase) => (
@@ -169,7 +169,7 @@ export function LcpProgress({
                     const session = unit?.sessions.find((s) => s.id === Number(e.target.value));
                     if (unit && session) void moveToSession(session.id, unit.id, session.session_number);
                   }}
-                  className="rounded-lg border border-sparrow-rule bg-white px-3 py-1.5 text-sm text-sparrow-ink"
+                  className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink"
                 >
                   <option value="" disabled>Choose a session…</option>
                   {allUnits
@@ -183,7 +183,7 @@ export function LcpProgress({
                 <button
                   disabled={busy}
                   onClick={() => moveTo(manualUnitId)}
-                  className="text-xs text-sparrow-gray underline hover:text-sparrow-ink"
+                  className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray underline hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                 >
                   Just this unit, no specific session
                 </button>
@@ -198,7 +198,7 @@ export function LcpProgress({
       {/* Phase legend */}
       <div className="flex flex-wrap gap-x-4 gap-y-1.5">
         {phases.map((p, i) => (
-          <span key={p.id} className="flex items-center gap-1.5 text-xs text-sparrow-gray">
+          <span key={p.id} className="flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             <span
               className="inline-block h-2.5 w-3.5 rounded-sm"
               style={{ backgroundColor: PHASE_COLORS[i] }}
@@ -210,19 +210,19 @@ export function LcpProgress({
 
       {/* Family progress matrix */}
       <div>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
           Family Progress
         </h2>
         <div className="space-y-2.5">
           {families.map((f) => (
             <div
               key={f.id}
-              className="rounded-xl border border-sparrow-rule bg-white px-4 py-3"
+              className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-3"
             >
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-sparrow-ink">{f.display_name}</span>
+                <span className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
                 {f.joined_unit_id == null && (
-                  <span className="text-[11px] italic text-sparrow-gray">entry point not set</span>
+                  <span className="text-[11px] italic text-sparrow-gray dark:text-sparrow-dark-gray">entry point not set</span>
                 )}
               </div>
               <PhaseProgressBar

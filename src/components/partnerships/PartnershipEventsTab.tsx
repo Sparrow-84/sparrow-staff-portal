@@ -153,14 +153,14 @@ export function PartnershipEventsTab() {
       {/* ── Event Log ── */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-sparrow-ink">Event log</h3>
+          <h3 className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Event log</h3>
           <button onClick={() => setShowEventForm((v) => !v)} className="btn-primary text-xs">
             {showEventForm ? 'Cancel' : '+ Log event'}
           </button>
         </div>
 
         {showEventForm && (
-          <form onSubmit={handleAddEvent} className="mb-4 rounded-xl border border-sparrow-rule bg-white p-4 space-y-3">
+          <form onSubmit={handleAddEvent} className="mb-4 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label className="field-label">Event name *</label>
@@ -215,47 +215,47 @@ export function PartnershipEventsTab() {
           </form>
         )}
 
-        {loading && <p className="py-8 text-center text-sm text-sparrow-gray">Loading…</p>}
+        {loading && <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>}
 
         {!loading && events.length === 0 && (
-          <p className="rounded-xl border border-dashed border-sparrow-rule p-8 text-center text-sm text-sparrow-gray">
+          <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             No events logged yet. Log within 24 hours of each event.
           </p>
         )}
 
         {!loading && events.length > 0 && (
-          <div className="overflow-x-auto rounded-xl border border-sparrow-rule bg-white">
+          <div className="overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sparrow-rule text-left">
-                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Date</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Event</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Location</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Attendees</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Notes</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray"></th>
+                <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border text-left">
+                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Date</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Event</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Location</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Attendees</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Notes</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sparrow-rule">
+              <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
                 {events.map((ev) => (
                   <tr
                     key={ev.id}
                     onClick={() => setSelectedEventId(ev.id)}
                     className="cursor-pointer hover:bg-sparrow-mist/40"
                   >
-                    <td className="px-4 py-2.5 whitespace-nowrap text-xs text-sparrow-gray">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       {shortDate(ev.event_date)}
                     </td>
-                    <td className="px-3 py-2.5 font-medium text-sparrow-ink">{ev.event_name}</td>
-                    <td className="px-3 py-2.5 text-sparrow-gray">{ev.location ?? '—'}</td>
-                    <td className="px-3 py-2.5 text-sparrow-gray">{ev.attendees ?? '—'}</td>
+                    <td className="px-3 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{ev.event_name}</td>
+                    <td className="px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{ev.location ?? '—'}</td>
+                    <td className="px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{ev.attendees ?? '—'}</td>
                     <td className="px-3 py-2.5 max-w-[200px]">
-                      <p className="truncate text-sparrow-gray" title={ev.notes ?? undefined}>{ev.notes ?? '—'}</p>
+                      <p className="truncate text-sparrow-gray dark:text-sparrow-dark-gray" title={ev.notes ?? undefined}>{ev.notes ?? '—'}</p>
                     </td>
                     <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => openConnFormForEvent(ev)}
-                        className="whitespace-nowrap text-xs font-medium text-sparrow-green hover:underline"
+                        className="whitespace-nowrap text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                       >
                         + Connections
                       </button>
@@ -271,14 +271,14 @@ export function PartnershipEventsTab() {
       {/* ── Meaningful Connections ── */}
       <section id="conn-form">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-sparrow-ink">Meaningful connections</h3>
+          <h3 className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Meaningful connections</h3>
           <button onClick={toggleConnForm} className="btn-primary text-xs">
             {showConnForm ? 'Cancel' : '+ Add connection'}
           </button>
         </div>
 
         {showConnForm && (
-          <form onSubmit={handleAddConn} className="mb-4 rounded-xl border border-sparrow-rule bg-white p-4 space-y-3">
+          <form onSubmit={handleAddConn} className="mb-4 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="field-label">Name *</label>
@@ -362,28 +362,28 @@ export function PartnershipEventsTab() {
         )}
 
         {!loading && connections.length === 0 && (
-          <p className="rounded-xl border border-dashed border-sparrow-rule p-8 text-center text-sm text-sparrow-gray">
+          <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             No connections logged yet.
           </p>
         )}
 
         {!loading && connections.length > 0 && (
-          <div className="overflow-x-auto rounded-xl border border-sparrow-rule bg-white">
+          <div className="overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sparrow-rule text-left">
-                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Name</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Org</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Discussed</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Next action</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Follow-up due</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Done</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Owner</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Event</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray"></th>
+                <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border text-left">
+                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Name</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Org</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Discussed</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Next action</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Follow-up due</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Done</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Owner</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Event</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sparrow-rule">
+              <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
                 {connections.map((conn) => {
                   const overdue = isOverdue(conn);
                   return (
@@ -392,19 +392,19 @@ export function PartnershipEventsTab() {
                       onClick={() => setSelectedConnId(conn.id)}
                       className={`cursor-pointer hover:bg-sparrow-mist/40 ${overdue ? 'border-l-4 border-l-priority-p1' : ''}`}
                     >
-                      <td className="px-4 py-2.5 font-medium text-sparrow-ink">{conn.name}</td>
-                      <td className="px-3 py-2.5 text-sparrow-gray">{conn.organization ?? '—'}</td>
+                      <td className="px-4 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{conn.name}</td>
+                      <td className="px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{conn.organization ?? '—'}</td>
                       <td className="px-3 py-2.5 max-w-[180px]">
-                        <p className="truncate text-sparrow-gray" title={conn.what_discussed ?? undefined}>
+                        <p className="truncate text-sparrow-gray dark:text-sparrow-dark-gray" title={conn.what_discussed ?? undefined}>
                           {conn.what_discussed ?? '—'}
                         </p>
                       </td>
                       <td className="px-3 py-2.5 max-w-[160px]">
-                        <p className="truncate text-sparrow-gray" title={conn.next_action ?? undefined}>
+                        <p className="truncate text-sparrow-gray dark:text-sparrow-dark-gray" title={conn.next_action ?? undefined}>
                           {conn.next_action ?? '—'}
                         </p>
                       </td>
-                      <td className={`px-3 py-2.5 whitespace-nowrap text-xs ${overdue ? 'font-semibold text-priority-p1' : 'text-sparrow-gray'}`}>
+                      <td className={`px-3 py-2.5 whitespace-nowrap text-xs ${overdue ? 'font-semibold text-priority-p1' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                         {shortDate(conn.followup_due)}
                       </td>
                       <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
@@ -427,13 +427,13 @@ export function PartnershipEventsTab() {
                           ))}
                         </select>
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-sparrow-gray whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray whitespace-nowrap">
                         {eventName(conn.event_id)}
                       </td>
                       <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                         <a
                           href={`/partnerships?action=add&name=${encodeURIComponent(conn.name)}&org=${encodeURIComponent(conn.organization ?? '')}`}
-                          className="whitespace-nowrap text-xs font-medium text-sparrow-green hover:underline"
+                          className="whitespace-nowrap text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                           title="Open Add Partner panel with this person's details"
                         >
                           Become a partner →

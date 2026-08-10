@@ -27,10 +27,10 @@ export function Login() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-sparrow-sage px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-sparrow-rule bg-white p-8 text-center shadow-card">
+    <main className="flex min-h-screen items-center justify-center bg-sparrow-sage dark:bg-sparrow-dark-bg px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center shadow-card">
         <h1 className="font-serif text-2xl font-semibold">Sparrow Staff Portal</h1>
-        <p className="mt-2 text-sm text-sparrow-gray">Sign in with your Sparrow account.</p>
+        <p className="mt-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Sign in with your Sparrow account.</p>
 
         {isSupabaseConfigured ? (
           <>
@@ -40,9 +40,9 @@ export function Login() {
             {error && <p className="mt-3 text-sm text-priority-p1">{error}</p>}
           </>
         ) : (
-          <div className="mt-6 rounded-lg bg-sparrow-cream p-4 text-left text-sm text-sparrow-ink">
+          <div className="mt-6 rounded-lg bg-sparrow-cream p-4 text-left text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
             <p className="font-semibold">Supabase isn’t connected yet.</p>
-            <p className="mt-1 text-sparrow-gray">
+            <p className="mt-1 text-sparrow-gray dark:text-sparrow-dark-gray">
               Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to{' '}
               <code>.env.local</code>, then run the migration + seed. See <code>README.md</code>.
             </p>

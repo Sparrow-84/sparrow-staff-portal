@@ -38,27 +38,27 @@ export function SessionLogByBucket({ families }: { families: Family[] }) {
 
   return (
     <div className="grid gap-3 sm:grid-cols-[15rem_1fr]">
-      <div className="overflow-hidden rounded-2xl border border-sparrow-rule bg-white">
+      <div className="overflow-hidden rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
         {MONDAY_BUCKETS.map((bucket) => (
           <button
             key={bucket}
             onClick={() => setSelected(bucket)}
-            className={`block w-full border-t border-l-4 border-sparrow-rule px-3.5 py-3 text-left text-sm first:border-t-0 ${
-              bucket === selected ? BUCKET_ACTIVE_ROW[bucket] : 'border-l-transparent hover:bg-sparrow-mist'
+            className={`block w-full border-t border-l-4 border-sparrow-rule dark:border-sparrow-dark-border px-3.5 py-3 text-left text-sm first:border-t-0 ${
+              bucket === selected ? BUCKET_ACTIVE_ROW[bucket] : 'border-l-transparent hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
             }`}
           >
-            <p className="font-medium text-sparrow-ink">{MONDAY_BUCKET_LABEL[bucket]}</p>
-            <p className="text-xs text-sparrow-gray">Last logged {lastLogged[bucket] ?? '…'}</p>
+            <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{MONDAY_BUCKET_LABEL[bucket]}</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Last logged {lastLogged[bucket] ?? '…'}</p>
           </button>
         ))}
       </div>
 
-      <div className="min-h-[20rem] rounded-2xl border border-sparrow-rule bg-white p-4">
-        <h3 className="mb-2 font-serif text-lg font-semibold text-sparrow-ink">{MONDAY_BUCKET_LABEL[selected]}</h3>
+      <div className="min-h-[20rem] rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4">
+        <h3 className="mb-2 font-serif text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{MONDAY_BUCKET_LABEL[selected]}</h3>
         {loading ? (
-          <p className="text-sm text-sparrow-gray">Loading…</p>
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
         ) : notes.length === 0 ? (
-          <p className="text-sm text-sparrow-gray">No notes yet.</p>
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No notes yet.</p>
         ) : (
           notes.map((n) => <BucketNoteCard key={n.id} note={n} families={families} />)
         )}

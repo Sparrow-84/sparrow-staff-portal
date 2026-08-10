@@ -32,7 +32,7 @@ function InfoButton({ children }: { children: React.ReactNode }) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="ml-1.5 text-sparrow-gray hover:text-sparrow-ink transition text-sm leading-none"
+        className="ml-1.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition text-sm leading-none"
         aria-label="More information"
       >
         ⓘ
@@ -40,14 +40,14 @@ function InfoButton({ children }: { children: React.ReactNode }) {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-6 z-20 w-72 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg">
-            <div className="text-xs text-sparrow-gray leading-relaxed space-y-1.5">
+          <div className="absolute left-0 top-6 z-20 w-72 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg">
+            <div className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray leading-relaxed space-y-1.5">
               {children}
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="mt-2.5 text-xs text-sparrow-green font-medium"
+              className="mt-2.5 text-xs text-sparrow-green dark:text-sparrow-dark-green font-medium"
             >
               Got it
             </button>
@@ -66,7 +66,7 @@ const SCHEDULE_INFO: Partial<Record<InvBentonSchedule, React.ReactNode>> = {
       <p><strong>Schedule 5A — All other taxable personal property.</strong></p>
       <p>Furniture, equipment, electronics, and anything not listed in another schedule. Items $50 or more are listed individually with description, year acquired, and value.</p>
       <p>Batch items (similar items all under $50) are grouped by category and tracked in the Batch Tallies section above.</p>
-      <p className="font-medium text-sparrow-ink">Do not include:</p>
+      <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Do not include:</p>
       <ul className="list-disc pl-4 space-y-0.5">
         <li>Consumable supplies — paper, cleaning products, etc. (those go in the Consumables tab)</li>
         <li>Software or subscriptions</li>
@@ -103,21 +103,21 @@ function FilingItemRow({ item }: { item: FilingItem }) {
   const totalValue = item.unit_cost * item.quantity;
 
   return (
-    <tr className="border-b border-sparrow-rule last:border-0 hover:bg-sparrow-mist/40 transition-colors">
+    <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border last:border-0 hover:bg-sparrow-mist/40 transition-colors">
       <td className="py-2.5 pr-3 pl-4">
         <div className="flex items-start gap-2">
           <span className={`shrink-0 mt-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-medium ${meta.chip}`}>
             {meta.label}
           </span>
           <div className="min-w-0">
-            <p className="text-sm text-sparrow-ink leading-snug">
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink leading-snug">
               {item.filed_as ?? item.description}
             </p>
             {item.filed_as && item.filed_as !== item.description && (
-              <p className="text-xs text-sparrow-gray">internal: {item.description}</p>
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">internal: {item.description}</p>
             )}
             {item.who_has_it && (
-              <p className="text-xs text-sparrow-gray">off-site: {item.who_has_it}</p>
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">off-site: {item.who_has_it}</p>
             )}
             {item.review_flag && (
               <p className="text-xs text-sparrow-gold mt-0.5">⚠ {item.review_flag}</p>
@@ -126,22 +126,22 @@ function FilingItemRow({ item }: { item: FilingItem }) {
         </div>
       </td>
 
-      <td className="py-2.5 pr-3 text-xs text-sparrow-gray whitespace-nowrap">
+      <td className="py-2.5 pr-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray whitespace-nowrap">
         {item.location.name}
         {item.sub_location && (
-          <span className="block text-sparrow-rule-dark">{item.sub_location.name}</span>
+          <span className="block text-sparrow-rule dark:text-sparrow-dark-border-dark">{item.sub_location.name}</span>
         )}
       </td>
 
-      <td className="py-2.5 pr-3 text-xs text-sparrow-gray whitespace-nowrap text-right">
+      <td className="py-2.5 pr-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray whitespace-nowrap text-right">
         {item.quantity > 1 && <span>{item.quantity} × </span>}
         {formatCost(item.unit_cost)}
         {item.quantity > 1 && (
-          <span className="block text-sparrow-ink font-medium">{formatCost(totalValue)}</span>
+          <span className="block text-sparrow-ink dark:text-sparrow-dark-ink font-medium">{formatCost(totalValue)}</span>
         )}
       </td>
 
-      <td className="py-2.5 pr-4 text-xs text-sparrow-gray whitespace-nowrap">
+      <td className="py-2.5 pr-4 text-xs text-sparrow-gray dark:text-sparrow-dark-gray whitespace-nowrap">
         {yearAcquired ?? '—'}
       </td>
     </tr>
@@ -149,10 +149,10 @@ function FilingItemRow({ item }: { item: FilingItem }) {
 }
 
 const SCHEDULE_HEADING: Record<InvBentonSchedule, { bg: string; text: string; count: string }> = {
-  schedule_2:  { bg: 'bg-sparrow-mist',       text: 'text-sparrow-gray',  count: 'text-sparrow-gray' },
+  schedule_2:  { bg: 'bg-sparrow-mist dark:bg-sparrow-dark-surface2',       text: 'text-sparrow-gray dark:text-sparrow-dark-gray',  count: 'text-sparrow-gray dark:text-sparrow-dark-gray' },
   schedule_4:  { bg: 'bg-priority-p1/10',      text: 'text-priority-p1',   count: 'text-priority-p1/70' },
   schedule_5a: { bg: 'bg-sparrow-gold/10',     text: 'text-sparrow-gold',  count: 'text-sparrow-gold/70' },
-  schedule_5b: { bg: 'bg-sparrow-mist',        text: 'text-sparrow-ink',   count: 'text-sparrow-gray' },
+  schedule_5b: { bg: 'bg-sparrow-mist dark:bg-sparrow-dark-surface2',        text: 'text-sparrow-ink dark:text-sparrow-dark-ink',   count: 'text-sparrow-gray dark:text-sparrow-dark-gray' },
 };
 
 // ── Schedule section ──────────────────────────────────────────────────────
@@ -165,8 +165,8 @@ function ScheduleSection({ schedule, items }: { schedule: InvBentonSchedule; ite
   const h = SCHEDULE_HEADING[schedule];
 
   return (
-    <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden mb-4">
-      <div className={`flex items-center justify-between gap-4 border-b border-sparrow-rule px-4 py-2.5 ${h.bg}`}>
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden mb-4">
+      <div className={`flex items-center justify-between gap-4 border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 ${h.bg}`}>
         <div className="flex items-center gap-2">
           <span className={`text-xs font-semibold uppercase tracking-wide ${h.text}`}>
             {BENTON_SCHEDULE_LABELS[schedule]}
@@ -178,22 +178,22 @@ function ScheduleSection({ schedule, items }: { schedule: InvBentonSchedule; ite
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {addedCount > 0 && (
-            <span className="text-xs text-sparrow-green font-medium">+{addedCount} new</span>
+            <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green font-medium">+{addedCount} new</span>
           )}
           {updatedCount > 0 && (
             <span className="text-xs text-sparrow-gold font-medium">{updatedCount} updated</span>
           )}
-          <span className="text-xs font-medium text-sparrow-ink">{formatCost(totalValue)} total</span>
+          <span className="text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{formatCost(totalValue)} total</span>
         </div>
       </div>
 
       <table className="w-full">
         <thead>
-          <tr className="border-b border-sparrow-rule">
-            <th className="py-2 pl-4 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Item</th>
-            <th className="py-2 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Location</th>
-            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Value</th>
-            <th className="py-2 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Year</th>
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border">
+            <th className="py-2 pl-4 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Item</th>
+            <th className="py-2 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Location</th>
+            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Value</th>
+            <th className="py-2 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Year</th>
           </tr>
         </thead>
         <tbody>
@@ -211,36 +211,36 @@ function ScheduleSection({ schedule, items }: { schedule: InvBentonSchedule; ite
 function CountyContact() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 text-sm text-sparrow-gray hover:bg-sparrow-mist/40 transition"
+        className="w-full flex items-center justify-between px-4 py-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist/40 transition"
       >
-        <span className="font-medium text-sparrow-ink">Questions? Benton County Assessor</span>
+        <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Questions? Benton County Assessor</span>
         <span className="text-xs">{open ? '▲' : '▼'}</span>
       </button>
       {open && (
-        <div className="border-t border-sparrow-rule px-4 py-3 text-xs text-sparrow-gray space-y-1.5">
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray space-y-1.5">
           <p>
-            <span className="font-medium text-sparrow-ink">Website: </span>
+            <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Website: </span>
             <a
               href="https://assessment.bentoncountyor.gov/business-personal-property/"
               target="_blank"
               rel="noreferrer"
-              className="text-sparrow-green underline"
+              className="text-sparrow-green dark:text-sparrow-dark-green underline"
             >
               assessment.bentoncountyor.gov
             </a>
           </p>
           <p>
-            <span className="font-medium text-sparrow-ink">Email: </span>
-            <a href="mailto:Personal.Property@bentoncountyor.gov" className="text-sparrow-green underline">
+            <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Email: </span>
+            <a href="mailto:Personal.Property@bentoncountyor.gov" className="text-sparrow-green dark:text-sparrow-dark-green underline">
               Personal.Property@bentoncountyor.gov
             </a>
           </p>
-          <p><span className="font-medium text-sparrow-ink">Phone: </span>(541) 766-6269</p>
-          <p><span className="font-medium text-sparrow-ink">Hours: </span>Mon–Fri 8:00 AM – 5:00 PM</p>
+          <p><span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Phone: </span>(541) 766-6269</p>
+          <p><span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Hours: </span>Mon–Fri 8:00 AM – 5:00 PM</p>
         </div>
       )}
     </div>
@@ -318,7 +318,7 @@ export function FilingView() {
   const deadlineUrgent = daysToDeadline <= 14;
 
   if (loading) {
-    return <div className="flex items-center justify-center h-40 text-sparrow-gray text-sm">Loading…</div>;
+    return <div className="flex items-center justify-center h-40 text-sparrow-gray dark:text-sparrow-dark-gray text-sm">Loading…</div>;
   }
 
   if (err) {
@@ -339,14 +339,14 @@ export function FilingView() {
             <span className={`font-medium ${deadlineUrgent ? 'text-priority-p1' : 'text-sparrow-gold'}`}>
               Benton County filing deadline: March 15
             </span>
-            <span className="text-sparrow-gray ml-2">
+            <span className="text-sparrow-gray dark:text-sparrow-dark-gray ml-2">
               ({daysToDeadline === 0 ? 'today' : `${daysToDeadline} day${daysToDeadline !== 1 ? 's' : ''} away`})
             </span>
           </div>
           <InfoButton>
             <p><strong>Assessment date:</strong> January 1 at 1:00 AM — your return must reflect what you owned at that moment.</p>
             <p><strong>Filing deadline:</strong> March 15.</p>
-            <p className="font-medium text-sparrow-ink">Late penalties:</p>
+            <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Late penalties:</p>
             <ul className="list-disc pl-4 space-y-0.5">
               <li>5% if filed by June 1</li>
               <li>25% if filed by August 1</li>
@@ -357,12 +357,12 @@ export function FilingView() {
       )}
 
       {/* Summary + action bar */}
-      <div className="rounded-xl border border-sparrow-rule bg-white px-4 py-3.5 flex flex-wrap items-center gap-4">
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-3.5 flex flex-wrap items-center gap-4">
         <div className="flex flex-wrap gap-4 flex-1 text-sm">
           {addedCount > 0 && (
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-sparrow-green" />
-              <span className="font-medium text-sparrow-green">{addedCount} new</span>
+              <span className="font-medium text-sparrow-green dark:text-sparrow-dark-green">{addedCount} new</span>
             </span>
           )}
           {updatedCount > 0 && (
@@ -379,17 +379,17 @@ export function FilingView() {
           )}
           {onFileCount > 0 && (
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-sparrow-rule" />
-              <span className="text-sparrow-gray">{onFileCount} on file</span>
+              <span className="h-2 w-2 rounded-full bg-sparrow-rule dark:bg-sparrow-dark-border" />
+              <span className="text-sparrow-gray dark:text-sparrow-dark-gray">{onFileCount} on file</span>
             </span>
           )}
           {totalActive === 0 && (
-            <span className="text-sparrow-gray">No items in register yet</span>
+            <span className="text-sparrow-gray dark:text-sparrow-dark-gray">No items in register yet</span>
           )}
         </div>
 
         {lastFiling && (
-          <span className="text-xs text-sparrow-gray shrink-0">
+          <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray shrink-0">
             Last filed: {lastFiling.year} ({new Date(lastFiling.filed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
           </span>
         )}
@@ -407,19 +407,19 @@ export function FilingView() {
       {/* Mark-as-filed confirmation */}
       {confirmOpen && (
         <div className="rounded-xl border border-sparrow-green/30 bg-sparrow-green/5 px-4 py-3.5">
-          <p className="text-sm font-medium text-sparrow-ink mb-1">Mark Benton County filing as complete</p>
-          <p className="text-xs text-sparrow-gray mb-3">
+          <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink mb-1">Mark Benton County filing as complete</p>
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mb-3">
             This will mark all {addedCount + updatedCount} new/updated items as "on file." It won't affect the register — only the filing status labels.
           </p>
           <div className="flex items-center gap-3">
-            <label className="text-xs text-sparrow-gray">Filing year</label>
+            <label className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Filing year</label>
             <input
               type="number"
               value={filingYear}
               onChange={(e) => setFilingYear(Number(e.target.value))}
               min={2020}
               max={2030}
-              className="w-20 rounded border border-sparrow-rule px-2 py-1 text-sm text-sparrow-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green"
+              className="w-20 rounded border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
             />
             <button
               onClick={() => void handleMarkFiled()}
@@ -428,7 +428,7 @@ export function FilingView() {
             >
               {marking ? 'Saving…' : `Confirm — Mark ${filingYear} as Filed`}
             </button>
-            <button onClick={() => setConfirmOpen(false)} className="text-sm text-sparrow-gray hover:text-sparrow-ink transition">
+            <button onClick={() => setConfirmOpen(false)} className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition">
               Cancel
             </button>
           </div>
@@ -438,10 +438,10 @@ export function FilingView() {
       {/* Success */}
       {markedCount !== null && (
         <div className="rounded-xl border border-sparrow-green/20 bg-sparrow-green/5 px-4 py-3 flex items-center justify-between">
-          <p className="text-sm text-sparrow-green">
+          <p className="text-sm text-sparrow-green dark:text-sparrow-dark-green">
             {markedCount} item{markedCount !== 1 ? 's' : ''} marked as on file for {filingYear}.
           </p>
-          <button onClick={() => setMarkedCount(null)} className="text-xs text-sparrow-gray hover:text-sparrow-ink">
+          <button onClick={() => setMarkedCount(null)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
             Dismiss
           </button>
         </div>
@@ -460,8 +460,8 @@ export function FilingView() {
       })}
 
       {totalActive === 0 && (
-        <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist p-8 text-center">
-          <p className="text-sm text-sparrow-gray">
+        <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-8 text-center">
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             No items in the register yet. Items appear here once monthly submissions are approved.
           </p>
         </div>
@@ -469,7 +469,7 @@ export function FilingView() {
 
       {/* Removed since last filing */}
       {removedItems.length > 0 && (
-        <div className="rounded-xl border border-priority-p1/20 bg-white overflow-hidden">
+        <div className="rounded-xl border border-priority-p1/20 bg-white dark:bg-sparrow-dark-surface overflow-hidden">
           <div className="flex items-center gap-2 border-b border-priority-p1/20 px-4 py-2.5 bg-priority-p1/5">
             <span className="text-xs font-semibold uppercase tracking-wide text-priority-p1">
               Removed Since Last Filing
@@ -479,17 +479,17 @@ export function FilingView() {
           <table className="w-full">
             <tbody>
               {removedItems.map((item) => (
-                <tr key={item.id} className="border-b border-sparrow-rule last:border-0">
+                <tr key={item.id} className="border-b border-sparrow-rule dark:border-sparrow-dark-border last:border-0">
                   <td className="py-2.5 pl-4 pr-3">
-                    <p className="text-sm text-sparrow-ink">{item.filed_as ?? item.description}</p>
+                    <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{item.filed_as ?? item.description}</p>
                     {item.location && (
-                      <p className="text-xs text-sparrow-gray">{item.location.name}</p>
+                      <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{item.location.name}</p>
                     )}
                   </td>
-                  <td className="py-2.5 pr-3 text-xs text-sparrow-gray whitespace-nowrap">
+                  <td className="py-2.5 pr-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray whitespace-nowrap">
                     Removed {item.removed_date ? new Date(item.removed_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
                   </td>
-                  <td className="py-2.5 pr-4 text-xs text-sparrow-gray whitespace-nowrap">
+                  <td className="py-2.5 pr-4 text-xs text-sparrow-gray dark:text-sparrow-dark-gray whitespace-nowrap">
                     {formatCost(item.unit_cost * item.quantity)}
                   </td>
                 </tr>
@@ -501,7 +501,7 @@ export function FilingView() {
 
       {/* Footer */}
       <div className="space-y-3 pb-2">
-        <p className="text-xs text-sparrow-gray text-center">
+        <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray text-center">
           Schedule 2 (consumables estimates) are managed in the Consumables tab.
         </p>
         <CountyContact />

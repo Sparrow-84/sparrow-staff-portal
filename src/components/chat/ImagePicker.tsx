@@ -64,14 +64,14 @@ export function ImagePicker({
 
   if (phase === 'sending') {
     return (
-      <div className="flex items-center gap-3 border-t border-sparrow-rule px-4 py-3">
-        <span className="text-sm text-sparrow-gray">Sending…</span>
+      <div className="flex items-center gap-3 border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
+        <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Sending…</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-3 border-t border-sparrow-rule px-4 py-3">
+    <div className="flex items-center gap-3 border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
       <input
         ref={inputRef}
         type="file"
@@ -81,7 +81,7 @@ export function ImagePicker({
       />
 
       {phase === 'selecting' && (
-        <span className="text-sm text-sparrow-gray">Choose a photo…</span>
+        <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Choose a photo…</span>
       )}
 
       {phase === 'preview' && previewUrl && (
@@ -89,7 +89,7 @@ export function ImagePicker({
           <button
             onClick={cancel}
             aria-label="Cancel"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -102,7 +102,7 @@ export function ImagePicker({
             className="h-12 w-12 shrink-0 rounded-lg object-cover"
           />
 
-          <span className="flex-1 truncate text-sm text-sparrow-gray">
+          <span className="flex-1 truncate text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {file?.name}
           </span>
 

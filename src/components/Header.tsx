@@ -9,7 +9,7 @@ function MessagesButton({ onNavigate }: { onNavigate: (v: View) => void }) {
   return (
     <button
       onClick={() => onNavigate('messages')}
-      className="relative rounded-lg p-2 text-sparrow-gray transition hover:bg-sparrow-mist hover:text-sparrow-ink"
+      className="relative rounded-lg p-2 text-sparrow-gray dark:text-sparrow-dark-gray transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
       aria-label="Messages"
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -26,11 +26,11 @@ function MessagesButton({ onNavigate }: { onNavigate: (v: View) => void }) {
 
 export function Header({ profile, onMenu, onNavigate }: { profile: Profile; onMenu: () => void; onNavigate: (v: View) => void }) {
   return (
-    <header className="flex items-center justify-between border-b border-sparrow-rule bg-white px-4 py-3 sm:px-6">
+    <header className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-3 sm:px-6">
       <div className="flex items-center gap-2">
         <button
           onClick={onMenu}
-          className="rounded-lg p-2 text-sparrow-gray transition hover:bg-sparrow-mist hover:text-sparrow-ink md:hidden"
+          className="rounded-lg p-2 text-sparrow-gray dark:text-sparrow-dark-gray transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink md:hidden"
           aria-label="Open menu"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -39,14 +39,14 @@ export function Header({ profile, onMenu, onNavigate }: { profile: Profile; onMe
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <span className="font-serif text-lg font-semibold text-sparrow-green">Sparrow</span>
+        <span className="font-serif text-lg font-semibold text-sparrow-green dark:text-sparrow-dark-green">Sparrow</span>
       </div>
       <div className="flex items-center gap-3">
         <MessagesButton onNavigate={onNavigate} />
         <NotificationBell onNavigate={onNavigate} currentUserId={profile.id} />
         <div className="hidden text-right sm:block">
-          <p className="text-sm font-medium text-sparrow-ink">{profile.full_name}</p>
-          <p className="text-xs capitalize text-sparrow-gray">{profile.role}</p>
+          <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{profile.full_name}</p>
+          <p className="text-xs capitalize text-sparrow-gray dark:text-sparrow-dark-gray">{profile.role}</p>
         </div>
         <SignOutButton />
       </div>

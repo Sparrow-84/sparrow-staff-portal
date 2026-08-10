@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { updateMyProfile, normalizeSchedule } from '@/lib/team';
 import { getPushPermission, requestPushPermission } from '@/lib/push';
+import { applyTheme } from '@/lib/theme';
 import type { ScheduleBlock } from '@/lib/types';
 
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -38,6 +39,7 @@ export function SettingsView() {
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [pushBlocked, setPushBlocked] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
   // Only re-sync from the loaded profile when it's actually a different user's data
   // (profile.id changes) — not on every incidental refetch of the same profile
@@ -47,6 +49,7 @@ export function SettingsView() {
     if (!profile) return;
     setPushEnabled(profile.push_enabled ?? true);
     setPushBlocked(getPushPermission() === 'denied');
+    setDarkMode(profile.dark_mode ?? false);
     setBlurb(profile.blurb ?? '');
     const { month, day } = splitBirthday(profile.birthday);
     setBirthMonth(month);
@@ -100,21 +103,21 @@ export function SettingsView() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
       <h1 className="font-serif text-2xl font-semibold">Settings</h1>
-      <p className="mt-1 text-sm text-sparrow-gray">Preferences for {profile.full_name}.</p>
+      <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Preferences for {profile.full_name}.</p>
 
       <div className="mt-8 space-y-4">
 
         {/* My Profile */}
-        <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
-          <h2 className="mb-3 text-sm font-semibold text-sparrow-ink">My Profile</h2>
-          <p className="mb-4 text-xs text-sparrow-gray">
+        <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
+          <h2 className="mb-3 text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">My Profile</h2>
+          <p className="mb-4 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             Visible to all staff on the Team page. Your role description is set by Susanna.
           </p>
 
           {profile.role_description && (
             <div className="mb-4">
               <p className="field-label">Role</p>
-              <p className="mt-1 rounded-lg bg-sparrow-mist px-3 py-2 text-sm text-sparrow-gray">
+              <p className="mt-1 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                 {profile.role_description}
               </p>
             </div>
@@ -134,7 +137,7 @@ export function SettingsView() {
 
           <div className="mb-4">
             <label className="field-label" htmlFor="birthday-month">
-              Birthday <span className="font-normal text-sparrow-gray">(adds a yearly all-staff calendar event — no year needed)</span>
+              Birthday <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(adds a yearly all-staff calendar event — no year needed)</span>
             </label>
             <div className="grid grid-cols-2 gap-3">
               <select
@@ -169,12 +172,12 @@ export function SettingsView() {
 
           <div className="mb-4">
             <p className="field-label">Typical working hours</p>
-            <p className="mb-2 text-xs text-sparrow-gray">
+            <p className="mb-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               Add a block for each chunk of time you typically work — split your day however it actually goes.
             </p>
             <div className="space-y-3">
               {scheduleBlocks.map((block, index) => (
-                <div key={index} className="rounded-xl border border-sparrow-rule p-3">
+                <div key={index} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
                   <div className="flex flex-wrap gap-1.5">
                     {ALL_DAYS.map((day) => (
                       <button
@@ -184,7 +187,7 @@ export function SettingsView() {
                         className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                           block.days.includes(day)
                             ? 'bg-sparrow-green text-white'
-                            : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                            : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                         }`}
                       >
                         {day}
@@ -217,7 +220,7 @@ export function SettingsView() {
                     <button
                       type="button"
                       onClick={() => removeBlock(index)}
-                      className="mt-2 text-xs text-sparrow-gray hover:text-priority-p1"
+                      className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
                     >
                       Remove block
                     </button>
@@ -225,13 +228,13 @@ export function SettingsView() {
                 </div>
               ))}
             </div>
-            <button type="button" onClick={addBlock} className="btn-ghost mt-2 border border-sparrow-rule text-sm">
+            <button type="button" onClick={addBlock} className="btn-ghost mt-2 border border-sparrow-rule dark:border-sparrow-dark-border text-sm">
               + Add another block
             </button>
           </div>
 
           {profileStatus && (
-            <p className={`mb-3 text-xs ${profileStatus.includes('Could not') ? 'text-priority-p1' : 'text-sparrow-green'}`}>
+            <p className={`mb-3 text-xs ${profileStatus.includes('Could not') ? 'text-priority-p1' : 'text-sparrow-green dark:text-sparrow-dark-green'}`}>
               {profileStatus}
             </p>
           )}
@@ -246,10 +249,10 @@ export function SettingsView() {
         </section>
 
         {/* Push notifications */}
-        <section className="flex items-start justify-between gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+        <section className="flex items-start justify-between gap-4 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
           <div>
-            <p className="text-sm font-medium text-sparrow-ink">Push notifications</p>
-            <p className="mt-0.5 text-xs text-sparrow-gray">
+            <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Push notifications</p>
+            <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               {pushBlocked
                 ? 'Blocked in your browser — click the lock icon in your address bar to allow, then reload.'
                 : 'Alerts for new direct messages and announcements, even when the app isn\'t open.'}
@@ -279,12 +282,46 @@ export function SettingsView() {
               }
             }}
             className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
-              pushEnabled && !pushBlocked ? 'bg-sparrow-green' : 'bg-sparrow-rule'
+              pushEnabled && !pushBlocked ? 'bg-sparrow-green' : 'bg-sparrow-rule dark:bg-sparrow-dark-border'
             } ${pushBlocked ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span
               className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
                 pushEnabled && !pushBlocked ? 'left-[1.375rem]' : 'left-0.5'
+              }`}
+            />
+          </button>
+        </section>
+
+        {/* Dark mode */}
+        <section className="flex items-start justify-between gap-4 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
+          <div>
+            <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Dark mode</p>
+            <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              Applies across the whole staff dashboard, just for you.
+            </p>
+          </div>
+          <button
+            role="switch"
+            aria-checked={darkMode}
+            onClick={async () => {
+              const next = !darkMode;
+              setDarkMode(next);
+              applyTheme(next);
+              try {
+                await updateMyProfile(profile!.id, { dark_mode: next });
+              } catch {
+                setDarkMode(!next);
+                applyTheme(!next);
+              }
+            }}
+            className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
+              darkMode ? 'bg-sparrow-green' : 'bg-sparrow-rule dark:bg-sparrow-dark-border'
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                darkMode ? 'left-[1.375rem]' : 'left-0.5'
               }`}
             />
           </button>

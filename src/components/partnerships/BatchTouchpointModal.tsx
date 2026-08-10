@@ -100,17 +100,17 @@ export function BatchTouchpointModal({
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-sparrow-ink/40 px-4 py-12"
       onClick={onClose}
     >
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between border-b border-sparrow-rule px-6 py-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-sparrow-dark-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-6 py-4">
           <div>
             <h2 className="font-serif text-lg font-semibold">Log a touchpoint for multiple partners</h2>
-            <p className="mt-1 text-sm text-sparrow-gray">
+            <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               Same method, date, and summary applied to everyone you pick below.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xl leading-none text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xl leading-none text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
             aria-label="Close"
           >
             ×
@@ -127,7 +127,7 @@ export function BatchTouchpointModal({
               placeholder="Search by name, organization, or type…"
               className="field-input mt-0"
             />
-            <div className="mt-2 max-h-56 space-y-0.5 overflow-y-auto rounded-xl border border-sparrow-rule p-2">
+            <div className="mt-2 max-h-56 space-y-0.5 overflow-y-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-2">
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border-b border-sparrow-rule/60 px-2 py-1.5 text-sm font-medium">
                 <input
                   type="checkbox"
@@ -148,14 +148,14 @@ export function BatchTouchpointModal({
                     onChange={() => toggle(p.id)}
                     className="h-4 w-4 rounded accent-sparrow-green"
                   />
-                  <span className="text-sparrow-ink">{PARTNER_TYPE[p.type].icon} {p.name}</span>
+                  <span className="text-sparrow-ink dark:text-sparrow-dark-ink">{PARTNER_TYPE[p.type].icon} {p.name}</span>
                 </label>
               ))}
               {filtered.length === 0 && (
-                <p className="px-2 py-1.5 text-xs text-sparrow-gray">No partners match that search.</p>
+                <p className="px-2 py-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No partners match that search.</p>
               )}
             </div>
-            <p className="mt-1 text-xs text-sparrow-gray">{selectedIds.length} selected</p>
+            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{selectedIds.length} selected</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -193,7 +193,7 @@ export function BatchTouchpointModal({
           />
 
           {loggedCount != null && (
-            <p className="text-sm text-sparrow-green">
+            <p className="text-sm text-sparrow-green dark:text-sparrow-dark-green">
               Logged a touchpoint for {loggedCount} partner{loggedCount === 1 ? '' : 's'}.
             </p>
           )}

@@ -57,17 +57,17 @@ function TaskTooltip({ task, x, y }: TooltipState) {
 
   return (
     <div
-      className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg"
+      className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg"
       style={{ left, top }}
     >
-      <p className="text-sm font-medium leading-snug text-sparrow-ink">{task.title}</p>
+      <p className="text-sm font-medium leading-snug text-sparrow-ink dark:text-sparrow-dark-ink">{task.title}</p>
       <div className="mt-2 flex items-center gap-1.5">
         <span className={`h-2 w-2 shrink-0 rounded-full ${tier.dot}`} aria-hidden />
         <span className={`text-xs font-medium ${tier.text}`}>{tier.label}</span>
       </div>
-      <p className="mt-1 text-xs text-sparrow-gray">{STATUS_LABELS[task.status]}</p>
+      <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{STATUS_LABELS[task.status]}</p>
       {task.assignee && (
-        <p className="mt-1 text-xs text-sparrow-gray">{task.assignee.full_name}</p>
+        <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{task.assignee.full_name}</p>
       )}
       {task.notes && (
         <p className="mt-2 line-clamp-3 text-xs text-sparrow-ink/70">{task.notes}</p>
@@ -132,16 +132,16 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
       </div>
 
       {/* Weekday header */}
-      <div className="grid grid-cols-7 border-b border-sparrow-rule pb-1">
+      <div className="grid grid-cols-7 border-b border-sparrow-rule dark:border-sparrow-dark-border pb-1">
         {WEEKDAYS.map((w) => (
-          <div key={w} className="px-1 text-center text-xs font-medium text-sparrow-gray">
+          <div key={w} className="px-1 text-center text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
             {w}
           </div>
         ))}
       </div>
 
       {/* Weeks */}
-      <div className="grid grid-cols-7 overflow-hidden rounded-b-xl border-x border-b border-sparrow-rule">
+      <div className="grid grid-cols-7 overflow-hidden rounded-b-xl border-x border-b border-sparrow-rule dark:border-sparrow-dark-border">
         {weeks.flat().map((day) => {
           const iso = isoDate(day);
           const inMonth = day.getMonth() === cursor.getMonth();
@@ -156,8 +156,8 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
               }}
               onDragLeave={() => setOverDate((d) => (d === iso ? null : d))}
               onDrop={(e) => onDrop(e, iso)}
-              className={`min-h-24 border-b border-r border-sparrow-rule p-1 align-top ${
-                inMonth ? 'bg-white' : 'bg-sparrow-mist/50'
+              className={`min-h-24 border-b border-r border-sparrow-rule dark:border-sparrow-dark-border p-1 align-top ${
+                inMonth ? 'bg-white dark:bg-sparrow-dark-surface' : 'bg-sparrow-mist/50'
               } ${overDate === iso ? 'ring-2 ring-inset ring-sparrow-gold' : ''}`}
             >
               <div className="mb-1 flex justify-end">
@@ -166,7 +166,7 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
                     isToday
                       ? 'bg-sparrow-green font-semibold text-white'
                       : inMonth
-                        ? 'text-sparrow-ink'
+                        ? 'text-sparrow-ink dark:text-sparrow-dark-ink'
                         : 'text-sparrow-gray/60'
                   }`}
                 >
@@ -193,7 +193,7 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
                   </button>
                 ))}
                 {items.length > 3 && (
-                  <p className="px-1 text-[11px] text-sparrow-gray">+{items.length - 3} more</p>
+                  <p className="px-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">+{items.length - 3} more</p>
                 )}
               </div>
             </div>
@@ -204,7 +204,7 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
       {/* Undated tasks — draggable onto a day to schedule */}
       {undated.length > 0 && (
         <div className="mt-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
             No date · {undated.length} <span className="font-normal normal-case">(drag onto a day to schedule)</span>
           </p>
           <div className="flex flex-wrap gap-2">

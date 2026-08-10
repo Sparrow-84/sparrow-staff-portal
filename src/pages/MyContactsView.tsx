@@ -52,7 +52,7 @@ function ContactCard({ contact, onSave, onDelete }: {
 
   if (editing) {
     return (
-      <form onSubmit={handleSave} className="rounded-xl border border-sparrow-rule bg-white p-4 space-y-3">
+      <form onSubmit={handleSave} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3">
         <ContactFields form={form} onChange={setForm} />
         {error && <p className="text-sm text-priority-p1">{error}</p>}
         <div className="flex justify-end gap-2">
@@ -72,20 +72,20 @@ function ContactCard({ contact, onSave, onDelete }: {
   }
 
   return (
-    <div className="group rounded-xl border border-sparrow-rule bg-white p-4">
+    <div className="group rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-sparrow-ink">{contact.name}</p>
-          {contact.organization && <p className="mt-0.5 text-xs text-sparrow-gray">{contact.organization}</p>}
-          {contact.relationship && <p className="mt-1 text-xs text-sparrow-gray">Connection: {contact.relationship}</p>}
-          <div className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-sparrow-gray">
+          <p className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{contact.name}</p>
+          {contact.organization && <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{contact.organization}</p>}
+          {contact.relationship && <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Connection: {contact.relationship}</p>}
+          <div className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             {contact.phone && <span>{contact.phone}</span>}
             {contact.email && <span>{contact.email}</span>}
           </div>
-          {contact.notes && <p className="mt-2 text-xs text-sparrow-gray">{contact.notes}</p>}
+          {contact.notes && <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{contact.notes}</p>}
         </div>
         <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100">
-          <button onClick={() => setEditing(true)} className="rounded p-1 text-sparrow-gray/70 hover:text-sparrow-ink" title="Edit" aria-label="Edit contact">
+          <button onClick={() => setEditing(true)} className="rounded p-1 text-sparrow-gray/70 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink" title="Edit" aria-label="Edit contact">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -151,7 +151,7 @@ export function MyContactsView() {
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="mb-5">
         <h1 className="font-serif text-2xl font-semibold">My Contacts</h1>
-        <p className="mt-1 text-sm text-sparrow-gray">
+        <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           A personal list of people you think Sparrow should know about — a relative in ministry, a
           former coworker, anyone worth staying connected to as part of Sparrow's network. This is
           mostly a one-time thing to fill out, not a tool you'll use often. Partnerships staff can see
@@ -160,14 +160,14 @@ export function MyContactsView() {
       </div>
 
       <div className="mb-5 flex items-center justify-between">
-        <p className="text-sm text-sparrow-gray">{contacts.length} contact{contacts.length !== 1 ? 's' : ''}</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{contacts.length} contact{contacts.length !== 1 ? 's' : ''}</p>
         <button onClick={() => { setShowAddForm((v) => !v); setFormError(null); }} className="btn-primary text-xs">
           {showAddForm ? 'Cancel' : '+ Add contact'}
         </button>
       </div>
 
       {showAddForm && (
-        <form onSubmit={handleAdd} className="mb-5 rounded-xl border border-sparrow-rule bg-white p-4 space-y-3">
+        <form onSubmit={handleAdd} className="mb-5 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3">
           <ContactFields form={form} onChange={setForm} />
           {formError && <p className="text-sm text-priority-p1">{formError}</p>}
           <div className="flex justify-end gap-2">
@@ -182,9 +182,9 @@ export function MyContactsView() {
       )}
 
       {loading ? (
-        <p className="text-sm text-sparrow-gray">Loading…</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
       ) : contacts.length === 0 ? (
-        <p className="py-8 text-center text-sm text-sparrow-gray">
+        <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           Nothing here yet — add anyone worth Sparrow staying connected to, whenever one comes to mind.
         </p>
       ) : (

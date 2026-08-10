@@ -10,7 +10,7 @@ interface Props {
 }
 
 const CONTENT_CLASSES =
-  'text-sm leading-relaxed text-sparrow-ink ' +
+  'text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink ' +
   '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 ' +
   '[&_li]:mb-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2';
 
@@ -38,15 +38,15 @@ export function OrphanedNoteView({ noteId, scope, title, startsAt, onClose }: Pr
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
-      <div className="flex items-center justify-between border-b border-sparrow-rule px-6 py-4">
+    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-sparrow-dark-surface">
+      <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-6 py-4">
         <div>
-          <h1 className="text-lg font-semibold text-sparrow-ink">{title}</h1>
-          <p className="mt-0.5 text-sm text-sparrow-gray">{dateLabel}</p>
+          <h1 className="text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{title}</h1>
+          <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{dateLabel}</p>
         </div>
         <button
           onClick={onClose}
-          className="rounded-xl border border-sparrow-rule px-4 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist"
+          className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
         >
           Close
         </button>
@@ -59,11 +59,11 @@ export function OrphanedNoteView({ noteId, scope, title, startsAt, onClose }: Pr
       </div>
 
       {loading ? (
-        <p className="p-6 text-sm text-sparrow-gray">Loading…</p>
+        <p className="p-6 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
       ) : (
         <div className="flex-1 overflow-y-auto">
           {scope === 'private' ? (
-            <div className="mx-auto max-w-3xl divide-y divide-sparrow-rule px-6 py-6">
+            <div className="mx-auto max-w-3xl divide-y divide-sparrow-rule dark:divide-sparrow-dark-border px-6 py-6">
               <div className="pb-6">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">Prep Notes</p>
                 {content.prep ? (
@@ -73,7 +73,7 @@ export function OrphanedNoteView({ noteId, scope, title, startsAt, onClose }: Pr
                 )}
               </div>
               <div className="pt-6">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-green">Live Notes</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">Live Notes</p>
                 {content.live ? (
                   <div className={CONTENT_CLASSES} dangerouslySetInnerHTML={{ __html: content.live }} />
                 ) : (

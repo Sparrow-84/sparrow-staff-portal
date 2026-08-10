@@ -143,13 +143,13 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
       <button
         type="button"
         onClick={() => { setOpen(true); setView('list'); }}
-        className="field-input text-left text-sparrow-gray"
+        className="field-input text-left text-sparrow-gray dark:text-sparrow-dark-gray"
       >
         + Add tag
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-sparrow-rule bg-white shadow-xl">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-xl">
 
           {view === 'list' && (
             <>
@@ -159,23 +159,23 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
                     <button
                       type="button"
                       onClick={() => toggle(tag.name)}
-                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-sparrow-mist"
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                     >
                       <span className={`h-3 w-3 shrink-0 rounded-full ${swatchClass(tag.color)}`} />
-                      <span className="flex-1 truncate text-sparrow-ink">{tag.name}</span>
-                      {value.includes(tag.name) && <span className="text-sparrow-green">✓</span>}
+                      <span className="flex-1 truncate text-sparrow-ink dark:text-sparrow-dark-ink">{tag.name}</span>
+                      {value.includes(tag.name) && <span className="text-sparrow-green dark:text-sparrow-dark-green">✓</span>}
                     </button>
                   </li>
                 ))}
                 {allTags.length === 0 && (
-                  <li className="px-3 py-2 text-xs text-sparrow-gray">No tags yet — create one below.</li>
+                  <li className="px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No tags yet — create one below.</li>
                 )}
               </ul>
-              <div className="border-t border-sparrow-rule">
+              <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border">
                 <button
                   type="button"
                   onClick={() => setView('create')}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-sparrow-green hover:bg-sparrow-mist"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                 >
                   <span>+</span> Create tag
                 </button>
@@ -183,7 +183,7 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
                   <button
                     type="button"
                     onClick={() => { setView('manage'); setEditingId(null); }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-sparrow-gray hover:bg-sparrow-mist"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                   >
                     <span>✎</span> Manage tags
                   </button>
@@ -191,7 +191,7 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
                 <button
                   type="button"
                   onClick={() => { setOpen(false); setView('list'); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-sparrow-gray hover:bg-sparrow-mist"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                 >
                   Done
                 </button>
@@ -202,10 +202,10 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
           {view === 'create' && (
             <div className="space-y-3 p-3">
               <div className="flex items-center gap-2">
-                <button type="button" onClick={() => setView('list')} className="text-xs text-sparrow-gray hover:text-sparrow-ink">
+                <button type="button" onClick={() => setView('list')} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
                   ← Back
                 </button>
-                <span className="text-xs font-semibold text-sparrow-ink">New tag</span>
+                <span className="text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">New tag</span>
               </div>
               <input
                 type="text"
@@ -217,7 +217,7 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
                 autoFocus
               />
               <div>
-                <p className="mb-1.5 text-xs text-sparrow-gray">Color</p>
+                <p className="mb-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Color</p>
                 <div className="flex flex-wrap gap-2">
                   {LABEL_COLORS.map((c) => (
                     <button
@@ -247,11 +247,11 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
                 <button
                   type="button"
                   onClick={() => { setView('list'); setEditingId(null); }}
-                  className="text-xs text-sparrow-gray hover:text-sparrow-ink"
+                  className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                 >
                   ← Back
                 </button>
-                <span className="text-xs font-semibold text-sparrow-ink">Manage tags</span>
+                <span className="text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Manage tags</span>
               </div>
               {allTags.map((tag) => (
                 <div key={tag.id} className="rounded-lg bg-sparrow-mist/50 p-2">
@@ -281,11 +281,11 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
                           type="button"
                           onClick={() => void handleSaveEdit(tag)}
                           disabled={!editName.trim() || savingEdit}
-                          className="text-xs font-medium text-sparrow-green hover:opacity-70"
+                          className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:opacity-70"
                         >
                           Save
                         </button>
-                        <button type="button" onClick={() => setEditingId(null)} className="text-xs text-sparrow-gray hover:text-sparrow-ink">
+                        <button type="button" onClick={() => setEditingId(null)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
                           ✕
                         </button>
                       </div>
@@ -293,8 +293,8 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className={`h-3 w-3 shrink-0 rounded-full ${swatchClass(tag.color)}`} />
-                      <span className="flex-1 truncate text-xs text-sparrow-ink">{tag.name}</span>
-                      <button type="button" onClick={() => startEdit(tag)} className="text-sparrow-gray hover:text-sparrow-ink" aria-label="Edit">
+                      <span className="flex-1 truncate text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{tag.name}</span>
+                      <button type="button" onClick={() => startEdit(tag)} className="text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink" aria-label="Edit">
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
@@ -303,7 +303,7 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
                         type="button"
                         onClick={() => void handleDelete(tag)}
                         disabled={deletingId === tag.id}
-                        className="text-sparrow-gray hover:text-priority-p1"
+                        className="text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
                         aria-label="Delete"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -317,7 +317,7 @@ export function StoryTagPicker({ value, allTags, currentUserId, onChange, onTags
               <button
                 type="button"
                 onClick={() => setView('create')}
-                className="flex w-full items-center gap-2 pt-1 text-xs font-medium text-sparrow-green hover:opacity-70"
+                className="flex w-full items-center gap-2 pt-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:opacity-70"
               >
                 <span>+</span> Create new tag
               </button>

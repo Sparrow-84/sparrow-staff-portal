@@ -77,7 +77,7 @@ export function StoriesRoom() {
     setPanelOpen(false);
   }
 
-  if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading Stories &amp; Media…</p>;
+  if (loading) return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading Stories &amp; Media…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
   return (
@@ -86,7 +86,7 @@ export function StoriesRoom() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold">Stories &amp; Media</h1>
-          <p className="mt-1 text-sm text-sparrow-gray">
+          <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {stories.length} {stories.length === 1 ? 'story' : 'stories'} ·{' '}
             {events.length} {events.length === 1 ? 'event' : 'events'} logged ·{' '}
             {consents.length} photo {consents.length === 1 ? 'form' : 'forms'} on file
@@ -95,15 +95,15 @@ export function StoriesRoom() {
       </div>
 
       {/* Tab bar */}
-      <div className="mt-6 flex border-b border-sparrow-rule">
+      <div className="mt-6 flex border-b border-sparrow-rule dark:border-sparrow-dark-border">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
             className={`px-4 py-2 text-sm font-medium transition ${
               activeTab === t.key
-                ? '-mb-px border-b-2 border-sparrow-green text-sparrow-green'
-                : 'text-sparrow-gray hover:text-sparrow-ink'
+                ? '-mb-px border-b-2 border-sparrow-green dark:border-sparrow-dark-green text-sparrow-green dark:text-sparrow-dark-green'
+                : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
             }`}
           >
             {t.label}

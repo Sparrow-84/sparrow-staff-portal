@@ -9,7 +9,7 @@ import { Drawer } from './Drawer';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 const KIND_COLOR: Record<string, string> = {
-  curriculum: 'bg-sparrow-green/10 text-sparrow-green',
+  curriculum: 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green',
   one_on_one:  'bg-amber-100 text-amber-700',
   dinner:      'bg-violet-100 text-violet-700',
   volunteer:   'bg-sky-100 text-sky-700',
@@ -183,7 +183,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
               <button
                 onClick={() => handleSave('future')}
                 disabled={!!saving}
-                className="w-full rounded-xl border border-sparrow-green py-2 text-sm font-medium text-sparrow-green hover:bg-sparrow-green/5"
+                className="w-full rounded-xl border border-sparrow-green dark:border-sparrow-dark-green py-2 text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green hover:bg-sparrow-green/5"
               >
                 {saving === 'future' ? 'Saving…' : 'Save this + all future'}
               </button>
@@ -222,7 +222,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
 
     return (
       <div className="space-y-2">
-        <p className="text-xs text-sparrow-gray">
+        <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           {isRecurring
             ? 'Delete just this event, or this one and all future events in the series?'
             : 'This cannot be undone.'}
@@ -320,7 +320,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
             </div>
             <div>
               <label className="field-label">
-                End time <span className="font-normal text-sparrow-gray">(optional)</span>
+                End time <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
               </label>
               <input
                 type="time"
@@ -333,7 +333,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
 
           <div>
             <label className="field-label">
-              Location <span className="font-normal text-sparrow-gray">(optional)</span>
+              Location <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
             </label>
             <input
               type="text"
@@ -343,12 +343,12 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
             />
           </div>
 
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
             <input
               type="checkbox"
               checked={editMandatory}
               onChange={(e) => setEditMandatory(e.target.checked)}
-              className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+              className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
             />
             Mandatory attendance
           </label>
@@ -360,33 +360,33 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
           </span>
 
           <div>
-            <p className="text-sm font-medium text-sparrow-ink">{dayLabel(event.starts_at)}</p>
-            <p className="mt-0.5 text-sm text-sparrow-gray">{timeRange}</p>
+            <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{dayLabel(event.starts_at)}</p>
+            <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{timeRange}</p>
           </div>
 
           {event.location && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Location</p>
-              <p className="mt-0.5 text-sm text-sparrow-ink">{event.location}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Location</p>
+              <p className="mt-0.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{event.location}</p>
             </div>
           )}
 
           <div className="flex gap-2">
             {event.mandatory && (
-              <span className="rounded-full bg-sparrow-mist px-2.5 py-1 text-xs font-medium text-sparrow-gray">
+              <span className="rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2.5 py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
                 Mandatory
               </span>
             )}
             {isRecurring && (
-              <span className="rounded-full bg-sparrow-mist px-2.5 py-1 text-xs font-medium text-sparrow-gray">
+              <span className="rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2.5 py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
                 Recurring
               </span>
             )}
           </div>
 
-          <div className="border-t border-sparrow-rule pt-4">
+          <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
             <label className="flex cursor-pointer items-center justify-between gap-3">
-              <span className="text-sm text-sparrow-ink">Show on all-staff calendar</span>
+              <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Show on all-staff calendar</span>
               <button
                 onClick={toggleOrgCal}
                 disabled={toggling}
@@ -401,7 +401,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
             </label>
           </div>
 
-          <div className="border-t border-sparrow-rule pt-4">
+          <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
             <button
               onClick={() => { handleClose(); onLogSession(event); }}
               className="btn-primary w-full"

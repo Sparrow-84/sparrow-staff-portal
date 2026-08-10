@@ -86,19 +86,19 @@ export function GrantPanel({
   return (
     <Drawer open={open} onClose={onClose} title={grant.funder_name} subtitle="Grant record">
       {grant.prior_consent_required && (
-        <p className="mb-3 flex items-start gap-2 rounded-lg border border-sparrow-green/40 bg-sparrow-sage px-3 py-2 text-xs font-medium text-sparrow-green">
+        <p className="mb-3 flex items-start gap-2 rounded-lg border border-sparrow-green/40 bg-sparrow-sage px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
           <span aria-hidden>⚠️</span>
           Prior consent required — do not take action on this grant (insurance, management,
           ownership, or debt changes) without the funder's sign-off first.
         </p>
       )}
-      <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-sparrow-rule bg-sparrow-mist p-1 text-xs">
+      <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1 text-xs">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`rounded-lg px-2.5 py-1.5 font-medium transition ${
-              tab === t.key ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
+              tab === t.key ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-green dark:text-sparrow-dark-green shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
             }`}
           >
             {t.label}
@@ -229,7 +229,7 @@ function DetailsTab({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between rounded-xl border border-sparrow-rule/70 p-3">
-        <span className="text-sm text-sparrow-gray">
+        <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           {grant.status === 'active' ? 'Active grant' : 'Past — wrapped up'}
           <InfoTip text="Marking a grant Past doesn't delete anything — every field, link, and document stays exactly as it was. It just moves which tab it shows up in." />
         </span>
@@ -240,13 +240,13 @@ function DetailsTab({
 
       <div className="rounded-xl border border-sparrow-rule/70 p-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-sparrow-ink">
+          <span className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
             Annual certification
             <InfoTip text="Once a year you tell the funder that you're still meeting the grant's rules — e.g. that enough spaces are still rented to qualifying low-income households. The date below is when that's due." />
           </span>
           {tone.label && <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`}>{tone.label}</span>}
         </div>
-        <p className="mt-1 text-xs text-sparrow-gray">
+        <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           Due {formatDate(grant.certification_due_date)}
           {grant.last_certified_on && ` · last certified ${formatDate(grant.last_certified_on)}`}
         </p>
@@ -261,7 +261,7 @@ function DetailsTab({
             Mark certified today
           </button>
         </div>
-        <p className="mt-2 text-[11px] text-sparrow-gray">
+        <p className="mt-2 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
           "Mark certified today" saves the date in the box above, records today as the completion
           date, and rolls the due date forward exactly one year. Only click it once this year's
           certification has actually been filed with the funder — not just to save a typed-in date.
@@ -269,7 +269,7 @@ function DetailsTab({
       </div>
 
       <label className="block" htmlFor="grant-funder-name">
-        <span className="text-xs font-medium text-sparrow-gray">Funder name *</span>
+        <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Funder name *</span>
         <input
           id="grant-funder-name"
           value={form.funder_name}
@@ -279,7 +279,7 @@ function DetailsTab({
       </label>
 
       <label className="block">
-        <span className="text-xs font-medium text-sparrow-gray">Amount</span>
+        <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Amount</span>
         <input
           type="number"
           value={form.amount ?? ''}
@@ -290,7 +290,7 @@ function DetailsTab({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray">
+          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
             Owner
             <InfoTip text="Who's responsible for making sure this grant's to-dos actually happen — filing the certification, watching for funder emails, etc. Reminders go to this person." />
           </span>
@@ -306,7 +306,7 @@ function DetailsTab({
           </select>
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray">
+          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
             Reminder lead time (days)
             <InfoTip text="How many days before the certification is due the owner should get a reminder task. 30 is the default — plenty of time to file with the funder." />
           </span>
@@ -321,7 +321,7 @@ function DetailsTab({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray">
+          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
             Placed in service
             <InfoTip text="Roughly: the date the funded property started being used for its purpose — for an acquisition (like Twin Oaks), that's usually the closing/effective date, not a separate construction date." />
           </span>
@@ -333,7 +333,7 @@ function DetailsTab({
           />
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray">
+          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
             Affordability period end
             <InfoTip text="The date the grant's income restrictions expire — after this, the funder's rules on renting to low-income households no longer apply. Often decades out; check the agreement for the exact formula." />
           </span>
@@ -347,7 +347,7 @@ function DetailsTab({
       </div>
 
       <div className="rounded-xl border border-sparrow-rule/70 p-3">
-        <p className="mb-2 text-xs font-medium text-sparrow-gray">
+        <p className="mb-2 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
           Funder contact
           <InfoTip text="Who to reach at the funder with questions or required notices. Not every funder assigns a specific person — some route everything through a general compliance address instead." />
         </p>
@@ -380,14 +380,14 @@ function DetailsTab({
           onChange={(e) => set('prior_consent_required', e.target.checked)}
           className="h-4 w-4"
         />
-        <span className="text-sm font-medium text-sparrow-green">
+        <span className="text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green">
           Prior consent required before acting
           <InfoTip text="Check this if the funder's agreement says Sparrow must get their written OK before certain actions — commonly: selling/transferring the property, changing the management company, or taking on new debt against it. Acting without asking first can be a real compliance violation, not just a formality." />
         </span>
       </label>
 
       <label className="block">
-        <span className="text-xs font-medium text-sparrow-gray">Notes</span>
+        <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Notes</span>
         <textarea value={form.notes ?? ''} onChange={(e) => set('notes', e.target.value || null)} rows={3} className="field-input" />
       </label>
 
@@ -395,23 +395,23 @@ function DetailsTab({
       <button onClick={save} disabled={busy} className="btn-primary w-full">
         Save changes
       </button>
-      {autoSaveLabel && <p className="-mt-2 text-center text-[11px] text-sparrow-gray">{autoSaveLabel} automatically</p>}
+      {autoSaveLabel && <p className="-mt-2 text-center text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">{autoSaveLabel} automatically</p>}
 
-      <hr className="border-sparrow-rule" />
+      <hr className="border-sparrow-rule dark:border-sparrow-dark-border" />
       {children}
 
-      <hr className="border-sparrow-rule" />
+      <hr className="border-sparrow-rule dark:border-sparrow-dark-border" />
       <div className="flex items-center justify-end">
         {confirmDelete ? (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-sparrow-ink">Delete this grant permanently?</span>
+            <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Delete this grant permanently?</span>
             <button onClick={() => setConfirmDelete(false)} className="btn-ghost">Cancel</button>
             <button onClick={remove} disabled={deleteBusy} className="rounded-lg bg-priority-p1 px-3 py-1.5 text-sm font-medium text-white">
               Delete
             </button>
           </div>
         ) : (
-          <button onClick={() => setConfirmDelete(true)} className="text-xs font-medium text-sparrow-gray hover:text-priority-p1">
+          <button onClick={() => setConfirmDelete(true)} className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
             Delete this grant
           </button>
         )}
@@ -469,20 +469,20 @@ function LinksTab({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-sparrow-ink">Links</p>
+      <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Links</p>
       <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
         {links.map((l) => (
           <div key={l.id} className="flex items-center gap-2 text-sm">
-            <a href={l.url} target="_blank" rel="noreferrer" className="flex-1 truncate font-medium text-sparrow-green underline">
+            <a href={l.url} target="_blank" rel="noreferrer" className="flex-1 truncate font-medium text-sparrow-green dark:text-sparrow-dark-green underline">
               {l.label}
             </a>
-            <button onClick={() => deleteGrantLink(l.id).then(onChanged)} className="text-xs text-sparrow-gray hover:text-priority-p1">
+            <button onClick={() => deleteGrantLink(l.id).then(onChanged)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
               Remove
             </button>
           </div>
         ))}
-        {links.length === 0 && <p className="text-xs text-sparrow-gray">No links yet.</p>}
-        <div className="flex gap-2 border-t border-dashed border-sparrow-rule pt-2">
+        {links.length === 0 && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No links yet.</p>}
+        <div className="flex gap-2 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
           <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Grant agreement portal)" className="field-input mt-0 flex-1 text-xs" />
           <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" className="field-input mt-0 flex-1 text-xs" />
           <button onClick={add} disabled={busy} className="btn-primary shrink-0 text-xs">
@@ -524,11 +524,11 @@ function NotificationsTab({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-sparrow-gray">
+      <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
         Record of funder notifications actually sent — append-only, this is the compliance history.
       </p>
       <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
-        <span className="flex items-center text-xs font-medium text-sparrow-gray">
+        <span className="flex items-center text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
           What are you notifying the funder about?
           <InfoTip text="These are notices sent TO the funder about changes at the property — not Sparrow's own insurance shopping. Insurance change: a policy was cancelled, non-renewed, or swapped. Management change: a new property manager. Ownership/transfer: any change in who owns the property or Sparrow itself. Debt: any new loan that could create a lien on the property." />
         </span>
@@ -548,14 +548,14 @@ function NotificationsTab({
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Notes (optional)" className="field-input mt-0" />
       </div>
       <ul className="space-y-2">
-        {items.length === 0 && <li className="text-sm text-sparrow-gray">No notifications logged yet.</li>}
+        {items.length === 0 && <li className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No notifications logged yet.</li>}
         {items.map((n) => (
           <li key={n.id} className="rounded-xl border border-sparrow-rule/70 p-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-sparrow-ink">{notificationCategoryLabel(n.category)}</span>
-              <span className="text-xs text-sparrow-gray">{formatDate(n.sent_on)}</span>
+              <span className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{notificationCategoryLabel(n.category)}</span>
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{formatDate(n.sent_on)}</span>
             </div>
-            {n.notes && <p className="mt-1 text-sm text-sparrow-gray">{n.notes}</p>}
+            {n.notes && <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{n.notes}</p>}
           </li>
         ))}
       </ul>
@@ -612,8 +612,8 @@ function DocumentsTab({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-sparrow-ink">Documents</p>
-      <p className="text-xs text-sparrow-gray">Grant agreements and correspondence — stored privately, ops tier only.</p>
+      <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Documents</p>
+      <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Grant agreements and correspondence — stored privately, ops tier only.</p>
       <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
         <input
           id="grant-doc-label"
@@ -634,16 +634,16 @@ function DocumentsTab({
         </button>
         {(error || missingMessage) && <p className="text-xs text-priority-p1">{error || missingMessage}</p>}
       </div>
-      <ul className="divide-y divide-sparrow-rule/70 rounded-xl border border-sparrow-rule">
-        {docs.length === 0 && <li className="p-3 text-sm text-sparrow-gray">No documents yet.</li>}
+      <ul className="divide-y divide-sparrow-rule/70 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border">
+        {docs.length === 0 && <li className="p-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No documents yet.</li>}
         {docs.map((d) => (
           <li key={d.id} className="p-3 text-sm">
             <div className="flex items-center gap-2">
-              <button onClick={() => open(d)} className="flex-1 truncate text-left font-medium text-sparrow-green underline">
+              <button onClick={() => open(d)} className="flex-1 truncate text-left font-medium text-sparrow-green dark:text-sparrow-dark-green underline">
                 {d.label}
               </button>
-              <span className="text-xs text-sparrow-gray">{formatDate(d.created_at)}</span>
-              <button onClick={() => deleteGrantDocument(d).then(onChanged)} className="text-xs text-sparrow-gray hover:text-priority-p1">
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{formatDate(d.created_at)}</span>
+              <button onClick={() => deleteGrantDocument(d).then(onChanged)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
                 Delete
               </button>
             </div>
@@ -695,7 +695,7 @@ function DocumentSummary({ doc, onChanged }: { doc: GrantDocument; onChanged: ()
           </button>
           <button
             onClick={() => { setDraft(doc.summary ?? ''); setEditing(false); }}
-            className="text-xs text-sparrow-gray hover:text-sparrow-ink"
+            className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
           >
             Cancel
           </button>
@@ -706,7 +706,7 @@ function DocumentSummary({ doc, onChanged }: { doc: GrantDocument; onChanged: ()
 
   if (!doc.summary) {
     return (
-      <button onClick={() => setEditing(true)} className="mt-1 text-xs text-sparrow-green hover:underline">
+      <button onClick={() => setEditing(true)} className="mt-1 text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline">
         + Add plain-English summary
       </button>
     );
@@ -716,15 +716,15 @@ function DocumentSummary({ doc, onChanged }: { doc: GrantDocument; onChanged: ()
     <div className="mt-1">
       <button
         onClick={() => setExpanded((e) => !e)}
-        className="flex items-center gap-1 text-xs font-medium text-sparrow-green hover:underline"
+        className="flex items-center gap-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
       >
         <span aria-hidden>{expanded ? '▾' : '▸'}</span>
         Plain-English summary
       </button>
       {expanded && (
-        <div className="mt-2 rounded-lg bg-sparrow-mist p-3">
-          <p className="whitespace-pre-wrap text-xs text-sparrow-ink">{doc.summary}</p>
-          <button onClick={() => setEditing(true)} className="mt-2 text-xs text-sparrow-gray hover:text-sparrow-ink">
+        <div className="mt-2 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
+          <p className="whitespace-pre-wrap text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{doc.summary}</p>
+          <button onClick={() => setEditing(true)} className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
             Edit
           </button>
         </div>

@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthContext';
+import { applyTheme, getCachedTheme } from './lib/theme';
+
+applyTheme(getCachedTheme());
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

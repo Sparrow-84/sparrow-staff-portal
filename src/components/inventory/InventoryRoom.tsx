@@ -26,23 +26,23 @@ export function InventoryRoom() {
   const [openFlipId, setOpenFlipId] = useState<{ locationId: string; locationName: string } | null>(null);
 
   const tabBase   = 'px-4 py-2 text-sm font-medium border-b-2 transition';
-  const tabActive = 'border-sparrow-green text-sparrow-green';
-  const tabIdle   = 'border-transparent text-sparrow-gray hover:text-sparrow-ink';
+  const tabActive = 'border-sparrow-green dark:border-sparrow-dark-green text-sparrow-green dark:text-sparrow-dark-green';
+  const tabIdle   = 'border-transparent text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink';
 
   return (
     <div className="flex flex-col h-full">
       {/* Room header */}
-      <div className="border-b border-sparrow-rule px-6 py-5">
+      <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border px-6 py-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="font-serif text-2xl font-semibold">Property Inventory</h1>
-            <p className="text-sm text-sparrow-gray mt-0.5">
+            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
               {isOps
                 ? 'Review and approve monthly submissions · Manage the asset register'
                 : 'Log additions and removals for your area each month'}
             </p>
           </div>
-          <span className="shrink-0 rounded-full border border-sparrow-rule px-3 py-1 text-xs text-sparrow-gray">
+          <span className="shrink-0 rounded-full border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             {new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
           </span>
         </div>
@@ -148,7 +148,7 @@ function HouseFlipsOpsView({
   const activeLocIds = new Set(activeFlips.map((f) => f.location_id));
 
   if (loading) {
-    return <div className="flex items-center justify-center h-40 text-sparrow-gray text-sm">Loading…</div>;
+    return <div className="flex items-center justify-center h-40 text-sparrow-gray dark:text-sparrow-dark-gray text-sm">Loading…</div>;
   }
   if (err) {
     return <p className="text-sm text-priority-p1">{err}</p>;
@@ -159,21 +159,21 @@ function HouseFlipsOpsView({
       {/* Active flips */}
       {activeFlips.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray mb-2">
             Active Flips
           </p>
-          <ul className="divide-y divide-sparrow-rule rounded-xl border border-sparrow-rule bg-white overflow-hidden">
+          <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
             {activeFlips.map((flip) => (
               <li key={flip.id}>
                 <button
                   onClick={() => onOpenFlip(flip.location_id, flip.location?.name ?? '')}
-                  className="w-full flex items-center gap-4 px-4 py-3.5 text-left hover:bg-sparrow-mist transition"
+                  className="w-full flex items-center gap-4 px-4 py-3.5 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-sparrow-ink">
+                    <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                       {flip.location?.name ?? 'Unknown house'}
                     </p>
-                    <p className="text-xs text-sparrow-gray mt-0.5">
+                    <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
                       {flip.initiator?.full_name}
                       {' · '}
                       {new Date(flip.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -182,7 +182,7 @@ function HouseFlipsOpsView({
                   <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium bg-sparrow-gold/20 text-sparrow-gold">
                     {FLIP_STATUS_LABELS[flip.status]}
                   </span>
-                  <span className="text-sparrow-gray shrink-0">›</span>
+                  <span className="text-sparrow-gray dark:text-sparrow-dark-gray shrink-0">›</span>
                 </button>
               </li>
             ))}
@@ -192,28 +192,28 @@ function HouseFlipsOpsView({
 
       {/* LCP houses without active flips */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray mb-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray mb-2">
           {activeFlips.length > 0 ? 'Other LCP Houses' : 'LCP Houses'}
         </p>
-        <ul className="divide-y divide-sparrow-rule rounded-xl border border-sparrow-rule bg-white overflow-hidden">
+        <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
           {lcpHouses
             .filter((l) => !activeLocIds.has(l.id))
             .map((loc) => (
               <li key={loc.id}>
                 <button
                   onClick={() => onOpenFlip(loc.id, loc.name)}
-                  className="w-full flex items-center gap-4 px-4 py-3.5 text-left hover:bg-sparrow-mist transition"
+                  className="w-full flex items-center gap-4 px-4 py-3.5 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-sparrow-ink">{loc.name}</p>
-                    <p className="text-xs text-sparrow-gray mt-0.5">No active flip</p>
+                    <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{loc.name}</p>
+                    <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">No active flip</p>
                   </div>
-                  <span className="shrink-0 text-xs text-sparrow-gray">Start flip →</span>
+                  <span className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Start flip →</span>
                 </button>
               </li>
             ))}
           {lcpHouses.filter((l) => !activeLocIds.has(l.id)).length === 0 && (
-            <li className="px-4 py-4 text-sm text-sparrow-gray text-center">
+            <li className="px-4 py-4 text-sm text-sparrow-gray dark:text-sparrow-dark-gray text-center">
               All LCP houses have active flips in progress.
             </li>
           )}
@@ -223,23 +223,23 @@ function HouseFlipsOpsView({
       {/* Recent completed flips */}
       {flips.filter((f) => f.status === 'submitted').length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray mb-2">
             Recently Completed
           </p>
-          <ul className="divide-y divide-sparrow-rule rounded-xl border border-sparrow-rule bg-white overflow-hidden">
+          <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
             {flips
               .filter((f) => f.status === 'submitted')
               .slice(0, 5)
               .map((flip) => (
                 <li key={flip.id} className="flex items-center gap-4 px-4 py-3.5">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-sparrow-ink">{flip.location?.name ?? 'Unknown house'}</p>
-                    <p className="text-xs text-sparrow-gray mt-0.5">
+                    <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{flip.location?.name ?? 'Unknown house'}</p>
+                    <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
                       {flip.submitted_at &&
                         new Date(flip.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium bg-sparrow-green/10 text-sparrow-green">
+                  <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green">
                     Complete
                   </span>
                 </li>

@@ -60,6 +60,7 @@ export interface Profile {
   push_enabled: boolean;
   /** MM-DD-agnostic date of birth — drives the auto-generated yearly all-staff calendar event. */
   birthday: string | null;
+  dark_mode: boolean;
 }
 
 export interface Task {

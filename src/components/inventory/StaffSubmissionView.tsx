@@ -102,7 +102,7 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-40 text-sparrow-gray text-sm">
+      <div className="flex items-center justify-center h-40 text-sparrow-gray dark:text-sparrow-dark-gray text-sm">
         Loading…
       </div>
     );
@@ -114,8 +114,8 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
 
   if (assignments.length === 0) {
     return (
-      <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist p-6 text-center">
-        <p className="text-sm text-sparrow-gray">
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-6 text-center">
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           You don't have any inventory locations assigned yet. Contact operations.
         </p>
       </div>
@@ -156,10 +156,10 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
       {remoteAssignments.length > 0 && (
         <div>
           <div className="mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Remote Items
             </p>
-            <p className="text-xs text-sparrow-gray mt-0.5">
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
               Items in your possession outside of a fixed Sparrow location. Same submission rules apply.
             </p>
           </div>
@@ -210,25 +210,25 @@ function LocationCard({
   onOpenFlip: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
       {/* Location header */}
-      <div className="border-b border-sparrow-rule px-4 py-3 flex items-center justify-between">
+      <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3 flex items-center justify-between">
         <div>
-          <h2 className="font-medium text-sparrow-ink text-sm">{loc.name}</h2>
+          <h2 className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink text-sm">{loc.name}</h2>
           {ownerName && (
-            <p className="text-xs text-sparrow-gray mt-0.5">
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
               Submitter: {ownerName}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
           {isOwner && ownerName === null && (
-            <span className="text-xs text-sparrow-green bg-sparrow-sage rounded-full px-2 py-0.5 font-medium">
+            <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-sage rounded-full px-2 py-0.5 font-medium">
               You submit
             </span>
           )}
           {loc.is_remote && (
-            <span className="text-xs text-sparrow-gray bg-sparrow-mist rounded-full px-2 py-0.5">
+            <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray bg-sparrow-mist dark:bg-sparrow-dark-surface2 rounded-full px-2 py-0.5">
               Remote
             </span>
           )}
@@ -237,13 +237,13 @@ function LocationCard({
 
       {/* Monthly submission */}
       <div className="px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray mb-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray mb-2">
           {monthName(month)} {year}
         </p>
         {currentSub ? (
           <button
             onClick={onOpenForm}
-            className="w-full flex items-center justify-between rounded-lg border border-sparrow-rule px-3 py-2.5 text-left hover:bg-sparrow-mist transition"
+            className="w-full flex items-center justify-between rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2.5 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition"
           >
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
@@ -251,18 +251,18 @@ function LocationCard({
                   {SUBMISSION_STATUS_META[currentSub.status].label}
                 </span>
               </div>
-              <p className="text-xs text-sparrow-gray">
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 {currentSub.status === 'draft'     && 'Continue filling out your sheet'}
                 {currentSub.status === 'submitted' && 'Awaiting review by Susanna'}
                 {currentSub.status === 'approved'  && 'Approved — no action needed'}
               </p>
             </div>
-            <span className="text-sparrow-gray">›</span>
+            <span className="text-sparrow-gray dark:text-sparrow-dark-gray">›</span>
           </button>
         ) : (
           <button
             onClick={onOpenForm}
-            className="w-full rounded-lg border border-dashed border-sparrow-rule px-3 py-2.5 text-sm text-sparrow-gray hover:border-sparrow-green/50 hover:text-sparrow-green transition text-left"
+            className="w-full rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/50 hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition text-left"
           >
             Start {monthName(month)} submission →
           </button>
@@ -271,27 +271,27 @@ function LocationCard({
 
       {/* House flip trigger — only for LCP houses */}
       {loc.is_lcp_house && (
-        <div className="border-t border-sparrow-rule px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray mb-2">
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray mb-2">
             House Flip
           </p>
           {activeFlip ? (
             <button
               onClick={onOpenFlip}
-              className="w-full flex items-center justify-between rounded-lg border border-sparrow-rule px-3 py-2.5 text-left hover:bg-sparrow-mist transition"
+              className="w-full flex items-center justify-between rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2.5 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition"
             >
               <div>
-                <p className="text-sm text-sparrow-ink">Continue house flip</p>
-                <p className="text-xs text-sparrow-gray mt-0.5">
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Continue house flip</p>
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
                   {FLIP_STATUS_LABELS[activeFlip.status]}
                 </p>
               </div>
-              <span className="text-sparrow-gray">›</span>
+              <span className="text-sparrow-gray dark:text-sparrow-dark-gray">›</span>
             </button>
           ) : (
             <button
               onClick={onOpenFlip}
-              className="w-full rounded-lg border border-dashed border-sparrow-rule px-3 py-2.5 text-sm text-sparrow-gray hover:border-sparrow-green/50 hover:text-sparrow-green transition text-left"
+              className="w-full rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/50 hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition text-left"
             >
               Start house flip →
             </button>
@@ -301,14 +301,14 @@ function LocationCard({
 
       {/* Recent history */}
       {recentSubs.length > 0 && (
-        <div className="border-t border-sparrow-rule px-4 py-2.5">
-          <p className="text-xs text-sparrow-gray mb-1.5">Recent</p>
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5">
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mb-1.5">Recent</p>
           <div className="space-y-1">
             {recentSubs.map((s) => (
               <button
                 key={s.id}
                 onClick={onOpenForm}
-                className="w-full flex items-center justify-between text-xs text-sparrow-gray hover:text-sparrow-ink transition py-0.5"
+                className="w-full flex items-center justify-between text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition py-0.5"
               >
                 <span>{monthName(s.period_month)} {s.period_year}</span>
                 <span className={`rounded-full px-1.5 py-0.5 ${SUBMISSION_STATUS_META[s.status].chip}`}>

@@ -276,7 +276,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
             />
           </div>
           <div>
-            <label className="field-label">End time <span className="font-normal text-sparrow-gray">(optional)</span></label>
+            <label className="field-label">End time <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span></label>
             <input
               type="time"
               value={endTime}
@@ -288,7 +288,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
 
         {/* Location */}
         <div>
-          <label className="field-label">Location <span className="font-normal text-sparrow-gray">(optional)</span></label>
+          <label className="field-label">Location <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span></label>
           <input
             type="text"
             value={location}
@@ -299,44 +299,44 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
         </div>
 
         {/* Mandatory */}
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
           <input
             type="checkbox"
             checked={mandatory}
             onChange={(e) => setMandatory(e.target.checked)}
-            className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+            className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
           />
           Mandatory attendance
         </label>
 
         {/* Family visibility */}
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
           <input
             type="checkbox"
             checked={familyVisible}
             onChange={(e) => setFamilyVisible(e.target.checked)}
-            className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+            className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
           />
           Show to LCP families{' '}
-          <span className="font-normal text-sparrow-gray">(just the name, date, and time — nothing else)</span>
+          <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(just the name, date, and time — nothing else)</span>
         </label>
 
         {/* Attendees — mirrors AddOrgEventPanel's picker */}
         <div ref={attendeeRef} className="relative">
           <label className="field-label">
-            Attendees <span className="font-normal text-sparrow-gray">(optional — adds session to their widget)</span>
+            Attendees <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional — adds session to their widget)</span>
           </label>
           {attendeeIds.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1.5">
               {attendeeIds.map((id) => {
                 const p = profiles.find((x) => x.id === id);
                 return (
-                  <span key={id} className="flex items-center gap-1 rounded-full bg-sparrow-sage px-2.5 py-0.5 text-xs font-medium text-sparrow-ink">
+                  <span key={id} className="flex items-center gap-1 rounded-full bg-sparrow-sage px-2.5 py-0.5 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                     {p?.full_name ?? id}
                     <button
                       type="button"
                       onClick={() => setAttendeeIds((prev) => prev.filter((x) => x !== id))}
-                      className="ml-0.5 text-sparrow-gray hover:text-sparrow-ink"
+                      className="ml-0.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                       aria-label={`Remove ${p?.full_name ?? id}`}
                     >
                       ×
@@ -356,7 +356,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
             className="field-input"
           />
           {attendeeDropdownOpen && attendeeSearch.trim() && (
-            <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-sparrow-rule bg-white shadow-lg">
+            <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-lg">
               {profiles
                 .filter((p) =>
                   p.id !== currentUserId &&
@@ -372,7 +372,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
                         setAttendeeSearch('');
                         setAttendeeDropdownOpen(false);
                       }}
-                      className="w-full px-3 py-2 text-left text-sm text-sparrow-ink hover:bg-sparrow-mist"
+                      className="w-full px-3 py-2 text-left text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                     >
                       {p.full_name}
                     </button>
@@ -380,29 +380,29 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
                 ))}
             </ul>
           )}
-          <p className="mt-1 text-xs text-sparrow-gray">You're always added as attending. Selected staff will be notified.</p>
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">You're always added as attending. Selected staff will be notified.</p>
         </div>
 
         {/* NOTE: restore this checkbox after Byron runs migration 0039
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
           <input
             type="checkbox"
             checked={showOnOrgCal}
             onChange={(e) => setShowOnOrgCal(e.target.checked)}
-            className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+            className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
           />
           Also show on all-staff calendar
         </label>
         */}
 
         {/* Recurrence toggle */}
-        <div className="border-t border-sparrow-rule pt-4">
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-sparrow-ink">
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
             <input
               type="checkbox"
               checked={recurring}
               onChange={(e) => setRecurring(e.target.checked)}
-              className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+              className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
             />
             Repeat this event
           </label>
@@ -422,7 +422,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
                       className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                         frequency === f
                           ? 'bg-sparrow-green text-white'
-                          : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                          : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                       }`}
                     >
                       {f === 'weekly' ? 'Weekly' : 'Every 2 weeks'}
@@ -443,7 +443,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
                       className={`h-8 w-8 rounded-full text-xs font-semibold transition ${
                         daysOfWeek.has(dow)
                           ? 'bg-sparrow-green text-white'
-                          : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                          : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                       }`}
                     >
                       {abbr}
@@ -464,7 +464,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
                       className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                         untilMode === m
                           ? 'bg-sparrow-green text-white'
-                          : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                          : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                       }`}
                     >
                       {m === 'date' ? 'On a date' : 'Indefinitely'}
@@ -483,7 +483,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
               </div>
 
               {/* Preview */}
-              <p className="text-sm text-sparrow-gray">
+              <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                 {occurrenceDates.length === 0
                   ? 'No dates match — check your day selection and date range.'
                   : `This will create ${occurrenceDates.length} event${occurrenceDates.length !== 1 ? 's' : ''}.`}

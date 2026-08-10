@@ -17,7 +17,7 @@ function InfoButton({ children }: { children: React.ReactNode }) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="ml-1.5 text-sparrow-gray hover:text-sparrow-ink transition text-sm leading-none"
+        className="ml-1.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition text-sm leading-none"
         aria-label="More information"
       >
         ⓘ
@@ -25,14 +25,14 @@ function InfoButton({ children }: { children: React.ReactNode }) {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-6 z-20 w-72 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg">
-            <div className="text-xs text-sparrow-gray leading-relaxed space-y-1.5">
+          <div className="absolute left-0 top-6 z-20 w-72 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg">
+            <div className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray leading-relaxed space-y-1.5">
               {children}
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="mt-2.5 text-xs text-sparrow-green font-medium"
+              className="mt-2.5 text-xs text-sparrow-green dark:text-sparrow-dark-green font-medium"
             >
               Got it
             </button>
@@ -97,7 +97,7 @@ function TallyRow({
       className={`rounded px-2 py-1 text-xs font-medium transition disabled:opacity-40 ${
         tally.decision === value
           ? color
-          : 'bg-sparrow-mist text-sparrow-gray hover:bg-sparrow-rule'
+          : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-rule dark:hover:bg-sparrow-dark-border'
       }`}
     >
       {label}
@@ -105,11 +105,11 @@ function TallyRow({
   );
 
   return (
-    <tr className="border-b border-sparrow-rule last:border-0 hover:bg-sparrow-mist/30 transition-colors">
+    <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border last:border-0 hover:bg-sparrow-mist/30 transition-colors">
       {/* Category */}
       <td className="py-2.5 pl-4 pr-3">
-        <p className="text-sm text-sparrow-ink">{tally.category}</p>
-        <p className="text-xs text-sparrow-gray">{BENTON_SCHEDULE_SHORT[tally.schedule]}</p>
+        <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{tally.category}</p>
+        <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{BENTON_SCHEDULE_SHORT[tally.schedule]}</p>
       </td>
 
       {/* Filed Last Year */}
@@ -117,7 +117,7 @@ function TallyRow({
         {editingValue ? (
           <span className="inline-flex flex-col items-end gap-1">
             <span className="inline-flex items-center gap-1.5">
-              <span className="text-xs text-sparrow-gray">$</span>
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">$</span>
               <input
                 id={valueId}
                 type="number"
@@ -129,10 +129,10 @@ function TallyRow({
                   if (e.key === 'Enter') void saveValue();
                   if (e.key === 'Escape') setEditingValue(false);
                 }}
-                className={`w-20 rounded border px-1.5 py-0.5 text-sm text-sparrow-ink focus:outline-none ${
+                className={`w-20 rounded border px-1.5 py-0.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none ${
                   fieldClass(valueId, '').includes('field-input-error')
                     ? 'border-priority-p1'
-                    : 'border-sparrow-green'
+                    : 'border-sparrow-green dark:border-sparrow-dark-green'
                 }`}
                 autoFocus
               />
@@ -140,14 +140,14 @@ function TallyRow({
                 type="button"
                 onClick={() => void saveValue()}
                 disabled={saving}
-                className="text-xs text-sparrow-green font-medium disabled:opacity-40"
+                className="text-xs text-sparrow-green dark:text-sparrow-dark-green font-medium disabled:opacity-40"
               >
                 Save
               </button>
               <button
                 type="button"
                 onClick={() => setEditingValue(false)}
-                className="text-xs text-sparrow-gray"
+                className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray"
               >
                 ✕
               </button>
@@ -159,7 +159,7 @@ function TallyRow({
             type="button"
             onClick={() => { setDraftValue(String(tally.filed_value ?? '')); setEditingValue(true); resetValidation(); }}
             className={`text-sm font-medium hover:underline transition ${
-              filed == null ? 'text-sparrow-gold italic' : 'text-sparrow-ink'
+              filed == null ? 'text-sparrow-gold italic' : 'text-sparrow-ink dark:text-sparrow-dark-ink'
             }`}
             title="Click to edit"
           >
@@ -171,14 +171,14 @@ function TallyRow({
       {/* Added This Year */}
       <td className="py-2.5 pr-3 text-right text-sm whitespace-nowrap">
         {addedValue > 0
-          ? <span className="text-sparrow-green font-medium">+{formatCost(addedValue)}</span>
-          : <span className="text-sparrow-gray">—</span>
+          ? <span className="text-sparrow-green dark:text-sparrow-dark-green font-medium">+{formatCost(addedValue)}</span>
+          : <span className="text-sparrow-gray dark:text-sparrow-dark-gray">—</span>
         }
       </td>
 
       {/* Register Total */}
-      <td className="py-2.5 pr-3 text-right text-sm text-sparrow-ink whitespace-nowrap">
-        {registerValue > 0 ? formatCost(registerValue) : <span className="text-sparrow-gray">—</span>}
+      <td className="py-2.5 pr-3 text-right text-sm text-sparrow-ink dark:text-sparrow-dark-ink whitespace-nowrap">
+        {registerValue > 0 ? formatCost(registerValue) : <span className="text-sparrow-gray dark:text-sparrow-dark-gray">—</span>}
       </td>
 
       {/* Net (register - filed) */}
@@ -186,23 +186,23 @@ function TallyRow({
         {net != null ? (
           <span className={`text-sm font-medium ${
             Math.abs(net) < 25
-              ? 'text-sparrow-gray'
+              ? 'text-sparrow-gray dark:text-sparrow-dark-gray'
               : net > 0
-                ? 'text-sparrow-green'
+                ? 'text-sparrow-green dark:text-sparrow-dark-green'
                 : 'text-priority-p1'
           }`}>
             {net > 0 ? '+' : ''}{formatCost(net)}
           </span>
         ) : (
-          <span className="text-sparrow-gray text-sm">—</span>
+          <span className="text-sparrow-gray dark:text-sparrow-dark-gray text-sm">—</span>
         )}
       </td>
 
       {/* Decision */}
       <td className="py-2.5 pr-4">
         <div className="flex gap-1.5">
-          {decisionBtn('Keep', 'keep', 'bg-sparrow-mist text-sparrow-ink border border-sparrow-rule-dark')}
-          {decisionBtn('Update', 'update', 'bg-sparrow-green/15 text-sparrow-green border border-sparrow-green/30')}
+          {decisionBtn('Keep', 'keep', 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-ink dark:text-sparrow-dark-ink border border-sparrow-rule dark:border-sparrow-dark-border-dark')}
+          {decisionBtn('Update', 'update', 'bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green border border-sparrow-green/30')}
           {decisionBtn('Assess', 'assess', 'bg-sparrow-gold/15 text-sparrow-gold border border-sparrow-gold/30')}
         </div>
       </td>
@@ -229,9 +229,9 @@ function LocationGroup({
   const totalFiled = tallies.reduce((s, t) => s + (t.filed_value ?? 0), 0);
 
   return (
-    <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden mb-4">
-      <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-green/10">
-        <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden mb-4">
+      <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 bg-sparrow-green/10">
+        <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">
           {locationName}
         </span>
         <span className="text-xs text-sparrow-green/70">
@@ -240,13 +240,13 @@ function LocationGroup({
       </div>
       <table className="w-full">
         <thead>
-          <tr className="border-b border-sparrow-rule">
-            <th className="py-2 pl-4 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Category</th>
-            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Filed</th>
-            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Added</th>
-            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Register</th>
-            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Net</th>
-            <th className="py-2 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Jan Decision</th>
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border">
+            <th className="py-2 pl-4 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Category</th>
+            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Filed</th>
+            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Added</th>
+            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Register</th>
+            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Net</th>
+            <th className="py-2 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Jan Decision</th>
           </tr>
         </thead>
         <tbody>
@@ -328,10 +328,10 @@ export function BatchTalliesSection({ year }: { year: number }) {
   return (
     <div>
       {/* Section heading */}
-      <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden mb-4">
-        <div className="flex items-center justify-between gap-4 border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-mist/40">
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden mb-4">
+        <div className="flex items-center justify-between gap-4 border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 bg-sparrow-mist/40">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Batch Category Tallies
             </span>
             <InfoButton>
@@ -364,19 +364,19 @@ export function BatchTalliesSection({ year }: { year: number }) {
               <span className="text-sparrow-gold font-medium">{assessCount} to assess</span>
             )}
             {updateCount > 0 && (
-              <span className="text-sparrow-green font-medium">{updateCount} to update</span>
+              <span className="text-sparrow-green dark:text-sparrow-dark-green font-medium">{updateCount} to update</span>
             )}
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-24 text-sparrow-gray text-sm rounded-xl border border-sparrow-rule bg-white">Loading…</div>
+        <div className="flex items-center justify-center h-24 text-sparrow-gray dark:text-sparrow-dark-gray text-sm rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">Loading…</div>
       ) : err ? (
-        <p className="rounded-xl border border-sparrow-rule bg-white p-4 text-sm text-priority-p1">{err}</p>
+        <p className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 text-sm text-priority-p1">{err}</p>
       ) : locations.length === 0 ? (
-        <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist p-8 text-center">
-          <p className="text-sm text-sparrow-gray">
+        <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-8 text-center">
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             No batch items recorded yet. Batch categories appear here after monthly submissions are approved.
           </p>
         </div>

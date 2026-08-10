@@ -59,10 +59,10 @@ export function VoiceMessagePlayer({
   }
 
   const playBg = mine ? 'bg-white/20 hover:bg-white/30' : 'bg-sparrow-green/10 hover:bg-sparrow-green/20';
-  const playColor = mine ? 'text-white' : 'text-sparrow-green';
-  const timeColor = mine ? 'text-white/75' : 'text-sparrow-gray';
-  const speedActive = mine ? 'bg-white/20 text-white' : 'bg-sparrow-green/15 text-sparrow-green';
-  const speedInactive = mine ? 'text-white/50 hover:text-white/75' : 'text-sparrow-gray hover:text-sparrow-ink';
+  const playColor = mine ? 'text-white' : 'text-sparrow-green dark:text-sparrow-dark-green';
+  const timeColor = mine ? 'text-white/75' : 'text-sparrow-gray dark:text-sparrow-dark-gray';
+  const speedActive = mine ? 'bg-white/20 text-white' : 'bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green';
+  const speedInactive = mine ? 'text-white/50 hover:text-white/75' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink';
 
   return (
     <div className="flex items-center gap-2 py-0.5">

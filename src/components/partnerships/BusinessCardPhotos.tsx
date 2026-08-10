@@ -49,17 +49,17 @@ function Slot({
 
   return (
     <div className="flex-1">
-      <p className="mb-1 text-[11px] font-medium text-sparrow-gray">{label}</p>
+      <p className="mb-1 text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray">{label}</p>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="flex h-24 w-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-sparrow-rule bg-sparrow-mist/30 hover:border-sparrow-green/50"
+        className="flex h-24 w-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 hover:border-sparrow-green/50"
       >
         {url ? (
           <img src={url} alt={label} className="h-full w-full object-cover" />
         ) : (
-          <span className="text-xs text-sparrow-gray">{busy ? 'Uploading…' : '+ Add photo'}</span>
+          <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{busy ? 'Uploading…' : '+ Add photo'}</span>
         )}
       </button>
       <input

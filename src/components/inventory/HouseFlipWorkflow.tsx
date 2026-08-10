@@ -138,7 +138,7 @@ export function HouseFlipWorkflow({
 
   if (step === 'loading') {
     return (
-      <div className="flex items-center justify-center h-40 text-sparrow-gray text-sm">
+      <div className="flex items-center justify-center h-40 text-sparrow-gray dark:text-sparrow-dark-gray text-sm">
         Loading…
       </div>
     );
@@ -150,12 +150,12 @@ export function HouseFlipWorkflow({
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={onBack}
-          className="text-sm text-sparrow-gray hover:text-sparrow-ink transition"
+          className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition"
         >
           ← Back
         </button>
-        <span className="text-sparrow-rule">|</span>
-        <span className="text-sm font-medium text-sparrow-ink">{locationName} — House Flip</span>
+        <span className="text-sparrow-rule dark:text-sparrow-dark-border">|</span>
+        <span className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{locationName} — House Flip</span>
       </div>
 
       {err && <p className="mb-4 text-sm text-priority-p1">{err}</p>}
@@ -317,14 +317,14 @@ function StartScreen({
   saving: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-sparrow-rule bg-white p-6 text-center space-y-4">
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-6 text-center space-y-4">
       <div>
-        <h2 className="font-serif text-xl font-semibold text-sparrow-ink">
+        <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
           Start House Flip
         </h2>
-        <p className="text-sm text-sparrow-gray mt-1">{locationName}</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray mt-1">{locationName}</p>
       </div>
-      <p className="text-sm text-sparrow-gray max-w-sm mx-auto">
+      <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray max-w-sm mx-auto">
         This workflow walks you through an inventory audit before a new resident moves in.
         You'll walk the house, log what was left behind, get supervisor sign-off, then record what came in.
       </p>
@@ -379,47 +379,47 @@ function WalkthroughScreen({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-serif text-xl font-semibold text-sparrow-ink">Walk the House</h2>
-        <p className="text-sm text-sparrow-gray mt-1">
+        <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Walk the House</h2>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray mt-1">
           Check off each item as you see it. Anything not checked will be flagged as potentially missing.
         </p>
       </div>
 
       {checks.length === 0 ? (
-        <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist p-5 text-center">
-          <p className="text-sm text-sparrow-gray">No items on file for this house yet.</p>
-          <p className="text-xs text-sparrow-gray mt-1">
+        <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-5 text-center">
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No items on file for this house yet.</p>
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-1">
             You can still proceed to log leave-behinds and new items.
           </p>
         </div>
       ) : (
         <>
-          <div className="text-xs text-sparrow-gray">
+          <div className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             {checkedCount} of {checks.length} checked
             {uncheckedCount > 0 && ` · ${uncheckedCount} not yet seen`}
           </div>
           <div className="space-y-3">
             {Object.entries(grouped).map(([groupName, groupChecks]) => (
-              <div key={groupName} className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
-                <div className="border-b border-sparrow-rule px-4 py-2 bg-sparrow-mist">
-                  <p className="text-xs font-semibold text-sparrow-gray uppercase tracking-wide">
+              <div key={groupName} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
+                <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2 bg-sparrow-mist dark:bg-sparrow-dark-surface2">
+                  <p className="text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray uppercase tracking-wide">
                     {groupName}
                   </p>
                 </div>
-                <ul className="divide-y divide-sparrow-rule">
+                <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
                   {groupChecks.map((c) => (
                     <li key={c.id}>
                       <button
                         onClick={() => handleToggle(c)}
                         disabled={toggling === c.id}
                         className={`w-full flex items-center gap-3 px-4 py-3 text-left transition ${
-                          c.checked_present ? 'bg-sparrow-green/5' : 'hover:bg-sparrow-mist'
+                          c.checked_present ? 'bg-sparrow-green/5' : 'hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
                         }`}
                       >
                         <span className={`shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition ${
                           c.checked_present
-                            ? 'border-sparrow-green bg-sparrow-green'
-                            : 'border-sparrow-rule'
+                            ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green'
+                            : 'border-sparrow-rule dark:border-sparrow-dark-border'
                         }`}>
                           {c.checked_present && (
                             <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
@@ -427,11 +427,11 @@ function WalkthroughScreen({
                             </svg>
                           )}
                         </span>
-                        <span className={`text-sm ${c.checked_present ? 'text-sparrow-gray line-through' : 'text-sparrow-ink'}`}>
+                        <span className={`text-sm ${c.checked_present ? 'text-sparrow-gray dark:text-sparrow-dark-gray line-through' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
                           {c.item?.description ?? 'Unknown item'}
                         </span>
                         {c.item?.is_batch && c.item.quantity > 1 && (
-                          <span className="ml-auto text-xs text-sparrow-gray shrink-0">
+                          <span className="ml-auto text-xs text-sparrow-gray dark:text-sparrow-dark-gray shrink-0">
                             ×{c.item.quantity}
                           </span>
                         )}
@@ -493,23 +493,23 @@ function ConfirmMissingScreen({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-serif text-xl font-semibold text-sparrow-ink">Verify Missing Items</h2>
-        <p className="text-sm text-sparrow-gray mt-1">
+        <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Verify Missing Items</h2>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray mt-1">
           These items weren't checked off. Confirm each one is no longer in the house, or mark it as found.
         </p>
       </div>
 
-      <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
-        <ul className="divide-y divide-sparrow-rule">
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
+        <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
           {unchecked.map((c) => {
             const state = resolved[c.id];
             return (
               <li key={c.id} className="px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-sparrow-ink">{c.item?.description ?? 'Unknown item'}</p>
+                    <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{c.item?.description ?? 'Unknown item'}</p>
                     {c.item?.sub_location && (
-                      <p className="text-xs text-sparrow-gray mt-0.5">{c.item.sub_location.name}</p>
+                      <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">{c.item.sub_location.name}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -517,8 +517,8 @@ function ConfirmMissingScreen({
                       onClick={() => markFound(c.id)}
                       className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition ${
                         state === false
-                          ? 'bg-sparrow-green text-white border-sparrow-green'
-                          : 'border-sparrow-rule text-sparrow-gray hover:border-sparrow-green hover:text-sparrow-green'
+                          ? 'bg-sparrow-green text-white border-sparrow-green dark:border-sparrow-dark-green'
+                          : 'border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:text-sparrow-green dark:hover:text-sparrow-dark-green'
                       }`}
                     >
                       Found it
@@ -528,7 +528,7 @@ function ConfirmMissingScreen({
                       className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition ${
                         state === true
                           ? 'bg-priority-p1 text-white border-priority-p1'
-                          : 'border-sparrow-rule text-sparrow-gray hover:border-priority-p1 hover:text-priority-p1'
+                          : 'border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:border-priority-p1 hover:text-priority-p1'
                       }`}
                     >
                       Confirm missing
@@ -544,7 +544,7 @@ function ConfirmMissingScreen({
       <div className="flex gap-3">
         <button
           onClick={onBack}
-          className="flex-1 rounded-lg border border-sparrow-rule px-4 py-2.5 text-sm text-sparrow-gray hover:bg-sparrow-mist transition"
+          className="flex-1 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition"
         >
           ← Back to walkthrough
         </button>
@@ -629,32 +629,32 @@ function LeaveBehindScreen({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-serif text-xl font-semibold text-sparrow-ink">Leave-Behinds</h2>
-        <p className="text-sm text-sparrow-gray mt-1">
+        <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Leave-Behinds</h2>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray mt-1">
           Log anything the outgoing resident left behind. Mark each item as kept by Sparrow or not.
         </p>
       </div>
 
       {/* Existing entries */}
       {leaveBehinds.length > 0 && (
-        <ul className="rounded-xl border border-sparrow-rule bg-white divide-y divide-sparrow-rule overflow-hidden">
+        <ul className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden">
           {leaveBehinds.map((lb) => (
             <li key={lb.id} className="flex items-start gap-3 px-4 py-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sparrow-ink">{lb.description}</p>
-                <p className="text-xs text-sparrow-gray mt-0.5">
+                <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{lb.description}</p>
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
                   {lb.condition === 'new' ? 'New' : 'Used'}
                   {lb.estimated_value ? ` · ~$${lb.estimated_value}` : ''}
                   {lb.sub_location ? ` · ${lb.sub_location.name}` : ''}
                   {' · '}
-                  <span className={lb.keeping ? 'text-sparrow-green' : 'text-sparrow-gray'}>
+                  <span className={lb.keeping ? 'text-sparrow-green dark:text-sparrow-dark-green' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}>
                     {lb.keeping ? 'Keeping' : 'Not keeping'}
                   </span>
                 </p>
               </div>
               <button
                 onClick={() => handleDelete(lb.id)}
-                className="text-xs text-sparrow-gray hover:text-priority-p1 transition shrink-0"
+                className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 transition shrink-0"
               >
                 Remove
               </button>
@@ -668,9 +668,9 @@ function LeaveBehindScreen({
         <form
           ref={formRef}
           onSubmit={handleAdd}
-          className="rounded-xl border border-sparrow-rule bg-white p-4 space-y-3"
+          className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3"
         >
-          <p className="text-sm font-medium text-sparrow-ink">Add leave-behind</p>
+          <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Add leave-behind</p>
           {(formErr || missingMessage) && <p className="text-xs text-priority-p1">{formErr || missingMessage}</p>}
 
           <input
@@ -681,7 +681,7 @@ function LeaveBehindScreen({
             className={
               fieldClass('lb-desc', '').includes('field-input-error')
                 ? 'w-full rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
-                : 'w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green'
+                : 'w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
             }
           />
 
@@ -689,7 +689,7 @@ function LeaveBehindScreen({
             <select
               name="condition"
               defaultValue="used"
-              className="rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="new">New</option>
               <option value="used">Used</option>
@@ -700,14 +700,14 @@ function LeaveBehindScreen({
               min="0"
               step="0.01"
               placeholder="Est. value ($)"
-              className="rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             />
           </div>
 
           {subLocs.length > 0 && (
             <select
               name="sub_location_id"
-              className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="">No specific room</option>
               {subLocs.map((s) => (
@@ -731,14 +731,14 @@ function LeaveBehindScreen({
             name="notes"
             rows={2}
             placeholder="Notes (optional)"
-            className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green resize-none"
+            className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green resize-none"
           />
 
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => { setShowForm(false); setDesc(''); resetValidation(); }}
-              className="flex-1 rounded-lg border border-sparrow-rule px-3 py-2 text-sm text-sparrow-gray hover:bg-sparrow-mist transition"
+              className="flex-1 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition"
             >
               Cancel
             </button>
@@ -756,7 +756,7 @@ function LeaveBehindScreen({
       {!showForm && (
         <button
           onClick={() => { setNothingLeft(false); setShowForm(true); resetValidation(); }}
-          className="w-full rounded-lg border border-dashed border-sparrow-rule px-4 py-2.5 text-sm text-sparrow-gray hover:border-sparrow-green/50 hover:text-sparrow-green transition"
+          className="w-full rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/50 hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition"
         >
           + Add leave-behind
         </button>
@@ -808,49 +808,49 @@ function ShellyReviewScreen({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="font-serif text-xl font-semibold text-sparrow-ink">Supervisor Review</h2>
-        <p className="text-sm text-sparrow-gray mt-1">
+        <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Supervisor Review</h2>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray mt-1">
           Review the current state of the house and approve the shopping list before purchases are made.
         </p>
       </div>
 
       {/* Asset check summary */}
-      <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
-        <div className="border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-mist">
-          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Asset Check</p>
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
+        <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 bg-sparrow-mist dark:bg-sparrow-dark-surface2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Asset Check</p>
         </div>
         <div className="px-4 py-3 grid grid-cols-3 gap-3 text-center">
           <div>
-            <p className="text-2xl font-semibold text-sparrow-green">{confirmed.length}</p>
-            <p className="text-xs text-sparrow-gray mt-0.5">Confirmed present</p>
+            <p className="text-2xl font-semibold text-sparrow-green dark:text-sparrow-dark-green">{confirmed.length}</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">Confirmed present</p>
           </div>
           <div>
             <p className="text-2xl font-semibold text-priority-p1">{missing.length}</p>
-            <p className="text-xs text-sparrow-gray mt-0.5">Confirmed missing</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">Confirmed missing</p>
           </div>
           <div>
-            <p className="text-2xl font-semibold text-sparrow-ink">{keptItems.length}</p>
-            <p className="text-xs text-sparrow-gray mt-0.5">Leave-behinds kept</p>
+            <p className="text-2xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{keptItems.length}</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">Leave-behinds kept</p>
           </div>
         </div>
       </div>
 
       {/* Missing items (shopping reference) */}
       {missing.length > 0 && (
-        <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
-          <div className="border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-mist">
-            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+        <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 bg-sparrow-mist dark:bg-sparrow-dark-surface2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Missing Items — Shopping Reference
             </p>
           </div>
-          <ul className="divide-y divide-sparrow-rule">
+          <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
             {missing.map((c) => (
               <li key={c.id} className="px-4 py-2.5 flex items-center gap-3">
                 <span className="h-1.5 w-1.5 rounded-full bg-priority-p1 shrink-0" />
                 <div>
-                  <p className="text-sm text-sparrow-ink">{c.item?.description}</p>
+                  <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{c.item?.description}</p>
                   {c.item?.sub_location && (
-                    <p className="text-xs text-sparrow-gray">{c.item.sub_location.name}</p>
+                    <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{c.item.sub_location.name}</p>
                   )}
                 </div>
               </li>
@@ -861,17 +861,17 @@ function ShellyReviewScreen({
 
       {/* Leave-behinds being kept */}
       {keptItems.length > 0 && (
-        <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
-          <div className="border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-mist">
-            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+        <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 bg-sparrow-mist dark:bg-sparrow-dark-surface2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Leave-Behinds Being Kept
             </p>
           </div>
-          <ul className="divide-y divide-sparrow-rule">
+          <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
             {keptItems.map((lb) => (
               <li key={lb.id} className="px-4 py-2.5 flex items-center gap-3">
                 <span className="h-1.5 w-1.5 rounded-full bg-sparrow-green shrink-0" />
-                <p className="text-sm text-sparrow-ink">
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                   {lb.description}
                   {lb.estimated_value ? ` · ~$${lb.estimated_value}` : ''}
                 </p>
@@ -889,7 +889,7 @@ function ShellyReviewScreen({
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder="Notes / shopping list (optional — jot anything you want to remember before purchasing)"
-            className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green resize-none"
+            className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green resize-none"
           />
           <button
             onClick={() => onApprove(notes)}
@@ -900,9 +900,9 @@ function ShellyReviewScreen({
           </button>
         </div>
       ) : (
-        <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist p-5 text-center">
-          <p className="text-sm font-medium text-sparrow-ink">Awaiting supervisor approval</p>
-          <p className="text-sm text-sparrow-gray mt-1">
+        <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-5 text-center">
+          <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Awaiting supervisor approval</p>
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray mt-1">
             A supervisor needs to review this screen and approve before purchasing can begin.
           </p>
         </div>
@@ -924,13 +924,13 @@ function PurchasingScreen({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-serif text-xl font-semibold text-sparrow-ink">Purchasing</h2>
-        <p className="text-sm text-sparrow-gray mt-1">
+        <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Purchasing</h2>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray mt-1">
           The supervisor has approved. Complete all purchases for the house, then come back here to log what came in.
         </p>
       </div>
-      <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist p-5 text-center">
-        <p className="text-sm text-sparrow-gray">
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-5 text-center">
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           Nothing to do here yet — come back once purchasing is complete.
         </p>
       </div>
@@ -1030,22 +1030,22 @@ function NewItemsScreen({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-serif text-xl font-semibold text-sparrow-ink">Log New Items</h2>
-        <p className="text-sm text-sparrow-gray mt-1">
+        <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Log New Items</h2>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray mt-1">
           Log everything that was purchased or brought in for the new resident. Same rules as a monthly submission.
         </p>
       </div>
 
       {newItems.length > 0 && (
-        <ul className="rounded-xl border border-sparrow-rule bg-white divide-y divide-sparrow-rule overflow-hidden">
+        <ul className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden">
           {newItems.map((ni) => (
             <li key={ni.id} className="flex items-start gap-3 px-4 py-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sparrow-ink">
+                <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                   {ni.description}
                   {ni.quantity > 1 && ` ×${ni.quantity}`}
                 </p>
-                <p className="text-xs text-sparrow-gray mt-0.5">
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
                   ${ni.cost}
                   {ni.cost_basis === 'total' ? ' total' : ' each'}
                   {ni.condition === 'new' ? ' · New' : ' · Used'}
@@ -1055,7 +1055,7 @@ function NewItemsScreen({
               </div>
               <button
                 onClick={() => handleDelete(ni.id)}
-                className="text-xs text-sparrow-gray hover:text-priority-p1 transition shrink-0"
+                className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 transition shrink-0"
               >
                 Remove
               </button>
@@ -1068,9 +1068,9 @@ function NewItemsScreen({
         <form
           ref={formRef}
           onSubmit={handleAdd}
-          className="rounded-xl border border-sparrow-rule bg-white p-4 space-y-3"
+          className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3"
         >
-          <p className="text-sm font-medium text-sparrow-ink">Add item</p>
+          <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Add item</p>
           {(formErr || missingMessage) && <p className="text-xs text-priority-p1">{formErr || missingMessage}</p>}
 
           <div className="flex gap-3">
@@ -1097,7 +1097,7 @@ function NewItemsScreen({
           {isBatch ? (
             <select
               name="batch_category"
-              className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               {BATCH_CATEGORIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -1112,7 +1112,7 @@ function NewItemsScreen({
               className={
                 fieldClass('ni-desc', '').includes('field-input-error')
                   ? 'w-full rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
-                  : 'w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green'
+                  : 'w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
               }
             />
           )}
@@ -1126,7 +1126,7 @@ function NewItemsScreen({
               className={
                 fieldClass('ni-desc', '').includes('field-input-error')
                   ? 'w-full rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
-                  : 'w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green'
+                  : 'w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
               }
             />
           )}
@@ -1135,7 +1135,7 @@ function NewItemsScreen({
             <input
               name="serial_number"
               placeholder="Serial number (electronics, tools, appliances)"
-              className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             />
           )}
 
@@ -1143,7 +1143,7 @@ function NewItemsScreen({
             <select
               name="condition"
               defaultValue="new"
-              className="rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="new">New</option>
               <option value="used">Used</option>
@@ -1151,7 +1151,7 @@ function NewItemsScreen({
             <select
               name="is_donated"
               defaultValue="false"
-              className="rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="false">Purchased</option>
               <option value="true">Donated</option>
@@ -1165,7 +1165,7 @@ function NewItemsScreen({
               min="1"
               defaultValue="1"
               placeholder="Qty"
-              className="rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             />
             <input
               id="ni-cost"
@@ -1178,13 +1178,13 @@ function NewItemsScreen({
               className={
                 fieldClass('ni-cost', '').includes('field-input-error')
                   ? 'rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
-                  : 'rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green'
+                  : 'rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
               }
             />
             <select
               name="cost_basis"
               defaultValue="per_item"
-              className="rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="per_item">Per item</option>
               <option value="total">Total</option>
@@ -1194,7 +1194,7 @@ function NewItemsScreen({
           <select
             name="cost_source"
             defaultValue="known"
-            className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+            className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
           >
             <option value="known">Known (receipt or handoff)</option>
             <option value="estimated">Estimated (best guess)</option>
@@ -1203,7 +1203,7 @@ function NewItemsScreen({
           {subLocs.length > 0 && (
             <select
               name="sub_location_id"
-              className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green"
+              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="">No specific room</option>
               {subLocs.map((s) => (
@@ -1216,7 +1216,7 @@ function NewItemsScreen({
             <button
               type="button"
               onClick={() => { setShowForm(false); resetForm(); }}
-              className="flex-1 rounded-lg border border-sparrow-rule px-3 py-2 text-sm text-sparrow-gray hover:bg-sparrow-mist transition"
+              className="flex-1 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition"
             >
               Cancel
             </button>
@@ -1234,7 +1234,7 @@ function NewItemsScreen({
       {!showForm && (
         <button
           onClick={() => { setNothingNew(false); setShowForm(true); resetValidation(); }}
-          className="w-full rounded-lg border border-dashed border-sparrow-rule px-4 py-2.5 text-sm text-sparrow-gray hover:border-sparrow-green/50 hover:text-sparrow-green transition"
+          className="w-full rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/50 hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition"
         >
           + Add item
         </button>
@@ -1271,22 +1271,22 @@ function SubmittedScreen({
   onBack: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-sparrow-rule bg-white p-8 text-center space-y-4">
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center space-y-4">
       <div className="h-12 w-12 rounded-full bg-sparrow-green/10 flex items-center justify-center mx-auto">
-        <svg className="h-6 w-6 text-sparrow-green" viewBox="0 0 24 24" fill="none">
+        <svg className="h-6 w-6 text-sparrow-green dark:text-sparrow-dark-green" viewBox="0 0 24 24" fill="none">
           <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
       <div>
-        <h2 className="font-serif text-xl font-semibold text-sparrow-ink">House Flip Complete</h2>
-        <p className="text-sm text-sparrow-gray mt-1">{locationName}</p>
+        <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">House Flip Complete</h2>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray mt-1">{locationName}</p>
       </div>
-      <p className="text-sm text-sparrow-gray">
+      <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
         The asset register has been updated. Missing items are marked removed; new items and kept leave-behinds have been added.
       </p>
       <button
         onClick={onBack}
-        className="rounded-lg border border-sparrow-rule px-6 py-2 text-sm text-sparrow-gray hover:bg-sparrow-mist transition"
+        className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-6 py-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition"
       >
         Done
       </button>

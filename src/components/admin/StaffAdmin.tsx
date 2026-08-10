@@ -33,9 +33,9 @@ export function StaffAdmin() {
   }, [load]);
 
   if (profile?.role !== 'admin') {
-    return <p className="p-8 text-sm text-sparrow-gray">Staff management is available to admins only.</p>;
+    return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Staff management is available to admins only.</p>;
   }
-  if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading staff…</p>;
+  if (loading) return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading staff…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
   const nameByEmail = (email: string | null) =>
@@ -73,13 +73,13 @@ export function StaffAdmin() {
       </div>
 
       {/* Tab bar */}
-      <div className="mt-4 flex gap-1 rounded-xl border border-sparrow-rule bg-sparrow-mist p-1 text-sm">
+      <div className="mt-4 flex gap-1 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1 text-sm">
         {(['roster', 'onboarding', 'documents'] as AdminTab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`rounded-lg px-4 py-1.5 font-medium capitalize transition ${
-              tab === t ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
+              tab === t ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-green dark:text-sparrow-dark-green shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
             }`}
           >
             {t === 'onboarding' ? 'Onboarding Checklist' : t === 'documents' ? 'Documents' : 'Roster'}
@@ -97,9 +97,9 @@ export function StaffAdmin() {
         </div>
       ) : (
         <div className="mt-6 space-y-3">
-          <div className="overflow-x-auto rounded-xl border border-sparrow-rule bg-white">
+          <div className="overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-sparrow-rule text-xs uppercase tracking-wide text-sparrow-gray">
+              <thead className="border-b border-sparrow-rule dark:border-sparrow-dark-border text-xs uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                 <tr>
                   <th className="px-4 py-2 font-semibold">Name</th>
                   <th className="px-4 py-2 font-semibold">Role</th>
@@ -109,33 +109,33 @@ export function StaffAdmin() {
                   <th className="px-4 py-2" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sparrow-rule">
+              <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
                 {staff.map((s) => (
-                  <tr key={s.id} className={s.active ? '' : 'bg-sparrow-mist/60 text-sparrow-gray'}>
+                  <tr key={s.id} className={s.active ? '' : 'bg-sparrow-mist/60 text-sparrow-gray dark:text-sparrow-dark-gray'}>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-sparrow-ink">{s.full_name}</div>
-                      <div className="text-xs text-sparrow-gray">{s.email}</div>
+                      <div className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{s.full_name}</div>
+                      <div className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{s.email}</div>
                     </td>
                     <td className="px-4 py-3">{roleLabel(s.role)}</td>
                     <td className="px-4 py-3">{departmentLabel(s.department)}</td>
                     <td className="px-4 py-3">{nameByEmail(s.manager_email)}</td>
                     <td className="px-4 py-3">
                       {s.active ? (
-                        <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-xs font-medium text-sparrow-green">
+                        <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
                           Active
                         </span>
                       ) : (
-                        <span className="rounded-full bg-sparrow-rule/60 px-2 py-0.5 text-xs font-medium text-sparrow-gray">
+                        <span className="rounded-full bg-sparrow-rule/60 px-2 py-0.5 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
                           Inactive
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2 text-xs">
-                        <button onClick={() => openEdit(s)} className="font-medium text-sparrow-green hover:underline">
+                        <button onClick={() => openEdit(s)} className="font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
                           Edit
                         </button>
-                        <button onClick={() => void toggleActive(s)} className="text-sparrow-gray hover:text-sparrow-ink">
+                        <button onClick={() => void toggleActive(s)} className="text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
                           {s.active ? 'Deactivate' : 'Reactivate'}
                         </button>
                         <button onClick={() => void remove(s)} className="text-priority-p1 hover:underline">
@@ -148,7 +148,7 @@ export function StaffAdmin() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-sparrow-gray">
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             New staff sign in with the Google email you enter here — it's the roster allowlist. Deactivating
             blocks sign-in without deleting their history; Delete removes the record entirely.
           </p>

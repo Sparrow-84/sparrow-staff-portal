@@ -72,15 +72,15 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
       <div className="flex items-start gap-3">
         <button
           onClick={onBack}
-          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green transition hover:bg-sparrow-sage/70"
+          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70"
         >
           ← Back
         </button>
         <div>
-          <h2 className="font-serif text-xl font-semibold text-sparrow-ink">
+          <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
             {SESSION_LOG_LABEL[log.session_type]}
           </h2>
-          <p className="mt-0.5 text-sm text-sparrow-gray">
+          <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {formatDate(log.session_date)}
             {log.created_by_name && ` · Filed by ${log.created_by_name}`}
           </p>
@@ -89,7 +89,7 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
 
       {/* Attendance */}
       {log.attendance.length > 0 && (
-        <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+        <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
           <span className="field-label">Attendance</span>
           <ul className="mt-3 space-y-2">
             {log.attendance.map((a) => {
@@ -99,12 +99,12 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
                   {family ? (
                     <button
                       onClick={() => onOpenFamily(family.id)}
-                      className="flex-1 text-left font-medium text-sparrow-ink hover:text-sparrow-green hover:underline"
+                      className="flex-1 text-left font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:text-sparrow-green dark:hover:text-sparrow-dark-green hover:underline"
                     >
                       {family.display_name}
                     </button>
                   ) : (
-                    <span className="flex-1 font-medium text-sparrow-ink">Unknown family</span>
+                    <span className="flex-1 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Unknown family</span>
                   )}
                   <span
                     className={`rounded-lg px-2 py-1 text-[11px] font-medium ${
@@ -112,13 +112,13 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
                         ? 'bg-priority-p1/10 text-priority-p1'
                         : a.status === 'late'
                           ? 'bg-priority-p2/10 text-priority-p2'
-                          : 'bg-sparrow-green/10 text-sparrow-green'
+                          : 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
                     }`}
                   >
                     {ATTENDANCE_LABEL[a.status]}
                   </span>
                   {a.voucher_awarded && (
-                    <span className="text-xs text-sparrow-gray">Voucher</span>
+                    <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Voucher</span>
                   )}
                 </li>
               );
@@ -129,10 +129,10 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
 
       {/* Group note (Thursday) */}
       {log.session_type === 'thursday_group' && (
-        <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+        <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
           <div className="flex items-center justify-between">
             <label className="field-label">Group session note</label>
-            {groupNoteSaved && <span className="text-xs text-sparrow-green">Saved</span>}
+            {groupNoteSaved && <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green">Saved</span>}
           </div>
           <textarea
             value={groupNote}
@@ -154,10 +154,10 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
       {log.session_type === 'monday_mentoring' ? (
         <div className="space-y-4">
           {MONDAY_BUCKETS.map((bucket) => (
-            <section key={bucket} className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+            <section key={bucket} className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
               <div className="flex items-center justify-between">
                 <span className="field-label">{MONDAY_BUCKET_LABEL[bucket]}</span>
-                {noteSaved && <span className="text-xs text-sparrow-green">Saved</span>}
+                {noteSaved && <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green">Saved</span>}
               </div>
               <NoteList
                 notes={notes.filter((n) => n.bucket === bucket)}
@@ -177,12 +177,12 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
           ))}
         </div>
       ) : (
-        <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+        <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
           <div className="flex items-center justify-between">
             <span className="field-label">
               {log.session_type === 'thursday_group' ? 'Individual session notes' : 'Session notes'}
             </span>
-            {noteSaved && <span className="text-xs text-sparrow-green">Saved</span>}
+            {noteSaved && <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green">Saved</span>}
           </div>
           <NoteList
             notes={notes}
@@ -232,7 +232,7 @@ function NoteList({
   emptyMessage: string;
 }) {
   if (notes.length === 0) {
-    return <p className="mt-2 text-sm text-sparrow-gray">{emptyMessage}</p>;
+    return <p className="mt-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{emptyMessage}</p>;
   }
   return (
     <ul className="mt-3 space-y-3">
@@ -246,7 +246,7 @@ function NoteList({
             {family && (
               <button
                 onClick={() => onOpenFamily(family.id)}
-                className="mb-1.5 text-xs font-semibold text-sparrow-gray hover:text-sparrow-green hover:underline"
+                className="mb-1.5 text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green hover:underline"
                 title={`See all of ${family.display_name}'s notes`}
               >
                 {family.display_name}
@@ -275,9 +275,9 @@ function NoteList({
               </div>
             ) : (
               <>
-                <p className="text-sm text-sparrow-ink">{n.body}</p>
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{n.body}</p>
                 <div className="mt-1 flex items-center justify-between gap-2">
-                  <p className="text-xs text-sparrow-gray">
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {n.author_name && `${n.author_name} · `}
                     {n.updated_at && n.updated_at !== n.created_at
                       ? `Edited ${dayLabel(n.updated_at)}`
@@ -285,7 +285,7 @@ function NoteList({
                   </p>
                   <div className="flex items-center gap-2">
                     {canEdit && (
-                      <button onClick={() => onEditStart(n)} className="text-xs text-sparrow-gray hover:text-sparrow-green">
+                      <button onClick={() => onEditStart(n)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green">
                         Edit
                       </button>
                     )}

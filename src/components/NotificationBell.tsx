@@ -107,7 +107,7 @@ export function NotificationBell({ onNavigate, currentUserId }: { onNavigate: (v
     <div className="relative">
       <button
         onClick={() => (open ? setOpen(false) : void openMenu())}
-        className="relative rounded-lg p-2 text-sparrow-gray transition hover:bg-sparrow-mist hover:text-sparrow-ink"
+        className="relative rounded-lg p-2 text-sparrow-gray dark:text-sparrow-dark-gray transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
         aria-label="Notifications"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -124,31 +124,31 @@ export function NotificationBell({ onNavigate, currentUserId }: { onNavigate: (v
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
-          <div className="fixed right-4 top-16 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-sparrow-rule bg-white shadow-card">
-            <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-2">
+          <div className="fixed right-4 top-16 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-card">
+            <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2">
               <div className="flex items-center gap-1 text-xs">
                 <button
                   onClick={() => setFilter('unread')}
-                  className={`rounded-full px-2 py-0.5 font-medium ${filter === 'unread' ? 'bg-sparrow-green/10 text-sparrow-green' : 'text-sparrow-gray hover:text-sparrow-ink'}`}
+                  className={`rounded-full px-2 py-0.5 font-medium ${filter === 'unread' ? 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'}`}
                 >
                   Unread
                 </button>
                 <button
                   onClick={() => setFilter('all')}
-                  className={`rounded-full px-2 py-0.5 font-medium ${filter === 'all' ? 'bg-sparrow-green/10 text-sparrow-green' : 'text-sparrow-gray hover:text-sparrow-ink'}`}
+                  className={`rounded-full px-2 py-0.5 font-medium ${filter === 'all' ? 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'}`}
                 >
                   All
                 </button>
               </div>
               {unread > 0 && (
-                <button onClick={() => void clearAll()} className="text-xs text-sparrow-green hover:underline">
+                <button onClick={() => void clearAll()} className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline">
                   Mark all read
                 </button>
               )}
             </div>
-            <ul className="max-h-96 divide-y divide-sparrow-rule overflow-y-auto">
+            <ul className="max-h-96 divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-y-auto">
               {displayItems.length === 0 && (
-                <li className="px-4 py-6 text-center text-sm text-sparrow-gray">
+                <li className="px-4 py-6 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                   {filter === 'unread' ? "You're all caught up." : 'No notifications yet.'}
                 </li>
               )}
@@ -159,24 +159,24 @@ export function NotificationBell({ onNavigate, currentUserId }: { onNavigate: (v
                     tabIndex={0}
                     onClick={() => void onItemClick(n)}
                     onKeyDown={(e) => { if (e.key === 'Enter') void onItemClick(n); }}
-                    className={`block w-full cursor-pointer px-4 py-3 text-left hover:bg-sparrow-mist ${n.read ? 'opacity-60' : ''}`}
+                    className={`block w-full cursor-pointer px-4 py-3 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 ${n.read ? 'opacity-60' : ''}`}
                   >
                     <div className="flex items-start gap-2">
                       <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? 'bg-sparrow-gray/40' : 'bg-sparrow-green'}`} />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-sparrow-ink">{describe(n)}</p>
+                        <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{describe(n)}</p>
                         {n.body && n.type !== 'pushed_back' && n.type !== 'new_contact' && (
-                          <p className="truncate text-xs text-sparrow-gray">{n.body}</p>
+                          <p className="truncate text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{n.body}</p>
                         )}
                         <p className="mt-0.5 text-[11px] text-sparrow-gray/70">{timeAgo(n.created_at)}</p>
                         {n.type === 'event_created' && n.entity_id && (
                           responded.has(n.id) ? (
-                            <p className="mt-1.5 text-xs font-medium text-sparrow-green">
+                            <p className="mt-1.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
                               {responded.get(n.id) === 'attending' ? "You're attending ✓" : "You said you're not attending"}
                             </p>
                           ) : (
                             <div className="mt-1.5 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                              <span className="text-xs text-sparrow-gray">Attending?</span>
+                              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Attending?</span>
                               <button
                                 onClick={() => void respond(n, 'attending')}
                                 className="rounded-md bg-sparrow-green px-2.5 py-1 text-xs font-medium text-white hover:bg-sparrow-green/90"
@@ -185,7 +185,7 @@ export function NotificationBell({ onNavigate, currentUserId }: { onNavigate: (v
                               </button>
                               <button
                                 onClick={() => void respond(n, 'opted_out')}
-                                className="rounded-md bg-sparrow-mist px-2.5 py-1 text-xs font-medium text-sparrow-gray hover:text-sparrow-ink"
+                                className="rounded-md bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2.5 py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                               >
                                 No
                               </button>

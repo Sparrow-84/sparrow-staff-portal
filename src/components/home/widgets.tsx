@@ -59,9 +59,9 @@ export function WidgetCard({
   children: ReactNode;
 }) {
   return (
-    <section className="flex flex-col rounded-2xl border border-sparrow-rule bg-white shadow-card">
-      <header className="flex items-center justify-between gap-2 border-b border-sparrow-rule px-4 py-2.5">
-        <h2 className="font-serif text-base font-semibold text-sparrow-green">{title}</h2>
+    <section className="flex flex-col rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-card">
+      <header className="flex items-center justify-between gap-2 border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5">
+        <h2 className="font-serif text-base font-semibold text-sparrow-green dark:text-sparrow-dark-green">{title}</h2>
         {headerRight}
       </header>
       <div className="flex-1 px-4 py-3">{children}</div>
@@ -70,7 +70,7 @@ export function WidgetCard({
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <p className="py-4 text-center text-sm text-sparrow-gray">{children}</p>;
+  return <p className="py-4 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{children}</p>;
 }
 
 function addDays(today: string, n: number): string {
@@ -120,8 +120,8 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
   if (due.length === 0) {
     return (
       <div className="py-3 text-center">
-        <p className="text-sm font-medium text-sparrow-ink">You've done all of today's tasks! 🎉</p>
-        <button onClick={() => ctx.onNavigate('tasks')} className="btn-ghost mt-2 text-sparrow-green">
+        <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">You've done all of today's tasks! 🎉</p>
+        <button onClick={() => ctx.onNavigate('tasks')} className="btn-ghost mt-2 text-sparrow-green dark:text-sparrow-dark-green">
           Get ahead on next week →
         </button>
       </div>
@@ -137,18 +137,18 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
           <li key={t.id} className="flex items-center gap-2">
             <button
               onClick={() => ctx.onOpenTask(t)}
-              className={`flex flex-1 items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-sparrow-mist ${
-                isFading ? 'text-sparrow-gray line-through opacity-50' : ''
+              className={`flex flex-1 items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 ${
+                isFading ? 'text-sparrow-gray dark:text-sparrow-dark-gray line-through opacity-50' : ''
               }`}
             >
               <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
-              <span className="flex-1 text-sm text-sparrow-ink">{t.title}</span>
-              <span className="shrink-0 text-xs text-sparrow-gray">{dueLabel(t.due_date, ctx.today)}</span>
+              <span className="flex-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{t.title}</span>
+              <span className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{dueLabel(t.due_date, ctx.today)}</span>
             </button>
             <button
               onClick={() => complete(t)}
               aria-label="Complete task"
-              className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-sparrow-rule transition hover:border-sparrow-green hover:bg-sparrow-sage"
+              className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-sparrow-rule dark:border-sparrow-dark-border transition hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:bg-sparrow-sage"
             >
               {isFading && <span className="h-2.5 w-2.5 rounded-full bg-sparrow-green" />}
             </button>
@@ -169,13 +169,13 @@ function DatePickerChip({ active, today, onOpen, onPick }: { active: boolean; to
         type="date"
         autoFocus
         min={today}
-        className="rounded-md border border-sparrow-rule px-1.5 py-1 text-xs text-sparrow-ink focus:border-sparrow-green focus:outline-none focus:ring-1 focus:ring-sparrow-green"
+        className="rounded-md border border-sparrow-rule dark:border-sparrow-dark-border px-1.5 py-1 text-xs text-sparrow-ink dark:text-sparrow-dark-ink focus:border-sparrow-green dark:focus:border-sparrow-dark-green focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
         onChange={(e) => onPick(e.target.value)}
       />
     );
   }
   return (
-    <button onClick={onOpen} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
+    <button onClick={onOpen} className="rounded-md border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-1 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
       Pick a date
     </button>
   );
@@ -235,22 +235,22 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
       {pending.length > 0 && (
         <div>
           {showLabels && (
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Needs response
             </p>
           )}
           <ul className="space-y-2">
             {pending.map((t) => (
-              <li key={t.id} className="rounded-lg border border-sparrow-rule px-3 py-2">
-                <p className="text-sm font-medium text-sparrow-ink">{t.title}</p>
-                <p className="text-xs text-sparrow-gray">
+              <li key={t.id} className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2">
+                <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{t.title}</p>
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   Assigned by {t.creator?.full_name ?? 'the system'}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                   <button onClick={() => void defer(t.id, 0)} className="rounded-md bg-sparrow-green px-2 py-1 font-medium text-white hover:bg-sparrow-green-dark">
                     Today
                   </button>
-                  <button onClick={() => void accept(t.id)} className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink">
+                  <button onClick={() => void accept(t.id)} className="rounded-md border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-1 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
                     Unscheduled
                   </button>
                   <DatePickerChip
@@ -262,7 +262,7 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
                   {t.created_by && (
                     <button
                       onClick={() => { setPushBackTarget(t); setPushBackNote(''); }}
-                      className="rounded-md border border-sparrow-rule px-2 py-1 text-sparrow-gray hover:text-sparrow-ink"
+                      className="rounded-md border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-1 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                     >
                       Push back
                     </button>
@@ -276,14 +276,14 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
       {unscheduled.length > 0 && (
         <div>
           {showLabels && (
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Unscheduled
             </p>
           )}
           <ul className="space-y-2">
             {unscheduled.map((t) => (
-              <li key={t.id} className="rounded-lg border border-sparrow-rule px-3 py-2">
-                <p className="text-sm font-medium text-sparrow-ink">{t.title}</p>
+              <li key={t.id} className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2">
+                <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{t.title}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                   <button onClick={() => void defer(t.id, 0)} className="rounded-md bg-sparrow-green px-2 py-1 font-medium text-white hover:bg-sparrow-green-dark">
                     Today
@@ -303,9 +303,9 @@ function TriageWidget({ ctx }: { ctx: WidgetContext }) {
     </div>
     {pushBackTarget && (
       <div className="fixed inset-0 z-50 grid place-items-center bg-sparrow-ink/30 p-4">
-        <div className="w-full max-w-sm rounded-xl border border-sparrow-rule bg-white p-5 shadow-card">
-          <h3 className="font-serif text-base font-semibold text-sparrow-ink">Push back "{pushBackTarget.title}"</h3>
-          <p className="mt-1 text-sm text-sparrow-gray">
+        <div className="w-full max-w-sm rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-5 shadow-card">
+          <h3 className="font-serif text-base font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Push back "{pushBackTarget.title}"</h3>
+          <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             Let {pushBackTarget.creator?.full_name ?? 'the assigner'} know why — it's added as a comment on the task.
           </p>
           <textarea
@@ -374,15 +374,15 @@ function NotificationsWidget({ ctx }: { ctx: WidgetContext }) {
           <li key={n.id}>
             <button
               onClick={() => void open(n)}
-              className="block w-full rounded-lg bg-sparrow-sage/40 px-2 py-1.5 text-left transition hover:bg-sparrow-mist"
+              className="block w-full rounded-lg bg-sparrow-sage/40 px-2 py-1.5 text-left transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
             >
-              <p className="text-sm text-sparrow-ink">{describe(n)}</p>
-              {n.body && <p className="truncate text-xs text-sparrow-gray">{n.body}</p>}
+              <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{describe(n)}</p>
+              {n.body && <p className="truncate text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{n.body}</p>}
             </button>
           </li>
         ))}
       </ul>
-      <button onClick={() => void clearAll()} className="mt-2 text-xs text-sparrow-green hover:underline">
+      <button onClick={() => void clearAll()} className="mt-2 text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline">
         Mark all read
       </button>
     </>
@@ -406,12 +406,12 @@ function QuickWinsWidget({ ctx }: { ctx: WidgetContext }) {
         <li key={w.id} className="flex gap-2">
           <span aria-hidden>{QUICK_WIN_EMOJI[w.kind]}</span>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-sparrow-ink">{w.title}</p>
-            {w.detail && <p className="text-xs text-sparrow-gray">{w.detail}</p>}
+            <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{w.title}</p>
+            {w.detail && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{w.detail}</p>}
             {w.note ? (
-              <p className="mt-0.5 text-xs italic text-sparrow-gray">“{w.note}”</p>
+              <p className="mt-0.5 text-xs italic text-sparrow-gray dark:text-sparrow-dark-gray">“{w.note}”</p>
             ) : (
-              <button onClick={() => void note(w.id)} className="mt-0.5 text-xs text-sparrow-green hover:underline">
+              <button onClick={() => void note(w.id)} className="mt-0.5 text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline">
                 + Add a note
               </button>
             )}
@@ -477,9 +477,9 @@ function UpcomingMeetingsWidget({ ctx }: { ctx: WidgetContext }) {
                 <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${getLayerPill(o.event)}`}>
                   {timeLabel(o.occursAt, o.event.all_day)}
                 </span>
-                <span className="min-w-0 truncate text-sm text-sparrow-ink">{o.event.title}</span>
+                <span className="min-w-0 truncate text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{o.event.title}</span>
                 {ctx.notedEventIds.has(o.event.id) && (
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white dark:bg-sparrow-dark-surface" aria-hidden />
                 )}
               </li>
             ))}
@@ -509,12 +509,12 @@ function MiniCalendarWidget({ ctx }: { ctx: WidgetContext }) {
 
   return (
     <div>
-      <p className="mb-2 text-center text-sm font-medium text-sparrow-ink">
+      <p className="mb-2 text-center text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
         {ref.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
       </p>
       <div className="grid grid-cols-7 gap-0.5 text-center text-[11px]">
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-          <span key={i} className="text-sparrow-gray">{d}</span>
+          <span key={i} className="text-sparrow-gray dark:text-sparrow-dark-gray">{d}</span>
         ))}
         {cells.map((d, i) => {
           const isToday = d === ref.getDate();
@@ -524,7 +524,7 @@ function MiniCalendarWidget({ ctx }: { ctx: WidgetContext }) {
               onClick={() => d && ctx.onNavigate('calendar')}
               disabled={!d}
               className={`relative grid h-7 place-items-center rounded-md ${
-                isToday ? 'bg-sparrow-green font-semibold text-white' : d ? 'hover:bg-sparrow-mist' : ''
+                isToday ? 'bg-sparrow-green font-semibold text-white' : d ? 'hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2' : ''
               }`}
             >
               {d}
@@ -556,11 +556,11 @@ function TeamPulseWidget({ ctx }: { ctx: WidgetContext }) {
         const color = s.overdue > 0 ? 'bg-priority-p1' : s.open > 0 ? 'bg-sparrow-gold' : 'bg-sparrow-green';
         return (
           <li key={r.id} className="flex items-center justify-between gap-2 text-sm">
-            <span className="flex items-center gap-2 text-sparrow-ink">
+            <span className="flex items-center gap-2 text-sparrow-ink dark:text-sparrow-dark-ink">
               <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden />
               {r.full_name}
             </span>
-            <span className="text-xs text-sparrow-gray">
+            <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               {s.open} open{s.overdue > 0 ? ` · ${s.overdue} overdue` : ''}
             </span>
           </li>
@@ -587,27 +587,27 @@ function WeekTooltip({ state }: { state: WeekTooltipState }) {
   if (state.kind === 'task') {
     const tier = TIER_META[tierForPriority(state.task.priority)];
     return (
-      <div className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg" style={{ left, top }}>
-        <p className="text-sm font-medium leading-snug text-sparrow-ink">{state.task.title}</p>
+      <div className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg" style={{ left, top }}>
+        <p className="text-sm font-medium leading-snug text-sparrow-ink dark:text-sparrow-dark-ink">{state.task.title}</p>
         <div className="mt-2 flex items-center gap-1.5">
           <span className={`h-2 w-2 shrink-0 rounded-full ${tier.dot}`} aria-hidden />
           <span className={`text-xs font-medium ${tier.text}`}>{tier.label}</span>
         </div>
-        <p className="mt-1 text-xs text-sparrow-gray">{WEEK_STATUS_LABELS[state.task.status]}</p>
+        <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{WEEK_STATUS_LABELS[state.task.status]}</p>
         {state.task.notes && <p className="mt-2 line-clamp-3 text-xs text-sparrow-ink/70">{state.task.notes}</p>}
       </div>
     );
   }
   return (
-    <div className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg" style={{ left, top }}>
-      <p className="text-sm font-medium leading-snug text-sparrow-ink">{state.event.title}</p>
-      <p className="mt-1 text-xs text-sparrow-gray">{state.event.is_personal ? 'Personal — only you can see this' : (state.event.label?.name ?? KIND_LABEL[state.event.kind])}</p>
+    <div className="pointer-events-none fixed z-50 w-64 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg" style={{ left, top }}>
+      <p className="text-sm font-medium leading-snug text-sparrow-ink dark:text-sparrow-dark-ink">{state.event.title}</p>
+      <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{state.event.is_personal ? 'Personal — only you can see this' : (state.event.label?.name ?? KIND_LABEL[state.event.kind])}</p>
       {!state.event.all_day && (
-        <p className="mt-1 text-xs text-sparrow-gray">
+        <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           {state.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
         </p>
       )}
-      {state.event.location && <p className="mt-1 text-xs text-sparrow-gray">{state.event.location}</p>}
+      {state.event.location && <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{state.event.location}</p>}
     </div>
   );
 }
@@ -646,38 +646,38 @@ function DayDetailPopup({
   return (
     <>
       <div className="fixed inset-0 z-40 bg-sparrow-ink/20" onClick={onClose} aria-hidden />
-      <div className="fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-sparrow-rule bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-3">
-          <h3 className="font-serif text-base font-semibold text-sparrow-ink">{heading}</h3>
+      <div className="fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
+          <h3 className="font-serif text-base font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{heading}</h3>
           <button onClick={onClose} className="btn-ghost" aria-label="Close">✕</button>
         </div>
         <div className="max-h-96 overflow-y-auto px-4 py-3">
           {events.length === 0 && tasks.length === 0 && (
-            <p className="py-4 text-center text-sm text-sparrow-gray">Nothing scheduled for this day.</p>
+            <p className="py-4 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Nothing scheduled for this day.</p>
           )}
           {events.length > 0 && (
             <div className={tasks.length > 0 ? 'mb-4' : ''}>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-sparrow-gray">Events</p>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Events</p>
               <div className="space-y-2">
                 {events.map((o, i) => (
                   <button
                     key={`${o.event.id}-${i}`}
                     onClick={() => { onOpenEvent(o.event); onClose(); }}
-                    className="block w-full rounded-lg bg-sparrow-mist px-3 py-2 text-left hover:bg-sparrow-sage/30"
+                    className="block w-full rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-left hover:bg-sparrow-sage/30"
                   >
-                    <p className="flex items-center gap-1.5 text-sm font-medium text-sparrow-ink">
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                       <span className="min-w-0 truncate">{o.event.title}</span>
                       {notedEventIds.has(o.event.id) && (
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white dark:bg-sparrow-dark-surface" aria-hidden />
                       )}
                     </p>
-                    <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-sparrow-gray">
+                    <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       {!o.event.all_day && (
                         <span>{o.occursAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
                       )}
                       {o.event.location && <span>{o.event.location}</span>}
                       <span>{o.event.is_personal ? 'Personal' : (o.event.label?.name ?? KIND_LABEL[o.event.kind])}</span>
-                      <span className="ml-auto font-medium text-sparrow-green">Open notes →</span>
+                      <span className="ml-auto font-medium text-sparrow-green dark:text-sparrow-dark-green">Open notes →</span>
                     </div>
                   </button>
                 ))}
@@ -686,7 +686,7 @@ function DayDetailPopup({
           )}
           {tasks.length > 0 && (
             <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-sparrow-gray">Tasks</p>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tasks</p>
               <div className="space-y-1.5">
                 {tasks.map((t) => {
                   const tier = TIER_META[tierForPriority(t.priority)];
@@ -694,18 +694,18 @@ function DayDetailPopup({
                     <button
                       key={t.id}
                       onClick={() => { onNavigateToTask(t.id); }}
-                      className="block w-full rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-left hover:bg-sparrow-mist"
+                      className="block w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                     >
                       <div className="flex items-center gap-2">
                         <span className={`h-2 w-2 shrink-0 rounded-full ${tier.dot}`} aria-hidden />
-                        <span className="text-sm text-sparrow-ink">{t.title}</span>
+                        <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{t.title}</span>
                       </div>
                       <div className="mt-0.5 flex gap-3">
                         <span className={`text-xs ${tier.text}`}>{tier.label}</span>
-                        <span className="text-xs text-sparrow-gray">{WEEK_STATUS_LABELS[t.status]}</span>
+                        <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{WEEK_STATUS_LABELS[t.status]}</span>
                       </div>
                       {t.notes && (
-                        <p className="mt-1 line-clamp-2 text-xs text-sparrow-gray">{t.notes}</p>
+                        <p className="mt-1 line-clamp-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{t.notes}</p>
                       )}
                     </button>
                   );
@@ -763,7 +763,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
       <div className="mb-2 flex justify-end">
         <button
           onClick={() => ctx.onNavigate('calendar')}
-          className="text-xs text-sparrow-green hover:underline"
+          className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline"
         >
           My calendar →
         </button>
@@ -782,12 +782,12 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
                 className="flex w-8 shrink-0 flex-col items-center py-1 transition-opacity hover:opacity-70"
                 title={`View ${weekday}`}
               >
-                <p className="text-[9px] font-medium uppercase leading-none text-sparrow-gray opacity-50">
+                <p className="text-[9px] font-medium uppercase leading-none text-sparrow-gray dark:text-sparrow-dark-gray opacity-50">
                   {weekday.charAt(0)}
                 </p>
-                <p className="mt-0.5 text-[10px] leading-none text-sparrow-gray opacity-40">{dayNum}</p>
+                <p className="mt-0.5 text-[10px] leading-none text-sparrow-gray dark:text-sparrow-dark-gray opacity-40">{dayNum}</p>
                 {hasContent && (
-                  <span className="mt-1.5 h-1 w-1 rounded-full bg-sparrow-gray opacity-30" aria-hidden />
+                  <span className="mt-1.5 h-1 w-1 rounded-full bg-sparrow-gray dark:bg-sparrow-dark-border opacity-30" aria-hidden />
                 )}
               </button>
             );
@@ -804,10 +804,10 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
               }`}
             >
               <div className="mb-1.5 text-center">
-                <p className={`text-[10px] font-medium uppercase tracking-wide ${isToday ? 'text-sparrow-green' : 'text-sparrow-gray'}`}>
+                <p className={`text-[10px] font-medium uppercase tracking-wide ${isToday ? 'text-sparrow-green dark:text-sparrow-dark-green' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                   {weekday}
                 </p>
-                <p className={`text-sm font-semibold leading-none ${isToday ? 'text-sparrow-green' : 'text-sparrow-ink'}`}>
+                <p className={`text-sm font-semibold leading-none ${isToday ? 'text-sparrow-green dark:text-sparrow-dark-green' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
                   {dayNum}
                 </p>
               </div>
@@ -828,7 +828,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
                     {o.event.title}
                   </span>
                   {ctx.notedEventIds.has(o.event.id) && (
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white dark:bg-sparrow-dark-surface" aria-hidden />
                   )}
                 </div>
               ))}
@@ -838,12 +838,12 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
                   <button
                     key={t.id}
                     onClick={(e) => { e.stopPropagation(); ctx.onOpenTask(t); }}
-                    className="mb-0.5 flex w-full items-center gap-1 rounded bg-white/60 px-1 py-0.5 text-left text-[10px] hover:bg-white"
+                    className="mb-0.5 flex w-full items-center gap-1 rounded bg-white/60 px-1 py-0.5 text-left text-[10px] hover:bg-white dark:hover:bg-sparrow-dark-surface"
                     onMouseEnter={(e) => setTooltip({ kind: 'task', task: t, x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => setTooltip(null)}
                   >
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
-                    <span className="truncate text-sparrow-ink">{t.title}</span>
+                    <span className="truncate text-sparrow-ink dark:text-sparrow-dark-ink">{t.title}</span>
                   </button>
                 );
               })}
@@ -876,7 +876,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
 
 function MyWeekHeaderRight({ ctx }: { ctx: WidgetContext }) {
   return (
-    <label className="flex cursor-pointer items-center gap-1.5 text-xs text-sparrow-gray">
+    <label className="flex cursor-pointer items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
       <input
         type="checkbox"
         checked={ctx.weekendVisible}

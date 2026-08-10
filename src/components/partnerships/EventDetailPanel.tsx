@@ -90,19 +90,19 @@ export function EventDetailPanel({
         <div className="space-y-4">
           <div>
             <p className="field-label">Date</p>
-            <p className="text-sm text-sparrow-ink">{shortDate(event.event_date)}</p>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{shortDate(event.event_date)}</p>
           </div>
           <div>
             <p className="field-label">Location</p>
-            <p className="text-sm text-sparrow-ink">{event.location ?? '—'}</p>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{event.location ?? '—'}</p>
           </div>
           <div>
             <p className="field-label">Sparrow attendees</p>
-            <p className="text-sm text-sparrow-ink">{event.attendees ?? '—'}</p>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{event.attendees ?? '—'}</p>
           </div>
           <div>
             <p className="field-label">Notes</p>
-            <p className="whitespace-pre-wrap text-sm text-sparrow-ink">{event.notes ?? '—'}</p>
+            <p className="whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{event.notes ?? '—'}</p>
           </div>
         </div>
       ) : (

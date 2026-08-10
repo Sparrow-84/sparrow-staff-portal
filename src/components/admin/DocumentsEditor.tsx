@@ -82,16 +82,16 @@ export function DocumentsEditor() {
     }
   }
 
-  if (loading) return <p className="py-6 text-sm text-sparrow-gray">Loading documents…</p>;
+  if (loading) return <p className="py-6 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading documents…</p>;
   if (error) return <p className="py-6 text-sm text-priority-p1">{error}</p>;
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-sparrow-gray">
+      <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
         Add and manage the documents that appear in the staff Documents library. Staff can view but not edit these.
       </p>
 
-      <div className="rounded-xl border border-dashed border-sparrow-rule p-3">
+      <div className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-3">
         {adding ? (
           <DocForm
             state={addState}
@@ -105,7 +105,7 @@ export function DocumentsEditor() {
           <button
             onClick={() => { setAdding(true); setEditing(null); }}
             disabled={busy}
-            className="w-full text-sm text-sparrow-green hover:underline"
+            className="w-full text-sm text-sparrow-green dark:text-sparrow-dark-green hover:underline"
           >
             + Add document
           </button>
@@ -115,17 +115,17 @@ export function DocumentsEditor() {
       <div className="space-y-5">
         {[...grouped.entries()].map(([category, items]) => (
           <section key={category}>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               {category}
             </h3>
             {items.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-sparrow-rule px-3 py-2 text-xs text-sparrow-gray">
+              <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 No documents yet
               </p>
             ) : (
               <ul className="space-y-2">
                 {items.map((doc) => (
-                  <li key={doc.id} className="rounded-xl border border-sparrow-rule bg-white p-3">
+                  <li key={doc.id} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3">
                     {editing?.id === doc.id ? (
                       <DocForm
                         state={editing}
@@ -139,20 +139,20 @@ export function DocumentsEditor() {
                       <div className="flex items-start gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium text-sparrow-ink">{doc.title}</span>
+                            <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{doc.title}</span>
                             {!doc.url && (
-                              <span className="rounded-full bg-sparrow-rule/60 px-2 py-0.5 text-[11px] text-sparrow-gray">
+                              <span className="rounded-full bg-sparrow-rule/60 px-2 py-0.5 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
                                 No link yet
                               </span>
                             )}
                           </div>
-                          {doc.description && <p className="mt-0.5 text-xs text-sparrow-gray">{doc.description}</p>}
+                          {doc.description && <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{doc.description}</p>}
                           {doc.url && (
                             <a
                               href={doc.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="mt-0.5 block truncate text-xs text-sparrow-green hover:underline"
+                              className="mt-0.5 block truncate text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                             >
                               {doc.url}
                             </a>
@@ -162,14 +162,14 @@ export function DocumentsEditor() {
                           <button
                             onClick={() => setEditing({ id: doc.id, title: doc.title, category: doc.category, description: doc.description ?? '', url: doc.url ?? '' })}
                             disabled={busy}
-                            className="rounded px-2 py-1 text-xs text-sparrow-gray hover:text-sparrow-ink"
+                            className="rounded px-2 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => void remove(doc)}
                             disabled={busy}
-                            className="rounded px-2 py-1 text-xs text-sparrow-gray hover:text-priority-p1"
+                            className="rounded px-2 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
                           >
                             Delete
                           </button>

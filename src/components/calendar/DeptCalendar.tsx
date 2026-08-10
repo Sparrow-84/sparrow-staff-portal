@@ -165,24 +165,24 @@ export function DeptCalendar({ department }: Props) {
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-3">
+      <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
         <div className="flex items-center gap-1.5">
           <button
             onClick={prevMonth}
-            className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
             aria-label="Previous month"
           >←</button>
-          <span className="min-w-[10rem] text-center text-sm font-semibold text-sparrow-ink">
+          <span className="min-w-[10rem] text-center text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
             {MONTHS[month]} {year}
           </span>
           <button
             onClick={nextMonth}
-            className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
             aria-label="Next month"
           >→</button>
           <button
             onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); }}
-            className="rounded-md border border-sparrow-rule px-2 py-0.5 text-xs text-sparrow-gray hover:text-sparrow-ink"
+            className="rounded-md border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
           >
             Today
           </button>
@@ -195,13 +195,13 @@ export function DeptCalendar({ department }: Props) {
       {/* Grid */}
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <p className="p-8 text-sm text-sparrow-gray">Loading…</p>
+          <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
         ) : (
-          <div className="border-l border-t border-sparrow-rule">
+          <div className="border-l border-t border-sparrow-rule dark:border-sparrow-dark-border">
             {/* Day-of-week headers */}
             <div className="grid grid-cols-7">
               {DOW.map((d) => (
-                <div key={d} className="border-b border-r border-sparrow-rule bg-sparrow-mist px-2 py-1.5 text-center text-xs font-semibold text-sparrow-gray">
+                <div key={d} className="border-b border-r border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2 py-1.5 text-center text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">
                   {d}
                 </div>
               ))}
@@ -234,7 +234,7 @@ export function DeptCalendar({ department }: Props) {
                     >
                       <span className="min-w-0 truncate">{bar.isActualStart ? bar.event.title : ''}</span>
                       {bar.isActualStart && notedEventIds.has(bar.event.id) && (
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white dark:bg-sparrow-dark-surface" aria-hidden />
                       )}
                     </button>
                   ))}
@@ -253,16 +253,16 @@ export function DeptCalendar({ department }: Props) {
                       return (
                         <div
                           key={`${dStr}-${col}`}
-                          className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${!inMonth || isPast ? 'bg-sparrow-mist/30' : ''}`}
+                          className={`group min-h-[6rem] border-b border-r border-sparrow-rule dark:border-sparrow-dark-border p-1 ${!inMonth || isPast ? 'bg-sparrow-mist/30' : ''}`}
                           style={barAreaPx > 0 ? { paddingTop: barAreaPx + 4 } : undefined}
                         >
                           <div className="flex items-center justify-between">
-                            <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : !inMonth ? 'text-sparrow-rule' : isPast ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
+                            <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : !inMonth ? 'text-sparrow-rule dark:text-sparrow-dark-border' : isPast ? 'text-sparrow-gray dark:text-sparrow-dark-gray' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
                               {day.getDate()}
                             </span>
                             <button
                               onClick={() => openAdd(dStr)}
-                              className="hidden rounded px-1 text-sm leading-none text-sparrow-gray hover:text-sparrow-green group-hover:block"
+                              className="hidden rounded px-1 text-sm leading-none text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green group-hover:block"
                               aria-label={`Add event on ${dStr}`}
                             >+</button>
                           </div>
@@ -279,7 +279,7 @@ export function DeptCalendar({ department }: Props) {
                                   {ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
                                 </span>
                                 {notedEventIds.has(ev.id) && (
-                                  <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                                  <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white dark:bg-sparrow-dark-surface" aria-hidden />
                                 )}
                               </button>
                             ))}
@@ -287,7 +287,7 @@ export function DeptCalendar({ department }: Props) {
                               <button
                                 type="button"
                                 onClick={() => setExpandedDays((prev) => new Set(prev).add(dStr))}
-                                className="w-full pl-1 text-left text-[10px] font-medium text-sparrow-green hover:underline"
+                                className="w-full pl-1 text-left text-[10px] font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                               >
                                 +{overflow} more
                               </button>
@@ -307,12 +307,12 @@ export function DeptCalendar({ department }: Props) {
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="pointer-events-none fixed z-50 w-48 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg"
+          className="pointer-events-none fixed z-50 w-48 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg"
           style={{ left: tooltip.x > window.innerWidth - 220 ? tooltip.x - 204 : tooltip.x + 14, top: tooltip.y + 16 }}
         >
-          <p className="text-sm font-medium text-sparrow-ink">{tooltip.title}</p>
-          {tooltip.sub && <p className="mt-0.5 text-xs text-sparrow-gray">{tooltip.sub}</p>}
-          {tooltip.time && <p className="mt-0.5 text-xs text-sparrow-gray">{tooltip.time}</p>}
+          <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{tooltip.title}</p>
+          {tooltip.sub && <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{tooltip.sub}</p>}
+          {tooltip.time && <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{tooltip.time}</p>}
         </div>
       )}
 

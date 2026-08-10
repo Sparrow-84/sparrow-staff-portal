@@ -228,7 +228,7 @@ export function PartnerDetailPanel({
                   onChanged();
                 }}
                 disabled={busy}
-                className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 transition hover:bg-amber-50 disabled:opacity-50"
+                className="rounded-lg border border-amber-300 bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-amber-800 transition hover:bg-amber-50 disabled:opacity-50"
               >
                 Not yet — revisit in 30 days
               </button>
@@ -240,17 +240,17 @@ export function PartnerDetailPanel({
         {lastTouchpoint ? (
           <div className="rounded-xl border border-sparrow-rule/70 bg-sparrow-mist/40 px-3 py-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-sparrow-gray">Last touchpoint</span>
-              <span className="text-xs text-sparrow-gray">
+              <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Last touchpoint</span>
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 {TOUCHPOINT_METHOD[lastTouchpoint.method]} · {shortDate(lastTouchpoint.occurred_on)}
               </span>
             </div>
             {lastTouchpoint.summary && (
-              <p className="mt-1 line-clamp-2 text-xs text-sparrow-ink">{lastTouchpoint.summary}</p>
+              <p className="mt-1 line-clamp-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{lastTouchpoint.summary}</p>
             )}
           </div>
         ) : (
-          <p className="text-xs text-sparrow-gray">No touchpoints logged yet.</p>
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No touchpoints logged yet.</p>
         )}
 
         {/* ── 4. Log touchpoint — collapsed behind a button ── */}
@@ -268,7 +268,7 @@ export function PartnerDetailPanel({
             }}
             className={`w-full rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
               logOpen
-                ? 'border-sparrow-rule bg-sparrow-mist text-sparrow-gray'
+                ? 'border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray'
                 : 'btn-primary'
             }`}
           >
@@ -276,7 +276,7 @@ export function PartnerDetailPanel({
           </button>
 
           {logOpen && (
-            <div className="mt-3 space-y-3 rounded-xl border border-sparrow-rule p-3">
+            <div className="mt-3 space-y-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
 
               {/* Direction toggle */}
               <div className="grid grid-cols-2 gap-2">
@@ -297,15 +297,15 @@ export function PartnerDetailPanel({
                     }}
                     className={`rounded-lg border py-2 text-xs font-medium transition ${
                       direction === dir
-                        ? 'border-sparrow-green bg-sparrow-green/10 text-sparrow-green'
-                        : 'border-sparrow-rule text-sparrow-gray hover:border-sparrow-green/40'
+                        ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
+                        : 'border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/40'
                     }`}
                   >
                     {dir === 'outbound' ? 'We reached out' : 'They reached out'}
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] leading-snug text-sparrow-gray">
+              <p className="text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
                 {direction === 'outbound'
                   ? 'Record your outreach. Stage and donor tier updates below if needed.'
                   : 'Record what they shared. Stage auto-set to Active — override below if needed.'}
@@ -349,7 +349,7 @@ export function PartnerDetailPanel({
 
               {/* Inline updates */}
               <div className="space-y-2 border-t border-sparrow-rule/60 pt-2">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-sparrow-gray">Also update (optional)</p>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Also update (optional)</p>
                 <div>
                   <span className="field-label">Stage</span>
                   <select
@@ -364,7 +364,7 @@ export function PartnerDetailPanel({
                     ))}
                   </select>
                   {stageUpdate !== partner.stage && (
-                    <p className="mt-1 text-[11px] text-sparrow-green">Stage will update when you save ✓</p>
+                    <p className="mt-1 text-[11px] text-sparrow-green dark:text-sparrow-dark-green">Stage will update when you save ✓</p>
                   )}
                 </div>
                 <div>
@@ -382,7 +382,7 @@ export function PartnerDetailPanel({
                     ))}
                   </select>
                   {donorTierUpdate && donorTierUpdate !== (partner.donor_tier ?? '') && (
-                    <p className="mt-1 text-[11px] text-sparrow-green">Donor tier will update when you save ✓</p>
+                    <p className="mt-1 text-[11px] text-sparrow-green dark:text-sparrow-dark-green">Donor tier will update when you save ✓</p>
                   )}
                 </div>
               </div>
@@ -410,7 +410,7 @@ export function PartnerDetailPanel({
               disabled={busy}
               placeholder="None"
             />
-            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">
+            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
               Tags {partner.name} onto those Directory tabs too. The main Type above still
               drives cadence and which fields show below.
             </p>
@@ -464,7 +464,7 @@ export function PartnerDetailPanel({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">{PARTNER_STAGE_DESC[partner.stage]}</p>
+            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">{PARTNER_STAGE_DESC[partner.stage]}</p>
           </div>
           <div>
             <span className="field-label">Donor tier</span>
@@ -488,7 +488,7 @@ export function PartnerDetailPanel({
               ))}
             </select>
             {partner.donor_tier && (
-              <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">{DONOR_TIER_DESC[partner.donor_tier]}</p>
+              <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">{DONOR_TIER_DESC[partner.donor_tier]}</p>
             )}
           </div>
         </section>
@@ -500,7 +500,7 @@ export function PartnerDetailPanel({
             <span className="field-label">Partner info</span>
             <button
               onClick={() => setEditingInfo((v) => !v)}
-              className="text-xs font-medium text-sparrow-green hover:underline"
+              className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
             >
               {editingInfo ? 'Done editing' : 'Edit'}
             </button>
@@ -538,14 +538,14 @@ export function PartnerDetailPanel({
                   value={partner.email ?? ''}
                   disabled={busy}
                   onSave={(v) => void patch({ email: v })}
-                  action={partner.email ? <a className="text-xs text-sparrow-green hover:underline" href={`mailto:${partner.email}`}>Email</a> : undefined}
+                  action={partner.email ? <a className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={`mailto:${partner.email}`}>Email</a> : undefined}
                 />
                 <EditField
                   label="Phone"
                   value={partner.phone ?? ''}
                   disabled={busy}
                   onSave={(v) => void patch({ phone: v })}
-                  action={partner.phone ? <a className="text-xs text-sparrow-green hover:underline" href={`tel:${partner.phone}`}>Call</a> : undefined}
+                  action={partner.phone ? <a className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={`tel:${partner.phone}`}>Call</a> : undefined}
                 />
               </div>
               <div>
@@ -594,7 +594,7 @@ export function PartnerDetailPanel({
               onInterestsCreated?.();
             }}
           />
-          <p className="mt-1 text-[11px] leading-snug text-sparrow-gray">
+          <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
             You can search Directory by an interest's name to pull up everyone tagged with it.
           </p>
         </section>
@@ -655,9 +655,9 @@ export function PartnerDetailPanel({
                 checked={partner.newsletter_subscribed}
                 onChange={(e) => void patch({ newsletter_subscribed: e.target.checked })}
                 disabled={busy}
-                className="h-4 w-4 rounded border-sparrow-rule accent-sparrow-green"
+                className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border accent-sparrow-green"
               />
-              <span className="text-sm text-sparrow-ink">Newsletter subscribed</span>
+              <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Newsletter subscribed</span>
             </label>
           </section>
         )}
@@ -715,9 +715,9 @@ export function PartnerDetailPanel({
                 </div>
               )}
               {partner.mou_status === 'on_file' && (
-                <p className="mt-1 text-xs font-medium text-sparrow-green">On file ✓</p>
+                <p className="mt-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">On file ✓</p>
               )}
-              <p className="mt-2 text-xs text-sparrow-gray">
+              <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 An MOU is needed when both organizations are formally doing something for each other — services, client referrals, or access to participants. If you're not sure, ask Susanna.
               </p>
             </div>
@@ -728,14 +728,14 @@ export function PartnerDetailPanel({
         <section>
           <span className="field-label">Touchpoint history</span>
           <ul className="mt-1 space-y-2">
-            {touchpoints.length === 0 && <li className="text-sm text-sparrow-gray">No touchpoints logged yet.</li>}
+            {touchpoints.length === 0 && <li className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No touchpoints logged yet.</li>}
             {touchpoints.map((t) => (
               <li key={t.id} className="rounded-xl border border-sparrow-rule/70 p-3">
-                <div className="flex items-center justify-between text-xs text-sparrow-gray">
+                <div className="flex items-center justify-between text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   <span>{TOUCHPOINT_METHOD[t.method]} · {shortDate(t.occurred_on)}</span>
                   <span>{loggerName(t.logged_by)}</span>
                 </div>
-                {t.summary && <p className="mt-1 text-sm text-sparrow-ink">{t.summary}</p>}
+                {t.summary && <p className="mt-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{t.summary}</p>}
               </li>
             ))}
           </ul>
@@ -747,7 +747,7 @@ export function PartnerDetailPanel({
             <div className="flex items-baseline justify-between">
               <span className="field-label">Giving history</span>
               {donorStat && donorStat.gift_count > 0 && (
-                <span className="text-xs text-sparrow-gray">
+                <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   {donorStat.gift_count} gift{donorStat.gift_count > 1 ? 's' : ''} · last {shortDate(donorStat.last_gift_date)}
                 </span>
               )}
@@ -762,28 +762,28 @@ export function PartnerDetailPanel({
             ) : (
               <ul className="mt-2 space-y-2">
                 {donations.map((d) => (
-                  <li key={d.id} className="rounded-xl border border-sparrow-rule/70 bg-white p-3">
+                  <li key={d.id} className="rounded-xl border border-sparrow-rule/70 bg-white dark:bg-sparrow-dark-surface p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="flex items-center gap-2 text-sm font-medium text-sparrow-ink">
+                        <div className="flex items-center gap-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                           {shortDate(d.received_on)}
                           {d.amount_above_10k && (
-                            <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">
+                            <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                               $10k+
                             </span>
                           )}
                           {d.recurring && (
-                            <span className="rounded-full bg-sparrow-green/10 px-2 py-0.5 text-[10px] font-medium text-sparrow-green">
+                            <span className="rounded-full bg-sparrow-green/10 px-2 py-0.5 text-[10px] font-medium text-sparrow-green dark:text-sparrow-dark-green">
                               Recurring
                             </span>
                           )}
                         </div>
                         {d.designation && (
-                          <p className="mt-0.5 text-xs text-sparrow-gray">{d.designation}</p>
+                          <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{d.designation}</p>
                         )}
                       </div>
                       {d.giving_method && (
-                        <span className="shrink-0 text-xs text-sparrow-gray">{d.giving_method}</span>
+                        <span className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{d.giving_method}</span>
                       )}
                     </div>
                   </li>
@@ -794,7 +794,7 @@ export function PartnerDetailPanel({
         )}
 
         {/* ── Merge into another partner — for a duplicate spotted any time, not just ones the sync flags ── */}
-        <section className="border-t border-sparrow-rule pt-4">
+        <section className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           <button
             onClick={() => {
               if (!mergeOpen) {
@@ -803,14 +803,14 @@ export function PartnerDetailPanel({
               }
               setMergeOpen((v) => !v);
             }}
-            className="text-xs font-medium text-sparrow-gray hover:text-sparrow-ink"
+            className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
           >
             {mergeOpen ? '↑ Cancel merge' : 'Merge into another partner…'}
           </button>
 
           {mergeOpen && (
-            <div className="mt-3 space-y-3 rounded-xl border border-sparrow-rule p-3">
-              <p className="text-xs leading-snug text-sparrow-gray">
+            <div className="mt-3 space-y-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
+              <p className="text-xs leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
                 Use this when you've spotted a duplicate — e.g. this donor already has a joint
                 household record under a different name. Pick who {partner.name} should merge into.
               </p>
@@ -830,7 +830,7 @@ export function PartnerDetailPanel({
 
               {mergeTarget && (
                 <div className="space-y-2 rounded-xl bg-sparrow-mist/50 p-3">
-                  <p className="text-xs font-medium text-sparrow-ink">
+                  <p className="text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                     This will move {touchpoints.length} touchpoint{touchpoints.length === 1 ? '' : 's'}
                     {isDonor && `, ${donations.length} gift${donations.length === 1 ? '' : 's'}`} from{' '}
                     <span className="font-semibold">{partner.name}</span> into{' '}
@@ -839,12 +839,12 @@ export function PartnerDetailPanel({
                   {(partner.notes || mergeTarget.notes) && (
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <p className="font-medium text-sparrow-gray">{partner.name}'s notes (will be discarded)</p>
-                        <p className="mt-0.5 whitespace-pre-wrap text-sparrow-ink">{partner.notes || '—'}</p>
+                        <p className="font-medium text-sparrow-gray dark:text-sparrow-dark-gray">{partner.name}'s notes (will be discarded)</p>
+                        <p className="mt-0.5 whitespace-pre-wrap text-sparrow-ink dark:text-sparrow-dark-ink">{partner.notes || '—'}</p>
                       </div>
                       <div>
-                        <p className="font-medium text-sparrow-gray">{mergeTarget.name}'s notes (kept)</p>
-                        <p className="mt-0.5 whitespace-pre-wrap text-sparrow-ink">{mergeTarget.notes || '—'}</p>
+                        <p className="font-medium text-sparrow-gray dark:text-sparrow-dark-gray">{mergeTarget.name}'s notes (kept)</p>
+                        <p className="mt-0.5 whitespace-pre-wrap text-sparrow-ink dark:text-sparrow-dark-ink">{mergeTarget.notes || '—'}</p>
                       </div>
                     </div>
                   )}
@@ -858,14 +858,14 @@ export function PartnerDetailPanel({
               {mergeTargetId && !confirmMerge && (
                 <button
                   onClick={() => setConfirmMerge(true)}
-                  className="rounded-lg border border-priority-p1/40 bg-white px-3 py-1.5 text-xs font-medium text-priority-p1 transition hover:bg-priority-p1/5"
+                  className="rounded-lg border border-priority-p1/40 bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-priority-p1 transition hover:bg-priority-p1/5"
                 >
                   Merge {partner.name} into {mergeTarget?.name}…
                 </button>
               )}
               {confirmMerge && (
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-sparrow-ink">This can't be undone. Merge now?</span>
+                  <span className="text-xs text-sparrow-ink dark:text-sparrow-dark-ink">This can't be undone. Merge now?</span>
                   <div className="flex shrink-0 gap-2">
                     <button onClick={() => setConfirmMerge(false)} className="btn-ghost">Cancel</button>
                     <button
@@ -883,11 +883,11 @@ export function PartnerDetailPanel({
         </section>
 
         {/* ── 12. Archive / Restore ── */}
-        <section className="border-t border-sparrow-rule pt-4">
+        <section className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           {partner.active ? (
             confirmArchive ? (
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-sparrow-ink">Archive {partner.name}?</span>
+                <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Archive {partner.name}?</span>
                 <div className="flex shrink-0 gap-2">
                   <button onClick={() => setConfirmArchive(false)} className="btn-ghost">Cancel</button>
                   <button
@@ -900,17 +900,17 @@ export function PartnerDetailPanel({
                 </div>
               </div>
             ) : (
-              <button onClick={() => setConfirmArchive(true)} className="text-xs font-medium text-sparrow-gray hover:text-priority-p1">
+              <button onClick={() => setConfirmArchive(true)} className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
                 Archive this partner
               </button>
             )
           ) : (
             <div className="flex items-center justify-between">
-              <span className="text-xs text-sparrow-gray">This partner is archived.</span>
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">This partner is archived.</span>
               <button
                 onClick={() => void patch({ active: true, stage: 'active' })}
                 disabled={busy}
-                className="text-xs font-medium text-sparrow-green hover:underline disabled:opacity-50"
+                className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline disabled:opacity-50"
               >
                 Restore to active
               </button>
@@ -929,11 +929,11 @@ function InfoRow({ label, value, href }: { label: string; value: string | null; 
   const display = value || '—';
   return (
     <div className="flex gap-3">
-      <span className="w-16 shrink-0 text-[11px] uppercase tracking-wide text-sparrow-gray">{label}</span>
+      <span className="w-16 shrink-0 text-[11px] uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">{label}</span>
       {href && value ? (
-        <a href={href} className="min-w-0 flex-1 text-sm text-sparrow-green hover:underline">{display}</a>
+        <a href={href} className="min-w-0 flex-1 text-sm text-sparrow-green dark:text-sparrow-dark-green hover:underline">{display}</a>
       ) : (
-        <span className={`min-w-0 flex-1 text-sm ${value ? 'text-sparrow-ink' : 'text-sparrow-gray/50'}`}>{display}</span>
+        <span className={`min-w-0 flex-1 text-sm ${value ? 'text-sparrow-ink dark:text-sparrow-dark-ink' : 'text-sparrow-gray/50'}`}>{display}</span>
       )}
     </div>
   );

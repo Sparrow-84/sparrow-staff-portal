@@ -112,7 +112,7 @@ export function OperationsRoom() {
     setPanelOpen(true);
   }
 
-  if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading Operations…</p>;
+  if (loading) return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading Operations…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
   return (
@@ -120,17 +120,17 @@ export function OperationsRoom() {
       <RoomTour steps={OPS_TOUR_STEPS} open={tourOpen} onDismiss={dismissTour} />
       <div>
         <h1 className="font-serif text-2xl font-semibold">Operations</h1>
-        <p className="mt-1 text-sm text-sparrow-gray">Staff management · {staff.length} people</p>
+        <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Staff management · {staff.length} people</p>
       </div>
 
       {/* Tabs */}
-      <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
+      <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-1 text-sm">
         {(['staff', 'inventory', 'calendar', 'grants'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setOpsTab(t)}
             className={`rounded-lg px-3 py-1.5 font-medium capitalize transition ${
-              opsTab === t ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
+              opsTab === t ? 'bg-sparrow-green text-white' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
             }`}
           >
             {t === 'staff' ? 'Staff' : t === 'inventory' ? 'Inventory' : t === 'calendar' ? 'Calendar' : 'Grants'}
@@ -172,16 +172,16 @@ export function OperationsRoom() {
                 <li key={s.id}>
                   <button
                     onClick={() => openStaff(s.id)}
-                    className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 text-left shadow-card transition hover:border-sparrow-green/40"
+                    className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 text-left shadow-card transition hover:border-sparrow-green/40"
                   >
                     <div className="min-w-0 flex-1">
-                      <span className="font-medium text-sparrow-ink">{s.full_name}</span>
-                      <p className="text-xs capitalize text-sparrow-gray">
+                      <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{s.full_name}</span>
+                      <p className="text-xs capitalize text-sparrow-gray dark:text-sparrow-dark-gray">
                         {s.role} · {s.department}
                       </p>
                     </div>
                     {ck && (
-                      <span className="rounded-full bg-sparrow-green/10 px-2 py-0.5 text-[10px] font-medium capitalize text-sparrow-green">
+                      <span className="rounded-full bg-sparrow-green/10 px-2 py-0.5 text-[10px] font-medium capitalize text-sparrow-green dark:text-sparrow-dark-green">
                         {ck.kind}
                       </span>
                     )}
@@ -195,7 +195,7 @@ export function OperationsRoom() {
                         {tone.label}
                       </span>
                     )}
-                    <span className="shrink-0 text-sparrow-gray">›</span>
+                    <span className="shrink-0 text-sparrow-gray dark:text-sparrow-dark-gray">›</span>
                   </button>
                 </li>
               );

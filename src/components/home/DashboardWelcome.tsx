@@ -88,10 +88,10 @@ export function DashboardWelcome({ open, onDismiss }: { open: boolean; onDismiss
       className="fixed inset-0 z-50 flex items-center justify-center bg-sparrow-ink/60 px-4"
       onClick={(e) => { if (e.target === e.currentTarget) finish(); }}
     >
-      <div className="relative w-full max-w-sm rounded-2xl bg-white px-6 pb-6 pt-5 shadow-xl">
+      <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-sparrow-dark-surface px-6 pb-6 pt-5 shadow-xl">
         <button
           onClick={finish}
-          className="absolute right-4 top-4 text-xs text-sparrow-gray hover:text-sparrow-ink"
+          className="absolute right-4 top-4 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
         >
           Skip tour
         </button>
@@ -102,12 +102,12 @@ export function DashboardWelcome({ open, onDismiss }: { open: boolean; onDismiss
           <div className="mb-3 text-4xl">{current.icon}</div>
         )}
 
-        <h2 className="font-serif text-xl font-semibold text-sparrow-green">{current.title}</h2>
+        <h2 className="font-serif text-xl font-semibold text-sparrow-green dark:text-sparrow-dark-green">{current.title}</h2>
 
-        <p className="mt-2 text-sm leading-relaxed text-sparrow-gray">{current.body}</p>
+        <p className="mt-2 text-sm leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">{current.body}</p>
 
         {current.tag && (
-          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-sparrow-sage px-3 py-1 text-xs font-medium text-sparrow-green">
+          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-sparrow-sage px-3 py-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
             <span>{current.tag.icon}</span>
             <span>{current.tag.label}</span>
           </div>
@@ -119,7 +119,7 @@ export function DashboardWelcome({ open, onDismiss }: { open: boolean; onDismiss
               key={i}
               onClick={() => setStep(i)}
               className={`h-1.5 rounded-full transition-all ${
-                i === step ? 'w-5 bg-sparrow-green' : 'w-1.5 bg-sparrow-rule hover:bg-sparrow-gray'
+                i === step ? 'w-5 bg-sparrow-green' : 'w-1.5 bg-sparrow-rule dark:bg-sparrow-dark-border hover:bg-sparrow-gray dark:hover:bg-sparrow-dark-border'
               }`}
             />
           ))}

@@ -367,7 +367,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
             <option value="__personal__">Personal (only me)</option>
           </select>
           {isPersonal && (
-            <p className="mt-1 text-xs text-sparrow-gray">Only visible to you — no other staff can see this event.</p>
+            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Only visible to you — no other staff can see this event.</p>
           )}
         </div>
 
@@ -380,12 +380,12 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
           onChange={(id) => setLabelId(id)}
         />
 
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
           <input
             type="checkbox"
             checked={allDay}
             onChange={(e) => { setAllDay(e.target.checked); setEndDate(''); }}
-            className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+            className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
           />
           All day
         </label>
@@ -406,7 +406,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
           {allDay && !recurring && (
             <div>
               <label className="field-label">
-                End date <span className="font-normal text-sparrow-gray">(optional)</span>
+                End date <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
               </label>
               <input
                 type="date"
@@ -432,7 +432,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
               </div>
               <div>
                 <label className="field-label">
-                  End time <span className="font-normal text-sparrow-gray">(optional)</span>
+                  End time <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
                 </label>
                 <input
                   type="time"
@@ -447,7 +447,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
 
         <div>
           <label className="field-label">
-            Location <span className="font-normal text-sparrow-gray">(optional)</span>
+            Location <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
           </label>
           <input
             type="text"
@@ -462,7 +462,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
         {rooms.length > 0 && (
           <div>
             <label className="field-label">
-              Office room <span className="font-normal text-sparrow-gray">(optional)</span>
+              Office room <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
             </label>
             <select
               value={roomId}
@@ -475,16 +475,16 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
               ))}
             </select>
             {roomId && rooms.find((r) => r.id === roomId)?.blocks_whole_office && (
-              <label className="mt-2 flex cursor-pointer items-start gap-2.5 text-sm text-sparrow-ink">
+              <label className="mt-2 flex cursor-pointer items-start gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 <input
                   type="checkbox"
                   checked={isPrivateMeeting}
                   onChange={(e) => setIsPrivateMeeting(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                  className="mt-0.5 h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                 />
                 <span>
                   <span className="font-medium">Private meeting — do not walk through</span>
-                  <span className="mt-0.5 block text-xs text-sparrow-gray">
+                  <span className="mt-0.5 block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     This blocks the whole office. Other rooms will show as unavailable during this time.
                   </span>
                 </span>
@@ -497,19 +497,19 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
         {!isPersonal && department && (
           <div ref={attendeeRef} className="relative">
             <label className="field-label">
-              Attendees <span className="font-normal text-sparrow-gray">(optional — adds event to their widget)</span>
+              Attendees <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional — adds event to their widget)</span>
             </label>
             {attendeeIds.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {attendeeIds.map((id) => {
                   const p = profiles.find((x) => x.id === id);
                   return (
-                    <span key={id} className="flex items-center gap-1 rounded-full bg-sparrow-sage px-2.5 py-0.5 text-xs font-medium text-sparrow-ink">
+                    <span key={id} className="flex items-center gap-1 rounded-full bg-sparrow-sage px-2.5 py-0.5 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                       {p?.full_name ?? id}
                       <button
                         type="button"
                         onClick={() => setAttendeeIds((prev) => prev.filter((x) => x !== id))}
-                        className="ml-0.5 text-sparrow-gray hover:text-sparrow-ink"
+                        className="ml-0.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                         aria-label={`Remove ${p?.full_name ?? id}`}
                       >
                         ×
@@ -529,7 +529,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
               className="field-input"
             />
             {attendeeDropdownOpen && attendeeSearch.trim() && (
-              <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-sparrow-rule bg-white shadow-lg">
+              <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-lg">
                 {profiles
                   .filter((p) =>
                     p.id !== currentUserId &&
@@ -545,7 +545,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
                           setAttendeeSearch('');
                           setAttendeeDropdownOpen(false);
                         }}
-                        className="w-full px-3 py-2 text-left text-sm text-sparrow-ink hover:bg-sparrow-mist"
+                        className="w-full px-3 py-2 text-left text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                       >
                         {p.full_name}
                       </button>
@@ -553,32 +553,32 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
                   ))}
               </ul>
             )}
-            <p className="mt-1 text-xs text-sparrow-gray">You're always added as attending. Selected staff will be notified.</p>
+            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">You're always added as attending. Selected staff will be notified.</p>
           </div>
         )}
 
         {/* LCP family visibility — only relevant for LCP dept events */}
         {!isPersonal && department === 'lcp' && (
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
             <input
               type="checkbox"
               checked={familyVisible}
               onChange={(e) => setFamilyVisible(e.target.checked)}
-              className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+              className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
             />
             Show to LCP families{' '}
-            <span className="font-normal text-sparrow-gray">(just the name, date, and time — nothing else)</span>
+            <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(just the name, date, and time — nothing else)</span>
           </label>
         )}
 
         {/* Recurrence */}
-        <div className="border-t border-sparrow-rule pt-4">
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-sparrow-ink">
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
             <input
               type="checkbox"
               checked={recurring}
               onChange={(e) => setRecurring(e.target.checked)}
-              className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+              className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
             />
             Repeat this event
           </label>
@@ -602,7 +602,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
                       className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                         (value === 'monthly-date' && isMonthly) || frequency === value
                           ? 'bg-sparrow-green text-white'
-                          : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                          : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                       }`}
                     >
                       {label}
@@ -624,7 +624,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
                         className={`h-8 w-8 rounded-full text-xs font-semibold transition ${
                           daysOfWeek.has(dow)
                             ? 'bg-sparrow-green text-white'
-                            : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                            : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                         }`}
                       >
                         {abbr}
@@ -638,28 +638,28 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
               {isMonthly && (
                 <div className="space-y-2">
                   <label className="field-label">Repeat on</label>
-                  <label className="flex cursor-pointer items-start gap-2.5 text-sm text-sparrow-ink">
+                  <label className="flex cursor-pointer items-start gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                     <input
                       type="radio"
                       checked={monthlyMode === 'date'}
                       onChange={() => { setMonthlyMode('date'); setFrequency('monthly-date'); }}
-                      className="mt-0.5 h-4 w-4 border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                      className="mt-0.5 h-4 w-4 border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                     />
                     <span>
                       <span className="font-medium">{date ? monthlyDateLabel(date) : '—'}</span>
-                      <span className="ml-1.5 text-sparrow-gray">(same date each month)</span>
+                      <span className="ml-1.5 text-sparrow-gray dark:text-sparrow-dark-gray">(same date each month)</span>
                     </span>
                   </label>
-                  <label className="flex cursor-pointer items-start gap-2.5 text-sm text-sparrow-ink">
+                  <label className="flex cursor-pointer items-start gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                     <input
                       type="radio"
                       checked={monthlyMode === 'dow'}
                       onChange={() => { setMonthlyMode('dow'); setFrequency('monthly-dow'); }}
-                      className="mt-0.5 h-4 w-4 border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                      className="mt-0.5 h-4 w-4 border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                     />
                     <span>
                       <span className="font-medium">{date ? monthlyDowLabel(date) : '—'}</span>
-                      <span className="ml-1.5 text-sparrow-gray">(same weekday each month)</span>
+                      <span className="ml-1.5 text-sparrow-gray dark:text-sparrow-dark-gray">(same weekday each month)</span>
                     </span>
                   </label>
                 </div>
@@ -676,7 +676,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
                       className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                         untilMode === m
                           ? 'bg-sparrow-green text-white'
-                          : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                          : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                       }`}
                     >
                       {m === 'date' ? 'On a date' : 'Indefinitely'}
@@ -694,7 +694,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
                 )}
               </div>
 
-              <p className="text-sm text-sparrow-gray">
+              <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                 {occurrenceDates.length === 0
                   ? 'No dates match — check your settings and date range.'
                   : `This will create ${occurrenceDates.length} event${occurrenceDates.length !== 1 ? 's' : ''}.`}

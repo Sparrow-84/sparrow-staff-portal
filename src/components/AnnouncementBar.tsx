@@ -55,11 +55,11 @@ export function AnnouncementBar() {
         {items.map((a) => (
           <div key={a.id} className="flex items-center gap-2">
             <span aria-hidden>📣</span>
-            <span className="flex-1 text-sparrow-ink">{a.body}</span>
+            <span className="flex-1 text-sparrow-ink dark:text-sparrow-dark-ink">{a.body}</span>
             {isAdmin && (
               <button
                 onClick={() => dismiss(a.id)}
-                className="text-xs text-sparrow-gray hover:text-red-600 whitespace-nowrap"
+                className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-red-600 whitespace-nowrap"
                 aria-label="Clear announcement for everyone"
                 title="Removes this announcement for all staff"
               >
@@ -69,7 +69,7 @@ export function AnnouncementBar() {
           </div>
         ))}
         {items.length === 0 && isAdmin && (
-          <span className="text-sparrow-gray">No announcements.</span>
+          <span className="text-sparrow-gray dark:text-sparrow-dark-gray">No announcements.</span>
         )}
       </div>
 
@@ -97,7 +97,7 @@ export function AnnouncementBar() {
         ) : (
           <button
             onClick={() => setPosting(true)}
-            className="mt-1 text-xs font-medium text-sparrow-green hover:underline"
+            className="mt-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
           >
             + Post announcement
           </button>

@@ -122,7 +122,7 @@ export function LotMap({ spaces, onSelect, selectedId, noticeMap }: Props) {
   const spaceByLabel = new Map(spaces.map((s) => [s.label, s]));
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl border border-sparrow-rule bg-white p-3">
+    <div className="w-full overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3">
       <svg viewBox="80 0 1120 630" className="w-full h-auto" style={{ minWidth: 520 }}>
         <defs>
           <pattern id="lm-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">

@@ -105,12 +105,12 @@ export function SessionSplitLayout({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-30 flex flex-col bg-white">
+    <div className="fixed inset-0 z-30 flex flex-col bg-white dark:bg-sparrow-dark-surface">
       {/* Top bar */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-sparrow-rule bg-white px-4 py-2.5 shadow-sm">
+      <div className="flex shrink-0 items-center gap-3 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-2.5 shadow-sm">
         <div className="min-w-0 flex-1">
-          <span className="font-serif text-base font-semibold text-sparrow-ink">{sessionLabel}</span>
-          <span className="ml-3 hidden text-xs text-sparrow-gray sm:inline">
+          <span className="font-serif text-base font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{sessionLabel}</span>
+          <span className="ml-3 hidden text-xs text-sparrow-gray dark:text-sparrow-dark-gray sm:inline">
             {formatDateHeader(sessionDate)}
           </span>
         </div>
@@ -118,8 +118,8 @@ export function SessionSplitLayout({
           onClick={() => setNotesOpen((v) => !v)}
           className={`hidden rounded-lg px-3 py-1.5 text-xs font-medium transition md:block ${
             notesOpen
-              ? 'bg-sparrow-sage text-sparrow-green'
-              : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+              ? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green'
+              : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
           }`}
         >
           {notesOpen ? 'Hide notes' : '+ Notes'}
@@ -132,13 +132,13 @@ export function SessionSplitLayout({
         {/* Notes pane — desktop only */}
         {notesOpen && (
           <div
-            className="hidden shrink-0 flex-col overflow-hidden border-r border-sparrow-rule md:flex"
+            className="hidden shrink-0 flex-col overflow-hidden border-r border-sparrow-rule dark:border-sparrow-dark-border md:flex"
             style={{ width: `${leftPct}%` }}
           >
             {sessionType === 'monday_mentoring' ? (
               <div className="flex flex-1 flex-col overflow-hidden">
-                <div className="shrink-0 border-b border-sparrow-rule bg-sparrow-mist px-4 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+                <div className="shrink-0 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-4 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                     Monday Mentor Guide
                   </p>
                   <p className="text-[10px] text-sparrow-gray/70">
@@ -146,18 +146,18 @@ export function SessionSplitLayout({
                   </p>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
-                  <div className="mb-4 whitespace-pre-line rounded-lg bg-sparrow-sage/30 p-3 text-xs italic leading-relaxed text-sparrow-ink">
+                  <div className="mb-4 whitespace-pre-line rounded-lg bg-sparrow-sage/30 p-3 text-xs italic leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink">
                     {MONDAY_GUIDE_INSTRUCTIONS}
                   </div>
 
                   {mondayLoading ? (
-                    <p className="text-sm text-sparrow-gray">Loading this week's session…</p>
+                    <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading this week's session…</p>
                   ) : mondayContent ? (
                     <>
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-sparrow-gold">
                         {mondayContent.phaseName} · {mondayContent.unitName}
                       </p>
-                      <p className="mb-3 text-sm font-semibold text-sparrow-green">
+                      <p className="mb-3 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green">
                         Session {mondayContent.sessionNumber} · {mondayContent.sessionTitle}
                       </p>
                       <div className="mb-4">
@@ -174,25 +174,25 @@ export function SessionSplitLayout({
                       </div>
                     </>
                   ) : (
-                    <p className="text-sm text-sparrow-gray">
+                    <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                       No Thursday session has been filed yet, so there's nothing for Monday to reference.
                     </p>
                   )}
                 </div>
-                <div className="shrink-0 border-t border-sparrow-rule">
+                <div className="shrink-0 border-t border-sparrow-rule dark:border-sparrow-dark-border">
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={3}
-                    className="w-full resize-none bg-white p-3 text-xs leading-relaxed text-sparrow-ink outline-none placeholder:text-sparrow-rule"
+                    className="w-full resize-none bg-white dark:bg-sparrow-dark-surface p-3 text-xs leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink outline-none placeholder:text-sparrow-rule dark:placeholder:text-sparrow-dark-border"
                     placeholder="Personal scratch notes — visible only here, not saved"
                   />
                 </div>
               </div>
             ) : sessionType === 'thursday_group' ? (
               <div className="flex flex-1 flex-col overflow-hidden">
-                <div className="shrink-0 border-b border-sparrow-rule bg-sparrow-mist px-4 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+                <div className="shrink-0 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-4 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                     Teacher Guide
                   </p>
                   <p className="text-[10px] text-sparrow-gray/70">
@@ -201,10 +201,10 @@ export function SessionSplitLayout({
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
                   {thursdayGuideLoading ? (
-                    <p className="text-sm text-sparrow-gray">Loading tonight's guide…</p>
+                    <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading tonight's guide…</p>
                   ) : thursdayGuideContent ? (
                     <>
-                      <p className="mb-3 text-sm font-semibold text-sparrow-green">
+                      <p className="mb-3 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green">
                         Session {thursdayGuideContent.sessionNumber} · {thursdayGuideContent.sessionTitle}
                       </p>
                       {thursdayGuideContent.teacherGuide ? (
@@ -214,22 +214,22 @@ export function SessionSplitLayout({
                           href={thursdayGuideContent.teacherGuideDriveUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm font-medium text-sparrow-green hover:underline"
+                          className="text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                         >
                           Open Teacher Guide ↗
                         </a>
                       ) : (
-                        <p className="text-sm text-sparrow-gray">Not filled in yet — add it in Curriculum Admin.</p>
+                        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Not filled in yet — add it in Curriculum Admin.</p>
                       )}
                     </>
                   ) : (
-                    <p className="text-sm text-sparrow-gray">
+                    <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                       No session is currently positioned to teach — check the Progress tab.
                     </p>
                   )}
                 </div>
                 {thursdayNotes && (
-                  <div className="shrink-0 border-t border-sparrow-rule">
+                  <div className="shrink-0 border-t border-sparrow-rule dark:border-sparrow-dark-border">
                     <NotesAccordion
                       label="Prep notes"
                       draft={prepDraft}
@@ -250,15 +250,15 @@ export function SessionSplitLayout({
                     />
                     <div className="flex items-center gap-2 px-3 py-2">
                       <button onClick={saveBothNotes} className="btn-primary text-xs">Save notes</button>
-                      {justSaved && <span className="text-xs font-medium text-sparrow-green">Saved ✓</span>}
+                      {justSaved && <span className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">Saved ✓</span>}
                     </div>
                   </div>
                 )}
               </div>
             ) : (
               <>
-                <div className="shrink-0 border-b border-sparrow-rule bg-sparrow-mist px-4 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+                <div className="shrink-0 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-4 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                     Session Notes
                   </p>
                   <p className="text-[10px] text-sparrow-gray/70">
@@ -268,7 +268,7 @@ export function SessionSplitLayout({
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="flex-1 resize-none bg-white p-4 font-mono text-sm leading-relaxed text-sparrow-ink outline-none placeholder:text-sparrow-rule"
+                  className="flex-1 resize-none bg-white dark:bg-sparrow-dark-surface p-4 font-mono text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink outline-none placeholder:text-sparrow-rule dark:placeholder:text-sparrow-dark-border"
                   placeholder={"Session goal:\n\nTalking points:\n• \n• \n\nDiscussion questions:\n• \n\nMaterials needed:"}
                 />
               </>
@@ -325,13 +325,13 @@ function NotesAccordion({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border-t border-sparrow-rule first:border-t-0">
+    <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border first:border-t-0">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-sparrow-gray hover:text-sparrow-ink"
+        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
       >
         <span>{open ? '▾' : '▸'} {label}</span>
-        {!open && draft.trim() && <span className="normal-case text-[10px] font-medium text-sparrow-green">has notes</span>}
+        {!open && draft.trim() && <span className="normal-case text-[10px] font-medium text-sparrow-green dark:text-sparrow-dark-green">has notes</span>}
       </button>
       {open && (
         <textarea
@@ -339,7 +339,7 @@ function NotesAccordion({
           onChange={(e) => onDraftChange(e.target.value)}
           onBlur={onBlurSave}
           rows={3}
-          className="w-full resize-none bg-white px-3 pb-3 text-xs leading-relaxed text-sparrow-ink outline-none placeholder:text-sparrow-rule"
+          className="w-full resize-none bg-white dark:bg-sparrow-dark-surface px-3 pb-3 text-xs leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink outline-none placeholder:text-sparrow-rule dark:placeholder:text-sparrow-dark-border"
           placeholder={placeholder}
         />
       )}

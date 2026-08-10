@@ -69,8 +69,8 @@ function collateralDaysUntilDue(item: PartnershipCollateral, today: Date = new D
 type CollateralStatus = 'on_cadence' | 'due_soon' | 'overdue';
 
 const COLLATERAL_STATUS: Record<CollateralStatus, { label: string; dot: string; chip: string }> = {
-  on_cadence: { label: 'On cadence', dot: 'bg-sparrow-green', chip: 'bg-sparrow-green/10 text-sparrow-green' },
-  due_soon: { label: 'Due soon', dot: 'bg-sparrow-gold', chip: 'bg-sparrow-gold/20 text-sparrow-ink' },
+  on_cadence: { label: 'On cadence', dot: 'bg-sparrow-green', chip: 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green' },
+  due_soon: { label: 'Due soon', dot: 'bg-sparrow-gold', chip: 'bg-sparrow-gold/20 text-sparrow-ink dark:text-sparrow-dark-ink' },
   overdue: { label: 'Overdue', dot: 'bg-priority-p1', chip: 'bg-priority-p1/15 text-priority-p1' },
 };
 
@@ -266,7 +266,7 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
     return (
       <th
         onClick={() => toggleSort(k)}
-        className="cursor-pointer select-none whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray hover:text-sparrow-ink"
+        className="cursor-pointer select-none whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
       >
         {label}
         {active && <span className="ml-1 opacity-60">{sortDir === 'asc' ? '↑' : '↓'}</span>}
@@ -278,14 +278,14 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
     <div className="space-y-4">
       {/* Attention banners */}
       {(overdueCount > 0 || dueSoonCount > 0) && (
-        <div className="rounded-xl border border-priority-p1/30 bg-priority-p1/5 px-4 py-3 text-sm text-sparrow-ink">
+        <div className="rounded-xl border border-priority-p1/30 bg-priority-p1/5 px-4 py-3 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
           {overdueCount > 0 && <span>{overdueCount} item{overdueCount > 1 ? 's' : ''} overdue for review. </span>}
           {dueSoonCount > 0 && <span>{dueSoonCount} due soon.</span>}
           {' '}Tasks have been pushed to each item's owner. Sort by Due to see them first.
         </div>
       )}
       {upcomingReview && (
-        <div className="rounded-xl border border-sparrow-gold/40 bg-sparrow-gold/5 px-4 py-3 text-sm text-sparrow-ink">
+        <div className="rounded-xl border border-sparrow-gold/40 bg-sparrow-gold/5 px-4 py-3 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
           March/Sept review calendar coming up <strong>{formatDate(upcomingReview)}</strong> — drafts due{' '}
           <strong>{formatDate(draftsDue(upcomingReview))}</strong>. Submit all proposed changes to Susanna before that date.
         </div>
@@ -293,7 +293,7 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-sparrow-gray">{items.length} active item{items.length !== 1 ? 's' : ''}</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{items.length} active item{items.length !== 1 ? 's' : ''}</p>
         <button onClick={() => { setShowAddForm((v) => !v); setFormError(null); }} className="btn-primary text-xs">
           {showAddForm ? 'Cancel' : '+ Add item'}
         </button>
@@ -301,7 +301,7 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
 
       {/* Add form */}
       {showAddForm && (
-        <form onSubmit={handleAdd} className="rounded-xl border border-sparrow-rule bg-white p-4 space-y-3">
+        <form onSubmit={handleAdd} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <label className="field-label">Item name *</label>
@@ -382,33 +382,33 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
         </form>
       )}
 
-      {loading && <p className="py-8 text-center text-sm text-sparrow-gray">Loading…</p>}
+      {loading && <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>}
 
       {!loading && sorted.length === 0 && (
-        <p className="rounded-xl border border-dashed border-sparrow-rule p-8 text-center text-sm text-sparrow-gray">
+        <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           No collateral items yet. Add your first item above.
         </p>
       )}
 
       {!loading && sorted.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-sparrow-rule bg-white">
+        <div className="overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-sparrow-rule text-left">
+              <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border text-left">
                 <th className="w-6 px-3 py-2.5" />
                 <SortTh label="Item" k="item" />
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Qty</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Qty</th>
                 <SortTh label="Owner" k="owner" />
                 <SortTh label="Cadence" k="cadence" />
                 <SortTh label="Lead time" k="lead_time" />
                 <SortTh label="Due" k="due" />
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Review cycle</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Attention</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">Notes</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray"></th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Review cycle</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Attention</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Notes</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sparrow-rule">
+            <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
               {sorted.map((item) => {
                 const isArchived = !item.active;
                 const status = collateralStatus(item, now);
@@ -471,7 +471,7 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
                         <button
                           onClick={() => void handleMarkReviewed(item)}
                           disabled={isArchived || isBusy}
-                          className="text-left text-[10px] font-medium text-sparrow-green hover:underline disabled:opacity-50"
+                          className="text-left text-[10px] font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline disabled:opacity-50"
                         >
                           Mark reviewed
                         </button>
@@ -493,7 +493,7 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
                           <option value="sept">September</option>
                           <option value="both">Both</option>
                         </select>
-                        <p className="mt-0.5 text-[10px] text-sparrow-gray">
+                        <p className="mt-0.5 text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray">
                           Info only — next: {formatDate(getNextReviewDate(item.review_cycle))}
                         </p>
                       </div>
@@ -503,7 +503,7 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
                         title={item.needs_attention ? 'Needs attention — click to clear' : 'No flag — click to flag'}
                         onClick={() => handleToggleAttention(item)}
                         disabled={isArchived}
-                        className={`text-lg ${item.needs_attention ? 'text-amber-500' : 'text-sparrow-rule hover:text-amber-400'}`}
+                        className={`text-lg ${item.needs_attention ? 'text-amber-500' : 'text-sparrow-rule dark:text-sparrow-dark-border hover:text-amber-400'}`}
                       >
                         🚩
                       </button>
@@ -521,7 +521,7 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
                       {!isArchived && (
                         <button
                           onClick={() => handleArchive(item.id)}
-                          className="text-xs text-sparrow-gray hover:text-priority-p1"
+                          className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
                           title="Archive item"
                         >
                           Archive
@@ -539,7 +539,7 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
       {/* Show archived toggle */}
       <button
         onClick={() => setShowArchived((v) => !v)}
-        className="text-xs text-sparrow-gray hover:text-sparrow-ink underline"
+        className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink underline"
       >
         {showArchived ? 'Hide archived items' : 'Show archived items'}
       </button>

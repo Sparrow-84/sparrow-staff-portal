@@ -112,7 +112,7 @@ export function OpsSubmissionsView({ month, year }: { month: number; year: numbe
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-40 text-sparrow-gray text-sm">
+      <div className="flex items-center justify-center h-40 text-sparrow-gray dark:text-sparrow-dark-gray text-sm">
         Loading…
       </div>
     );
@@ -142,13 +142,13 @@ export function OpsSubmissionsView({ month, year }: { month: number; year: numbe
         {approved > 0 && (
           <div className="flex items-center gap-1.5 text-sm">
             <span className="h-2 w-2 rounded-full bg-sparrow-green" />
-            <span className="text-sparrow-gray">{approved} approved</span>
+            <span className="text-sparrow-gray dark:text-sparrow-dark-gray">{approved} approved</span>
           </div>
         )}
         {missing > 0 && (
           <div className="flex items-center gap-1.5 text-sm">
-            <span className="h-2 w-2 rounded-full bg-sparrow-rule" />
-            <span className="text-sparrow-gray">{missing} not yet started</span>
+            <span className="h-2 w-2 rounded-full bg-sparrow-rule dark:bg-sparrow-dark-border" />
+            <span className="text-sparrow-gray dark:text-sparrow-dark-gray">{missing} not yet started</span>
           </div>
         )}
       </div>
@@ -168,10 +168,10 @@ export function OpsSubmissionsView({ month, year }: { month: number; year: numbe
       {/* Remote staff */}
       {remoteLocations.length > 0 && (
         <div className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray mb-2">
             Remote Staff Submissions
           </p>
-          <p className="text-xs text-sparrow-gray mb-3">
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mb-3">
             Items in staff possession outside of a fixed Sparrow location.
           </p>
           <LocationSection
@@ -219,7 +219,7 @@ function LocationSection({
   onSetOwner: (locationId: string, userId: string) => Promise<void>;
 }) {
   return (
-    <div className="rounded-xl border border-sparrow-rule bg-white overflow-hidden divide-y divide-sparrow-rule">
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
       {locations.map((loc) => (
         <LocationRow
           key={loc.id}
@@ -289,13 +289,13 @@ function LocationRow({
         {/* Left: click to open form/panel */}
         <button
           onClick={() => onRowClick(loc)}
-          className="flex-1 flex items-center gap-4 px-4 py-3.5 text-left hover:bg-sparrow-mist transition min-w-0"
+          className="flex-1 flex items-center gap-4 px-4 py-3.5 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition min-w-0"
         >
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sparrow-ink">{loc.name}</p>
+            <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{loc.name}</p>
             {/* Assignee names */}
             {assigned.length > 0 ? (
-              <p className="text-xs text-sparrow-gray mt-0.5">
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
                 {assigned.map((u) => u.is_owner
                   ? `${u.full_name.split(' ')[0]} (submits)`
                   : u.full_name.split(' ')[0]
@@ -306,7 +306,7 @@ function LocationRow({
             )}
             {/* Submission hint */}
             {sub?.submitter && (
-              <p className="text-xs text-sparrow-gray">
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 {sub.submitter.full_name}
                 {sub.submitted_at &&
                   ` · ${new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
@@ -323,19 +323,19 @@ function LocationRow({
               {SUBMISSION_STATUS_META[status].label}
             </span>
           ) : (
-            <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium bg-sparrow-mist text-sparrow-gray">
+            <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray">
               Not started
             </span>
           )}
-          <span className="text-sparrow-gray shrink-0">›</span>
+          <span className="text-sparrow-gray dark:text-sparrow-dark-gray shrink-0">›</span>
         </button>
 
         {/* Right: assign toggle button */}
         <button
           onClick={() => setAssignOpen((v) => !v)}
           title="Manage assignees"
-          className={`shrink-0 px-3 border-l border-sparrow-rule hover:bg-sparrow-mist transition ${
-            assignOpen ? 'text-sparrow-green bg-sparrow-sage' : 'text-sparrow-gray'
+          className={`shrink-0 px-3 border-l border-sparrow-rule dark:border-sparrow-dark-border hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition ${
+            assignOpen ? 'text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-sage' : 'text-sparrow-gray dark:text-sparrow-dark-gray'
           }`}
         >
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -346,7 +346,7 @@ function LocationRow({
 
       {/* Inline assignment editor */}
       {assignOpen && (
-        <div className="border-t border-sparrow-rule bg-sparrow-mist/30 px-4 py-3 space-y-2">
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-3 space-y-2">
           {/* Current assignees with owner radio */}
           {assigned.length > 0 ? (
             <div className="space-y-1.5">
@@ -359,15 +359,15 @@ function LocationRow({
                     title={u.is_owner ? 'Designated submitter' : 'Make designated submitter'}
                     className={`shrink-0 h-4 w-4 rounded-full border-2 flex items-center justify-center transition ${
                       u.is_owner
-                        ? 'border-sparrow-green bg-sparrow-green'
-                        : 'border-sparrow-rule hover:border-sparrow-green'
+                        ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green'
+                        : 'border-sparrow-rule dark:border-sparrow-dark-border hover:border-sparrow-green dark:hover:border-sparrow-dark-green'
                     } disabled:opacity-60`}
                   >
-                    {u.is_owner && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    {u.is_owner && <span className="h-1.5 w-1.5 rounded-full bg-white dark:bg-sparrow-dark-surface" />}
                   </button>
                   {/* Name chip */}
                   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                    u.is_owner ? 'bg-sparrow-sage text-sparrow-green' : 'bg-sparrow-mist text-sparrow-gray'
+                    u.is_owner ? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green' : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray'
                   }`}>
                     {u.full_name.split(' ')[0]}
                     {u.is_owner && <span className="text-[10px] opacity-70">submits</span>}
@@ -387,7 +387,7 @@ function LocationRow({
               )}
             </div>
           ) : (
-            <p className="text-xs text-sparrow-gray italic">Nobody assigned yet</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray italic">Nobody assigned yet</p>
           )}
 
           {/* Add person */}
@@ -399,7 +399,7 @@ function LocationRow({
                 if (e.target.value) void handleAdd(e.target.value);
                 e.target.value = '';
               }}
-              className="rounded-lg border border-sparrow-rule bg-white px-2.5 py-1.5 text-sm text-sparrow-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green disabled:opacity-50"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2.5 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green disabled:opacity-50"
             >
               <option value="" disabled>{adding ? 'Adding…' : '+ Add person'}</option>
               {unassigned.map((p) => (

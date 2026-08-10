@@ -85,40 +85,40 @@ export function MoveInRequestPanel({
       }
     >
       <div className="space-y-4">
-        <p className="rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink">
+        <p className="rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
           Only resident info moves over — name, phone, email, children's names, move-in date, emergency
           contact. Nothing about their LCP program (session log, curriculum position, etc.) is shared.
         </p>
 
         {!detail ? (
-          <p className="text-sm text-sparrow-gray">Loading…</p>
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
         ) : (
           <>
             <div>
               <span className="field-label">Move-in date</span>
-              <p className="text-sm text-sparrow-ink">{detail.move_in_date ?? '—'}</p>
+              <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{detail.move_in_date ?? '—'}</p>
             </div>
 
             <div>
               <span className="field-label">Adult</span>
               {detail.adult ? (
                 <div className="mt-1 rounded-xl border border-sparrow-rule/70 p-3">
-                  <p className="text-sm font-medium text-sparrow-ink">{detail.adult.full_name}</p>
-                  <p className="text-xs text-sparrow-gray">{detail.adult.phone} · {detail.adult.email}</p>
+                  <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{detail.adult.full_name}</p>
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{detail.adult.phone} · {detail.adult.email}</p>
                 </div>
               ) : (
-                <p className="mt-1 text-sm text-sparrow-gray">None on file.</p>
+                <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">None on file.</p>
               )}
             </div>
 
             <div>
               <span className="field-label">Children</span>
               {detail.children.length === 0 ? (
-                <p className="mt-1 text-sm text-sparrow-gray">None on file.</p>
+                <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">None on file.</p>
               ) : (
                 <ul className="mt-1 space-y-0.5">
                   {detail.children.map((name, i) => (
-                    <li key={i} className="text-sm text-sparrow-ink">{name}</li>
+                    <li key={i} className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{name}</li>
                   ))}
                 </ul>
               )}
@@ -127,13 +127,13 @@ export function MoveInRequestPanel({
             {detail.emergency_contact_notes && (
               <div>
                 <span className="field-label">Emergency contact</span>
-                <p className="text-sm text-sparrow-ink">{detail.emergency_contact_notes}</p>
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{detail.emergency_contact_notes}</p>
               </div>
             )}
           </>
         )}
 
-        <div className="border-t border-sparrow-rule pt-4">
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           <span className="field-label">Notes / questions for LCP staff</span>
           <textarea
             value={notes}
@@ -142,15 +142,15 @@ export function MoveInRequestPanel({
             placeholder="e.g. Need annual income before we can set up the lease…"
             className="field-input"
           />
-          <button onClick={markNeedsInfo} disabled={busy} className="btn-ghost mt-2 border border-sparrow-rule">
+          <button onClick={markNeedsInfo} disabled={busy} className="btn-ghost mt-2 border border-sparrow-rule dark:border-sparrow-dark-border">
             Save note & mark needs info
           </button>
           {noteSaved && (
-            <p className="mt-2 rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs font-medium text-sparrow-green">
+            <p className="mt-2 rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
               ✓ Saved — this note is now visible on {request.family_display_name}'s LCP record.
             </p>
           )}
-          <p className="mt-1 text-xs text-sparrow-gray">
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             This shows up on the family's LCP record. For a real back-and-forth, message the LCP staff
             directly via chat or a task.
           </p>

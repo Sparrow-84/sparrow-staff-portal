@@ -130,21 +130,21 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
     <div className="space-y-8">
       {/* Rules box — all 3 layers */}
       <div className="rounded-xl border border-sparrow-gold/30 bg-sparrow-cream px-4 py-3 text-sm">
-        <p className="font-semibold text-sparrow-ink">Three-layer photo release framework</p>
-        <ul className="mt-2 space-y-1.5 text-sparrow-gray">
+        <p className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Three-layer photo release framework</p>
+        <ul className="mt-2 space-y-1.5 text-sparrow-gray dark:text-sparrow-dark-gray">
           <li>
-            <span className="font-medium text-sparrow-ink">Layer 1 — Community event</span> — A
+            <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Layer 1 — Community event</span> — A
             sandwich board at every community event lets attendees know photos may be taken.
             Documented here.
           </li>
           <li>
-            <span className="font-medium text-sparrow-ink">Layer 2 — Participant photo form</span> —
+            <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Layer 2 — Participant photo form</span> —
             Everyone signs the release, but the photo/video sections (participant and children) are
             separate optional checkboxes — a signed form does not by itself mean photos are allowed.
             Documented here.
           </li>
           <li>
-            <span className="font-medium text-sparrow-ink">Layer 3 — Story-level verbal consent</span> —
+            <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Layer 3 — Story-level verbal consent</span> —
             Before a photo is published next to a specific story, staff ask the participant directly.
             Tracked on each story record (Stories tab).
           </li>
@@ -154,7 +154,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
       {/* ── Layer 1: Community Event Log ───────────────────────────── */}
       <section>
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-sparrow-ink">Layer 1 — Community event log</h2>
+          <h2 className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Layer 1 — Community event log</h2>
           {!showEventForm && (
             <button
               onClick={() => setShowEventForm(true)}
@@ -166,7 +166,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
         </div>
 
         {showEventForm && (
-          <div className="mt-3 rounded-xl border border-sparrow-rule bg-white px-4 py-4">
+          <div className="mt-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="field-label" htmlFor="mr-event-name">
@@ -204,7 +204,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
             </label>
             <div className="mt-3">
               <label className="field-label" htmlFor="mr-event-notes">
-                Notes <span className="font-normal text-sparrow-gray">(optional)</span>
+                Notes <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
               </label>
               <input
                 id="mr-event-notes"
@@ -229,31 +229,31 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
         )}
 
         {events.length === 0 ? (
-          <p className="mt-3 text-sm text-sparrow-gray">No events logged yet.</p>
+          <p className="mt-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No events logged yet.</p>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded-xl border border-sparrow-rule">
+          <div className="mt-3 overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sparrow-rule bg-sparrow-mist/40">
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray">Event</th>
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray">Date</th>
-                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray">Board posted</th>
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray">Notes</th>
+                <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
+                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Event</th>
+                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Date</th>
+                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Board posted</th>
+                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sparrow-rule bg-white">
+              <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
                 {events.map((ev) => (
                   <tr key={ev.id}>
-                    <td className="px-4 py-2.5 font-medium text-sparrow-ink">{ev.event_name}</td>
-                    <td className="px-4 py-2.5 text-sparrow-gray">{formatDate(ev.event_date)}</td>
+                    <td className="px-4 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{ev.event_name}</td>
+                    <td className="px-4 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{formatDate(ev.event_date)}</td>
                     <td className="px-4 py-2.5 text-center">
                       {ev.sandwich_board_posted ? (
-                        <span className="text-sparrow-green">✓</span>
+                        <span className="text-sparrow-green dark:text-sparrow-dark-green">✓</span>
                       ) : (
                         <span className="text-priority-p1">✗</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-sparrow-gray">{ev.notes ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{ev.notes ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -265,7 +265,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
       {/* ── Layer 2: Participant Photo Forms ───────────────────────── */}
       <section>
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-sparrow-ink">Layer 2 — Participant photo forms</h2>
+          <h2 className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Layer 2 — Participant photo forms</h2>
           {!showConsentForm && (
             <button
               onClick={() => setShowConsentForm(true)}
@@ -277,7 +277,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
         </div>
 
         {showConsentForm && (
-          <div className="mt-3 rounded-xl border border-sparrow-rule bg-white px-4 py-4">
+          <div className="mt-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="field-label" htmlFor="mr-p-name">
@@ -293,7 +293,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
               </div>
               <div>
                 <label className="field-label" htmlFor="mr-p-date">
-                  Date signed <span className="font-normal text-sparrow-gray">(if signed)</span>
+                  Date signed <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(if signed)</span>
                 </label>
                 <input
                   id="mr-p-date"
@@ -307,7 +307,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div>
                 <label className="field-label" htmlFor="mr-p-photo">
-                  Photos/video of participant <span className="font-normal text-sparrow-gray">(Section 2 of the form)</span>
+                  Photos/video of participant <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(Section 2 of the form)</span>
                 </label>
                 <select
                   id="mr-p-photo"
@@ -321,7 +321,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
               </div>
               <div>
                 <label className="field-label" htmlFor="mr-p-children-photo">
-                  Photos/video of children <span className="font-normal text-sparrow-gray">(Section 3)</span>
+                  Photos/video of children <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(Section 3)</span>
                 </label>
                 <select
                   id="mr-p-children-photo"
@@ -337,14 +337,14 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 </select>
               </div>
             </div>
-            <p className="mt-2 text-xs text-sparrow-gray">
+            <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               Signing the release form is separate from consenting to photos — Sections 2 and 3 are optional
               checkboxes on the form, so a signed form can still have either left unchecked. Log exactly what
               the form says, not whether it was signed.
             </p>
             <div className="mt-3">
               <label className="field-label" htmlFor="mr-p-notes">
-                Notes <span className="font-normal text-sparrow-gray">(optional)</span>
+                Notes <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
               </label>
               <input
                 id="mr-p-notes"
@@ -369,43 +369,43 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
         )}
 
         {consents.length === 0 ? (
-          <p className="mt-3 text-sm text-sparrow-gray">No photo consent forms on record yet.</p>
+          <p className="mt-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No photo consent forms on record yet.</p>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded-xl border border-sparrow-rule">
+          <div className="mt-3 overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sparrow-rule bg-sparrow-mist/40">
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray">Participant</th>
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray">Date signed</th>
-                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray">Photos — participant</th>
-                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray">Photos — children</th>
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray">Notes</th>
+                <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
+                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Participant</th>
+                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Date signed</th>
+                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Photos — participant</th>
+                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Photos — children</th>
+                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sparrow-rule bg-white">
+              <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
                 {consents.map((c) => (
                   <tr key={c.id}>
-                    <td className="px-4 py-2.5 font-medium text-sparrow-ink">{c.participant_name}</td>
-                    <td className="px-4 py-2.5 text-sparrow-gray">
+                    <td className="px-4 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{c.participant_name}</td>
+                    <td className="px-4 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">
                       {c.date_signed ? formatDate(c.date_signed) : '—'}
                     </td>
                     <td className="px-4 py-2.5 text-center">
                       {c.photo_consent ? (
-                        <span className="font-medium text-sparrow-green">Yes</span>
+                        <span className="font-medium text-sparrow-green dark:text-sparrow-dark-green">Yes</span>
                       ) : (
                         <span className="font-medium text-priority-p1">No</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-center">
                       {c.children_photo_consent === 'yes' ? (
-                        <span className="font-medium text-sparrow-green">Yes</span>
+                        <span className="font-medium text-sparrow-green dark:text-sparrow-dark-green">Yes</span>
                       ) : c.children_photo_consent === 'no' ? (
                         <span className="font-medium text-priority-p1">No</span>
                       ) : (
-                        <span className="text-sparrow-gray">—</span>
+                        <span className="text-sparrow-gray dark:text-sparrow-dark-gray">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-sparrow-gray">{c.notes ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{c.notes ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -415,8 +415,8 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
       </section>
 
       {/* Layer 3 note */}
-      <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist/30 px-4 py-3 text-sm text-sparrow-gray">
-        <span className="font-medium text-sparrow-ink">Layer 3 — Story-level verbal consent</span> is
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
+        <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Layer 3 — Story-level verbal consent</span> is
         tracked on each story record. Open the Stories tab, click a story, and scroll to the Photo
         consent section to update it.
       </div>

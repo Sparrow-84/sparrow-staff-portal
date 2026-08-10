@@ -71,11 +71,11 @@ function ItemEditPanel({
     }
   }
 
-  const inputCls = 'w-full rounded border border-sparrow-rule px-2 py-1.5 text-sm text-sparrow-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green';
-  const labelCls = 'block text-xs font-medium text-sparrow-gray mb-1';
+  const inputCls = 'w-full rounded border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green';
+  const labelCls = 'block text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray mb-1';
 
   return (
-    <div className="border-t border-sparrow-rule bg-sparrow-mist/30 px-4 py-4 space-y-3">
+    <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-4 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="sm:col-span-2">
           <label className={labelCls} htmlFor={`reg-item-desc-${item.id}`}>Description</label>
@@ -115,7 +115,7 @@ function ItemEditPanel({
           </select>
         </div>
         <div className="flex items-end pb-1.5">
-          <label className="flex items-center gap-2 text-sm text-sparrow-ink">
+          <label className="flex items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
             <input type="checkbox" checked={isDonated} onChange={(e) => setIsDonated(e.target.checked)} />
             Donated
           </label>
@@ -170,7 +170,7 @@ function ItemEditPanel({
         >
           {saving ? 'Saving…' : 'Save'}
         </button>
-        <button onClick={onCancel} className="text-sm text-sparrow-gray hover:text-sparrow-ink transition">
+        <button onClick={onCancel} className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition">
           Cancel
         </button>
       </div>
@@ -195,7 +195,7 @@ function RegisterItemRow({
   const totalValue = item.unit_cost * item.quantity;
 
   return (
-    <div className="border-b border-sparrow-rule last:border-0">
+    <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border last:border-0">
       <button
         onClick={onToggle}
         className="w-full flex items-start gap-3 px-4 py-2.5 text-left hover:bg-sparrow-mist/40 transition"
@@ -205,7 +205,7 @@ function RegisterItemRow({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm text-sparrow-ink leading-snug">{item.description}</p>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink leading-snug">{item.description}</p>
             {item.status === 'removed' && (
               <span className="rounded-full bg-priority-p1/10 px-1.5 py-0.5 text-[10px] font-medium text-priority-p1">Removed</span>
             )}
@@ -214,18 +214,18 @@ function RegisterItemRow({
             )}
           </div>
           {item.sub_location && (
-            <p className="text-xs text-sparrow-gray">{item.sub_location.name}</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{item.sub_location.name}</p>
           )}
           {item.review_flag && (
             <p className="text-xs text-sparrow-gold mt-0.5">⚠ {item.review_flag}</p>
           )}
         </div>
-        <div className="shrink-0 text-right text-xs text-sparrow-gray whitespace-nowrap">
+        <div className="shrink-0 text-right text-xs text-sparrow-gray dark:text-sparrow-dark-gray whitespace-nowrap">
           {item.quantity > 1 && <span>{item.quantity} × </span>}
           {formatCost(item.unit_cost)}
-          {item.quantity > 1 && <span className="block text-sparrow-ink font-medium">{formatCost(totalValue)}</span>}
+          {item.quantity > 1 && <span className="block text-sparrow-ink dark:text-sparrow-dark-ink font-medium">{formatCost(totalValue)}</span>}
         </div>
-        <span className="text-sparrow-gray shrink-0">{expanded ? '▲' : '▼'}</span>
+        <span className="text-sparrow-gray dark:text-sparrow-dark-gray shrink-0">{expanded ? '▲' : '▼'}</span>
       </button>
       {expanded && (
         <ItemEditPanel item={item} onSave={onSave} onCancel={onToggle} />
@@ -298,7 +298,7 @@ export function AssetRegisterView() {
     .reduce((sum, i) => sum + i.unit_cost * i.quantity, 0);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-40 text-sparrow-gray text-sm">Loading…</div>;
+    return <div className="flex items-center justify-center h-40 text-sparrow-gray dark:text-sparrow-dark-gray text-sm">Loading…</div>;
   }
   if (err) {
     return <p className="p-4 text-sm text-priority-p1">{err}</p>;
@@ -307,9 +307,9 @@ export function AssetRegisterView() {
   return (
     <div className="space-y-4">
       {/* Summary */}
-      <div className="rounded-xl border border-sparrow-rule bg-white px-4 py-3.5 flex flex-wrap items-center gap-4 text-sm">
-        <span className="font-medium text-sparrow-ink">{totalActive} active items</span>
-        <span className="text-sparrow-gray">{formatCost(totalValue)} total value</span>
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-3.5 flex flex-wrap items-center gap-4 text-sm">
+        <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{totalActive} active items</span>
+        <span className="text-sparrow-gray dark:text-sparrow-dark-gray">{formatCost(totalValue)} total value</span>
         {flaggedCount > 0 && (
           <button
             onClick={() => setReviewOnly((v) => !v)}
@@ -329,12 +329,12 @@ export function AssetRegisterView() {
           placeholder="Search description…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="rounded-lg border border-sparrow-rule px-3 py-1.5 text-sm text-sparrow-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green flex-1 min-w-[180px]"
+          className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green flex-1 min-w-[180px]"
         />
         <select
           value={locationFilter}
           onChange={(e) => setLocationFilter(e.target.value)}
-          className="rounded-lg border border-sparrow-rule px-2.5 py-1.5 text-sm text-sparrow-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green"
+          className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-2.5 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
         >
           <option value="">All locations</option>
           {locations.map((l) => (
@@ -343,7 +343,7 @@ export function AssetRegisterView() {
         </select>
 
         {/* View mode toggle */}
-        <div className="flex rounded-lg border border-sparrow-rule overflow-hidden text-xs font-medium">
+        <div className="flex rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border overflow-hidden text-xs font-medium">
           {(['all', 'individual', 'batch'] as const).map((mode) => (
             <button
               key={mode}
@@ -351,7 +351,7 @@ export function AssetRegisterView() {
               className={`px-3 py-1.5 transition ${
                 viewMode === mode
                   ? 'bg-sparrow-green text-white'
-                  : 'bg-white text-sparrow-gray hover:bg-sparrow-mist'
+                  : 'bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
               }`}
             >
               {mode === 'all' ? 'All' : mode === 'individual' ? 'Individual' : 'Batch'}
@@ -359,7 +359,7 @@ export function AssetRegisterView() {
           ))}
         </div>
 
-        <label className="flex items-center gap-1.5 text-xs text-sparrow-gray">
+        <label className="flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           <input type="checkbox" checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} />
           Show removed
         </label>
@@ -371,9 +371,9 @@ export function AssetRegisterView() {
         .map((loc) => {
           const locItems = grouped.get(loc.id)!.sort((a, b) => a.description.localeCompare(b.description));
           return (
-            <div key={loc.id} className="rounded-xl border border-sparrow-rule bg-white overflow-hidden">
-              <div className="flex items-center justify-between border-b border-sparrow-rule px-4 py-2.5 bg-sparrow-green/10">
-                <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">{loc.name}</span>
+            <div key={loc.id} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
+              <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 bg-sparrow-green/10">
+                <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">{loc.name}</span>
                 <span className="text-xs text-sparrow-green/70">({locItems.length})</span>
               </div>
               {locItems.map((item) => (
@@ -390,8 +390,8 @@ export function AssetRegisterView() {
         })}
 
       {filtered.length === 0 && (
-        <div className="rounded-xl border border-sparrow-rule bg-sparrow-mist p-8 text-center">
-          <p className="text-sm text-sparrow-gray">No items match this filter.</p>
+        <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-8 text-center">
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No items match this filter.</p>
         </div>
       )}
     </div>

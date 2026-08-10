@@ -19,32 +19,32 @@ function Toolbar() {
     document.execCommand(cmd, false, undefined);
   }
   return (
-    <div className="flex items-center gap-0.5 border-b border-sparrow-rule bg-white px-4 py-1.5">
+    <div className="flex items-center gap-0.5 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-1.5">
       <button
         onMouseDown={(e) => { e.preventDefault(); apply('bold'); }}
-        className="rounded px-2.5 py-1 text-sm font-bold text-sparrow-ink hover:bg-sparrow-mist"
+        className="rounded px-2.5 py-1 text-sm font-bold text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
         title="Bold (Ctrl+B)"
       >
         B
       </button>
       <button
         onMouseDown={(e) => { e.preventDefault(); apply('italic'); }}
-        className="rounded px-2.5 py-1 text-sm italic text-sparrow-ink hover:bg-sparrow-mist"
+        className="rounded px-2.5 py-1 text-sm italic text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
         title="Italic (Ctrl+I)"
       >
         I
       </button>
-      <div className="mx-1.5 h-4 w-px bg-sparrow-rule" />
+      <div className="mx-1.5 h-4 w-px bg-sparrow-rule dark:bg-sparrow-dark-border" />
       <button
         onMouseDown={(e) => { e.preventDefault(); apply('insertUnorderedList'); }}
-        className="rounded px-2.5 py-1 text-sm text-sparrow-ink hover:bg-sparrow-mist"
+        className="rounded px-2.5 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
         title="Bullet list"
       >
         • List
       </button>
       <button
         onMouseDown={(e) => { e.preventDefault(); apply('insertOrderedList'); }}
-        className="rounded px-2.5 py-1 text-sm text-sparrow-ink hover:bg-sparrow-mist"
+        className="rounded px-2.5 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
         title="Numbered list"
       >
         1. List
@@ -54,7 +54,7 @@ function Toolbar() {
 }
 
 const CONTENT_CLASSES =
-  'flex-1 overflow-y-auto p-6 text-sm leading-relaxed text-sparrow-ink focus:outline-none ' +
+  'flex-1 overflow-y-auto p-6 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none ' +
   '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 ' +
   '[&_li]:mb-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2';
 
@@ -302,21 +302,21 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
-        <p className="text-sm text-sparrow-gray">Loading notes…</p>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white dark:bg-sparrow-dark-surface">
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading notes…</p>
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-white">
-        <p className="text-sm font-medium text-sparrow-ink">Could not load meeting notes.</p>
-        <p className="text-sm text-sparrow-gray">Your existing notes are safe. Try closing and reopening, or refreshing the page.</p>
-        <p className="rounded bg-sparrow-mist px-3 py-2 font-mono text-xs text-sparrow-ink">{loadError}</p>
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-white dark:bg-sparrow-dark-surface">
+        <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Could not load meeting notes.</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Your existing notes are safe. Try closing and reopening, or refreshing the page.</p>
+        <p className="rounded bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 font-mono text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{loadError}</p>
         <button
           onClick={onClose}
-          className="rounded-xl border border-sparrow-rule px-4 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist"
+          className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
         >
           Close
         </button>
@@ -325,26 +325,26 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-sparrow-dark-surface">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-sparrow-rule px-6 py-4">
+      <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-6 py-4">
         <div>
           <div className="flex items-center gap-2">
             <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${KIND_PILL[event.kind]}`}>
               {KIND_LABEL[event.kind]}
             </span>
-            <h1 className="text-lg font-semibold text-sparrow-ink">{event.title}</h1>
+            <h1 className="text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{event.title}</h1>
           </div>
-          <p className="mt-0.5 text-sm text-sparrow-gray">{dateLabel} · {timeLabel}</p>
+          <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{dateLabel} · {timeLabel}</p>
         </div>
         <div className="flex items-center gap-4">
-          {!closing && displayStatus === 'saving' && <span className="text-xs text-sparrow-gray">Saving…</span>}
-          {!closing && displayStatus === 'saved' && <span className="text-xs text-sparrow-gray">Saved</span>}
+          {!closing && displayStatus === 'saving' && <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Saving…</span>}
+          {!closing && displayStatus === 'saved' && <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Saved</span>}
           {!closing && displayStatus === 'error' && <span className="text-xs text-priority-p1">Error saving</span>}
           <button
             onClick={flushAndClose}
             disabled={closing}
-            className="rounded-xl border border-sparrow-rule px-4 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist disabled:opacity-60"
+            className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 disabled:opacity-60"
           >
             {closing ? 'Saving…' : 'Close notes'}
           </button>
@@ -363,7 +363,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
             </button>
             <button
               onClick={onClose}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium text-sparrow-gray hover:bg-sparrow-mist"
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
             >
               Close without saving
             </button>
@@ -377,8 +377,8 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
       {/* Three-column notes area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Prep Notes */}
-        <div className="flex flex-1 flex-col border-r border-sparrow-rule">
-          <div className="border-b border-sparrow-rule bg-amber-50 px-6 py-3">
+        <div className="flex flex-1 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border">
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-amber-50 px-6 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Prep Notes</p>
             <p className="text-xs text-amber-600/70">Before the meeting · only visible to you</p>
           </div>
@@ -393,9 +393,9 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         </div>
 
         {/* Live Notes */}
-        <div className="flex flex-1 flex-col border-r border-sparrow-rule">
-          <div className="border-b border-sparrow-rule bg-green-50 px-6 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">Live Notes</p>
+        <div className="flex flex-1 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border">
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-green-50 px-6 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">Live Notes</p>
             <p className="text-xs text-sparrow-green/60">During the meeting · only visible to you</p>
           </div>
           <div
@@ -410,7 +410,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
 
         {/* Shared Notes */}
         <div className="flex flex-1 flex-col">
-          <div className="border-b border-sparrow-rule bg-blue-50 px-6 py-3">
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-blue-50 px-6 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Shared Notes</p>
             <p className="text-xs text-blue-600/70">Visible to everyone with calendar access</p>
           </div>

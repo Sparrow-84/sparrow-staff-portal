@@ -78,8 +78,8 @@ export function TaskBoardView({ tasks, today, userId, showAssignee, onOpen, onMo
             onDrop={(e) => onDrop(e, col.status)}
             className={`rounded-xl border p-2 transition ${
               overCol === col.status
-                ? 'border-sparrow-green bg-sparrow-sage'
-                : 'border-sparrow-rule bg-sparrow-mist'
+                ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage'
+                : 'border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2'
             }`}
           >
             <div className="flex items-center justify-between px-1 pb-2 pt-1">
@@ -93,13 +93,13 @@ export function TaskBoardView({ tasks, today, userId, showAssignee, onOpen, onMo
                     if (e.key === 'Enter') commitEdit();
                     if (e.key === 'Escape') setEditingCol(null);
                   }}
-                  className="w-full bg-transparent text-xs font-semibold uppercase tracking-wide text-sparrow-gray outline-none border-b border-sparrow-green"
+                  className="w-full bg-transparent text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray outline-none border-b border-sparrow-green dark:border-sparrow-dark-green"
                 />
               ) : (
                 <button
                   onClick={() => startEdit(col.status)}
                   title="Click to rename column"
-                  className="group flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-sparrow-gray hover:text-sparrow-ink"
+                  className="group flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                 >
                   {colTitles[col.status]}
                   <span className="opacity-0 group-hover:opacity-40 text-[10px] not-uppercase normal-case tracking-normal">✎</span>
@@ -138,23 +138,23 @@ function Card({
       draggable
       onDragStart={(e) => e.dataTransfer.setData('text/plain', task.id)}
       onClick={onOpen}
-      className="block w-full cursor-grab rounded-lg border border-sparrow-rule bg-white p-3 text-left shadow-card active:cursor-grabbing"
+      className="block w-full cursor-grab rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 text-left shadow-card active:cursor-grabbing"
     >
       {task.label && task.label_color && (
         <div className="mb-1.5">
           <LabelPill label={task.label} color={task.label_color} />
         </div>
       )}
-      <p className="text-sm text-sparrow-ink">{task.title}</p>
+      <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{task.title}</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <PriorityChip p={task.priority} />
         <DeptTag d={task.department} />
         {task.due_date && (
-          <span className="text-xs text-sparrow-gray">{dueLabel(task.due_date, today)}</span>
+          <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{dueLabel(task.due_date, today)}</span>
         )}
       </div>
       {showAssignee && task.assignee && (
-        <p className="mt-1 text-xs text-sparrow-gray">{task.assignee.full_name}</p>
+        <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{task.assignee.full_name}</p>
       )}
     </button>
   );

@@ -122,7 +122,7 @@ export function PartnerTableView({
       <th
         onClick={() => toggleSort(k)}
         style={minWidth ? { minWidth } : undefined}
-        className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray hover:text-sparrow-ink"
+        className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
       >
         {label}
         {active && <span className="ml-1 opacity-60">{sortDir === 'asc' ? '↑' : '↓'}</span>}
@@ -131,24 +131,24 @@ export function PartnerTableView({
   }
 
   if (sorted.length === 0) {
-    return <p className="py-8 text-center text-sm text-sparrow-gray">No partners in this view yet.</p>;
+    return <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No partners in this view yet.</p>;
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-sparrow-rule">
+    <div className="overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-sparrow-rule bg-sparrow-mist/40">
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
             <th className="w-6 px-3 py-2" />
             <SortTh label="Name" k="name" minWidth="260px" />
             <SortTh label="Type" k="type" minWidth="160px" />
-            <th style={{ minWidth: '170px' }} className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+            <th style={{ minWidth: '170px' }} className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Interests
             </th>
             <SortTh label="Stage" k="stage" minWidth="130px" />
             <th
               style={{ minWidth: '180px' }}
-              className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray"
+              className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray"
             >
               Owner
             </th>
@@ -161,10 +161,10 @@ export function PartnerTableView({
               </>
             ) : (
               <>
-                <th style={{ minWidth: '150px' }} className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+                <th style={{ minWidth: '150px' }} className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                   Cadence
                 </th>
-                <th style={{ minWidth: '150px' }} className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+                <th style={{ minWidth: '150px' }} className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                   Lead time
                 </th>
               </>
@@ -181,7 +181,7 @@ export function PartnerTableView({
               <tr
                 key={p.id}
                 onClick={() => onOpenPartner(p.id)}
-                className="group cursor-pointer border-b border-sparrow-rule/60 bg-white hover:bg-sparrow-mist/40"
+                className="group cursor-pointer border-b border-sparrow-rule/60 bg-white dark:bg-sparrow-dark-surface hover:bg-sparrow-mist/40"
               >
                 {/* Status dot */}
                 <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
@@ -191,10 +191,10 @@ export function PartnerTableView({
                 {/* Name + badges — kept on one line; the table scrolls horizontally rather than squeezing this */}
                 <td className="px-3 py-2.5">
                   <div className="flex flex-nowrap items-center gap-1.5">
-                    <span className="whitespace-nowrap font-medium text-sparrow-ink">{p.name}</span>
+                    <span className="whitespace-nowrap font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{p.name}</span>
                     {(() => {
                       const tier = derivedDonorTier(p.donor_tier, donorStatMap.get(p.id));
-                      if (tier === 'major') return <span className="whitespace-nowrap rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">Major</span>;
+                      if (tier === 'major') return <span className="whitespace-nowrap rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Major</span>;
                       if (tier === 'lapsed' && p.type === 'donor') return <span className="whitespace-nowrap rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">Lapsed giving</span>;
                       if (tier === 'first_time') return <span className="whitespace-nowrap rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">First gift</span>;
                       return null;
@@ -206,7 +206,7 @@ export function PartnerTableView({
                 </td>
 
                 {/* Type — every type this partner is (primary, then tags), stacked */}
-                <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">
+                <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">
                   <div className="flex flex-col gap-0.5">
                     {[type, ...p.secondary_types.map((t) => PARTNER_TYPE[t])].map((t) => (
                       <span key={t.label}>{t.icon} {t.label}</span>
@@ -243,7 +243,7 @@ export function PartnerTableView({
                 <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1.5">
                     <span
-                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${p.owner_id ? (ownerColors[p.owner_id] ?? 'bg-sparrow-gray') : 'bg-sparrow-mist'}`}
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${p.owner_id ? (ownerColors[p.owner_id] ?? 'bg-sparrow-gray dark:bg-sparrow-dark-border') : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2'}`}
                     />
                     <select
                       value={p.owner_id ?? ''}
@@ -262,7 +262,7 @@ export function PartnerTableView({
                 </td>
 
                 {/* Last touch */}
-                <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">
+                <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">
                   {shortDate(p.last_touchpoint_at)}
                 </td>
 
@@ -278,10 +278,10 @@ export function PartnerTableView({
                   const stat = donorStatMap.get(p.id);
                   return (
                     <>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">
                         {stat ? stat.gift_count : '—'}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">
                         {stat?.last_gift_date ? shortDate(stat.last_gift_date) : '—'}
                       </td>
                     </>

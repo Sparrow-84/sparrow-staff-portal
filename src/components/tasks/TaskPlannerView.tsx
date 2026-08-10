@@ -113,19 +113,19 @@ export function TaskPlannerView({ tasks, today, onOpen, onMoveDate, onToggle }: 
                 overDate === iso
                   ? 'border-sparrow-gold bg-amber-50'
                   : isToday
-                    ? 'border-sparrow-green bg-sparrow-sage/20'
-                    : 'border-sparrow-rule bg-white'
+                    ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage/20'
+                    : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface'
               }`}
             >
               {/* Day header */}
-              <div className="border-b border-sparrow-rule px-2 py-1.5 text-center">
+              <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border px-2 py-1.5 text-center">
                 <div
                   className={`text-[10px] font-semibold uppercase tracking-widest ${
                     isToday
-                      ? 'text-sparrow-green'
+                      ? 'text-sparrow-green dark:text-sparrow-dark-green'
                       : isPast
                         ? 'text-sparrow-gray/50'
-                        : 'text-sparrow-gray'
+                        : 'text-sparrow-gray dark:text-sparrow-dark-gray'
                   }`}
                 >
                   {WEEKDAYS[day.getDay()]}
@@ -136,7 +136,7 @@ export function TaskPlannerView({ tasks, today, onOpen, onMoveDate, onToggle }: 
                       ? 'bg-sparrow-green text-white'
                       : isPast
                         ? 'text-sparrow-gray/40'
-                        : 'text-sparrow-ink'
+                        : 'text-sparrow-ink dark:text-sparrow-dark-ink'
                   }`}
                 >
                   {day.getDate()}
@@ -167,7 +167,7 @@ export function TaskPlannerView({ tasks, today, onOpen, onMoveDate, onToggle }: 
       {/* Undated tray — always visible; drop here to clear a due date */}
       <div
         className={`mt-4 rounded-xl border-2 border-dashed p-3 transition ${
-          overUndated ? 'border-sparrow-gold bg-amber-50' : 'border-sparrow-rule'
+          overUndated ? 'border-sparrow-gold bg-amber-50' : 'border-sparrow-rule dark:border-sparrow-dark-border'
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -181,7 +181,7 @@ export function TaskPlannerView({ tasks, today, onOpen, onMoveDate, onToggle }: 
           if (id) onMoveDate(id, null);
         }}
       >
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
           Unscheduled{undated.length > 0 ? ` · ${undated.length}` : ''}{' '}
           <span className="font-normal normal-case">— drag here to clear due date</span>
         </p>
@@ -221,7 +221,7 @@ function PlannerTask({
     <div
       draggable
       onDragStart={(e) => e.dataTransfer.setData('text/plain', task.id)}
-      className={`cursor-grab rounded-lg border border-sparrow-rule bg-white px-2 py-1.5 active:cursor-grabbing ${done ? 'opacity-50' : ''}`}
+      className={`cursor-grab rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1.5 active:cursor-grabbing ${done ? 'opacity-50' : ''}`}
     >
       <div className="flex items-start gap-1.5">
         <input
@@ -241,7 +241,7 @@ function PlannerTask({
           )}
           <p
             className={`line-clamp-2 text-[11px] leading-snug ${
-              done ? 'text-sparrow-gray line-through' : 'text-sparrow-ink'
+              done ? 'text-sparrow-gray dark:text-sparrow-dark-gray line-through' : 'text-sparrow-ink dark:text-sparrow-dark-ink'
             }`}
           >
             {task.title}

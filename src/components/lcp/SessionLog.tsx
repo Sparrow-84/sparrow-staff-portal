@@ -282,7 +282,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
     target.set(log.session_date, list);
   }
 
-  if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading session log…</p>;
+  if (loading) return <p className="py-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading session log…</p>;
 
   const track = computeCurriculumTrack(phases, programUnitId, programSessionId);
 
@@ -292,12 +292,12 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
       <div className="grid gap-4 md:grid-cols-[1fr_11rem]">
       {/* ── Section 1: what you can log right now ───────────────────── */}
       <section className="rounded-2xl bg-sparrow-sage/40 p-4 sm:p-5">
-        <h2 className="font-serif text-lg font-semibold text-sparrow-ink">Log tonight's session</h2>
-        <p className="mt-0.5 text-sm text-sparrow-gray">
+        <h2 className="font-serif text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Log tonight's session</h2>
+        <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           Today's scheduled sessions, or start one for a different date.
         </p>
         {todayEvents.length === 0 && (
-          <p className="mt-1 text-xs text-sparrow-gray">
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             There is no session scheduled for tonight on the Session Cal — that's why there's no "Log this
             session" button below. Add tonight's session to the Session Cal, or use "+ Log a different
             session" below instead.
@@ -316,9 +316,9 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
                 : ev.kind === 'one_on_one' ? 'monday_mentoring'
                 : null;
               return (
-                <div key={ev.id} className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
-                  <p className="font-medium text-sparrow-ink">{ev.title}</p>
-                  <p className="mt-0.5 text-sm text-sparrow-gray">
+                <div key={ev.id} className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
+                  <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{ev.title}</p>
+                  <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                     {timeLabel(ev.starts_at)} · {families.length} {families.length === 1 ? 'family' : 'families'} active
                   </p>
                   <div className="mt-3">
@@ -330,7 +330,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
                         Log this session
                       </button>
                     ) : (
-                      <p className="text-xs text-sparrow-gray">
+                      <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                         This calendar event's type ({EVENT_LABEL[ev.kind]}) isn't one Session Log tracks — if this
                         should be a Thursday Group or Monday Mentoring session, check the calendar entry's type.
                         Otherwise, log a session manually below.
@@ -348,13 +348,13 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
           {!showDatePicker ? (
             <button
               onClick={() => setShowDatePicker(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-sparrow-green px-4 py-2 text-sm font-medium text-sparrow-green transition hover:bg-white"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-sparrow-green dark:border-sparrow-dark-green px-4 py-2 text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-white dark:hover:bg-sparrow-dark-surface"
             >
               + Log a different session
             </button>
           ) : (
-            <div className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
-              <p className="mb-3 text-sm font-medium text-sparrow-ink">Log a session</p>
+            <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
+              <p className="mb-3 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Log a session</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="field-label">Date</label>
@@ -398,8 +398,8 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
       {/* ── Section 1.5: prep started for a date that hasn't happened yet ── */}
       {upcomingByDate.size > 0 && (
         <section className="mt-10">
-          <h2 className="font-serif text-lg font-semibold text-sparrow-ink">Upcoming sessions</h2>
-          <p className="mt-0.5 text-sm text-sparrow-gray">Prep started ahead of time for a date that hasn't happened yet.</p>
+          <h2 className="font-serif text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Upcoming sessions</h2>
+          <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Prep started ahead of time for a date that hasn't happened yet.</p>
           <div className="mt-4">
             <SessionLogList
               logsByDate={new Map(Array.from(upcomingByDate.entries()).sort(([a], [b]) => a.localeCompare(b)))}
@@ -413,10 +413,10 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
       {/* ── Section 2: what's already been logged ───────────────────── */}
       <section className="mt-10">
-        <h2 className="font-serif text-lg font-semibold text-sparrow-ink">Past sessions</h2>
-        <p className="mt-0.5 text-sm text-sparrow-gray">Everything logged so far, most recent first.</p>
+        <h2 className="font-serif text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Past sessions</h2>
+        <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Everything logged so far, most recent first.</p>
 
-        <div className="mt-4 inline-flex flex-wrap gap-0.5 rounded-xl border border-sparrow-rule bg-sparrow-mist p-1">
+        <div className="mt-4 inline-flex flex-wrap gap-0.5 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1">
           {([
             ['recent', 'Recent'],
             ['group', 'Group Notes'],
@@ -427,7 +427,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
               key={key}
               onClick={() => setPastView(key)}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                pastView === key ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
+                pastView === key ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-green dark:text-sparrow-dark-green shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
               }`}
             >
               {label}
@@ -481,14 +481,14 @@ function SessionLogList({
   emptyMessage: string;
 }) {
   if (logsByDate.size === 0) {
-    return <p className="text-sm text-sparrow-gray">{emptyMessage}</p>;
+    return <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{emptyMessage}</p>;
   }
   return (
     <ul className="space-y-1">
       {Array.from(logsByDate.entries()).map(([date, dateLogs]) => (
-        <li key={date} className="overflow-hidden rounded-xl border border-sparrow-rule bg-white">
-          <div className="bg-sparrow-mist px-4 py-2">
-            <span className="text-xs font-semibold text-sparrow-gray">{formatDate(date)}</span>
+        <li key={date} className="overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
+          <div className="bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-4 py-2">
+            <span className="text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">{formatDate(date)}</span>
           </div>
           {dateLogs.map((log) => {
             const preview =
@@ -500,19 +500,19 @@ function SessionLogList({
               <button
                 key={log.id}
                 onClick={() => onSelect(log)}
-                className="flex w-full items-center gap-3 border-t border-sparrow-rule px-4 py-3 text-left hover:bg-sparrow-mist"
+                className="flex w-full items-center gap-3 border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
               >
-                <span className="shrink-0 text-sm font-medium text-sparrow-ink">
+                <span className="shrink-0 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                   {SESSION_LOG_LABEL[log.session_type]}
                 </span>
                 {draft && preview == null && (
                   <span className="text-xs font-medium text-sparrow-gold">Draft — prep notes started, not filed</span>
                 )}
                 {preview && (
-                  <span className="min-w-0 flex-1 truncate text-sm text-sparrow-gray">"{preview}"</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-sparrow-gray dark:text-sparrow-dark-gray">"{preview}"</span>
                 )}
                 {!preview && !draft && <span className="flex-1" />}
-                <span className="shrink-0 text-xs text-sparrow-gray">
+                <span className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   {log.attendance.length} {log.attendance.length === 1 ? 'family' : 'families'}
                 </span>
                 <span

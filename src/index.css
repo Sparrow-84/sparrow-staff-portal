@@ -4,15 +4,18 @@
 
 @layer base {
   body {
-    @apply bg-sparrow-mist font-sans text-sparrow-ink antialiased;
+    @apply bg-sparrow-mist font-sans text-sparrow-ink antialiased dark:bg-sparrow-dark-bg dark:text-sparrow-dark-ink;
   }
   h1,
   h2,
   h3 {
-    @apply font-serif text-sparrow-green;
+    @apply font-serif text-sparrow-green dark:text-sparrow-dark-green;
   }
   :focus-visible {
     @apply outline-none ring-2 ring-sparrow-gold ring-offset-2;
+  }
+  .dark .shadow-card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4);
   }
 }
 
@@ -21,13 +24,13 @@
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-sparrow-green px-4 py-2 text-sm font-medium text-white transition hover:bg-sparrow-green-dark focus-visible:ring-2 focus-visible:ring-sparrow-gold disabled:opacity-50;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-sparrow-ink transition hover:bg-sparrow-sage;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-sparrow-ink transition hover:bg-sparrow-sage dark:text-sparrow-dark-ink dark:hover:bg-sparrow-dark-surface2;
   }
   .field-label {
-    @apply block text-xs font-medium uppercase tracking-wide text-sparrow-gray;
+    @apply block text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray;
   }
   .field-input {
-    @apply mt-1 block w-full rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-sm text-sparrow-ink shadow-sm focus:border-sparrow-green focus:outline-none focus:ring-1 focus:ring-sparrow-green;
+    @apply mt-1 block w-full rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-sm text-sparrow-ink shadow-sm focus:border-sparrow-green focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:border-sparrow-dark-border dark:bg-sparrow-dark-surface dark:text-sparrow-dark-ink;
   }
   .field-input-error {
     @apply border-priority-p1 focus:border-priority-p1 focus:ring-priority-p1;
@@ -38,13 +41,13 @@
      consistently here rather than with whatever exact fonts/colors the source
      (Google Docs, a Claude reply) carried in. */
   .rich-text {
-    @apply text-sm leading-relaxed text-sparrow-ink;
+    @apply text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink;
   }
   .rich-text h1,
   .rich-text h2,
   .rich-text h3,
   .rich-text h4 {
-    @apply mb-1.5 mt-4 font-serif font-semibold text-sparrow-green first:mt-0;
+    @apply mb-1.5 mt-4 font-serif font-semibold text-sparrow-green first:mt-0 dark:text-sparrow-dark-green;
   }
   .rich-text h1 { @apply text-xl; }
   .rich-text h2 { @apply text-lg; }
@@ -53,7 +56,7 @@
   .rich-text p { @apply mb-2.5; }
   .rich-text strong,
   .rich-text b {
-    @apply font-semibold text-sparrow-green;
+    @apply font-semibold text-sparrow-green dark:text-sparrow-dark-green;
   }
   .rich-text em,
   .rich-text i {
@@ -62,24 +65,24 @@
   .rich-text ul { @apply mb-2.5 list-disc space-y-1 pl-5; }
   .rich-text ol { @apply mb-2.5 list-decimal space-y-1 pl-5; }
   .rich-text blockquote {
-    @apply my-3 border-l-2 border-sparrow-gold pl-3 italic text-sparrow-green-dark;
+    @apply my-3 border-l-2 border-sparrow-gold pl-3 italic text-sparrow-green-dark dark:text-sparrow-dark-green;
   }
-  .rich-text a { @apply text-sparrow-green underline; }
+  .rich-text a { @apply text-sparrow-green underline dark:text-sparrow-dark-green; }
   .rich-text table {
-    @apply my-3 w-full border-collapse overflow-hidden rounded-lg border border-sparrow-rule text-xs;
+    @apply my-3 w-full border-collapse overflow-hidden rounded-lg border border-sparrow-rule text-xs dark:border-sparrow-dark-border;
   }
   .rich-text th {
-    @apply border border-sparrow-rule bg-sparrow-mist px-2 py-1.5 text-left font-semibold text-sparrow-gray;
+    @apply border border-sparrow-rule bg-sparrow-mist px-2 py-1.5 text-left font-semibold text-sparrow-gray dark:border-sparrow-dark-border dark:bg-sparrow-dark-surface2 dark:text-sparrow-dark-gray;
   }
   .rich-text td {
-    @apply border border-sparrow-rule px-2 py-1.5 align-top;
+    @apply border border-sparrow-rule px-2 py-1.5 align-top dark:border-sparrow-dark-border;
   }
 
   .rich-text-editor {
-    @apply mt-1 min-h-[8rem] w-full rounded-lg border border-sparrow-rule bg-white px-3 py-2 shadow-sm focus:border-sparrow-green focus:outline-none focus:ring-1 focus:ring-sparrow-green;
+    @apply mt-1 min-h-[8rem] w-full rounded-lg border border-sparrow-rule bg-white px-3 py-2 shadow-sm focus:border-sparrow-green focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:border-sparrow-dark-border dark:bg-sparrow-dark-surface dark:text-sparrow-dark-ink;
   }
   .rich-text-editor:empty::before {
     content: attr(data-placeholder);
-    @apply text-sparrow-gray;
+    @apply text-sparrow-gray dark:text-sparrow-dark-gray;
   }
 }

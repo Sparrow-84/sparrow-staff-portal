@@ -150,16 +150,16 @@ export function MentionInput({ value, onChange, onKeyDown, onPaste, staff, disab
         <div className="absolute bottom-full left-0 z-50 mb-1 flex items-center gap-2">
           <div
             onMouseDown={(e) => { e.preventDefault(); insertMention(suggestion); }}
-            className="flex cursor-pointer items-center gap-2 rounded-lg border border-sparrow-rule bg-white px-3 py-1.5 shadow-sm transition hover:bg-sparrow-mist"
+            className="flex cursor-pointer items-center gap-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 shadow-sm transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
           >
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sparrow-green text-[9px] font-bold text-white">
               {initials(suggestion.full_name)}
             </span>
-            <span className="text-sm font-medium text-sparrow-ink">{suggestion.full_name}</span>
-            <span className="rounded border border-sparrow-rule px-1 py-px text-[10px] text-sparrow-gray">Tab</span>
+            <span className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{suggestion.full_name}</span>
+            <span className="rounded border border-sparrow-rule dark:border-sparrow-dark-border px-1 py-px text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray">Tab</span>
           </div>
           {filtered.length > 1 && (
-            <span className="text-xs text-sparrow-gray">+{filtered.length - 1} more · ↑↓</span>
+            <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">+{filtered.length - 1} more · ↑↓</span>
           )}
         </div>
       )}

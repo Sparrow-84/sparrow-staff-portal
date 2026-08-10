@@ -65,12 +65,12 @@ const DEADLINE_PILL: Record<Priority, string> = {
 };
 
 // Filter chip styles — each chip is independent, not a radio group
-const CHIP_ON  = 'rounded-md border border-sparrow-green bg-sparrow-green px-3 py-1 text-xs font-medium text-white transition';
-const CHIP_OFF = 'rounded-md border border-sparrow-rule px-3 py-1 text-xs font-medium text-sparrow-gray transition hover:border-sparrow-gray hover:text-sparrow-ink';
+const CHIP_ON  = 'rounded-md border border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green px-3 py-1 text-xs font-medium text-white transition';
+const CHIP_OFF = 'rounded-md border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray transition hover:border-sparrow-gray dark:hover:border-sparrow-dark-border hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink';
 
 // Dept sub-chip styles (slightly smaller)
-const SUB_ON  = 'rounded border border-sparrow-green bg-sparrow-green px-2.5 py-0.5 text-[11px] font-medium text-white transition';
-const SUB_OFF = 'rounded border border-sparrow-rule px-2.5 py-0.5 text-[11px] font-medium text-sparrow-gray transition hover:text-sparrow-ink';
+const SUB_ON  = 'rounded border border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green px-2.5 py-0.5 text-[11px] font-medium text-white transition';
+const SUB_OFF = 'rounded border border-sparrow-rule dark:border-sparrow-dark-border px-2.5 py-0.5 text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray transition hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink';
 
 type DeadlineTask = Pick<Task, 'id' | 'title' | 'due_date' | 'priority' | 'status' | 'source_system' | 'source_ref'>;
 
@@ -88,13 +88,13 @@ function CalTooltip({ s }: { s: CalTooltipState }) {
   const top = s.y + 16;
   return (
     <div
-      className="pointer-events-none fixed z-50 w-56 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg"
+      className="pointer-events-none fixed z-50 w-56 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg"
       style={{ left, top }}
     >
-      <p className="text-sm font-medium leading-snug text-sparrow-ink">{s.title}</p>
-      {s.sub && <p className="mt-1 text-xs text-sparrow-gray">{s.sub}</p>}
-      {s.time && <p className="mt-0.5 text-xs text-sparrow-gray">{s.time}</p>}
-      {s.location && <p className="mt-0.5 text-xs text-sparrow-gray">{s.location}</p>}
+      <p className="text-sm font-medium leading-snug text-sparrow-ink dark:text-sparrow-dark-ink">{s.title}</p>
+      {s.sub && <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{s.sub}</p>}
+      {s.time && <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{s.time}</p>}
+      {s.location && <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{s.location}</p>}
     </div>
   );
 }
@@ -387,7 +387,7 @@ export function CalendarView() {
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sparrow-rule px-6 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sparrow-rule dark:border-sparrow-dark-border px-6 py-3">
         <div className="flex flex-col gap-2">
 
           {/* Row 1: layer chips + month nav */}
@@ -413,20 +413,20 @@ export function CalendarView() {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={prevMonth}
-                className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+                className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                 aria-label="Previous month"
               >←</button>
-              <span className="min-w-[11rem] text-center text-sm font-semibold text-sparrow-ink">
+              <span className="min-w-[11rem] text-center text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
                 {MONTHS[month]} {year}
               </span>
               <button
                 onClick={nextMonth}
-                className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+                className="grid h-7 w-7 place-items-center rounded-md text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                 aria-label="Next month"
               >→</button>
               <button
                 onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); }}
-                className="rounded-md border border-sparrow-rule px-2 py-0.5 text-xs text-sparrow-gray hover:text-sparrow-ink"
+                className="rounded-md border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
               >
                 Today
               </button>
@@ -436,7 +436,7 @@ export function CalendarView() {
           {/* Row 2: dept sub-chips — only shown when My Depts is on */}
           {showMyDepts && myDepts.length > 0 && (
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-sparrow-gray">My depts:</span>
+              <span className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">My depts:</span>
               {myDepts.map(dept => (
                 <button
                   key={dept}
@@ -454,7 +454,7 @@ export function CalendarView() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setHelpOpen(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule text-sm font-semibold text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule dark:border-sparrow-dark-border text-sm font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
             aria-label="Calendar help"
             title="How the calendar works"
           >
@@ -476,14 +476,14 @@ export function CalendarView() {
       {/* Calendar grid */}
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <p className="p-8 text-sm text-sparrow-gray">Loading…</p>
+          <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
         ) : (
           <>
-            <div className="border-l border-t border-sparrow-rule">
+            <div className="border-l border-t border-sparrow-rule dark:border-sparrow-dark-border">
               {/* Day-of-week headers */}
               <div className="grid grid-cols-7">
                 {DOW.map(d => (
-                  <div key={d} className="border-b border-r border-sparrow-rule bg-sparrow-mist px-2 py-1.5 text-center text-xs font-semibold text-sparrow-gray">
+                  <div key={d} className="border-b border-r border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2 py-1.5 text-center text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">
                     {d}
                   </div>
                 ))}
@@ -515,17 +515,17 @@ export function CalendarView() {
                         return (
                           <div
                             key={`${dStr}-${col}`}
-                            className={`group min-h-[6rem] border-b border-r border-sparrow-rule p-1 ${!inMonth || isPast ? 'bg-sparrow-mist/30' : ''}`}
+                            className={`group min-h-[6rem] border-b border-r border-sparrow-rule dark:border-sparrow-dark-border p-1 ${!inMonth || isPast ? 'bg-sparrow-mist/30' : ''}`}
                             style={barAreaPx > 0 ? { paddingTop: barAreaPx + 4 } : undefined}
                           >
                             {/* Day number */}
                             <div className="flex items-center justify-between">
-                              <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : !inMonth ? 'text-sparrow-rule' : isPast ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
+                              <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : !inMonth ? 'text-sparrow-rule dark:text-sparrow-dark-border' : isPast ? 'text-sparrow-gray dark:text-sparrow-dark-gray' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
                                 {day.getDate()}
                               </span>
                               <button
                                 onClick={() => openAdd(dStr)}
-                                className="hidden rounded px-1 text-sm leading-none text-sparrow-gray hover:text-sparrow-green group-hover:block"
+                                className="hidden rounded px-1 text-sm leading-none text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green group-hover:block"
                                 aria-label={`Add event on ${dStr}`}
                               >+</button>
                             </div>
@@ -547,7 +547,7 @@ export function CalendarView() {
                                       {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
                                     </span>
                                     {notedEventIds.has(ev.id) && (
-                                      <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                                      <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white dark:bg-sparrow-dark-surface" aria-hidden />
                                     )}
                                   </button>
                                 );
@@ -556,7 +556,7 @@ export function CalendarView() {
                                 <button
                                   type="button"
                                   onClick={() => setExpandedDays((prev) => new Set(prev).add(dStr))}
-                                  className="w-full pl-1 text-left text-[10px] font-medium text-sparrow-green hover:underline"
+                                  className="w-full pl-1 text-left text-[10px] font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                                 >
                                   +{overflow} more
                                 </button>
@@ -589,7 +589,7 @@ export function CalendarView() {
                                   </div>
                                 ))}
                                 {dayDeadlines.length > 3 && (
-                                  <p className="pl-1 text-[10px] text-sparrow-gray">+{dayDeadlines.length - 3} more</p>
+                                  <p className="pl-1 text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray">+{dayDeadlines.length - 3} more</p>
                                 )}
                               </div>
                             )}
@@ -628,7 +628,7 @@ export function CalendarView() {
                         >
                           <span className="min-w-0 truncate">{bar.event.title}</span>
                           {notedEventIds.has(bar.event.id) && (
-                            <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white" aria-hidden />
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white dark:bg-sparrow-dark-surface" aria-hidden />
                           )}
                         </button>
                       );
@@ -640,7 +640,7 @@ export function CalendarView() {
 
             {/* Dept calendar placeholder — shown for each active dept chip */}
             {activeDeptLabels.length > 0 && (
-              <div className="m-4 rounded-lg border border-sparrow-rule bg-sparrow-mist px-4 py-2.5 text-sm text-sparrow-gray">
+              <div className="m-4 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-4 py-2.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                 {activeDeptLabels.join(', ')} calendar events will appear here as each dept room's calendar is set up.
                 {/* TODO: fetch dept calendar events per active dept once each dept room calendar is built */}
               </div>

@@ -173,7 +173,7 @@ export function GrantsRoom() {
     });
   }
 
-  if (loading) return <p className="p-4 text-sm text-sparrow-gray">Loading grants…</p>;
+  if (loading) return <p className="p-4 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading grants…</p>;
   if (error) return <p className="p-4 text-sm text-priority-p1">{error}</p>;
 
   const activeGrants = grants.filter((g) => g.status === 'active');
@@ -187,13 +187,13 @@ export function GrantsRoom() {
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1 rounded-xl border border-sparrow-rule bg-sparrow-mist p-1 text-xs">
+        <div className="flex flex-wrap gap-1 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1 text-xs">
           {MODULE_TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setModuleTab(t.key)}
               className={`rounded-lg px-2.5 py-1.5 font-medium transition ${
-                moduleTab === t.key ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
+                moduleTab === t.key ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-green dark:text-sparrow-dark-green shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
               }`}
             >
               {t.label}{' '}
@@ -206,12 +206,12 @@ export function GrantsRoom() {
         <button
           onClick={() => setHelpOpen(true)}
           title="How this module works"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-sparrow-rule text-sm font-medium text-sparrow-gray transition hover:border-sparrow-green hover:text-sparrow-green"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-sparrow-rule dark:border-sparrow-dark-border text-sm font-medium text-sparrow-gray dark:text-sparrow-dark-gray transition hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
         >
           ?
         </button>
       </div>
-      <p className="mt-2 text-xs text-sparrow-gray">{currentTab.desc}</p>
+      <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{currentTab.desc}</p>
 
       {moduleTab === 'active' && overdueCount > 0 && (
         <div className="mt-3 rounded-xl border border-priority-p1/40 bg-priority-p1/10 px-4 py-2 text-sm text-priority-p1">
@@ -222,13 +222,13 @@ export function GrantsRoom() {
       {moduleTab === 'active' && (
         <>
           <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-sparrow-gray">{activeGrants.length} active grant{activeGrants.length === 1 ? '' : 's'}</p>
+            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{activeGrants.length} active grant{activeGrants.length === 1 ? '' : 's'}</p>
             <button onClick={() => setShowNewGrant((v) => !v)} className="btn-primary">
               + Add grant
             </button>
           </div>
           {showNewGrant && (
-            <div className="mt-4 flex gap-2 rounded-xl border border-sparrow-rule bg-white p-3 shadow-card">
+            <div className="mt-4 flex gap-2 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-card">
               <input value={newFunder} onChange={(e) => setNewFunder(e.target.value)} placeholder="Funder name" className="field-input mt-0 flex-1" />
               <button onClick={addGrant} disabled={busy || !newFunder.trim()} className="btn-primary shrink-0">
                 Create
@@ -248,13 +248,13 @@ export function GrantsRoom() {
       {moduleTab === 'prospects' && (
         <>
           <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-sparrow-gray">{pursuedProspects.length} prospect{pursuedProspects.length === 1 ? '' : 's'} still in motion</p>
+            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{pursuedProspects.length} prospect{pursuedProspects.length === 1 ? '' : 's'} still in motion</p>
             <button onClick={() => setShowNewProspect((v) => !v)} className="btn-primary">
               + Add prospect
             </button>
           </div>
           {showNewProspect && (
-            <div className="mt-4 flex gap-2 rounded-xl border border-sparrow-rule bg-white p-3 shadow-card">
+            <div className="mt-4 flex gap-2 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-card">
               <input value={newProspectName} onChange={(e) => setNewProspectName(e.target.value)} placeholder="Funder / opportunity name" className="field-input mt-0 flex-1" />
               <button onClick={addProspect} disabled={busy || !newProspectName.trim()} className="btn-primary shrink-0">
                 Create
@@ -327,7 +327,7 @@ function Th<K extends string>({
   return (
     <th
       onClick={() => onSort(k)}
-      className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray hover:text-sparrow-ink"
+      className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
     >
       {label}
       {active && <span className="ml-1 opacity-60">{sortDir === 'asc' ? '↑' : '↓'}</span>}
@@ -337,15 +337,15 @@ function Th<K extends string>({
 
 function OwnerCell({ owner, ownerColors }: { owner: Profile | undefined; ownerColors: Record<string, string> }) {
   return (
-    <span className="flex items-center gap-1.5 whitespace-nowrap text-sparrow-gray">
-      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${owner ? (ownerColors[owner.id] ?? 'bg-sparrow-gray') : 'bg-sparrow-mist'}`} />
+    <span className="flex items-center gap-1.5 whitespace-nowrap text-sparrow-gray dark:text-sparrow-dark-gray">
+      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${owner ? (ownerColors[owner.id] ?? 'bg-sparrow-gray dark:bg-sparrow-dark-border') : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2'}`} />
       {owner ? owner.full_name : 'Unassigned'}
     </span>
   );
 }
 
 function LabelCell({ label }: { label: GrantProspectLabel | undefined }) {
-  if (!label) return <span className="text-sparrow-rule">—</span>;
+  if (!label) return <span className="text-sparrow-rule dark:text-sparrow-dark-border">—</span>;
   return <LabelPill label={label.name} color={label.color} />;
 }
 
@@ -378,13 +378,13 @@ function ActiveGrantsTable({
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
-  if (sorted.length === 0) return <p className="mt-4 text-sm text-sparrow-gray">No active grants yet.</p>;
+  if (sorted.length === 0) return <p className="mt-4 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No active grants yet.</p>;
 
   return (
-    <div className="mt-4 overflow-x-auto rounded-2xl border border-sparrow-rule">
+    <div className="mt-4 overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-sparrow-rule bg-sparrow-mist/40">
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
             <th className="w-6 px-3 py-2" />
             <Th label="Funder" k="funder" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <Th label="Amount" k="amount" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
@@ -397,18 +397,18 @@ function ActiveGrantsTable({
             const tone = certificationTone(g.certification_due_date);
             const owner = profiles.find((p) => p.id === g.owner_id);
             return (
-              <tr key={g.id} onClick={() => onOpen(g.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white hover:bg-sparrow-mist/40">
+              <tr key={g.id} onClick={() => onOpen(g.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white dark:bg-sparrow-dark-surface hover:bg-sparrow-mist/40">
                 <td className="px-3 py-2.5"><span className="block h-2 w-2 rounded-full" style={{ background: certificationDotColor(g.certification_due_date) }} /></td>
                 <td className="whitespace-nowrap px-3 py-2.5">
-                  <span className="flex items-center gap-1.5 font-medium text-sparrow-ink">
+                  <span className="flex items-center gap-1.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                     {g.funder_name}
                     {g.prior_consent_required && <span title="Prior consent required">⚠️</span>}
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">{formatMoney(g.amount)}</td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{formatMoney(g.amount)}</td>
                 <td className="px-3 py-2.5"><OwnerCell owner={owner} ownerColors={ownerColors} /></td>
                 <td className="whitespace-nowrap px-3 py-2.5">
-                  {tone.label ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`}>{tone.label}</span> : <span className="text-sparrow-gray">—</span>}
+                  {tone.label ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`}>{tone.label}</span> : <span className="text-sparrow-gray dark:text-sparrow-dark-gray">—</span>}
                 </td>
               </tr>
             );
@@ -431,25 +431,25 @@ function PastGrantsTable({
   onOpen: (id: string) => void;
 }) {
   if (grants.length === 0) {
-    return <p className="text-sm text-sparrow-gray">No past grants yet — nothing's wrapped up so far. When one does, it lands here with every field, link, and document intact.</p>;
+    return <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No past grants yet — nothing's wrapped up so far. When one does, it lands here with every field, link, and document intact.</p>;
   }
   return (
-    <div className="overflow-x-auto rounded-2xl border border-sparrow-rule">
+    <div className="overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-sparrow-rule bg-sparrow-mist/40">
-            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray">Funder</th>
-            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray">Amount</th>
-            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray">Owner</th>
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Funder</th>
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Amount</th>
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Owner</th>
           </tr>
         </thead>
         <tbody>
           {grants.map((g) => {
             const owner = profiles.find((p) => p.id === g.owner_id);
             return (
-              <tr key={g.id} onClick={() => onOpen(g.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white hover:bg-sparrow-mist/40">
-                <td className="whitespace-nowrap px-3 py-2.5 font-medium text-sparrow-ink">{g.funder_name}</td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">{formatMoney(g.amount)}</td>
+              <tr key={g.id} onClick={() => onOpen(g.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white dark:bg-sparrow-dark-surface hover:bg-sparrow-mist/40">
+                <td className="whitespace-nowrap px-3 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{g.funder_name}</td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{formatMoney(g.amount)}</td>
                 <td className="px-3 py-2.5"><OwnerCell owner={owner} ownerColors={ownerColors} /></td>
               </tr>
             );
@@ -493,16 +493,16 @@ function ProspectsTable({
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
-  if (sorted.length === 0) return <p className="mt-4 text-sm text-sparrow-gray">No prospects yet.</p>;
+  if (sorted.length === 0) return <p className="mt-4 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No prospects yet.</p>;
 
   return (
-    <div className="mt-4 overflow-x-auto rounded-2xl border border-sparrow-rule">
+    <div className="mt-4 overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-sparrow-rule bg-sparrow-mist/40">
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
             <th className="w-6 px-3 py-2" />
             <Th label="Name" k="name" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray">Tier / Source</th>
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tier / Source</th>
             <Th label="Est. amount" k="amount" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <Th label="Owner" k="owner" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <Th label="Deadline" k="deadline" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
@@ -515,11 +515,11 @@ function ProspectsTable({
             const source = sourceLabels.find((l) => l.id === p.source_label_id);
             const overdue = (daysSince(p.application_deadline) ?? -9999) > 0;
             return (
-              <tr key={p.id} onClick={() => onOpen(p.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white hover:bg-sparrow-mist/40">
+              <tr key={p.id} onClick={() => onOpen(p.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white dark:bg-sparrow-dark-surface hover:bg-sparrow-mist/40">
                 <td className="px-3 py-2.5"><span className="block h-2 w-2 rounded-full" style={{ background: PROSPECT_DOT[p.status] ?? '#9CA3AF' }} /></td>
-                <td className="whitespace-nowrap px-3 py-2.5 font-medium text-sparrow-ink">{p.name}</td>
+                <td className="whitespace-nowrap px-3 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{p.name}</td>
                 <td className="px-3 py-2.5"><div className="flex flex-wrap gap-1"><LabelCell label={tier} /><LabelCell label={source} /></div></td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray">{p.est_amount ? formatMoney(p.est_amount) : '—'}</td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{p.est_amount ? formatMoney(p.est_amount) : '—'}</td>
                 <td className="px-3 py-2.5"><OwnerCell owner={owner} ownerColors={ownerColors} /></td>
                 <td className="whitespace-nowrap px-3 py-2.5">
                   {p.status === 'applied' ? (
@@ -529,7 +529,7 @@ function ProspectsTable({
                       {formatDate(p.application_deadline)}
                     </span>
                   ) : (
-                    <span className="text-sparrow-gray">No deadline set</span>
+                    <span className="text-sparrow-gray dark:text-sparrow-dark-gray">No deadline set</span>
                   )}
                 </td>
               </tr>
@@ -557,17 +557,17 @@ function NotMovingTable({
   sourceLabels: GrantProspectLabel[];
   onOpen: (id: string) => void;
 }) {
-  if (prospects.length === 0) return <p className="text-sm text-sparrow-gray">Nothing here yet.</p>;
+  if (prospects.length === 0) return <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Nothing here yet.</p>;
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-sparrow-rule">
+    <div className="overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-sparrow-rule bg-sparrow-mist/40">
-            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray">Name</th>
-            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray">Tier / Source</th>
-            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray">Owner</th>
-            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray">Why</th>
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Name</th>
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tier / Source</th>
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Owner</th>
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Why</th>
           </tr>
         </thead>
         <tbody>
@@ -576,11 +576,11 @@ function NotMovingTable({
             const tier = tierLabels.find((l) => l.id === p.tier_label_id);
             const source = sourceLabels.find((l) => l.id === p.source_label_id);
             return (
-              <tr key={p.id} onClick={() => onOpen(p.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white hover:bg-sparrow-mist/40">
-                <td className="whitespace-nowrap px-3 py-2.5 font-medium text-sparrow-ink">{p.name}</td>
+              <tr key={p.id} onClick={() => onOpen(p.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white dark:bg-sparrow-dark-surface hover:bg-sparrow-mist/40">
+                <td className="whitespace-nowrap px-3 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{p.name}</td>
                 <td className="px-3 py-2.5"><div className="flex flex-wrap gap-1"><LabelCell label={tier} /><LabelCell label={source} /></div></td>
                 <td className="px-3 py-2.5"><OwnerCell owner={owner} ownerColors={ownerColors} /></td>
-                <td className="max-w-xs truncate px-3 py-2.5 text-xs text-sparrow-gray">{p.decision_reasoning || '—'}</td>
+                <td className="max-w-xs truncate px-3 py-2.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{p.decision_reasoning || '—'}</td>
               </tr>
             );
           })}

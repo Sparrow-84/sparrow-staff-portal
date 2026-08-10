@@ -9,7 +9,7 @@ interface Props {
 
 // Matches MeetingNotesView CONTENT_CLASSES pattern exactly.
 const CONTENT_CLASSES =
-  'min-h-48 p-3 text-sm leading-relaxed text-sparrow-ink focus:outline-none ' +
+  'min-h-48 p-3 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none ' +
   '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 ' +
   '[&_li]:mb-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2';
 
@@ -18,10 +18,10 @@ function Toolbar() {
     document.execCommand(cmd, false, undefined);
   }
   return (
-    <div className="flex items-center gap-0.5 border-b border-sparrow-rule bg-sparrow-mist/40 px-2 py-1">
+    <div className="flex items-center gap-0.5 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 px-2 py-1">
       <button
         onMouseDown={(e) => { e.preventDefault(); apply('bold'); }}
-        className="rounded px-2 py-0.5 text-sm font-bold text-sparrow-ink hover:bg-sparrow-mist"
+        className="rounded px-2 py-0.5 text-sm font-bold text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
         title="Bold (Ctrl+B)"
         type="button"
       >
@@ -29,16 +29,16 @@ function Toolbar() {
       </button>
       <button
         onMouseDown={(e) => { e.preventDefault(); apply('italic'); }}
-        className="rounded px-2 py-0.5 text-sm italic text-sparrow-ink hover:bg-sparrow-mist"
+        className="rounded px-2 py-0.5 text-sm italic text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
         title="Italic (Ctrl+I)"
         type="button"
       >
         I
       </button>
-      <div className="mx-1 h-3.5 w-px bg-sparrow-rule" />
+      <div className="mx-1 h-3.5 w-px bg-sparrow-rule dark:bg-sparrow-dark-border" />
       <button
         onMouseDown={(e) => { e.preventDefault(); apply('insertUnorderedList'); }}
-        className="rounded px-2 py-0.5 text-sm text-sparrow-ink hover:bg-sparrow-mist"
+        className="rounded px-2 py-0.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
         title="Bullet list"
         type="button"
       >
@@ -85,7 +85,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Prop
   }
 
   return (
-    <div className={`rounded-lg border border-sparrow-rule bg-white ${className ?? ''}`}>
+    <div className={`rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface ${className ?? ''}`}>
       <Toolbar />
       <div
         ref={ref}

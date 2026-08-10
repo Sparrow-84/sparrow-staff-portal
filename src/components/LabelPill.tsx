@@ -1,5 +1,5 @@
 export const LABEL_COLORS: { id: string; swatch: string; pill: string }[] = [
-  { id: 'green',   swatch: 'bg-sparrow-green', pill: 'bg-sparrow-sage text-sparrow-green' },
+  { id: 'green',   swatch: 'bg-sparrow-green', pill: 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green' },
   { id: 'blue',    swatch: 'bg-blue-400',      pill: 'bg-blue-100 text-blue-700' },
   { id: 'sky',     swatch: 'bg-sky-400',       pill: 'bg-sky-100 text-sky-700' },
   { id: 'cyan',    swatch: 'bg-cyan-500',      pill: 'bg-cyan-100 text-cyan-700' },

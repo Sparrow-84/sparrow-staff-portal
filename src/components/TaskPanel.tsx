@@ -397,11 +397,11 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
       <aside
         role="dialog"
         aria-modal="true"
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl transition-transform ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white dark:bg-sparrow-dark-surface shadow-xl transition-transform ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-sparrow-rule px-5 py-4">
+        <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
           <h2 className="font-serif text-lg font-semibold">
             {task ? (readOnly ? 'View task' : 'Edit task') : 'New task'}
           </h2>
@@ -411,16 +411,16 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
         </div>
 
         {readOnly && (
-          <div className="border-b border-sparrow-rule bg-sparrow-cream px-5 py-3">
-            <p className="text-sm text-sparrow-gray">
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-cream px-5 py-3">
+            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               You assigned this task — you can comment below but can't edit it.
             </p>
           </div>
         )}
 
         {!readOnly && task && task.created_by === currentUser.id && task.assignee_id !== currentUser.id && (
-          <div className="border-b border-sparrow-rule bg-sparrow-cream px-5 py-3">
-            <p className="text-sm text-sparrow-gray">
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-cream px-5 py-3">
+            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               You assigned this to {task.assignee?.full_name ?? 'someone else'} — they'll be notified if you edit it.
             </p>
           </div>
@@ -525,7 +525,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
           {!task && (
             <div className="mt-4">
               <label className="field-label">
-                Assign to <span className="font-normal text-sparrow-gray">(pick one or more)</span>
+                Assign to <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(pick one or more)</span>
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {profiles.map((p) => {
@@ -537,8 +537,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
                       onClick={() => toggleAssignee(p.id)}
                       className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
                         active
-                          ? 'border-sparrow-green bg-sparrow-green text-white'
-                          : 'border-sparrow-rule bg-white text-sparrow-gray hover:text-sparrow-ink'
+                          ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green text-white'
+                          : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                       }`}
                     >
                       {p.id === currentUser.id ? 'Me' : p.full_name}
@@ -593,7 +593,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             {readOnly ? (
               <>
                 <label className="field-label">Label</label>
-                {label ? <LabelPill label={label} color={labelColor} /> : <p className="text-sm text-sparrow-gray">None</p>}
+                {label ? <LabelPill label={label} color={labelColor} /> : <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">None</p>}
               </>
             ) : (
               <TaskLabelPicker
@@ -609,14 +609,14 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
 
           {/* Recurring badge for existing tasks already in a series */}
           {task?.recurrence_id && (
-            <div className="mt-3 rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink">
+            <div className="mt-3 rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
               Part of a recurring series — Save will ask whether to apply your changes to just this task or to it and every later one too.
             </div>
           )}
 
           {/* Recurring setup — new tasks, or turning an existing task into the start of a series */}
           {!task?.recurrence_id && (
-            <div className="mt-4 border-t border-sparrow-rule pt-4">
+            <div className="mt-4 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
               <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="checkbox"
@@ -624,7 +624,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
                   onChange={(e) => handleToggleRecurring(e.target.checked)}
                   className="h-4 w-4 accent-sparrow-green"
                 />
-                <span className="text-sm font-medium text-sparrow-ink">Repeat this task</span>
+                <span className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Repeat this task</span>
               </label>
 
               {recurring && (
@@ -640,8 +640,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
                           onClick={() => setRFrequency(f)}
                           className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                             rFrequency === f
-                              ? 'border-sparrow-green bg-sparrow-green text-white'
-                              : 'border-sparrow-rule bg-white text-sparrow-gray hover:text-sparrow-ink'
+                              ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green text-white'
+                              : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                           }`}
                         >
                           {f === 'weekly' ? 'Weekly' : f === 'biweekly' ? 'Every 2 weeks' : 'Monthly'}
@@ -662,8 +662,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
                             onClick={() => toggleDow(i)}
                             className={`h-8 w-9 rounded-lg border text-xs font-medium transition ${
                               rDaysOfWeek.includes(i)
-                                ? 'border-sparrow-green bg-sparrow-green text-white'
-                                : 'border-sparrow-rule bg-white text-sparrow-gray hover:text-sparrow-ink'
+                                ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green text-white'
+                                : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                             }`}
                           >
                             {dl}
@@ -715,7 +715,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
                   </div>
 
                   {/* Occurrence count preview */}
-                  <p className="text-xs text-sparrow-gray">
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {!rUntilDate
                       ? 'Required — this task will only save as recurring once you set an end date.'
                       : occurrenceDates.length === 0
@@ -731,17 +731,17 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
 
           {/* Comments (existing tasks only) */}
           {task && (
-            <div className="mt-6 border-t border-sparrow-rule pt-4">
+            <div className="mt-6 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
               <p className="field-label">Comments</p>
               <ul className="mt-2 space-y-3">
-                {comments.length === 0 && <li className="text-sm text-sparrow-gray">No comments yet.</li>}
+                {comments.length === 0 && <li className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No comments yet.</li>}
                 {comments.map((c) => (
                   <li key={c.id} className="text-sm">
-                    <span className="font-medium text-sparrow-ink">{nameById(c.author_id)}</span>
-                    <span className="ml-2 text-xs text-sparrow-gray">
+                    <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{nameById(c.author_id)}</span>
+                    <span className="ml-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       {new Date(c.created_at).toLocaleDateString()}
                     </span>
-                    <p className="text-sparrow-ink">{c.body}</p>
+                    <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{c.body}</p>
                   </li>
                 ))}
               </ul>
@@ -765,13 +765,13 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-sparrow-rule px-5 py-4">
+        <div className="flex items-center justify-between border-t border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
           {readOnly || editChoice ? (
             <span />
           ) : task ? (
             deleteChoice ? (
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-sparrow-gray">Delete recurring task:</span>
+                <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Delete recurring task:</span>
                 <div className="flex gap-2">
                   <button
                     onClick={remove}
@@ -809,7 +809,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
             </button>
           ) : editChoice ? (
             <div className="flex flex-col items-end gap-1.5">
-              <span className="text-xs text-sparrow-gray">Apply this edit to:</span>
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Apply this edit to:</span>
               <div className="flex gap-2">
                 <button onClick={() => setEditChoice(false)} className="btn-ghost text-xs">
                   Cancel

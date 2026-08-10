@@ -18,7 +18,7 @@ interface Props {
 
 function Soon() {
   return (
-    <span className="ml-auto rounded-full bg-sparrow-rule/60 px-1.5 py-0.5 text-[10px] font-medium uppercase text-sparrow-gray">
+    <span className="ml-auto rounded-full bg-sparrow-rule/60 px-1.5 py-0.5 text-[10px] font-medium uppercase text-sparrow-gray dark:text-sparrow-dark-gray">
       Soon
     </span>
   );
@@ -57,11 +57,11 @@ function NavContent({
 }) {
   const { unreadTotal } = useChat();
   const itemBase = 'flex items-center gap-2 rounded-lg px-3 py-2 text-left transition';
-  const active = 'bg-sparrow-sage font-medium text-sparrow-green';
-  const idle = 'text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink';
+  const active = 'bg-sparrow-sage font-medium text-sparrow-green dark:text-sparrow-dark-green';
+  const idle = 'text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink';
 
   const section = 'flex flex-col gap-1 rounded-xl bg-sparrow-mist/50 p-2';
-  const sectionLabel = 'px-2 pb-1 text-xs font-bold uppercase tracking-wider text-sparrow-green';
+  const sectionLabel = 'px-2 pb-1 text-xs font-bold uppercase tracking-wider text-sparrow-green dark:text-sparrow-dark-green';
 
   return (
     <>
@@ -69,7 +69,7 @@ function NavContent({
         {hasOnboarding && (
           <button
             onClick={() => onNavigate('onboarding')}
-            className={`${itemBase} ${view === 'onboarding' ? active : 'bg-sparrow-green/10 font-medium text-sparrow-green hover:bg-sparrow-green/20'}`}
+            className={`${itemBase} ${view === 'onboarding' ? active : 'bg-sparrow-green/10 font-medium text-sparrow-green dark:text-sparrow-dark-green hover:bg-sparrow-green/20'}`}
           >
             My onboarding
             {view !== 'onboarding' && (
@@ -200,7 +200,7 @@ export function Sidebar({ view, isAdmin, tocAccess, lcpAccess, partnershipsAcces
   return (
     <>
       {/* Desktop: static sidebar */}
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-sparrow-rule bg-white px-3 py-5 md:flex">
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-5 md:flex">
         <NavContent
           view={view}
           isAdmin={isAdmin}
@@ -223,7 +223,7 @@ export function Sidebar({ view, isAdmin, tocAccess, lcpAccess, partnershipsAcces
         aria-hidden
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-sparrow-rule bg-white px-3 py-5 transition-transform md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-5 transition-transform md:hidden ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

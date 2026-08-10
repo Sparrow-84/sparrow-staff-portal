@@ -124,11 +124,11 @@ export function WorkOrderPanel({
       <aside
         role="dialog"
         aria-modal="true"
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl transition-transform ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white dark:bg-sparrow-dark-surface shadow-xl transition-transform ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-sparrow-rule px-5 py-4">
+        <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
           <h2 className="font-serif text-lg font-semibold">{workOrder ? 'Edit work order' : 'New work order'}</h2>
           <button onClick={onClose} className="btn-ghost" aria-label="Close">
             ✕
@@ -260,7 +260,7 @@ export function WorkOrderPanel({
           {(error || missingMessage) && <p className="mt-4 text-sm text-priority-p1">{error ?? missingMessage}</p>}
         </div>
 
-        <div className="flex items-center justify-between border-t border-sparrow-rule px-5 py-4">
+        <div className="flex items-center justify-between border-t border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
           {workOrder ? (
             <button onClick={remove} disabled={pending} className="btn-ghost text-priority-p1">
               Delete

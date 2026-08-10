@@ -154,19 +154,19 @@ export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
         <button
           onClick={exportCSV}
           disabled={rows.length === 0}
-          className="shrink-0 rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist disabled:opacity-40"
+          className="shrink-0 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 disabled:opacity-40"
         >
           Export CSV
         </button>
       </div>
 
       {filtered.length === 0 && (
-        <p className="rounded-xl border border-dashed border-sparrow-rule p-8 text-center text-sm text-sparrow-gray">
+        <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           {q ? 'No matches.' : 'No current residents on file.'}
         </p>
       )}
 
-      <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+      <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
         {filtered.map(({ space, tenant, members }) => {
           const isPast = tenant && (tenant.status === 'moved_out' || tenant.status === 'evicted');
           const primaryName = tenant?.name?.trim() || members[0]?.name || '—';
@@ -176,16 +176,16 @@ export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
             <li key={space.id}>
               <button
                 onClick={() => onSelectSpace(space.id)}
-                className="flex w-full items-start gap-4 px-4 py-3 text-left hover:bg-sparrow-mist"
+                className="flex w-full items-start gap-4 px-4 py-3 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
               >
                 {/* Lot badge */}
-                <span className="mt-0.5 shrink-0 rounded-lg border border-sparrow-rule bg-sparrow-mist px-2 py-1 text-xs font-semibold text-sparrow-gray">
+                <span className="mt-0.5 shrink-0 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2 py-1 text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">
                   {space.label}
                 </span>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sparrow-ink">{primaryName}</span>
+                    <span className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{primaryName}</span>
                     {isPast && (
                       <span className="rounded-full bg-priority-p1/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-priority-p1">
                         {tenant?.status === 'evicted' ? 'Evicted' : 'Moved out'}
@@ -208,16 +208,16 @@ export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
 
                   {/* Other adults in same household */}
                   {others.length > 0 && (
-                    <div className="mt-1 border-l-2 border-sparrow-rule pl-3">
+                    <div className="mt-1 border-l-2 border-sparrow-rule dark:border-sparrow-dark-border pl-3">
                       {others.map((m) => (
-                        <p key={m.id} className="text-xs text-sparrow-gray">{m.name}</p>
+                        <p key={m.id} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{m.name}</p>
                       ))}
                     </div>
                   )}
 
                   {/* Children if any */}
                   {(tenant?.children ?? 0) > 0 && (
-                    <p className="mt-0.5 text-xs text-sparrow-gray">
+                    <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       {tenant!.children} child{tenant!.children !== 1 ? 'ren' : ''}
                       {tenant?.children_names ? `: ${tenant.children_names}` : ''}
                     </p>

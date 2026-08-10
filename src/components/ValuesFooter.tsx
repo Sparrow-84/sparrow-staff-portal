@@ -165,10 +165,10 @@ export function ValuesFooter() {
   const snippet = SNIPPETS[dayOfYear(new Date()) % SNIPPETS.length];
 
   return (
-    <footer className="border-t border-sparrow-rule bg-white px-4 py-2 text-center">
-      <p className="text-xs italic text-sparrow-gray">{snippet.text}</p>
+    <footer className="border-t border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-2 text-center">
+      <p className="text-xs italic text-sparrow-gray dark:text-sparrow-dark-gray">{snippet.text}</p>
       {snippet.kind === 'verse' && (
-        <p className="text-xs text-sparrow-gray">— {snippet.reference}</p>
+        <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">— {snippet.reference}</p>
       )}
     </footer>
   );

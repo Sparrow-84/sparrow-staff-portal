@@ -23,7 +23,7 @@ function AvailabilityDot({ status }: { status: AvailabilityStatus }) {
   return (
     <span className="group relative flex items-center gap-1.5">
       <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
-      <span className="text-xs text-sparrow-gray">{label}</span>
+      <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{label}</span>
     </span>
   );
 }
@@ -55,7 +55,7 @@ function StaffCard({
   color: string;
 }) {
   return (
-    <div className={`flex gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card ${isMe ? 'ring-1 ring-sparrow-green/30' : ''}`}>
+    <div className={`flex gap-4 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card ${isMe ? 'ring-1 ring-sparrow-green/30' : ''}`}>
       {/* Avatar */}
       <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${color}`}>
         {initials(staff.full_name)}
@@ -64,12 +64,12 @@ function StaffCard({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-1.5">
-          <p className="font-medium text-sparrow-ink">{staff.full_name}</p>
-          {isMe && <span className="text-xs text-sparrow-gray">(you)</span>}
+          <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{staff.full_name}</p>
+          {isMe && <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">(you)</span>}
         </div>
 
         {staff.role_description && (
-          <p className="mt-0.5 text-sm text-sparrow-gray">{staff.role_description}</p>
+          <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{staff.role_description}</p>
         )}
 
         {staff.blurb && (
@@ -79,7 +79,7 @@ function StaffCard({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <AvailabilityDot status={status} />
           {staff.work_schedule && (
-            <span className="text-xs text-sparrow-gray">{scheduleText(staff.work_schedule)}</span>
+            <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{scheduleText(staff.work_schedule)}</span>
           )}
         </div>
 
@@ -120,13 +120,13 @@ export function TeamView() {
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="mb-6">
         <h1 className="font-serif text-2xl font-semibold">Team</h1>
-        <p className="mt-1 text-sm text-sparrow-gray">
+        <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           Who's on the team, what they do, and when they're typically working.
         </p>
       </div>
 
       {loading ? (
-        <p className="text-sm text-sparrow-gray">Loading…</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
       ) : (
         <div className="space-y-3">
           {team.map((member) => (
@@ -141,9 +141,9 @@ export function TeamView() {
         </div>
       )}
 
-      <p className="mt-6 text-xs text-sparrow-gray">
+      <p className="mt-6 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
         Update your own schedule and blurb in{' '}
-        <span className="font-medium text-sparrow-ink">Settings → My Profile</span>.
+        <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Settings → My Profile</span>.
       </p>
     </div>
   );

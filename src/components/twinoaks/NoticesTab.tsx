@@ -40,7 +40,7 @@ export function NoticesTab({ spaces, tenants, canManage, onSelectSpace }: Props)
       })
     : notices;
 
-  if (loading) return <p className="mt-8 text-sm text-sparrow-gray">Loading notices…</p>;
+  if (loading) return <p className="mt-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading notices…</p>;
 
   return (
     <div className="mt-6">
@@ -54,11 +54,11 @@ export function NoticesTab({ spaces, tenants, canManage, onSelectSpace }: Props)
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-sparrow-rule p-8 text-center text-sm text-sparrow-gray">
+        <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           {q ? 'No matching notices.' : 'No notices on record.'}
         </p>
       ) : (
-        <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+        <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
           {filtered.map((n) => {
             const lot = lotLabelById.get(n.space_id);
             const householdName = tenantNameBySpace.get(n.space_id);
@@ -74,16 +74,16 @@ export function NoticesTab({ spaces, tenants, canManage, onSelectSpace }: Props)
                     {lot && (
                       <button
                         onClick={() => onSelectSpace(n.space_id)}
-                        className="text-sm font-semibold text-sparrow-green hover:underline"
+                        className="text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                       >
                         Lot {lot}
                       </button>
                     )}
-                    {householdName && <span className="text-sm text-sparrow-ink">{householdName}</span>}
-                    <span className="text-xs text-sparrow-gray">{n.notice_date}</span>
+                    {householdName && <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{householdName}</span>}
+                    <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{n.notice_date}</span>
                   </div>
-                  <p className="mt-0.5 text-sm text-sparrow-ink">{n.description}</p>
-                  <p className="text-xs text-sparrow-gray capitalize">
+                  <p className="mt-0.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{n.description}</p>
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray capitalize">
                     {n.delivery_method.replace('_', ' ')}
                     {n.delivery_notes ? ` — ${n.delivery_notes}` : ''}
                     {n.creator ? ` · logged by ${n.creator.full_name}` : ''}
@@ -93,7 +93,7 @@ export function NoticesTab({ spaces, tenants, canManage, onSelectSpace }: Props)
                 {canManage && (
                   <button
                     onClick={async () => { await deleteNotice(n.id); void load(); }}
-                    className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1"
+                    className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
                     title="Delete notice"
                   >
                     ✕

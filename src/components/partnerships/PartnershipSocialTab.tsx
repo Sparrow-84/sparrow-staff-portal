@@ -36,7 +36,7 @@ const STATUS_LABEL: Record<SocialStatus, string> = {
 const STATUS_CHIP: Record<SocialStatus, string> = {
   planned: 'bg-slate-100 text-slate-600',
   scheduled: 'bg-amber-100 text-amber-700',
-  posted: 'bg-sparrow-green/10 text-sparrow-green',
+  posted: 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green',
 };
 
 const STATUS_CYCLE: SocialStatus[] = ['planned', 'scheduled', 'posted'];
@@ -153,14 +153,14 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
 
       {/* Frequency warning */}
       {showFrequencyWarning && !loading && (
-        <div className="rounded-xl border border-sparrow-gold/40 bg-sparrow-gold/5 px-4 py-3 text-sm text-sparrow-ink">
+        <div className="rounded-xl border border-sparrow-gold/40 bg-sparrow-gold/5 px-4 py-3 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
           No post in the last {cadenceDays} days and none planned in the next {leadTimeDays} days.
         </div>
       )}
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-sparrow-ink">Upcoming posts</h3>
+        <h3 className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Upcoming posts</h3>
         <button onClick={() => setShowAddForm((v) => !v)} className="btn-primary text-xs">
           {showAddForm ? 'Cancel' : '+ Add post'}
         </button>
@@ -168,7 +168,7 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
 
       {/* Add form */}
       {showAddForm && (
-        <form onSubmit={handleAdd} className="rounded-xl border border-sparrow-rule bg-white p-4 space-y-3">
+        <form onSubmit={handleAdd} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">Platform</label>
@@ -221,17 +221,17 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
         </form>
       )}
 
-      {loading && <p className="py-8 text-center text-sm text-sparrow-gray">Loading…</p>}
+      {loading && <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>}
 
       {/* Upcoming list */}
       {!loading && upcoming.length === 0 && (
-        <p className="rounded-xl border border-dashed border-sparrow-rule p-8 text-center text-sm text-sparrow-gray">
+        <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           No upcoming posts. Add one above.
         </p>
       )}
 
       {!loading && upcoming.length > 0 && (
-        <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+        <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
           {upcoming.map((post) => (
             <li key={post.id} className="flex items-start gap-3 px-4 py-3">
               <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${PLATFORM_CHIP[post.platform]}`}>
@@ -239,12 +239,12 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
               </span>
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-sparrow-ink">{post.content_idea}</p>
-                {post.notes && <p className="text-xs text-sparrow-gray mt-0.5">{post.notes}</p>}
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{post.content_idea}</p>
+                {post.notes && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">{post.notes}</p>}
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-xs text-sparrow-gray whitespace-nowrap">{shortDate(post.planned_date)}</span>
+                <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray whitespace-nowrap">{shortDate(post.planned_date)}</span>
                 <button
                   onClick={() => handleCycleStatus(post)}
                   className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_CHIP[post.status]}`}
@@ -253,7 +253,7 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
                 </button>
                 <button
                   onClick={() => handleDelete(post.id)}
-                  className="text-xs text-sparrow-gray hover:text-priority-p1"
+                  className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
                   title="Delete"
                 >
                   ✕
@@ -269,24 +269,24 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
         <div>
           <button
             onClick={() => setPostedOpen((v) => !v)}
-            className="flex items-center gap-2 text-sm font-semibold text-sparrow-gray hover:text-sparrow-ink"
+            className="flex items-center gap-2 text-sm font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
           >
             <span>{posted.length} past post{posted.length !== 1 ? 's' : ''}</span>
             <span>{postedOpen ? '▲' : '▼'}</span>
           </button>
 
           {postedOpen && (
-            <ul className="mt-2 divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+            <ul className="mt-2 divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
               {posted.map((post) => (
                 <li key={post.id} className="flex items-start gap-3 px-4 py-3 opacity-70">
                   <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${PLATFORM_CHIP[post.platform]}`}>
                     {PLATFORM_LABEL[post.platform]}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-sparrow-ink">{post.content_idea}</p>
-                    {post.notes && <p className="text-xs text-sparrow-gray mt-0.5">{post.notes}</p>}
+                    <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{post.content_idea}</p>
+                    {post.notes && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">{post.notes}</p>}
                   </div>
-                  <span className="shrink-0 text-xs text-sparrow-gray">{shortDate(post.planned_date)}</span>
+                  <span className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{shortDate(post.planned_date)}</span>
                 </li>
               ))}
             </ul>

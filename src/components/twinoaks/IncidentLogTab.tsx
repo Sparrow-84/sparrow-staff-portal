@@ -153,11 +153,11 @@ function IncidentPanel({ open, incident, spaces, onClose, onChanged }: PanelProp
       <aside
         role="dialog"
         aria-modal="true"
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl transition-transform ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white dark:bg-sparrow-dark-surface shadow-xl transition-transform ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-sparrow-rule px-5 py-4">
+        <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
           <h2 className="font-serif text-lg font-semibold">
             {incident ? 'Incident detail' : 'Log incident'}
           </h2>
@@ -290,7 +290,7 @@ function IncidentPanel({ open, incident, spaces, onClose, onChanged }: PanelProp
           )}
 
           {incident?.logger && (
-            <p className="text-xs text-sparrow-gray">
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               Logged by {incident.logger.full_name}
             </p>
           )}
@@ -298,7 +298,7 @@ function IncidentPanel({ open, incident, spaces, onClose, onChanged }: PanelProp
           {(error || missingMessage) && <p className="text-sm text-priority-p1">{error ?? missingMessage}</p>}
         </div>
 
-        <div className="flex items-center justify-between border-t border-sparrow-rule px-5 py-4">
+        <div className="flex items-center justify-between border-t border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
           {incident && canDelete ? (
             <button onClick={remove} disabled={pending} className="btn-ghost text-priority-p1">
               Delete
@@ -374,14 +374,14 @@ export function IncidentLogTab({ spaces }: TabProps) {
 
   const openCount = incidents.filter((i) => i.status === 'open').length;
 
-  if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading incidents…</p>;
+  if (loading) return <p className="py-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading incidents…</p>;
   if (err) return <p className="py-8 text-sm text-priority-p1">{err}</p>;
 
   return (
     <>
       <div className="mt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-sparrow-gray">
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {openCount} open · {incidents.length} total
           </p>
           <button onClick={openNew} className="btn-primary">
@@ -399,7 +399,7 @@ export function IncidentLogTab({ spaces }: TabProps) {
                 className={`rounded-lg px-3 py-1 font-medium transition ${
                   statusFilter === s
                     ? 'bg-sparrow-green text-white'
-                    : 'text-sparrow-gray hover:text-sparrow-ink'
+                    : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                 }`}
               >
                 {s === 'all' ? 'All statuses' : s.charAt(0).toUpperCase() + s.slice(1)}
@@ -412,7 +412,7 @@ export function IncidentLogTab({ spaces }: TabProps) {
               className={`rounded-lg px-3 py-1 font-medium transition ${
                 severityFilter === 'all'
                   ? 'bg-sparrow-green text-white'
-                  : 'text-sparrow-gray hover:text-sparrow-ink'
+                  : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
               }`}
             >
               All severities
@@ -424,7 +424,7 @@ export function IncidentLogTab({ spaces }: TabProps) {
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1 font-medium transition ${
                   severityFilter === s.value
                     ? 'bg-sparrow-green text-white'
-                    : 'text-sparrow-gray hover:text-sparrow-ink'
+                    : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                 }`}
               >
                 <span className={`h-2 w-2 rounded-full ${s.dot}`} aria-hidden />
@@ -436,34 +436,34 @@ export function IncidentLogTab({ spaces }: TabProps) {
 
         {/* List */}
         {filtered.length === 0 ? (
-          <p className="mt-6 rounded-xl border border-dashed border-sparrow-rule bg-white p-8 text-center text-sm text-sparrow-gray">
+          <p className="mt-6 rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {incidents.length === 0 ? 'No incidents logged yet.' : 'No incidents match this filter.'}
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+          <ul className="mt-4 divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
             {filtered.map((i) => {
               const sev = INCIDENT_SEVERITIES.find((s) => s.value === i.severity);
               return (
                 <li key={i.id}>
                   <button
                     onClick={() => openIncident(i)}
-                    className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-sparrow-mist"
+                    className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                   >
                     <span
-                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${sev?.dot ?? 'bg-sparrow-gray'}`}
+                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${sev?.dot ?? 'bg-sparrow-gray dark:bg-sparrow-dark-border'}`}
                       aria-hidden
                     />
                     <span className="flex-1 min-w-0">
                       <span className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="text-sm font-semibold text-sparrow-ink">
+                        <span className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
                           {i.incident_type}
                         </span>
                         {i.lot_label && (
-                          <span className="text-xs text-sparrow-gray">Lot {i.lot_label}</span>
+                          <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Lot {i.lot_label}</span>
                         )}
-                        <span className="text-xs text-sparrow-gray">{fmtDate(i.incident_date)}</span>
+                        <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{fmtDate(i.incident_date)}</span>
                       </span>
-                      <span className="mt-0.5 block truncate text-sm text-sparrow-gray">
+                      <span className="mt-0.5 block truncate text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                         {i.description}
                       </span>
                       {i.logger && (
@@ -476,7 +476,7 @@ export function IncidentLogTab({ spaces }: TabProps) {
                       className={`shrink-0 mt-0.5 rounded px-1.5 py-0.5 text-xs font-medium ring-1 ${
                         i.status === 'open'
                           ? 'bg-amber-50 text-amber-700 ring-amber-200'
-                          : 'bg-sparrow-mist text-sparrow-gray ring-sparrow-rule'
+                          : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray ring-sparrow-rule'
                       }`}
                     >
                       {i.status === 'open' ? 'Open' : 'Resolved'}

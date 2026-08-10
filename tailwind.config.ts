@@ -3,6 +3,7 @@ import type { Config } from 'tailwindcss';
 // Brand tokens kept 1:1 with sparrow-website so the portal shares the public
 // site's visual language (per Susanna's System Brief).
 const config: Config = {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
@@ -17,6 +18,15 @@ const config: Config = {
           mist: '#F5F5F5',
           sage: '#E8F2EC',
           cream: '#FFF8E1',
+          dark: {
+            bg: '#141416',
+            surface: '#1C1D1F',
+            surface2: '#242628',
+            border: '#33353A',
+            ink: '#F2F2F0',
+            gray: '#9A9A9E',
+            green: '#5FB37D',
+          },
         },
         priority: {
           p1: '#DC2626',

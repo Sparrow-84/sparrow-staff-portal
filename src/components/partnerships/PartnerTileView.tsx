@@ -33,7 +33,7 @@ export function PartnerTileView({
   }
 
   if (partners.length === 0) {
-    return <p className="py-8 text-center text-sm text-sparrow-gray">No partners in this view yet.</p>;
+    return <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No partners in this view yet.</p>;
   }
 
   return (
@@ -50,7 +50,7 @@ export function PartnerTileView({
           <button
             key={p.id}
             onClick={() => onOpenPartner(p.id)}
-            className="relative rounded-2xl border border-sparrow-rule bg-white p-4 text-left shadow-card transition hover:border-sparrow-green/40"
+            className="relative rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 text-left shadow-card transition hover:border-sparrow-green/40"
           >
             {/* Stewardship status dot */}
             <span
@@ -58,13 +58,13 @@ export function PartnerTileView({
               title={st.label}
             />
 
-            <p className="pr-8 font-semibold text-sparrow-ink">{p.name}</p>
-            <div className="mt-1 flex flex-col gap-0.5 text-xs text-sparrow-gray">
+            <p className="pr-8 font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{p.name}</p>
+            <div className="mt-1 flex flex-col gap-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               {[type, ...p.secondary_types.map((t) => PARTNER_TYPE[t])].map((t) => (
                 <span key={t.label}>{t.icon} {t.label}</span>
               ))}
             </div>
-            <p className="mt-0.5 text-xs text-sparrow-gray">{ownerName(p.owner_id)}</p>
+            <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{ownerName(p.owner_id)}</p>
 
             {(interestMap.get(p.id) ?? []).length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
@@ -80,7 +80,7 @@ export function PartnerTileView({
 
             {/* Donation summary for donors */}
             {p.type === 'donor' && (
-              <p className="mt-1 text-[10px] text-sparrow-gray">
+              <p className="mt-1 text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray">
                 {stat && stat.gift_count > 0
                   ? `${stat.gift_count} gift${stat.gift_count > 1 ? 's' : ''} · last ${shortDate(stat.last_gift_date)}`
                   : 'No gifts on record'}
@@ -96,7 +96,7 @@ export function PartnerTileView({
                   </span>
                 )}
                 {tier === 'major' && (
-                  <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">
+                  <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                     Major donor
                   </span>
                 )}

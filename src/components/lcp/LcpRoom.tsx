@@ -272,7 +272,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
     setBriefOpen(true);
   }
 
-  if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading LifeChange…</p>;
+  if (loading) return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading LifeChange…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
 
@@ -282,7 +282,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold">LifeChange</h1>
-          <p className="mt-1 text-sm text-sparrow-gray">
+          <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {stats.active} families · {stats.onTrack} on track · {stats.needs} need attention · {stats.onboarding} onboarding
             {stats.feeOverdue > 0 && <span className="text-priority-p1"> · {stats.feeOverdue} program fee overdue</span>}
           </p>
@@ -295,7 +295,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
       </div>
 
       {/* Tabs */}
-      <div className="mt-6 inline-flex flex-wrap rounded-xl border border-sparrow-rule bg-white p-1 text-sm">
+      <div className="mt-6 inline-flex flex-wrap rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-1 text-sm">
         {(['home', 'families', 'progress', 'session-log', 'session-cal', 'team-cal', 'curriculum'] as const)
           .filter((t) => t !== 'curriculum' || canEditCurriculum)
           .map((t) => (
@@ -303,7 +303,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
             key={t}
             onClick={() => setTab(t)}
             className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              tab === t ? 'bg-sparrow-green text-white' : 'text-sparrow-gray hover:text-sparrow-ink'
+              tab === t ? 'bg-sparrow-green text-white' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
             }`}
           >
             {t === 'session-log' ? 'Session Log'
@@ -351,13 +351,13 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
         </div>
       ) : tab === 'families' ? (
         <div className="mt-6 space-y-3">
-          <div className="inline-flex rounded-lg border border-sparrow-rule bg-sparrow-mist p-1 text-sm">
+          <div className="inline-flex rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1 text-sm">
             {(['active', 'past'] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setFamiliesView(v)}
                 className={`rounded-md px-3 py-1 font-medium capitalize transition ${
-                  familiesView === v ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
+                  familiesView === v ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-green dark:text-sparrow-dark-green shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                 }`}
               >
                 {v}
@@ -367,28 +367,28 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
 
           {familiesView === 'past' ? (
             !pastLoaded ? (
-              <p className="text-sm text-sparrow-gray">Loading…</p>
+              <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
             ) : pastFamilies.length === 0 ? (
-              <p className="text-sm text-sparrow-gray">No families have left the program or graduated yet.</p>
+              <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No families have left the program or graduated yet.</p>
             ) : (
               pastFamilies.map((f) => (
                 <button
                   key={f.id}
                   onClick={() => openFamily(f.id)}
-                  className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 text-left shadow-card transition hover:border-sparrow-green/40"
+                  className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 text-left shadow-card transition hover:border-sparrow-green/40"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-medium text-sparrow-ink">{f.display_name}</span>
+                      <span className="truncate font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${FAMILY_STATUS[f.status].chip}`}>
                         {FAMILY_STATUS[f.status].label}
                       </span>
                     </div>
                     {f.program_end_date && (
-                      <p className="mt-0.5 text-xs text-sparrow-gray">Program ended {dayLabel(f.program_end_date)}</p>
+                      <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Program ended {dayLabel(f.program_end_date)}</p>
                     )}
                   </div>
-                  <span className="shrink-0 text-sparrow-gray">›</span>
+                  <span className="shrink-0 text-sparrow-gray dark:text-sparrow-dark-gray">›</span>
                 </button>
               ))
             )
@@ -401,11 +401,11 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
                   <button
                     key={f.id}
                     onClick={() => openFamily(f.id)}
-                    className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule bg-white p-4 text-left shadow-card transition hover:border-sparrow-green/40"
+                    className="flex w-full items-center gap-4 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 text-left shadow-card transition hover:border-sparrow-green/40"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="truncate font-medium text-sparrow-ink">{f.display_name}</span>
+                        <span className="truncate font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${FAMILY_STATUS[f.status].chip}`}>
                           {FAMILY_STATUS[f.status].label}
                         </span>
@@ -415,7 +415,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
                           </span>
                         )}
                       </div>
-                      <p className="mt-0.5 text-xs text-sparrow-gray">
+                      <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                         {open} open homework
                       </p>
                       <div className="mt-2">
@@ -431,29 +431,29 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
                         Program fee overdue
                       </span>
                     )}
-                    <span className="shrink-0 text-sparrow-gray">›</span>
+                    <span className="shrink-0 text-sparrow-gray dark:text-sparrow-dark-gray">›</span>
                   </button>
                 );
               })}
 
               {/* Homework board — this week, one column per family */}
               <section className="mt-4">
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Homework board</h2>
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Homework board</h2>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {families.map((f) => {
                     const open = (homeworkByFamily.get(f.id) ?? []).filter((h) => h.status !== 'complete');
                     return (
-                      <div key={f.id} className="rounded-xl border border-sparrow-rule bg-white p-3">
-                        <p className="text-sm font-medium text-sparrow-ink">{f.display_name}</p>
+                      <div key={f.id} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3">
+                        <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</p>
                         <ul className="mt-2 space-y-1.5">
-                          {open.length === 0 && <li className="text-xs text-sparrow-gray">All clear ✓</li>}
+                          {open.length === 0 && <li className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">All clear ✓</li>}
                           {open.map((h) => (
-                            <li key={h.id} className="flex items-center gap-2 text-xs text-sparrow-ink">
+                            <li key={h.id} className="flex items-center gap-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
                               <span
                                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                                   h.status === 'submitted' ? 'bg-sparrow-gold'
                                   : isOverdue(h.due_date) ? 'bg-priority-p1'
-                                  : 'bg-sparrow-rule'
+                                  : 'bg-sparrow-rule dark:bg-sparrow-dark-border'
                                 }`}
                               />
                               <span className={`truncate ${isOverdue(h.due_date) ? 'text-priority-p1' : ''}`}>

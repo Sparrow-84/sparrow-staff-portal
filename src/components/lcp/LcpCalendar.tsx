@@ -9,11 +9,11 @@ function EventTooltip({ s }: { s: TooltipState }) {
   const top = s.y + 16;
   return (
     <div
-      className="pointer-events-none fixed z-50 w-56 rounded-lg border border-sparrow-rule bg-white p-3 shadow-lg"
+      className="pointer-events-none fixed z-50 w-56 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg"
       style={{ left, top }}
     >
-      <p className="text-sm font-medium leading-snug text-sparrow-ink">{s.title}</p>
-      {s.sub && <p className="mt-1 text-xs text-sparrow-gray">{s.sub}</p>}
+      <p className="text-sm font-medium leading-snug text-sparrow-ink dark:text-sparrow-dark-ink">{s.title}</p>
+      {s.sub && <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{s.sub}</p>}
     </div>
   );
 }
@@ -22,7 +22,7 @@ function EventTooltip({ s }: { s: TooltipState }) {
 // system uses (see LABEL_COLORS in LabelPill.tsx) — kept consistent across
 // both calendars rather than the bolder -500 shades this used to have.
 const KIND_COLOR: Record<string, string> = {
-  curriculum: 'bg-sparrow-sage text-sparrow-green',
+  curriculum: 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green',
   one_on_one:  'bg-amber-100 text-amber-700',
   dinner:      'bg-violet-100 text-violet-700',
   volunteer:   'bg-sky-100 text-sky-700',
@@ -105,16 +105,16 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
         <div className="flex items-center gap-1">
           <button
             onClick={prev}
-            className="rounded-lg px-2 py-1.5 text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="rounded-lg px-2 py-1.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
           >
             ←
           </button>
-          <span className="min-w-[160px] text-center text-sm font-semibold text-sparrow-ink">
+          <span className="min-w-[160px] text-center text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
             {MONTHS[month]} {year}
           </span>
           <button
             onClick={next}
-            className="rounded-lg px-2 py-1.5 text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="rounded-lg px-2 py-1.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
           >
             →
           </button>
@@ -122,7 +122,7 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
         <div className="flex items-center gap-3">
           <button
             onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); }}
-            className="text-xs font-medium text-sparrow-green hover:underline"
+            className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
           >
             Today
           </button>
@@ -133,10 +133,10 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
       </div>
 
       {/* Grid */}
-      <div className="overflow-hidden rounded-2xl border border-sparrow-rule bg-white">
-        <div className="grid grid-cols-7 border-b border-sparrow-rule">
+      <div className="overflow-hidden rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
+        <div className="grid grid-cols-7 border-b border-sparrow-rule dark:border-sparrow-dark-border">
           {DOW.map((d) => (
-            <div key={d} className="py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
+            <div key={d} className="py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               {d}
             </div>
           ))}
@@ -160,10 +160,10 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
                     isToday
                       ? 'bg-sparrow-green text-white'
                       : !inMonth
-                        ? 'text-sparrow-rule'
+                        ? 'text-sparrow-rule dark:text-sparrow-dark-border'
                         : isPast
-                          ? 'text-sparrow-gray'
-                          : 'text-sparrow-ink'
+                          ? 'text-sparrow-gray dark:text-sparrow-dark-gray'
+                          : 'text-sparrow-ink dark:text-sparrow-dark-ink'
                   }`}
                 >
                   {day.getDate()}
@@ -176,7 +176,7 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
                       onMouseEnter={(e) => setTooltip({ title: ev.title, sub: `${timeLabel(ev.starts_at)} · ${EVENT_LABEL[ev.kind]}`, x: e.clientX, y: e.clientY })}
                       onMouseLeave={() => setTooltip(null)}
                       className={`w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight transition hover:opacity-75 ${
-                        isPast ? 'bg-sparrow-rule text-sparrow-gray' : (KIND_COLOR[ev.kind] ?? 'bg-slate-400 text-white')
+                        isPast ? 'bg-sparrow-rule dark:bg-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray' : (KIND_COLOR[ev.kind] ?? 'bg-slate-400 text-white')
                       }`}
                     >
                       {timeLabel(ev.starts_at)} {ev.title}
@@ -188,13 +188,13 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
                       onClick={() => onLogClick(dayLog)}
                       onMouseEnter={(e) => setTooltip({ title: SESSION_LOG_LABEL[dayLog.session_type], x: e.clientX, y: e.clientY })}
                       onMouseLeave={() => setTooltip(null)}
-                      className="w-full truncate rounded bg-sparrow-rule px-1 py-0.5 text-left text-[10px] font-medium leading-tight text-sparrow-gray transition hover:opacity-75"
+                      className="w-full truncate rounded bg-sparrow-rule dark:bg-sparrow-dark-border px-1 py-0.5 text-left text-[10px] font-medium leading-tight text-sparrow-gray dark:text-sparrow-dark-gray transition hover:opacity-75"
                     >
                       {SESSION_LOG_LABEL[dayLog.session_type]}
                     </button>
                   )}
                   {overflow > 0 && (
-                    <p className="pl-1 text-[10px] text-sparrow-gray">+{overflow} more</p>
+                    <p className="pl-1 text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray">+{overflow} more</p>
                   )}
                 </div>
               </div>
@@ -206,18 +206,18 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
       {/* Upcoming list */}
       {upcoming.length > 0 && (
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Upcoming</h2>
-          <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Upcoming</h2>
+          <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
             {upcoming.map((ev) => (
               <li key={ev.id}>
                 <button
                   onClick={() => onEventClick(ev)}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sparrow-mist"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                 >
-                  <span className="w-28 shrink-0 text-xs text-sparrow-gray">
+                  <span className="w-28 shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {ev.starts_at.slice(5, 10).replace('-', '/')} · {timeLabel(ev.starts_at)}
                   </span>
-                  <span className="flex-1 text-sm font-medium text-sparrow-ink">{ev.title}</span>
+                  <span className="flex-1 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{ev.title}</span>
                   <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${KIND_COLOR[ev.kind] ?? 'bg-slate-400 text-white'}`}>
                     {EVENT_LABEL[ev.kind]}
                   </span>
@@ -229,7 +229,7 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
       )}
 
       {events.length === 0 && (
-        <p className="text-sm text-sparrow-gray">No sessions scheduled yet.</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No sessions scheduled yet.</p>
       )}
 
       {tooltip && <EventTooltip s={tooltip} />}

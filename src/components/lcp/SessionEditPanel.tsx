@@ -268,7 +268,7 @@ export function SessionEditPanel({
   function renderResourceForm() {
     return (
       <div className="space-y-3 rounded-xl border border-sparrow-green/30 bg-sparrow-sage/20 p-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+        <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
           {editMode.kind === 'add' ? `New ${RESOURCE_LABEL[resKind]}` : `Edit ${RESOURCE_LABEL[resKind]}`}
         </p>
 
@@ -301,7 +301,7 @@ export function SessionEditPanel({
           <div>
             <label className="field-label">
               Content{' '}
-              <span className="font-normal text-sparrow-gray">
+              <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">
                 (format it in Claude or a Google Doc, then paste — the formatting comes with it)
               </span>
             </label>
@@ -319,7 +319,7 @@ export function SessionEditPanel({
           <div>
             <label className="field-label">
               HTML source{' '}
-              <span className="font-normal text-sparrow-gray">
+              <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">
                 (paste Shelly's raw HTML file source — exactly as she designed it, fonts and colors included; participants see it rendered as-is)
               </span>
             </label>
@@ -336,7 +336,7 @@ export function SessionEditPanel({
         <div>
           <label className="field-label">
             Google Drive URL{' '}
-            <span className="font-normal text-sparrow-gray">
+            <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">
               {resKind === 'ppt' || resKind === 'handout' ? '' : '(optional — use instead of, or alongside, content)'}
             </span>
           </label>
@@ -412,7 +412,7 @@ export function SessionEditPanel({
             <div>
               <label className="field-label">
                 Focus{' '}
-                <span className="font-normal text-sparrow-gray">(optional)</span>
+                <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
               </label>
               <textarea
                 value={focus}
@@ -426,7 +426,7 @@ export function SessionEditPanel({
             <div>
               <label className="field-label">
                 Scripture{' '}
-                <span className="font-normal text-sparrow-gray">(optional)</span>
+                <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
               </label>
               <input
                 type="text"
@@ -439,20 +439,20 @@ export function SessionEditPanel({
           </div>
 
           {/* Monday Mentoring */}
-          <div className="border-t border-sparrow-rule pt-5">
+          <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-5">
             <button
               type="button"
               onClick={() => setMondayOpen((v) => !v)}
               className="flex w-full items-center justify-between text-left"
             >
-              <h3 className="text-sm font-semibold text-sparrow-ink">
-                Monday Mentoring {mondayReady && <span className="text-sparrow-green">✓</span>}
+              <h3 className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
+                Monday Mentoring {mondayReady && <span className="text-sparrow-green dark:text-sparrow-dark-green">✓</span>}
               </h3>
-              <span className="text-xs font-medium text-sparrow-gray">{mondayOpen ? 'Hide ▲' : 'Show ▼'}</span>
+              <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">{mondayOpen ? 'Hide ▲' : 'Show ▼'}</span>
             </button>
             {mondayOpen && (
               <>
-                <p className="mb-3 mt-1 text-xs text-sparrow-gray">
+                <p className="mb-3 mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   Read one-on-one with the participant who recently attended this session. Shelly's
                   fixed how-to-use instructions show automatically above this every Monday — only the
                   three fields below change week to week. Format it wherever you like (Claude, a
@@ -495,9 +495,9 @@ export function SessionEditPanel({
           </div>
 
           {/* Thursday Group Materials */}
-          <div className="border-t border-sparrow-rule pt-5">
-            <h3 className="mb-3 text-sm font-semibold text-sparrow-ink">Thursday Group Materials</h3>
-            {resLoading && <p className="mb-2 text-xs text-sparrow-gray">Loading materials…</p>}
+          <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-5">
+            <h3 className="mb-3 text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Thursday Group Materials</h3>
+            {resLoading && <p className="mb-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Loading materials…</p>}
             <div className="space-y-2.5">
               <MaterialSlot
                 label="Teacher Guide"
@@ -528,11 +528,11 @@ export function SessionEditPanel({
               {activeSlotKey === 'handout' && renderResourceForm()}
             </div>
 
-            <div className="mt-4 rounded-lg border border-sparrow-rule p-2.5">
+            <div className="mt-4 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border p-2.5">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-sparrow-ink">
+                <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                   Curriculum Notes{' '}
-                  <span className="font-normal text-sparrow-gray">— written by staff from the Session Log while teaching</span>
+                  <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">— written by staff from the Session Log while teaching</span>
                 </p>
                 {curriculumNotes.trim() && !curriculumNotesReviewedAt && (
                   <span className="shrink-0 rounded-full bg-sparrow-cream px-2 py-0.5 text-[11px] font-bold text-sparrow-gold">
@@ -551,12 +551,12 @@ export function SessionEditPanel({
                 <button
                   onClick={saveCurriculumNotes}
                   disabled={notesSaving || curriculumNotes === (session.curriculum_notes ?? '')}
-                  className="btn-ghost border border-sparrow-rule text-xs"
+                  className="btn-ghost border border-sparrow-rule dark:border-sparrow-dark-border text-xs"
                 >
                   {notesSaving ? 'Saving…' : 'Save notes'}
                 </button>
                 {curriculumNotes.trim() && !curriculumNotesReviewedAt && (
-                  <button onClick={markNotesReviewed} disabled={notesSaving} className="text-xs font-semibold text-sparrow-green">
+                  <button onClick={markNotesReviewed} disabled={notesSaving} className="text-xs font-semibold text-sparrow-green dark:text-sparrow-dark-green">
                     Mark reviewed
                   </button>
                 )}
@@ -565,9 +565,9 @@ export function SessionEditPanel({
           </div>
 
           {/* Participant Devotionals */}
-          <div className="border-t border-sparrow-rule pt-5">
-            <h3 className="text-sm font-semibold text-sparrow-ink">Participant Devotionals</h3>
-            <p className="mt-0.5 mb-3 text-xs text-sparrow-gray">This week's 5 daily readings, sent directly to participants</p>
+          <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-5">
+            <h3 className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Participant Devotionals</h3>
+            <p className="mt-0.5 mb-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">This week's 5 daily readings, sent directly to participants</p>
 
             <div className="space-y-2.5">
               {DEVOTIONAL_DAYS.map((day, i) => {
@@ -590,13 +590,13 @@ export function SessionEditPanel({
             </div>
 
             <div className="mt-4 flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">
+              <p className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                 Extra devotionals {extraDevotionals.length > 0 ? `(${extraDevotionals.length})` : ''}
               </p>
               {!isEditing && (
                 <button
                   onClick={() => openAdd({ kind: 'devotional', audience: 'participant', title: '', sortOrder: resources.length }, 'devotional-extra-new')}
-                  className="text-sm text-sparrow-green hover:underline"
+                  className="text-sm text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                 >
                   + Add extra
                 </button>
@@ -609,16 +609,16 @@ export function SessionEditPanel({
                   const slotKey = `devotional-extra-${r.id}`;
                   return (
                     <li key={r.id} className="space-y-2">
-                      <div className="flex items-start gap-2 rounded-lg border border-sparrow-rule p-2.5 text-sm">
+                      <div className="flex items-start gap-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border p-2.5 text-sm">
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sparrow-ink">{r.title}</p>
-                          <p className="mt-0.5 text-xs text-sparrow-gray">
+                          <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{r.title}</p>
+                          <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                             {r.content ? 'Has content' : r.drive_url ? 'Drive link' : 'No content yet'}
                           </p>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">
-                          <button onClick={() => openEdit(r, slotKey)} className="text-xs text-sparrow-green hover:underline">Edit</button>
-                          <button onClick={() => handleDeleteResource(r.id)} className="text-xs text-sparrow-gray hover:text-priority-p1">Remove</button>
+                          <button onClick={() => openEdit(r, slotKey)} className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline">Edit</button>
+                          <button onClick={() => handleDeleteResource(r.id)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">Remove</button>
                         </div>
                       </div>
                       {activeSlotKey === slotKey && renderResourceForm()}
@@ -647,7 +647,7 @@ function StatusChip({ label, ready }: { label: string; ready: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-        ready ? 'bg-sparrow-sage text-sparrow-green' : 'border border-sparrow-rule text-sparrow-gray'
+        ready ? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green' : 'border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray'
       }`}
     >
       <span>{ready ? '✓' : '○'}</span>
@@ -672,10 +672,10 @@ function MaterialSlot({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-sparrow-rule p-2.5 text-sm">
+    <div className="flex items-start gap-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border p-2.5 text-sm">
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-sparrow-ink">{label}</p>
-        <p className="mt-0.5 text-xs text-sparrow-gray">
+        <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{label}</p>
+        <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           {resource
             ? resource.content
               ? 'Has content'
@@ -691,18 +691,18 @@ function MaterialSlot({
             href={resource.drive_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs font-medium text-sparrow-green hover:underline"
+            className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
           >
             Open ↗
           </a>
         )}
         {resource ? (
           <>
-            <button onClick={onEdit} className="text-xs text-sparrow-green hover:underline">Edit</button>
-            <button onClick={onRemove} className="text-xs text-sparrow-gray hover:text-priority-p1">Remove</button>
+            <button onClick={onEdit} className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline">Edit</button>
+            <button onClick={onRemove} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">Remove</button>
           </>
         ) : (
-          <button onClick={onAdd} className="text-xs text-sparrow-green hover:underline">+ Add</button>
+          <button onClick={onAdd} className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline">+ Add</button>
         )}
       </div>
     </div>

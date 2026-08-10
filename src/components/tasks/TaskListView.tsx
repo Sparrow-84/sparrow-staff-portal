@@ -44,12 +44,12 @@ export function TaskListView({ tasks, today, currentUserId, showAssignee, onTogg
           onDragLeave={isDateKey(key) ? () => setOverKey((k) => (k === key ? null : k)) : undefined}
           onDrop={isDateKey(key) ? (e) => onDrop(e, key) : undefined}
         >
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
             {label} <span className="text-sparrow-gray/70">· {items.length}</span>
           </h2>
           <ul
-            className={`divide-y divide-sparrow-rule overflow-hidden rounded-xl border bg-white transition ${
-              overKey === key ? 'border-sparrow-gold bg-amber-50' : 'border-sparrow-rule'
+            className={`divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border bg-white dark:bg-sparrow-dark-surface transition ${
+              overKey === key ? 'border-sparrow-gold bg-amber-50' : 'border-sparrow-rule dark:border-sparrow-dark-border'
             }`}
           >
             {items.map((t) => (
@@ -76,8 +76,8 @@ export function TaskListView({ tasks, today, currentUserId, showAssignee, onTogg
 
 function EmptyState() {
   return (
-    <p className="rounded-xl border border-dashed border-sparrow-rule bg-white p-8 text-center text-sm text-sparrow-gray">
-      Nothing here yet. Click <span className="font-medium text-sparrow-green">+ New task</span> to add one.
+    <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
+      Nothing here yet. Click <span className="font-medium text-sparrow-green dark:text-sparrow-dark-green">+ New task</span> to add one.
     </p>
   );
 }
@@ -106,7 +106,7 @@ function TaskRow({
     <li
       draggable
       onDragStart={(e) => e.dataTransfer.setData('text/plain', task.id)}
-      className="flex cursor-grab items-center gap-3 px-4 py-3 hover:bg-sparrow-mist active:cursor-grabbing"
+      className="flex cursor-grab items-center gap-3 px-4 py-3 hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 active:cursor-grabbing"
     >
       <input
         type="checkbox"
@@ -117,7 +117,7 @@ function TaskRow({
       />
       <button onClick={onOpen} className="flex flex-1 items-center gap-3 text-left">
         <span className="flex-1">
-          <span className={`text-sm ${done ? 'text-sparrow-gray line-through' : 'text-sparrow-ink'}`}>
+          <span className={`text-sm ${done ? 'text-sparrow-gray dark:text-sparrow-dark-gray line-through' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
             {task.title}
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -125,15 +125,15 @@ function TaskRow({
               <LabelPill label={task.label} color={task.label_color} />
             )}
             {task.due_date && (
-              <span className={`text-xs ${overdue ? 'font-medium text-priority-p1' : 'text-sparrow-gray'}`}>
+              <span className={`text-xs ${overdue ? 'font-medium text-priority-p1' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                 {dueLabel(task.due_date, today)}
               </span>
             )}
             {showAssignee && task.assignee && (
-              <span className="text-xs text-sparrow-gray">{task.assignee.full_name}</span>
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{task.assignee.full_name}</span>
             )}
             {assignedByOther && task.creator && (
-              <span className="rounded-full bg-sparrow-cream px-2 py-0.5 text-[11px] text-sparrow-ink">
+              <span className="rounded-full bg-sparrow-cream px-2 py-0.5 text-[11px] text-sparrow-ink dark:text-sparrow-dark-ink">
                 Assigned by {task.creator.full_name.split(' ')[0]}
               </span>
             )}

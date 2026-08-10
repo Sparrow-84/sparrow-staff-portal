@@ -111,29 +111,29 @@ export function ConnectionDetailPanel({
         <div className="space-y-4">
           <div>
             <p className="field-label">Organization</p>
-            <p className="text-sm text-sparrow-ink">{connection.organization ?? '—'}</p>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{connection.organization ?? '—'}</p>
           </div>
           <div>
             <p className="field-label">What was discussed</p>
-            <p className="whitespace-pre-wrap text-sm text-sparrow-ink">{connection.what_discussed ?? '—'}</p>
+            <p className="whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{connection.what_discussed ?? '—'}</p>
           </div>
           <div>
             <p className="field-label">Next action</p>
-            <p className="whitespace-pre-wrap text-sm text-sparrow-ink">{connection.next_action ?? '—'}</p>
+            <p className="whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{connection.next_action ?? '—'}</p>
           </div>
           <div>
             <p className="field-label">Follow-up due</p>
-            <p className="text-sm text-sparrow-ink">{shortDate(connection.followup_due)}</p>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{shortDate(connection.followup_due)}</p>
           </div>
           <div>
             <p className="field-label">Owner</p>
-            <p className="text-sm text-sparrow-ink">
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
               {ownerProfiles.find((p) => p.id === connection.owner_id)?.full_name ?? 'Unassigned'}
             </p>
           </div>
           <div>
             <p className="field-label">Linked event</p>
-            <p className="text-sm text-sparrow-ink">{eventName}</p>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{eventName}</p>
           </div>
           <BusinessCardPhotos
             table="partnership_connections"

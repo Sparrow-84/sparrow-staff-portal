@@ -87,8 +87,8 @@ function LogMeetingPanel({
   const attendedCount = Object.values(attended).filter(Boolean).length;
 
   return (
-    <div className="rounded-2xl border border-sparrow-green/30 bg-white p-4 space-y-4 shadow-card">
-      <p className="font-medium text-sparrow-ink">Log this week's meeting</p>
+    <div className="rounded-2xl border border-sparrow-green/30 bg-white dark:bg-sparrow-dark-surface p-4 space-y-4 shadow-card">
+      <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Log this week's meeting</p>
 
       <div>
         <label className="field-label">Meeting date</label>
@@ -99,18 +99,18 @@ function LogMeetingPanel({
         <p className="field-label mb-2">Attendance ({attendedCount}/{volunteers.length})</p>
         <div className="space-y-2">
           {volunteers.length === 0 && (
-            <p className="text-sm text-sparrow-gray">No active volunteers yet — add some below.</p>
+            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No active volunteers yet — add some below.</p>
           )}
           {volunteers.map((v) => (
-            <label key={v.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-sparrow-rule px-3 py-2 hover:bg-sparrow-mist/40">
+            <label key={v.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 hover:bg-sparrow-mist/40">
               <input
                 type="checkbox"
                 checked={attended[v.id] ?? false}
                 onChange={() => toggle(v.id)}
-                className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green"
+                className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green"
               />
-              <span className="text-sm font-medium text-sparrow-ink">{v.full_name}</span>
-              {v.phone && <span className="ml-auto text-xs text-sparrow-gray">{v.phone}</span>}
+              <span className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{v.full_name}</span>
+              {v.phone && <span className="ml-auto text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{v.phone}</span>}
             </label>
           ))}
         </div>
@@ -194,13 +194,13 @@ export function PrayerMeetingTab() {
   const activeVolunteers = volunteers.filter((v) => v.active);
   const inactiveVolunteers = volunteers.filter((v) => !v.active);
 
-  if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading prayer log…</p>;
+  if (loading) return <p className="py-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading prayer log…</p>;
 
   if (notReady) {
     return (
-      <div className="rounded-2xl border border-sparrow-rule bg-sparrow-mist/40 px-6 py-8 text-center">
-        <p className="text-sm font-medium text-sparrow-ink">Prayer meeting log not set up yet</p>
-        <p className="mt-1 text-xs text-sparrow-gray">Migration 0043 needs to run first. Byron will handle this.</p>
+      <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 px-6 py-8 text-center">
+        <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Prayer meeting log not set up yet</p>
+        <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Migration 0043 needs to run first. Byron will handle this.</p>
       </div>
     );
   }
@@ -208,13 +208,13 @@ export function PrayerMeetingTab() {
   return (
     <div className="space-y-4">
       {/* Section toggle */}
-      <div className="flex gap-1 rounded-lg border border-sparrow-rule bg-sparrow-mist/40 p-0.5 w-fit">
+      <div className="flex gap-1 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 p-0.5 w-fit">
         {(['meetings', 'volunteers'] as Section[]).map((s) => (
           <button
             key={s}
             onClick={() => setSection(s)}
             className={`rounded px-3 py-1.5 text-sm font-medium capitalize transition ${
-              section === s ? 'bg-white shadow-sm text-sparrow-ink' : 'text-sparrow-gray hover:text-sparrow-ink'
+              section === s ? 'bg-white dark:bg-sparrow-dark-surface shadow-sm text-sparrow-ink dark:text-sparrow-dark-ink' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
             }`}
           >
             {s === 'meetings' ? `Meeting log${meetings.length > 0 ? ` (${meetings.length})` : ''}` : `Volunteers (${activeVolunteers.length})`}
@@ -240,7 +240,7 @@ export function PrayerMeetingTab() {
           )}
 
           {meetings.length === 0 && !loggingMeeting && (
-            <p className="py-6 text-center text-sm text-sparrow-gray">No meetings logged yet. Log the first one above.</p>
+            <p className="py-6 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No meetings logged yet. Log the first one above.</p>
           )}
 
           <div className="space-y-2">
@@ -250,35 +250,35 @@ export function PrayerMeetingTab() {
               const isExpanded = expandedMeeting === m.id;
 
               return (
-                <div key={m.id} className="rounded-2xl border border-sparrow-rule bg-white">
+                <div key={m.id} className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
                   <button
                     onClick={() => setExpandedMeeting(isExpanded ? null : m.id)}
                     className="flex w-full items-center justify-between px-4 py-3 text-left"
                   >
                     <div>
-                      <p className="font-medium text-sparrow-ink">{shortDate(m.meeting_date)}</p>
+                      <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{shortDate(m.meeting_date)}</p>
                       {m.notes && (
-                        <p className="mt-0.5 text-xs text-sparrow-gray line-clamp-1">{m.notes}</p>
+                        <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray line-clamp-1">{m.notes}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         total > 0 && present === total
-                          ? 'bg-sparrow-green/10 text-sparrow-green'
+                          ? 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
                           : 'bg-amber-50 text-amber-700'
                       }`}>
                         {total > 0 ? `${present}/${total} attended` : 'No volunteers tracked'}
                       </span>
-                      <span className="text-sparrow-gray">{isExpanded ? '↑' : '↓'}</span>
+                      <span className="text-sparrow-gray dark:text-sparrow-dark-gray">{isExpanded ? '↑' : '↓'}</span>
                     </div>
                   </button>
 
                   {isExpanded && (
-                    <div className="border-t border-sparrow-rule px-4 pb-4 pt-3 space-y-3">
+                    <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 pb-4 pt-3 space-y-3">
                       {m.notes && (
                         <div className="rounded-lg bg-sparrow-mist/60 px-3 py-2">
-                          <p className="text-xs font-medium text-sparrow-gray uppercase tracking-wide mb-1">Notes</p>
-                          <p className="text-sm text-sparrow-ink">{m.notes}</p>
+                          <p className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray uppercase tracking-wide mb-1">Notes</p>
+                          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{m.notes}</p>
                         </div>
                       )}
                       <div className="space-y-1">
@@ -287,15 +287,15 @@ export function PrayerMeetingTab() {
                           return (
                             <div key={a.volunteer_id} className="flex items-center gap-2 text-sm">
                               <span className={`h-2 w-2 rounded-full shrink-0 ${a.attended ? 'bg-sparrow-green' : 'bg-slate-300'}`} />
-                              <span className={a.attended ? 'text-sparrow-ink' : 'text-sparrow-gray'}>
+                              <span className={a.attended ? 'text-sparrow-ink dark:text-sparrow-dark-ink' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}>
                                 {vol?.full_name ?? 'Unknown'}
                               </span>
-                              {!a.attended && <span className="text-xs text-sparrow-gray">(absent)</span>}
+                              {!a.attended && <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">(absent)</span>}
                             </div>
                           );
                         })}
                         {m.attendance.length === 0 && (
-                          <p className="text-xs text-sparrow-gray">No attendance recorded for this meeting.</p>
+                          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No attendance recorded for this meeting.</p>
                         )}
                       </div>
                     </div>
@@ -310,24 +310,24 @@ export function PrayerMeetingTab() {
       {/* ── Volunteer roster ── */}
       {section === 'volunteers' && (
         <div className="space-y-4">
-          <p className="text-xs text-sparrow-gray">
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             This roster follows Directory automatically — tag someone as "Prayer volunteer"
             there (Type or "Also involved as") to add them here; remove the tag to take them
             off the active roster. Nothing to add or archive from this screen.
           </p>
 
           {activeVolunteers.length === 0 && (
-            <p className="py-6 text-center text-sm text-sparrow-gray">
+            <p className="py-6 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               No active prayer volunteers yet — tag someone in Directory to see them here.
             </p>
           )}
 
           <div className="space-y-2">
             {activeVolunteers.map((v) => (
-              <div key={v.id} className="rounded-2xl border border-sparrow-rule bg-white p-4">
+              <div key={v.id} className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4">
                 <div>
-                  <p className="font-medium text-sparrow-ink">{v.full_name}</p>
-                  <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray">
+                  <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{v.full_name}</p>
+                  <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {v.phone && <span>{v.phone}</span>}
                     {v.email && <span>{v.email}</span>}
                   </div>
@@ -350,13 +350,13 @@ export function PrayerMeetingTab() {
                 ) : (
                   <div className="mt-2">
                     {v.notes ? (
-                      <p className="text-sm text-sparrow-gray">{v.notes}</p>
+                      <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{v.notes}</p>
                     ) : (
                       <p className="text-xs italic text-sparrow-gray/60">No notes</p>
                     )}
                     <button
                       onClick={() => { setEditVolunteerId(v.id); setEditNotes(v.notes ?? ''); }}
-                      className="mt-1 text-xs text-sparrow-green hover:underline"
+                      className="mt-1 text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                     >
                       {v.notes ? 'Edit notes' : 'Add notes'}
                     </button>
@@ -368,13 +368,13 @@ export function PrayerMeetingTab() {
 
           {inactiveVolunteers.length > 0 && (
             <details className="mt-4">
-              <summary className="cursor-pointer text-xs text-sparrow-gray hover:text-sparrow-ink">
+              <summary className="cursor-pointer text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
                 No longer active ({inactiveVolunteers.length})
               </summary>
               <div className="mt-2 space-y-2">
                 {inactiveVolunteers.map((v) => (
                   <div key={v.id} className="flex items-center justify-between rounded-xl border border-sparrow-rule/60 bg-sparrow-mist/40 px-4 py-2.5">
-                    <span className="text-sm text-sparrow-gray">{v.full_name}</span>
+                    <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{v.full_name}</span>
                     <span className="text-xs text-sparrow-gray/70">No longer tagged in Directory</span>
                   </div>
                 ))}

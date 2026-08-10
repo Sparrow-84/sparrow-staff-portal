@@ -175,7 +175,7 @@ export function StaffThread({
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-3 overflow-y-auto">
         {messages.length === 0 ? (
-          <p className="text-center text-sm text-sparrow-gray">No messages yet.</p>
+          <p className="text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No messages yet.</p>
         ) : (
           messages.map((m) => {
             const fromStaff = m.sender_kind === 'staff';
@@ -203,7 +203,7 @@ export function StaffThread({
 
                   <div className="max-w-[80%]">
                     {isEditing ? (
-                      <div className="rounded-2xl border border-sparrow-rule bg-white px-3 py-2">
+                      <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2">
                         <textarea
                           value={editDraft}
                           onChange={(e) => setEditDraft(e.target.value)}
@@ -214,11 +214,11 @@ export function StaffThread({
                           autoFocus
                           rows={2}
                           spellCheck
-                          className="w-full resize-none text-sm text-sparrow-ink focus:outline-none"
+                          className="w-full resize-none text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none"
                         />
                         <div className="mt-1.5 flex justify-end gap-2">
-                          <button onClick={() => setEditingId(null)} className="text-xs text-sparrow-gray hover:text-sparrow-ink">Cancel</button>
-                          <button onClick={() => void saveEdit(m.id)} className="text-xs font-medium text-sparrow-green hover:underline">Save</button>
+                          <button onClick={() => setEditingId(null)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">Cancel</button>
+                          <button onClick={() => void saveEdit(m.id)} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">Save</button>
                         </div>
                       </div>
                     ) : (
@@ -226,12 +226,12 @@ export function StaffThread({
                         className={`rounded-2xl px-3.5 py-2 text-sm ${
                           fromStaff
                             ? 'rounded-br-sm bg-sparrow-green text-white'
-                            : 'rounded-bl-sm bg-sparrow-mist text-sparrow-ink'
+                            : 'rounded-bl-sm bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-ink dark:text-sparrow-dark-ink'
                         }`}
                       >
                         {/* Quote preview */}
                         {quotedMsg && (
-                          <div className={`mb-2 rounded-lg border-l-2 pl-2 pr-2 py-1 text-xs ${fromStaff ? 'border-white/40 bg-white/10 text-white/80' : 'border-sparrow-green/40 bg-white/50 text-sparrow-gray'}`}>
+                          <div className={`mb-2 rounded-lg border-l-2 pl-2 pr-2 py-1 text-xs ${fromStaff ? 'border-white/40 bg-white/10 text-white/80' : 'border-sparrow-green/40 bg-white/50 text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                             <p className="font-medium">{quotedMsg.sender_kind === 'staff' ? 'Staff' : 'Family'}</p>
                             <p className="truncate">{quotedMsg.body || (quotedMsg.voice_url ? '🎤 Voice message' : quotedMsg.image_url ? '🖼 Photo' : '')}</p>
                           </div>
@@ -246,7 +246,7 @@ export function StaffThread({
                           <p className="whitespace-pre-wrap break-words">{renderBody(m.body)}</p>
                         )}
 
-                        <p className={`mt-1 text-[10px] ${fromStaff ? 'text-white/70' : 'text-sparrow-gray'}`}>
+                        <p className={`mt-1 text-[10px] ${fromStaff ? 'text-white/70' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                           {fromStaff ? 'Staff' : 'Family'} · {dayLabel(m.created_at)} {timeLabel(m.created_at)}
                           {m.edited_at && <span className="ml-1">(edited)</span>}
                         </p>
@@ -262,8 +262,8 @@ export function StaffThread({
                             onClick={() => void toggleReaction(m.id, emoji)}
                             className={`flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-xs transition ${
                               iMine
-                                ? 'border-sparrow-green bg-sparrow-green/10 text-sparrow-green'
-                                : 'border-sparrow-rule bg-white text-sparrow-ink hover:border-sparrow-green/40'
+                                ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
+                                : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-ink dark:text-sparrow-dark-ink hover:border-sparrow-green/40'
                             }`}
                           >
                             {emoji} {count}
@@ -297,14 +297,14 @@ export function StaffThread({
                 {/* Emoji picker */}
                 {emojiPickerId === m.id && (
                   <div
-                    className={`mt-1 flex items-center gap-1 rounded-xl border border-sparrow-rule bg-white p-1.5 shadow-md ${fromStaff ? 'justify-end' : 'justify-start'}`}
+                    className={`mt-1 flex items-center gap-1 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-1.5 shadow-md ${fromStaff ? 'justify-end' : 'justify-start'}`}
                     onClick={(e) => e.stopPropagation()}
                   >
                     {REACTION_EMOJIS.map((emoji) => (
                       <button
                         key={emoji}
                         onClick={() => void toggleReaction(m.id, emoji)}
-                        className="rounded-lg p-1.5 text-lg leading-none hover:bg-sparrow-mist transition"
+                        className="rounded-lg p-1.5 text-lg leading-none hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition"
                       >
                         {emoji}
                       </button>
@@ -330,19 +330,19 @@ export function StaffThread({
         <div className="mt-3">
           {/* Reply bar */}
           {replyTo && (
-            <div className="mb-2 flex items-center gap-2 rounded-lg bg-sparrow-mist px-3 py-2">
+            <div className="mb-2 flex items-center gap-2 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium text-sparrow-gray">
+                <p className="text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
                   Replying to {replyTo.sender_kind === 'staff' ? 'yourself' : 'the family'}
                 </p>
-                <p className="truncate text-xs text-sparrow-ink">
+                <p className="truncate text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
                   {replyTo.body || (replyTo.voice_url ? '🎤 Voice message' : replyTo.image_url ? '🖼 Photo' : '')}
                 </p>
               </div>
               <button
                 onClick={() => setReplyTo(null)}
                 aria-label="Cancel reply"
-                className="shrink-0 text-sparrow-gray hover:text-sparrow-ink"
+                className="shrink-0 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -369,7 +369,7 @@ export function StaffThread({
               onClick={() => setPickingImage(true)}
               disabled={busy}
               aria-label="Send a photo"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-green disabled:opacity-40"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-green dark:hover:text-sparrow-dark-green disabled:opacity-40"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -380,7 +380,7 @@ export function StaffThread({
               onClick={() => setRecording(true)}
               disabled={busy}
               aria-label="Send a voice message"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-green disabled:opacity-40"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-green dark:hover:text-sparrow-dark-green disabled:opacity-40"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
@@ -416,8 +416,8 @@ function MsgActionBtn({
       onClick={onClick}
       className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
         danger
-          ? 'text-sparrow-gray hover:bg-red-50 hover:text-red-500'
-          : 'text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink'
+          ? 'text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-red-50 hover:text-red-500'
+          : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
       }`}
     >
       {children}

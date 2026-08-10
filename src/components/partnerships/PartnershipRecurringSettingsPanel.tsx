@@ -55,18 +55,18 @@ export function PartnershipRecurringSettingsPanel({
   }
 
   return (
-    <div className="rounded-xl border border-sparrow-rule bg-white">
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-semibold text-sparrow-ink"
+        className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink"
       >
         <span>⚙ Reminder settings</span>
-        <span className="text-xs text-sparrow-gray">{open ? '▲' : '▼'}</span>
+        <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
-        <div className="border-t border-sparrow-rule px-4 py-3">
-          {loading && <p className="text-xs text-sparrow-gray">Loading…</p>}
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 py-3">
+          {loading && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>}
           {!loading && !setting && (
             <p className="text-xs text-priority-p1">
               No {title.toLowerCase()} settings row found — an admin needs to create one before this reminder can fire.
@@ -74,7 +74,7 @@ export function PartnershipRecurringSettingsPanel({
           )}
           {!loading && setting && (
             <>
-              <p className="mb-3 text-xs text-sparrow-gray">{helpText}</p>
+              <p className="mb-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{helpText}</p>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="field-label">Cadence *</label>

@@ -146,7 +146,7 @@ export function OnboardingEditor() {
     }
   }
 
-  if (loading) return <p className="py-6 text-sm text-sparrow-gray">Loading template…</p>;
+  if (loading) return <p className="py-6 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading template…</p>;
   if (error) return <p className="py-6 text-sm text-priority-p1">{error}</p>;
 
   const isAddingTop = addingParentId === 'top';
@@ -155,7 +155,7 @@ export function OnboardingEditor() {
     <div className="space-y-2">
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-sm text-sparrow-gray">
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             This is the master onboarding checklist. Every new staff member gets a copy when you start their onboarding.
             Changes here don't affect in-progress checklists — only new ones started after you save.
           </p>
@@ -169,10 +169,10 @@ export function OnboardingEditor() {
           const isAddingSubtaskHere = addingParentId === item.id;
 
           return (
-            <li key={item.id} className="rounded-xl border border-sparrow-rule bg-white">
+            <li key={item.id} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
               {/* Top-level item row */}
               <div className="flex items-start gap-2 p-3">
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sparrow-sage text-xs font-semibold text-sparrow-green">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sparrow-sage text-xs font-semibold text-sparrow-green dark:text-sparrow-dark-green">
                   {idx + 1}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -197,10 +197,10 @@ export function OnboardingEditor() {
                       isLast={idx === topLevel.length - 1}
                       disabled={busy}
                     />
-                    <button onClick={() => openEdit(item)} disabled={busy} className="rounded px-2 py-1 text-xs text-sparrow-gray hover:text-sparrow-ink">
+                    <button onClick={() => openEdit(item)} disabled={busy} className="rounded px-2 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
                       Edit
                     </button>
-                    <button onClick={() => remove(item)} disabled={busy} className="rounded px-2 py-1 text-xs text-sparrow-gray hover:text-priority-p1">
+                    <button onClick={() => remove(item)} disabled={busy} className="rounded px-2 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
                       Delete
                     </button>
                   </div>
@@ -213,8 +213,8 @@ export function OnboardingEditor() {
                   {subs.map((sub, subIdx) => {
                     const isEditingSub = editing?.id === sub.id;
                     return (
-                      <li key={sub.id} className="flex items-start gap-2 rounded-lg bg-sparrow-mist px-2.5 py-2">
-                        <span className="mt-0.5 text-xs text-sparrow-gray">↳</span>
+                      <li key={sub.id} className="flex items-start gap-2 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2.5 py-2">
+                        <span className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">↳</span>
                         <div className="min-w-0 flex-1">
                           {isEditingSub ? (
                             <EditForm
@@ -237,10 +237,10 @@ export function OnboardingEditor() {
                               isLast={subIdx === subs.length - 1}
                               disabled={busy}
                             />
-                            <button onClick={() => openEdit(sub)} disabled={busy} className="rounded px-2 py-1 text-xs text-sparrow-gray hover:text-sparrow-ink">
+                            <button onClick={() => openEdit(sub)} disabled={busy} className="rounded px-2 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
                               Edit
                             </button>
-                            <button onClick={() => remove(sub)} disabled={busy} className="rounded px-2 py-1 text-xs text-sparrow-gray hover:text-priority-p1">
+                            <button onClick={() => remove(sub)} disabled={busy} className="rounded px-2 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
                               Delete
                             </button>
                           </div>
@@ -272,7 +272,7 @@ export function OnboardingEditor() {
                   <button
                     onClick={() => openAdd(item.id)}
                     disabled={busy}
-                    className="text-xs text-sparrow-green hover:underline"
+                    className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                   >
                     + Add subtask
                   </button>
@@ -284,7 +284,7 @@ export function OnboardingEditor() {
       </ul>
 
       {/* Add top-level item */}
-      <div className="mt-3 rounded-xl border border-dashed border-sparrow-rule p-3">
+      <div className="mt-3 rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-3">
         {isAddingTop ? (
           <AddForm
             title={addTitle}
@@ -304,7 +304,7 @@ export function OnboardingEditor() {
           <button
             onClick={() => openAdd(null)}
             disabled={busy}
-            className="w-full text-sm text-sparrow-green hover:underline"
+            className="w-full text-sm text-sparrow-green dark:text-sparrow-dark-green hover:underline"
           >
             + Add onboarding item
           </button>
@@ -318,9 +318,9 @@ function ItemDisplay({ item }: { item: ChecklistTemplate }) {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-sparrow-ink">{item.title}</span>
+        <span className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{item.title}</span>
         {item.estimated_minutes && (
-          <span className="rounded-full bg-sparrow-rule/60 px-2 py-0.5 text-[11px] text-sparrow-gray">
+          <span className="rounded-full bg-sparrow-rule/60 px-2 py-0.5 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
             ~{item.estimated_minutes} min
           </span>
         )}
@@ -330,13 +330,13 @@ function ItemDisplay({ item }: { item: ChecklistTemplate }) {
           href={item.url}
           target="_blank"
           rel="noreferrer"
-          className="mt-0.5 block truncate text-xs text-sparrow-green hover:underline"
+          className="mt-0.5 block truncate text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline"
         >
           {item.url}
         </a>
       )}
       {item.description && (
-        <p className="mt-0.5 text-xs text-sparrow-gray">{item.description}</p>
+        <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{item.description}</p>
       )}
     </div>
   );
@@ -456,7 +456,7 @@ function ReorderButtons({
       <button
         onClick={onUp}
         disabled={disabled || isFirst}
-        className="flex h-4 w-5 items-center justify-center rounded text-[10px] text-sparrow-gray hover:text-sparrow-ink disabled:opacity-30"
+        className="flex h-4 w-5 items-center justify-center rounded text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink disabled:opacity-30"
         aria-label="Move up"
       >
         ▲
@@ -464,7 +464,7 @@ function ReorderButtons({
       <button
         onClick={onDown}
         disabled={disabled || isLast}
-        className="flex h-4 w-5 items-center justify-center rounded text-[10px] text-sparrow-gray hover:text-sparrow-ink disabled:opacity-30"
+        className="flex h-4 w-5 items-center justify-center rounded text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink disabled:opacity-30"
         aria-label="Move down"
       >
         ▼

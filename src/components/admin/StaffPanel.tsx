@@ -116,11 +116,11 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       <aside
         role="dialog"
         aria-modal="true"
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl transition-transform ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white dark:bg-sparrow-dark-surface shadow-xl transition-transform ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-sparrow-rule px-5 py-4">
+        <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
           <h2 className="font-serif text-lg font-semibold">{staff ? 'Edit staff' : 'Add staff'}</h2>
           <button onClick={onClose} className="btn-ghost" aria-label="Close">
             ✕
@@ -135,10 +135,10 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
 
           <div className="mt-4">
             <label className="field-label" htmlFor="s-email">
-              Google email <span className="text-sparrow-gray">(sign-in address)</span>
+              Google email <span className="text-sparrow-gray dark:text-sparrow-dark-gray">(sign-in address)</span>
             </label>
             {staff ? (
-              <p className="mt-1 rounded-lg bg-sparrow-mist px-3 py-2 text-sm text-sparrow-gray">{email}</p>
+              <p className="mt-1 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{email}</p>
             ) : (
               <input
                 id="s-email"
@@ -204,7 +204,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
 
           <div className="mt-4">
             <label className="field-label" htmlFor="s-role-desc">
-              Role description <span className="font-normal text-sparrow-gray">(shown on Team page)</span>
+              Role description <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(shown on Team page)</span>
             </label>
             <input
               id="s-role-desc"
@@ -216,7 +216,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
             />
           </div>
 
-          <p className="mt-4 rounded-lg bg-sparrow-sage/50 px-3 py-2 text-xs text-sparrow-ink">
+          <p className="mt-4 rounded-lg bg-sparrow-sage/50 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
             Role + department set what this person can see: <strong>Admin</strong> sees everything,
             <strong> Manager</strong> sees their reports' tasks, and <strong>Twin Oaks</strong> staff
             (or admins) can see resident records.
@@ -232,7 +232,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
               />
               <span>
                 <span className="font-medium">Twin Oaks Room access</span>
-                <span className="mt-0.5 block text-xs text-sparrow-gray">
+                <span className="mt-0.5 block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   Opens the Twin Oaks Room — resident records, lot map, notices, and incident log.
                   Twin Oaks department staff already have it; grant this to others who need resident
                   data (e.g. Exec or Ops staff).
@@ -251,14 +251,14 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
               />
               <span>
                 <span className="font-medium">LifeChange Room access (full)</span>
-                <span className="mt-0.5 block text-xs text-sparrow-gray">
+                <span className="mt-0.5 block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   Opens the LifeChange Room — participant records, messages, staff notes, and
                   vouchers. Grant only to LCP staff. Separate from Role and Department.
                 </span>
               </span>
             </label>
             {staff?.lcp_role === 'extended' && (
-              <p className="mt-2 text-xs text-sparrow-gray">
+              <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 Currently has <strong>extended</strong> (read-only, Phase 2) access — leaving this
                 unchecked keeps that.
               </p>
@@ -273,7 +273,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
                 />
                 <span>
                   <span className="font-medium">Curriculum edit access</span>
-                  <span className="mt-0.5 block text-xs text-sparrow-gray">
+                  <span className="mt-0.5 block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     Shows the Curriculum tab and lets this person edit it — Teacher Guides,
                     devotionals, Monday Mentoring content, Slideshow/Handout links. Leave
                     unchecked for staff who just run sessions day to day; they won't see the
@@ -294,7 +294,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
               />
               <span>
                 <span className="font-medium">Partnerships Room access</span>
-                <span className="mt-0.5 block text-xs text-sparrow-gray">
+                <span className="mt-0.5 block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   Opens the Partnerships Room — the donor / church / volunteer CRM. Admins and the
                   Partnerships department already have it; grant this to other relationship owners
                   (e.g. FST or volunteer leads). Separate from Role and Department.
@@ -313,7 +313,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
               />
               <span>
                 <span className="font-medium">Operations Room access</span>
-                <span className="mt-0.5 block text-xs text-sparrow-gray">
+                <span className="mt-0.5 block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   Opens the Operations Room — staff records, HR notes, issue log, 1:1 tracker, and
                   performance reviews. Grant only to people-managers. Separate from Role and
                   Department.
@@ -332,7 +332,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
               />
               <span>
                 <span className="font-medium">Stories &amp; Media Room access</span>
-                <span className="mt-0.5 block text-xs text-sparrow-gray">
+                <span className="mt-0.5 block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   Opens the Stories &amp; Media Room — story drafts, photo release tracking (all
                   three consent layers), and community event log. Grant to communications staff and
                   anyone who gathers or publishes participant stories.
@@ -356,7 +356,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
           {error && <p className="mt-4 text-sm text-priority-p1">{error}</p>}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-sparrow-rule px-5 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
           <button onClick={onClose} className="btn-ghost">
             Cancel
           </button>

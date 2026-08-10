@@ -116,12 +116,12 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
     }
   }
 
-  if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading Home…</p>;
+  if (loading) return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading Home…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-sparrow-gray">
+      <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
         Everything due or overdue across the room this week — touchpoints, collateral
         reviews, connection follow-ups, social posting, and the newsletter calendar. This
         is a shared view: everyone with Partnerships access sees the same list.
@@ -135,7 +135,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
                 <p className="text-sm text-amber-900">
                   A gift came in from <span className="font-medium">{donation.given_by_name ?? donation.given_by_email ?? 'an unknown donor'}</span>
                   {donation.amount_above_10k && (
-                    <span className="ml-1.5 rounded-full bg-sparrow-gold/30 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">$10k+</span>
+                    <span className="ml-1.5 rounded-full bg-sparrow-gold/30 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink">$10k+</span>
                   )}
                   {' '}— possibly the same person as <span className="font-medium">{candidateName ?? 'an existing partner'}</span>.
                 </p>
@@ -153,7 +153,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
                   <button
                     onClick={() => void confirmNewDonor({ donation, candidateName })}
                     disabled={reviewBusyId === donation.id}
-                    className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 transition hover:bg-amber-50 disabled:opacity-50"
+                    className="rounded-lg border border-amber-300 bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-amber-800 transition hover:bg-amber-50 disabled:opacity-50"
                   >
                     No — new donor
                   </button>
@@ -173,25 +173,25 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
                   onClick={() => onNavigateTab('contacts')}
                   className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50"
                 >
-                  <span className="min-w-0 truncate text-sparrow-ink">
+                  <span className="min-w-0 truncate text-sparrow-ink dark:text-sparrow-dark-ink">
                     <span className="font-medium">{c.name}</span>
-                    {c.organization && <span className="text-sparrow-gray"> · {c.organization}</span>}
+                    {c.organization && <span className="text-sparrow-gray dark:text-sparrow-dark-gray"> · {c.organization}</span>}
                   </span>
-                  <span className="shrink-0 text-xs text-sparrow-gray">logged by {c.owner?.full_name ?? 'staff'}</span>
+                  <span className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">logged by {c.owner?.full_name ?? 'staff'}</span>
                 </button>
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[11px] text-sparrow-gray">
+          <p className="mt-2 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
             Not a to-do — just everything logged in My Contacts that hasn't been added to the Directory yet.
           </p>
         </WidgetCard>
       )}
 
       {items.length === 0 && needsReview.length === 0 ? (
-        <div className="rounded-2xl border border-sparrow-rule bg-white p-8 text-center shadow-card">
-          <p className="text-sm font-medium text-sparrow-ink">Nothing due or overdue this week. 🎉</p>
-          <p className="mt-1 text-sm text-sparrow-gray">
+        <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center shadow-card">
+          <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Nothing due or overdue this week. 🎉</p>
+          <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             The room is fully caught up on its stewardship rhythm.
           </p>
         </div>
@@ -204,7 +204,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
           )}
           <WidgetCard title={`Due this week (${dueThisWeek.length})`}>
             {dueThisWeek.length === 0 ? (
-              <p className="py-4 text-center text-sm text-sparrow-gray">
+              <p className="py-4 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                 Nothing else coming due this week.
               </p>
             ) : (
@@ -242,7 +242,7 @@ function ItemsByOwner({
     <div className="space-y-4">
       {groups.map(([ownerId, ownerItems]) => (
         <div key={ownerId}>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
             {ownerName(ownerId)} · {ownerItems.length}
           </p>
           <ul className="space-y-1">
@@ -254,13 +254,13 @@ function ItemsByOwner({
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <span aria-hidden>{KIND_ICON[item.kind]}</span>
-                    <span className="truncate text-sparrow-ink">{item.title}</span>
+                    <span className="truncate text-sparrow-ink dark:text-sparrow-dark-ink">{item.title}</span>
                   </span>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                       bucketFor(item.due_date, false, today) === 'overdue'
                         ? 'bg-priority-p1/15 text-priority-p1'
-                        : 'bg-sparrow-gold/20 text-sparrow-ink'
+                        : 'bg-sparrow-gold/20 text-sparrow-ink dark:text-sparrow-dark-ink'
                     }`}
                   >
                     {dueLabel(item.due_date, today)}

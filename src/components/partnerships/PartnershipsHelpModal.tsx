@@ -19,15 +19,15 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
+        className="w-full max-w-lg rounded-2xl bg-white dark:bg-sparrow-dark-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-sparrow-rule px-6 py-4">
+        <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-6 py-4">
           <h2 className="font-serif text-lg font-semibold">How this room works</h2>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-xl leading-none text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-xl leading-none text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
             aria-label="Close"
           >
             ×
@@ -36,7 +36,7 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
 
         <div className="space-y-6 px-6 py-5">
 
-          <p className="text-xs leading-relaxed text-sparrow-gray">
+          <p className="text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">
             A <strong>touchpoint</strong> is any logged, personal contact — a call, email, text,
             letter, meeting, or event. Receiving TSM (the newsletter) doesn't count on its own,
             since it's not one-on-one contact — if you also reached out to them directly about
@@ -45,37 +45,37 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
 
           {/* ── Do I have a to-do right now? ── The most important section */}
           <section className="rounded-xl bg-sparrow-mist/60 px-4 py-4">
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Do I have a to-do right now?
             </h3>
 
-            <p className="mb-2 text-sm font-medium text-sparrow-ink">Yes — act when the dot is:</p>
+            <p className="mb-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Yes — act when the dot is:</p>
             <div className="space-y-2 pl-1">
               <DotRow dot="bg-priority-p1" label="Overdue (red)" desc="Your cadence window passed without a logged touchpoint. A task has been added to your Incoming Tasks." />
               <DotRow dot="bg-slate-400" label="No cadence (gray)" desc="No stewardship rhythm is set. Open the record and add a cadence so the relationship is tracked." />
             </div>
 
-            <p className="mb-2 mt-4 text-sm font-medium text-sparrow-ink">Not right now — when the dot is:</p>
+            <p className="mb-2 mt-4 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Not right now — when the dot is:</p>
             <div className="space-y-2 pl-1">
               <DotRow dot="bg-sparrow-green" label="On cadence (green)" desc="You're up to date. Nothing needed until the next cadence window opens." />
               <DotRow dot="bg-sparrow-gold" label="Due soon (gold)" desc="Touchpoint due within 7 days. Good time to plan ahead — not urgent yet." />
               <DotRow dot="bg-orange-500" label="Lapsed (orange)" desc="The relationship has gone cold — 12+ months since they engaged. If you've already sent the warm check-in, you're done. The record will prompt you when 60 days passes with no response." />
-              <DotRow dot="bg-sparrow-rule" label="Inactive (light gray)" desc="Off your active list. No action needed. They still receive TSM unless they unsubscribe." />
+              <DotRow dot="bg-sparrow-rule dark:bg-sparrow-dark-border" label="Inactive (light gray)" desc="Off your active list. No action needed. They still receive TSM unless they unsubscribe." />
             </div>
 
-            <p className="mt-4 rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-xs text-sparrow-gray">
+            <p className="mt-4 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               The colored dot system applies to <strong>all partner types</strong> — donors, churches, community partners, volunteers, everyone. Cadences are set per record, so different partners have different rhythms.
             </p>
           </section>
 
-          <hr className="border-sparrow-rule" />
+          <hr className="border-sparrow-rule dark:border-sparrow-dark-border" />
 
           {/* ── Relationship stages ── */}
           <section>
-            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Relationship stages — all partner types
             </h3>
-            <p className="mb-3 text-xs text-sparrow-gray">
+            <p className="mb-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               Stages describe where the relationship stands — not whether you have a task. You can have a lapsed partner who is <em>not</em> on your to-do list because you've already sent the check-in.
             </p>
             <div className="space-y-3">
@@ -84,42 +84,42 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
                   <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium ${PARTNER_STAGE[s].chip}`}>
                     {PARTNER_STAGE[s].label}
                   </span>
-                  <p className="mt-1 text-xs text-sparrow-gray">{PARTNER_STAGE_DESC[s]}</p>
+                  <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{PARTNER_STAGE_DESC[s]}</p>
                 </div>
               ))}
             </div>
-            <p className="mt-3 rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-xs text-sparrow-gray">
+            <p className="mt-3 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               You'll also see "Lapsed" appear as an orange dot — that's not a stage you set. It's
               calculated automatically once 12+ months pass with no contact, no matter what stage
               the partner is officially in. See the color key above for what to do about it.
             </p>
           </section>
 
-          <hr className="border-sparrow-rule" />
+          <hr className="border-sparrow-rule dark:border-sparrow-dark-border" />
 
           {/* ── Donor tiers ── */}
           <section>
-            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Donor tiers — donors only
             </h3>
-            <p className="mb-3 text-xs text-sparrow-gray">
+            <p className="mb-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               Only visible on donor records. Tracks <em>giving history</em> — separate from the relationship stage. A donor can be re-engaging in stage (reconnected relationally) while still lapsed in tier (hasn't given yet).
             </p>
             <div className="space-y-3">
               {TIERS.map((t) => (
                 <div key={t}>
-                  <p className="text-sm font-medium text-sparrow-ink">{DONOR_TIER[t]}</p>
-                  <p className="mt-0.5 text-xs text-sparrow-gray">{DONOR_TIER_DESC[t]}</p>
+                  <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{DONOR_TIER[t]}</p>
+                  <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{DONOR_TIER_DESC[t]}</p>
                 </div>
               ))}
             </div>
           </section>
 
-          <hr className="border-sparrow-rule" />
+          <hr className="border-sparrow-rule dark:border-sparrow-dark-border" />
 
           {/* ── Key rules ── */}
           <section>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Key rules
             </h3>
             <div className="space-y-4">
@@ -156,8 +156,8 @@ function DotRow({ dot, label, desc }: { dot: string; label: string; desc: string
   return (
     <div className="flex items-start gap-2.5">
       <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
-      <p className="text-xs leading-relaxed text-sparrow-gray">
-        <span className="font-medium text-sparrow-ink">{label}</span> — {desc}
+      <p className="text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">
+        <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{label}</span> — {desc}
       </p>
     </div>
   );
@@ -166,8 +166,8 @@ function DotRow({ dot, label, desc }: { dot: string; label: string; desc: string
 function Rule({ title, body }: { title: string; body: string }) {
   return (
     <div>
-      <p className="text-sm font-medium text-sparrow-ink">{title}</p>
-      <p className="mt-0.5 text-xs leading-relaxed text-sparrow-gray">{body}</p>
+      <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{title}</p>
+      <p className="mt-0.5 text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">{body}</p>
     </div>
   );
 }

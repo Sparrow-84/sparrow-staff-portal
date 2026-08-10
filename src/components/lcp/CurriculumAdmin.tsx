@@ -161,7 +161,7 @@ export function CurriculumAdmin() {
     void load();
   }
 
-  if (loading) return <p className="mt-6 text-sm text-sparrow-gray">Loading curriculum…</p>;
+  if (loading) return <p className="mt-6 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading curriculum…</p>;
   if (error) return (
     <div className="mt-6 rounded-xl border border-priority-p1/30 bg-priority-p1/5 px-4 py-3">
       <p className="text-sm font-medium text-priority-p1">Could not load curriculum</p>
@@ -169,9 +169,9 @@ export function CurriculumAdmin() {
     </div>
   );
   if (phases.length === 0) return (
-    <div className="mt-6 rounded-xl border border-sparrow-rule bg-white px-4 py-6 text-center">
-      <p className="text-sm font-medium text-sparrow-ink">No curriculum data found</p>
-      <p className="mt-1 text-xs text-sparrow-gray">
+    <div className="mt-6 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-6 text-center">
+      <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">No curriculum data found</p>
+      <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
         The seed data may not have been applied to this database. Check Supabase → Table Editor → lcp_phases.
       </p>
     </div>
@@ -188,7 +188,7 @@ export function CurriculumAdmin() {
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${color.badge}`}>
                 Phase {phase.number}
               </span>
-              <h2 className="font-serif text-lg font-semibold text-sparrow-ink">{phase.name}</h2>
+              <h2 className="font-serif text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{phase.name}</h2>
             </div>
 
             <div className="space-y-3">
@@ -286,34 +286,34 @@ function UnitSection({
   }
 
   return (
-    <div className={`overflow-hidden rounded-xl border border-sparrow-rule bg-white ${phaseColor.cardAccent}`}>
+    <div className={`overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface ${phaseColor.cardAccent}`}>
       {/* Unit header */}
       <div className="flex items-start justify-between px-4 py-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             {unitNumber != null && (
-              <span className="text-xs font-semibold text-sparrow-gray">Unit {unitNumber}</span>
+              <span className="text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Unit {unitNumber}</span>
             )}
-            <span className="font-medium text-sparrow-ink">{unit.name}</span>
+            <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{unit.name}</span>
             {unit.month_label && (
-              <span className="text-xs text-sparrow-gray">{unit.month_label}</span>
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{unit.month_label}</span>
             )}
           </div>
           {unit.artifact && (
-            <p className="mt-0.5 text-xs text-sparrow-gray">Artifact: {unit.artifact}</p>
+            <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Artifact: {unit.artifact}</p>
           )}
           {unit.supplement && (
-            <p className="text-xs text-sparrow-gray">Supplement: {unit.supplement}</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Supplement: {unit.supplement}</p>
           )}
           {unit.encouragement_text && (
-            <p className="mt-0.5 text-xs italic text-sparrow-gray">
+            <p className="mt-0.5 text-xs italic text-sparrow-gray dark:text-sparrow-dark-gray">
               Pre-session note set ✓
             </p>
           )}
         </div>
         <button
           onClick={onToggleEdit}
-          className="ml-3 shrink-0 text-xs text-sparrow-gray hover:text-sparrow-ink"
+          className="ml-3 shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
         >
           {isEditing ? 'Cancel' : 'Edit unit'}
         </button>
@@ -321,7 +321,7 @@ function UnitSection({
 
       {/* Inline unit edit form */}
       {isEditing && (
-        <div className="space-y-3 border-t border-sparrow-rule bg-sparrow-mist/30 px-4 py-3">
+        <div className="space-y-3 border-t border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-3">
           <div>
             <label className="field-label">Month</label>
             <input
@@ -335,7 +335,7 @@ function UnitSection({
           <div>
             <label className="field-label">
               Artifact{' '}
-              <span className="font-normal text-sparrow-gray">(optional)</span>
+              <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
             </label>
             <input
               type="text"
@@ -348,7 +348,7 @@ function UnitSection({
           <div>
             <label className="field-label">
               Supplement track{' '}
-              <span className="font-normal text-sparrow-gray">(optional)</span>
+              <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
             </label>
             <input
               type="text"
@@ -361,7 +361,7 @@ function UnitSection({
           <div>
             <label className="field-label">
               Pre-session encouragement{' '}
-              <span className="font-normal text-sparrow-gray">(optional — shown to participants before this unit's sessions)</span>
+              <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional — shown to participants before this unit's sessions)</span>
             </label>
             <textarea
               rows={4}
@@ -379,7 +379,7 @@ function UnitSection({
       )}
 
       {/* Session rows */}
-      <ul className="divide-y divide-sparrow-rule border-t border-sparrow-rule">
+      <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border border-t border-sparrow-rule dark:border-sparrow-dark-border">
         {unit.sessions.map((s) => {
           const c = completion.get(s.id);
           return (
@@ -390,13 +390,13 @@ function UnitSection({
                 selectedSessionId === s.id ? phaseColor.sessionSelected : ''
               }`}
             >
-              <span className="mt-px w-7 shrink-0 text-right text-xs font-semibold tabular-nums text-sparrow-gray">
+              <span className="mt-px w-7 shrink-0 text-right text-xs font-semibold tabular-nums text-sparrow-gray dark:text-sparrow-dark-gray">
                 {s.session_number}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-sparrow-ink">{s.title}</p>
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{s.title}</p>
                 {(s.focus || s.scripture) && (
-                  <p className="mt-0.5 truncate text-xs text-sparrow-gray">
+                  <p className="mt-0.5 truncate text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {[s.focus, s.scripture].filter(Boolean).join(' · ')}
                   </p>
                 )}
@@ -407,7 +407,7 @@ function UnitSection({
                 <CompletionDot ready={!!c?.slideshow} label="Slideshow" />
                 <CompletionDot ready={!!c?.studentHandout} label="Student Handout" />
                 <span
-                  className={`text-[10px] tabular-nums ${(c?.devotionalCount ?? 0) >= 5 ? 'text-sparrow-green' : 'text-sparrow-gray'}`}
+                  className={`text-[10px] tabular-nums ${(c?.devotionalCount ?? 0) >= 5 ? 'text-sparrow-green dark:text-sparrow-dark-green' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}
                   title="Participant devotionals added, out of 5"
                 >
                   {c?.devotionalCount ?? 0}/5
@@ -421,7 +421,7 @@ function UnitSection({
                   </span>
                 )}
               </div>
-              <span className="mt-px shrink-0 text-xs text-sparrow-gray">›</span>
+              <span className="mt-px shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">›</span>
             </button>
           </li>
           );
@@ -435,7 +435,7 @@ function CompletionDot({ ready, label }: { ready: boolean; label: string }) {
   return (
     <span
       title={`${label}: ${ready ? 'ready' : 'missing'}`}
-      className={`h-1.5 w-1.5 shrink-0 rounded-full ${ready ? 'bg-sparrow-green' : 'bg-sparrow-rule'}`}
+      className={`h-1.5 w-1.5 shrink-0 rounded-full ${ready ? 'bg-sparrow-green' : 'bg-sparrow-rule dark:bg-sparrow-dark-border'}`}
     />
   );
 }

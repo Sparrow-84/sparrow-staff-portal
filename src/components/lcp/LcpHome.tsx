@@ -218,11 +218,11 @@ export function LcpHome({
     pendingRedemptions.length +
     (materialsNeedPrep ? 1 : 0);
 
-  if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading…</p>;
+  if (loading) return <p className="py-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>;
 
   if (totalOpen === 0 && justPrepped == null) {
     return (
-      <div className="mt-6 flex items-center gap-3 rounded-2xl border border-sparrow-rule bg-sparrow-sage/60 p-5 text-sm font-semibold text-sparrow-green">
+      <div className="mt-6 flex items-center gap-3 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-sage/60 p-5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green">
         🎉 You're all caught up.
       </div>
     );
@@ -351,19 +351,19 @@ export function LcpHome({
       )}
 
       {materialsNeedPrep && nextThursdaySession && (
-        <div className="rounded-2xl border border-sparrow-rule bg-white p-4">
-          <p className="mb-2 text-sm font-bold text-sparrow-ink">📦 Materials prep</p>
+        <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4">
+          <p className="mb-2 text-sm font-bold text-sparrow-ink dark:text-sparrow-dark-ink">📦 Materials prep</p>
           <div className="flex items-start gap-3">
             <input
               type="checkbox"
               disabled={busy}
               checked={false}
               onChange={() => void markMaterialsDone()}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
             />
-            <div className="text-sm text-sparrow-ink">
+            <div className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
               Gather materials for Session {nextThursdaySession.session_number} — {nextThursdaySession.title}
-              <span className="block text-xs text-sparrow-gray">
+              <span className="block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 Check the Teacher Guide's "Materials Needed" list · check the box once gathered, comes back for the next session
               </span>
             </div>
@@ -372,9 +372,9 @@ export function LcpHome({
       )}
 
       {justPrepped != null && nextThursdaySession?.id === justPrepped && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-sparrow-rule bg-sparrow-sage/40 p-4 text-sm">
-          <span className="font-medium text-sparrow-green">📦 Materials marked gathered ✓</span>
-          <button onClick={() => void undoMaterialsDone(justPrepped)} className="shrink-0 text-xs font-semibold text-sparrow-gray hover:text-sparrow-ink">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-sage/40 p-4 text-sm">
+          <span className="font-medium text-sparrow-green dark:text-sparrow-dark-green">📦 Materials marked gathered ✓</span>
+          <button onClick={() => void undoMaterialsDone(justPrepped)} className="shrink-0 text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
             Undo
           </button>
         </div>
@@ -399,12 +399,12 @@ function SignalCard({
     : tone === 'wait' ? 'bg-[#7A5980]/15 text-[#7A5980]'
     : 'bg-sparrow-gold/15 text-sparrow-gold';
   return (
-    <div className="rounded-2xl border border-sparrow-rule bg-white p-4">
+    <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4">
       <div className="mb-2 flex items-center gap-2">
-        <p className="text-sm font-bold text-sparrow-ink">{title}</p>
+        <p className="text-sm font-bold text-sparrow-ink dark:text-sparrow-dark-ink">{title}</p>
         <span className={`rounded-full px-2 py-0.5 text-[11px] font-extrabold ${toneClass}`}>{count}</span>
       </div>
-      <div className="divide-y divide-sparrow-rule">{children}</div>
+      <div className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">{children}</div>
     </div>
   );
 }
@@ -423,10 +423,10 @@ function SignalRow({
   return (
     <div className="flex items-center justify-between gap-3 py-2.5 first:pt-0">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-sparrow-ink">{who}</p>
-        {detail && <p className="truncate text-xs text-sparrow-gray">{detail}</p>}
+        <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{who}</p>
+        {detail && <p className="truncate text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{detail}</p>}
       </div>
-      <button onClick={onClick} className="shrink-0 rounded-lg border border-sparrow-rule px-2.5 py-1 text-xs font-semibold text-sparrow-green">
+      <button onClick={onClick} className="shrink-0 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-2.5 py-1 text-xs font-semibold text-sparrow-green dark:text-sparrow-dark-green">
         {cta}
       </button>
     </div>

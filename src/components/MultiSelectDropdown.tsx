@@ -75,13 +75,13 @@ export function MultiSelectDropdown({
         className="field-input mt-0 flex min-h-[38px] w-full flex-wrap items-center gap-1 text-left"
       >
         {selectedOptions.length === 0 ? (
-          <span className="text-sparrow-gray">{placeholder}</span>
+          <span className="text-sparrow-gray dark:text-sparrow-dark-gray">{placeholder}</span>
         ) : (
           selectedOptions.map((o) =>
             o.color ? (
               <LabelPill key={o.value} label={o.label} color={o.color} />
             ) : (
-              <span key={o.value} className="text-sm text-sparrow-ink">
+              <span key={o.value} className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 {o.icon} {o.label}
               </span>
             ),
@@ -90,7 +90,7 @@ export function MultiSelectDropdown({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full rounded-xl border border-sparrow-rule bg-white p-2 shadow-lg">
+        <div className="absolute z-20 mt-1 w-full rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 shadow-lg">
           <div className="max-h-56 space-y-0.5 overflow-y-auto">
             {options.map((o) => (
               <label
@@ -106,22 +106,22 @@ export function MultiSelectDropdown({
                 {o.color ? (
                   <LabelPill label={o.label} color={o.color} />
                 ) : (
-                  <span className="text-sparrow-ink">{o.icon} {o.label}</span>
+                  <span className="text-sparrow-ink dark:text-sparrow-dark-ink">{o.icon} {o.label}</span>
                 )}
               </label>
             ))}
             {options.length === 0 && (
-              <p className="px-2 py-1.5 text-xs text-sparrow-gray">Nothing to pick yet.</p>
+              <p className="px-2 py-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Nothing to pick yet.</p>
             )}
           </div>
 
           {onCreateNew && (
-            <div className="mt-2 border-t border-sparrow-rule pt-2">
+            <div className="mt-2 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-2">
               {!creating ? (
                 <button
                   type="button"
                   onClick={() => setCreating(true)}
-                  className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-sparrow-green hover:bg-sparrow-mist/60"
+                  className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:bg-sparrow-mist/60"
                 >
                   + New…
                 </button>

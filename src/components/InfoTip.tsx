@@ -11,12 +11,12 @@ export function InfoTip({ text }: { text: string }) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label="What does this mean?"
-        className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-sparrow-rule text-[10px] font-bold text-sparrow-gray hover:bg-sparrow-green hover:text-white"
+        className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-sparrow-rule dark:bg-sparrow-dark-border text-[10px] font-bold text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-green hover:text-white"
       >
         ?
       </button>
       {open && (
-        <span className="absolute left-0 top-5 z-10 w-64 rounded-lg border border-sparrow-rule bg-white p-2.5 text-xs font-normal leading-snug text-sparrow-ink shadow-card">
+        <span className="absolute left-0 top-5 z-10 w-64 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2.5 text-xs font-normal leading-snug text-sparrow-ink dark:text-sparrow-dark-ink shadow-card">
           {text}
         </span>
       )}

@@ -182,13 +182,13 @@ export function FamilyDetailPanel({
 
   return (
     <Drawer open={open} onClose={onClose} title={family.display_name} subtitle={family.login_email} wide>
-      <div className="mb-4 inline-flex rounded-xl border border-sparrow-rule bg-sparrow-mist p-1 text-xs">
+      <div className="mb-4 inline-flex rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1 text-xs">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`rounded-lg px-2.5 py-1.5 font-medium transition ${
-              tab === t.key ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
+              tab === t.key ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-green dark:text-sparrow-dark-green shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
             }`}
           >
             {t.label}
@@ -375,10 +375,10 @@ function ProgressTab({
     <div className="space-y-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-sparrow-gold">Building Your House</p>
-        <p className="font-serif text-lg font-semibold text-sparrow-green">
+        <p className="font-serif text-lg font-semibold text-sparrow-green dark:text-sparrow-dark-green">
           {currentPhase?.name ?? '—'}
         </p>
-        <p className="text-sm text-sparrow-gray">
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           {currentProgramUnit?.name ?? 'Program position not set'}
         </p>
         <div className="mt-3">
@@ -394,8 +394,8 @@ function ProgressTab({
       <div>
         <span className="field-label">Curriculum entry</span>
         {family.joined_unit_id == null ? (
-          <div className="mt-1.5 flex items-center justify-between rounded-xl border border-sparrow-rule bg-sparrow-cream px-4 py-3">
-            <p className="text-sm text-sparrow-gray">
+          <div className="mt-1.5 flex items-center justify-between rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-cream px-4 py-3">
+            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               {family.display_name} hasn&apos;t joined the curriculum yet.
             </p>
             <button
@@ -408,7 +408,7 @@ function ProgressTab({
           </div>
         ) : (
           <div className="mt-1.5 flex items-center justify-between">
-            <p className="text-sm text-sparrow-ink">
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
               Joined at:{' '}
               <span className="font-medium">
                 {phases.flatMap((p) => p.units).find((u) => u.id === family.joined_unit_id)?.name ?? '—'}
@@ -418,7 +418,7 @@ function ProgressTab({
               disabled={busy}
               value={family.joined_unit_id}
               onChange={(e) => setJoinedUnit(Number(e.target.value))}
-              className="rounded-lg border border-sparrow-rule bg-white px-2 py-1 text-xs text-sparrow-gray"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray"
             >
               {phases.map((phase) => (
                 <optgroup key={phase.id} label={phase.name}>
@@ -441,15 +441,15 @@ function ProgressTab({
             {FAMILY_STATUS[family.status].label}
           </span>
         </div>
-        <p className="mt-1.5 text-xs text-sparrow-gray">
+        <p className="mt-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           Set automatically — onboarding until a move-in date is entered below, then on track unless
           something's overdue or she's missed 2+ of her last 4 sessions.
         </p>
       </div>
 
-      <div className="border-t border-sparrow-rule pt-4">
+      <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
         <span className="field-label">Participation</span>
-        <p className="mt-1 text-xs text-sparrow-gray">
+        <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           Graduating and leaving early both remove {family.display_name} from the active roster but
           keep every record. Deleting erases everything permanently.
         </p>
@@ -469,7 +469,7 @@ function ProgressTab({
             </button>
           ) : (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-sparrow-ink">Mark {family.display_name} as graduated?</span>
+              <span className="text-sparrow-ink dark:text-sparrow-dark-ink">Mark {family.display_name} as graduated?</span>
               <button disabled={busy} onClick={graduate} className="btn-primary">
                 {busy ? 'Working…' : 'Yes, graduated'}
               </button>
@@ -486,7 +486,7 @@ function ProgressTab({
                 setConfirmDelete(false);
                 setConfirmCancel(true);
               }}
-              className="btn-ghost border border-sparrow-rule"
+              className="btn-ghost border border-sparrow-rule dark:border-sparrow-dark-border"
             >
               Left the program
             </button>
@@ -496,7 +496,7 @@ function ProgressTab({
         <div className="mt-2">
           {confirmCancel && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-sparrow-ink">Mark as having left the program before graduating?</span>
+              <span className="text-sparrow-ink dark:text-sparrow-dark-ink">Mark as having left the program before graduating?</span>
               <button disabled={busy} onClick={cancelParticipation} className="btn-primary">
                 {busy ? 'Working…' : 'Yes, they left'}
               </button>
@@ -515,7 +515,7 @@ function ProgressTab({
                 setConfirmCancel(false);
                 setConfirmDelete(true);
               }}
-              className="text-xs text-sparrow-gray underline hover:text-priority-p1"
+              className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray underline hover:text-priority-p1"
             >
               Delete permanently…
             </button>
@@ -609,11 +609,11 @@ function HousingSavingsCard({
 
   return (
     <div className="rounded-xl bg-sparrow-cream p-4">
-      <span className="font-serif text-base font-semibold text-sparrow-ink">🏡 Housing Savings</span>
-      <p className="mt-1 font-serif text-lg font-semibold text-sparrow-green">{money(family.housing_savings_cents)}</p>
+      <span className="font-serif text-base font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">🏡 Housing Savings</span>
+      <p className="mt-1 font-serif text-lg font-semibold text-sparrow-green dark:text-sparrow-dark-green">{money(family.housing_savings_cents)}</p>
 
       {pendingMonth && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sparrow-gold/40 bg-sparrow-mist p-2.5 text-sm">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sparrow-gold/40 bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-2.5 text-sm">
           <span>
             Did {family.display_name} have a perfect month in {monthFull(pendingMonth)}?
           </span>
@@ -621,7 +621,7 @@ function HousingSavingsCard({
             <button disabled={busy} onClick={() => answer(pendingMonth, true)} className="btn-primary">
               Yes, +$100
             </button>
-            <button disabled={busy} onClick={() => answer(pendingMonth, false)} className="btn-ghost border border-sparrow-rule">
+            <button disabled={busy} onClick={() => answer(pendingMonth, false)} className="btn-ghost border border-sparrow-rule dark:border-sparrow-dark-border">
               No
             </button>
           </div>
@@ -636,27 +636,27 @@ function HousingSavingsCard({
               const answered = byMonth.get(m);
               const isCorrecting = correcting?.month === m;
               return (
-                <div key={m} className="flex flex-col items-center gap-1 text-[11px] text-sparrow-gray">
+                <div key={m} className="flex flex-col items-center gap-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
                   {!answered ? (
-                    <span className="grid h-6 w-6 place-items-center rounded-full border-2 border-sparrow-rule" />
+                    <span className="grid h-6 w-6 place-items-center rounded-full border-2 border-sparrow-rule dark:border-sparrow-dark-border" />
                   ) : isCorrecting && !correcting.confirmed ? (
                     <div className="flex flex-col items-center gap-1">
                       <button
                         onClick={() => setCorrecting({ month: m, confirmed: true })}
-                        className="whitespace-nowrap rounded-full border border-sparrow-rule px-1.5 py-0.5 text-[10px] font-medium text-sparrow-ink"
+                        className="whitespace-nowrap rounded-full border border-sparrow-rule dark:border-sparrow-dark-border px-1.5 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink"
                       >
                         Change?
                       </button>
-                      <button onClick={() => setCorrecting(null)} className="text-[10px] text-sparrow-gray underline">
+                      <button onClick={() => setCorrecting(null)} className="text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray underline">
                         Cancel
                       </button>
                     </div>
                   ) : isCorrecting && correcting.confirmed ? (
                     <div className="flex gap-1">
-                      <button disabled={busy} onClick={() => answer(m, true)} className="rounded-full border border-sparrow-rule px-1.5 py-0.5 text-[10px] font-medium">
+                      <button disabled={busy} onClick={() => answer(m, true)} className="rounded-full border border-sparrow-rule dark:border-sparrow-dark-border px-1.5 py-0.5 text-[10px] font-medium">
                         Yes
                       </button>
-                      <button disabled={busy} onClick={() => answer(m, false)} className="rounded-full border border-sparrow-rule px-1.5 py-0.5 text-[10px] font-medium">
+                      <button disabled={busy} onClick={() => answer(m, false)} className="rounded-full border border-sparrow-rule dark:border-sparrow-dark-border px-1.5 py-0.5 text-[10px] font-medium">
                         No
                       </button>
                     </div>
@@ -664,7 +664,7 @@ function HousingSavingsCard({
                     <button
                       onClick={() => setCorrecting({ month: m, confirmed: false })}
                       className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${
-                        answered.awarded ? 'bg-sparrow-green text-white' : 'border-2 border-sparrow-rule bg-white text-transparent'
+                        answered.awarded ? 'bg-sparrow-green text-white' : 'border-2 border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-transparent'
                       }`}
                     >
                       {answered.awarded ? '✓' : ''}
@@ -755,7 +755,7 @@ function GoalsTab({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-sparrow-rule p-3">
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
         <span className="field-label">Add a goal</span>
         <input
           value={title}
@@ -765,7 +765,7 @@ function GoalsTab({
         />
         <div className="mt-2 flex items-end gap-2">
           <div className="flex-1">
-            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Goal area</label>
+            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Goal area</label>
             <select value={area} onChange={(e) => setArea(e.target.value as GoalArea)} className="field-input mt-0 w-full">
               {GOAL_AREAS.map((a) => (
                 <option key={a} value={a}>{GOAL_AREA_LABEL[a]}</option>
@@ -773,7 +773,7 @@ function GoalsTab({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Due date</label>
+            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Due date</label>
             <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="field-input mt-0" />
           </div>
           <button onClick={add} disabled={busy || !title.trim()} className="btn-primary shrink-0">Add</button>
@@ -781,7 +781,7 @@ function GoalsTab({
       </div>
 
       {active.length === 0 && met.length === 0 && (
-        <p className="text-sm text-sparrow-gray">No goals set yet. Add one above.</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No goals set yet. Add one above.</p>
       )}
 
       {active.length > 0 && (
@@ -802,8 +802,8 @@ function GoalsTab({
                   : 'border-sparrow-rule/70 hover:border-sparrow-green/40'
                 }`}
               >
-                <p className="text-sm text-sparrow-ink">{goal.title}</p>
-                <p className={`text-xs ${overdue && !flag ? 'text-priority-p1' : 'text-sparrow-gray'}`}>
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{goal.title}</p>
+                <p className={`text-xs ${overdue && !flag ? 'text-priority-p1' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                   {GOAL_AREA_LABEL[goal.area]}
                   {goal.due_date && ` · due ${goal.due_date}`}
                   {dueToday && ' · today'}
@@ -833,12 +833,12 @@ function GoalsTab({
                     ) : (
                       <button
                         onClick={() => { setExtendingId(goal.id); setNewDue(goal.due_date ?? ''); }}
-                        className="text-xs text-sparrow-gray hover:text-sparrow-green"
+                        className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
                       >
                         Adjust date
                       </button>
                     )}
-                    <button onClick={() => remove(goal.id)} className="text-xs text-sparrow-gray hover:text-priority-p1">Delete</button>
+                    <button onClick={() => remove(goal.id)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">Delete</button>
                   </div>
                 )}
               </li>
@@ -849,16 +849,16 @@ function GoalsTab({
 
       {met.length > 0 && (
         <div>
-          <span className="field-label text-sparrow-gray">Completed goals</span>
+          <span className="field-label text-sparrow-gray dark:text-sparrow-dark-gray">Completed goals</span>
           <ul className="mt-1 space-y-2">
             {met.map((goal) => (
               <li key={goal.id} className="flex items-start gap-2 rounded-xl border border-sparrow-rule/50 p-3 opacity-70">
                 <div className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-sparrow-green text-white text-xs">✓</div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-sparrow-gray line-through">{goal.title}</p>
-                  <p className="text-xs text-sparrow-gray">{GOAL_AREA_LABEL[goal.area]}</p>
+                  <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray line-through">{goal.title}</p>
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{GOAL_AREA_LABEL[goal.area]}</p>
                 </div>
-                <button onClick={() => reopen(goal)} className="shrink-0 text-xs text-sparrow-gray hover:text-sparrow-ink">
+                <button onClick={() => reopen(goal)} className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
                   Reopen
                 </button>
               </li>
@@ -962,19 +962,19 @@ function ProgramFeeTab({
       {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
 
       <span className="field-label">Payment history</span>
-      {payments.length === 0 && <p className="text-sm text-sparrow-gray">No payments logged yet.</p>}
+      {payments.length === 0 && <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No payments logged yet.</p>}
 
       <ul className="space-y-2">
         {payments.map((p) => (
           <li key={p.id} className="flex items-start justify-between gap-2 rounded-xl border border-sparrow-rule/70 p-3">
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-sparrow-ink">
+              <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 {money(p.amount_cents)} · {dayLabel(p.paid_date)} · {PROGRAM_FEE_METHOD_LABEL[p.method]}
               </p>
-              {p.comment && <p className="mt-0.5 text-xs text-sparrow-gray">{p.comment}</p>}
-              {p.author_name && <p className="mt-0.5 text-xs text-sparrow-gray">Logged by {p.author_name}</p>}
+              {p.comment && <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{p.comment}</p>}
+              {p.author_name && <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Logged by {p.author_name}</p>}
             </div>
-            <button onClick={() => remove(p.id)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
+            <button onClick={() => remove(p.id)} className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
               Delete
             </button>
           </li>
@@ -1005,16 +1005,16 @@ function FinanceTab({
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="mb-2 font-serif text-base font-semibold text-sparrow-ink">Program Fee</h3>
+        <h3 className="mb-2 font-serif text-base font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Program Fee</h3>
         <ProgramFeeTab family={family} payments={payments} currentUserId={currentUserId} onChanged={onChanged} />
       </div>
 
-      <div className="border-t border-sparrow-rule pt-4">
+      <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
         <HousingSavingsCard family={family} months={housingSavingsMonths} currentUserId={currentUserId} onChanged={onChanged} />
       </div>
 
-      <div className="border-t border-sparrow-rule pt-4">
-        <h3 className="mb-2 font-serif text-base font-semibold text-sparrow-ink">Perks</h3>
+      <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
+        <h3 className="mb-2 font-serif text-base font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Perks</h3>
         <RewardsTab family={family} vouchers={vouchers} redemptions={redemptions} currentUserId={currentUserId} onChanged={onChanged} />
       </div>
     </div>
@@ -1072,7 +1072,7 @@ function ComplianceTab({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-sparrow-gray">
+      <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
         Internal only. The log for compliance issues and program rules broken by the participant — men on the
         property, substance use, childcare requirements — so there's a clear record of what happened and how it
         was handled.
@@ -1108,7 +1108,7 @@ function ComplianceTab({
           <button
             onClick={() => setFollowUpNeeded(true)}
             className={`rounded-full px-3 py-1 text-xs font-medium ${
-              followUpNeeded ? 'bg-sparrow-gold text-white' : 'bg-sparrow-mist text-sparrow-gray'
+              followUpNeeded ? 'bg-sparrow-gold text-white' : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray'
             }`}
           >
             Yes
@@ -1116,7 +1116,7 @@ function ComplianceTab({
           <button
             onClick={() => setFollowUpNeeded(false)}
             className={`rounded-full px-3 py-1 text-xs font-medium ${
-              !followUpNeeded ? 'bg-sparrow-green text-white' : 'bg-sparrow-mist text-sparrow-gray'
+              !followUpNeeded ? 'bg-sparrow-green text-white' : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray'
             }`}
           >
             No
@@ -1136,7 +1136,7 @@ function ComplianceTab({
         Save note
       </button>
 
-      {notes.length === 0 && <p className="text-sm text-sparrow-gray">No compliance notes yet.</p>}
+      {notes.length === 0 && <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No compliance notes yet.</p>}
 
       <ul className="space-y-2">
         {notes.map((n) => (
@@ -1148,27 +1148,27 @@ function ComplianceTab({
                   ⚑ Needs follow-up
                 </span>
               ) : n.follow_up_resolved_at ? (
-                <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-[11px] font-bold text-sparrow-green">
+                <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-[11px] font-bold text-sparrow-green dark:text-sparrow-dark-green">
                   ✓ Resolved {dayLabel(n.follow_up_resolved_at)}
                   {n.follow_up_resolved_by_name ? ` by ${n.follow_up_resolved_by_name}` : ''}
                 </span>
               ) : null}
-              <span className="text-xs text-sparrow-gray">{dayLabel(n.created_at)}</span>
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{dayLabel(n.created_at)}</span>
             </div>
-            <p className="mt-1.5 text-sm text-sparrow-ink">
+            <p className="mt-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
               <span className="font-semibold">What happened:</span> {n.what_happened}
             </p>
-            <p className="mt-1 text-sm text-sparrow-ink">
+            <p className="mt-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
               <span className="font-semibold">Handled:</span> {n.how_handled}
             </p>
             {n.follow_up_note && (
-              <p className="mt-1 text-sm text-sparrow-ink">
+              <p className="mt-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 <span className="font-semibold">Follow-up:</span> {n.follow_up_note}
               </p>
             )}
-            {n.author_name && <p className="mt-1 text-xs text-sparrow-gray">Logged by {n.author_name}</p>}
+            {n.author_name && <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Logged by {n.author_name}</p>}
             {n.follow_up_needed && (
-              <button onClick={() => resolve(n.id)} disabled={busy} className="mt-2 text-xs font-semibold text-sparrow-green">
+              <button onClick={() => resolve(n.id)} disabled={busy} className="mt-2 text-xs font-semibold text-sparrow-green dark:text-sparrow-dark-green">
                 Mark follow-up resolved
               </button>
             )}
@@ -1252,7 +1252,7 @@ function GeneralInfoTab({
 function SyncStatus({ family, moveInRequest }: { family: Family; moveInRequest: LcpMoveInRequest | null }) {
   if (family.toc_tenant_id) {
     return (
-      <div className="mt-2 rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green">
+      <div className="mt-2 rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green dark:text-sparrow-dark-green">
         ✓ Linked to Twin Oaks residents{family.toc_synced_at ? ` — last synced ${dayLabel(family.toc_synced_at)}` : ''}
       </div>
     );
@@ -1260,21 +1260,21 @@ function SyncStatus({ family, moveInRequest }: { family: Family; moveInRequest: 
   if (moveInRequest?.status === 'needs_info') {
     return (
       <div className="mt-2 rounded-lg bg-sparrow-gold/15 px-3 py-2 text-xs">
-        <p className="font-semibold text-sparrow-ink">⚑ Twin Oaks staff have a question:</p>
-        <p className="mt-0.5 text-sparrow-ink">{moveInRequest.notes || '(no note left)'}</p>
-        <p className="mt-1 text-sparrow-gray">Reply via chat or a task, then update this family's info here.</p>
+        <p className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">⚑ Twin Oaks staff have a question:</p>
+        <p className="mt-0.5 text-sparrow-ink dark:text-sparrow-dark-ink">{moveInRequest.notes || '(no note left)'}</p>
+        <p className="mt-1 text-sparrow-gray dark:text-sparrow-dark-gray">Reply via chat or a task, then update this family's info here.</p>
       </div>
     );
   }
   if (moveInRequest?.status === 'pending') {
     return (
-      <div className="mt-2 rounded-lg bg-sparrow-gold/15 px-3 py-2 text-xs font-medium text-sparrow-ink">
+      <div className="mt-2 rounded-lg bg-sparrow-gold/15 px-3 py-2 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
         ✓ Move-in request sent to Twin Oaks — waiting on their review.
       </div>
     );
   }
   return (
-    <p className="mt-2 text-xs text-sparrow-gray">Set a home unit and a move-in date to send Twin Oaks a move-in request.</p>
+    <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Set a home unit and a move-in date to send Twin Oaks a move-in request.</p>
   );
 }
 
@@ -1301,63 +1301,63 @@ function GeneralInfoView({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Saved information</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Saved information</span>
         <button onClick={onEdit} className="btn-primary">
           Edit
         </button>
       </div>
 
-      <div className="rounded-xl border border-sparrow-rule p-4">
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-4">
         <span className="field-label">Household</span>
         {adult ? (
-          <p className="mt-1 text-sm text-sparrow-ink">{adult.full_name} · {adult.phone}</p>
+          <p className="mt-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{adult.full_name} · {adult.phone}</p>
         ) : (
-          <p className="mt-1 text-sm text-sparrow-gray">No adult on file.</p>
+          <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No adult on file.</p>
         )}
 
         <div className="mt-3">
-          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Children</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Children</span>
           {kids.length === 0 ? (
-            <p className="text-sm text-sparrow-gray">None on file.</p>
+            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">None on file.</p>
           ) : (
             <ul className="mt-1 space-y-0.5">
               {kids.map((c) => (
-                <li key={c.id} className="text-sm text-sparrow-ink">{c.full_name}</li>
+                <li key={c.id} className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{c.full_name}</li>
               ))}
             </ul>
           )}
         </div>
 
         <div className="mt-3">
-          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Emergency contact</span>
-          <p className="text-sm text-sparrow-ink">{family.emergency_contact_notes || '—'}</p>
+          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Emergency contact</span>
+          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{family.emergency_contact_notes || '—'}</p>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl bg-sparrow-mist p-3">
+        <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
           <span className="field-label">Onboarding start</span>
-          <p className="text-sm text-sparrow-ink">{dayLabel(family.created_at)}</p>
+          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{dayLabel(family.created_at)}</p>
         </div>
-        <div className="rounded-xl bg-sparrow-mist p-3">
+        <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
           <span className="field-label">Move-in date</span>
-          <p className="text-sm text-sparrow-ink">{family.move_in_date ? dayLabel(family.move_in_date) : 'Not set yet'}</p>
+          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{family.move_in_date ? dayLabel(family.move_in_date) : 'Not set yet'}</p>
         </div>
         {family.program_end_date && (
-          <div className="rounded-xl bg-sparrow-mist p-3 sm:col-span-2">
+          <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3 sm:col-span-2">
             <span className="field-label">Program end date</span>
-            <p className="text-sm text-sparrow-ink">{dayLabel(family.program_end_date)}</p>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{dayLabel(family.program_end_date)}</p>
           </div>
         )}
       </div>
 
       <div>
         <span className="field-label">Home unit</span>
-        <p className="text-sm text-sparrow-ink">
+        <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
           {space ? `Unit ${space.label}${space.designation_label ? ` | ${space.designation_label}` : ''}` : 'Not assigned yet'}
         </p>
         {space && (
-          <p className="mt-1 text-xs text-sparrow-gray">
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             {[space.street_number, space.street_name].filter(Boolean).join(' ') || 'No address on file'}
           </p>
         )}
@@ -1365,8 +1365,8 @@ function GeneralInfoView({
       </div>
 
       <div className={`flex items-center justify-between rounded-xl px-4 py-3 ${overdue ? 'bg-priority-p1/10' : 'bg-sparrow-green/10'}`}>
-        <span className="text-sm text-sparrow-ink">Program fee status</span>
-        <span className={`rounded-full px-3 py-1 text-xs font-medium ${overdue ? 'bg-priority-p1/20 text-priority-p1' : 'bg-sparrow-green/20 text-sparrow-green'}`}>
+        <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Program fee status</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-medium ${overdue ? 'bg-priority-p1/20 text-priority-p1' : 'bg-sparrow-green/20 text-sparrow-green dark:text-sparrow-dark-green'}`}>
           {overdue ? 'Overdue' : 'Current'}
         </span>
       </div>
@@ -1444,20 +1444,20 @@ function GeneralInfoEdit({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-sparrow-rule p-4">
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-4">
         <span className="field-label">Household</span>
 
         <div className="mt-1">
-          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Adult</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Adult</span>
           <input value={adultName} onChange={(e) => setAdultName(e.target.value)} placeholder="Full name" className="field-input" />
           <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-2" />
-          <p className="mt-1 text-xs text-sparrow-gray">Her email is the sign-in email at the top of this panel — no separate email needed here.</p>
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Her email is the sign-in email at the top of this panel — no separate email needed here.</p>
         </div>
 
         <div className="mt-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Children</span>
-            <button onClick={addChildRow} className="text-xs font-medium text-sparrow-green">
+            <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Children</span>
+            <button onClick={addChildRow} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
               + Add child
             </button>
           </div>
@@ -1471,7 +1471,7 @@ function GeneralInfoEdit({
                   placeholder="Full name"
                 />
                 {childRows.length > 1 && (
-                  <button onClick={() => removeChildRow(i)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
+                  <button onClick={() => removeChildRow(i)} className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
                     Remove
                   </button>
                 )}
@@ -1481,7 +1481,7 @@ function GeneralInfoEdit({
         </div>
 
         <div className="mt-4">
-          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray">Emergency contact</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Emergency contact</span>
           <textarea
             value={emergencyContact}
             onChange={(e) => setEmergencyContact(e.target.value)}
@@ -1492,23 +1492,23 @@ function GeneralInfoEdit({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl bg-sparrow-mist p-3">
+        <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
           <span className="field-label">Onboarding start</span>
-          <p className="text-sm text-sparrow-ink">{dayLabel(family.created_at)}</p>
+          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{dayLabel(family.created_at)}</p>
         </div>
-        <div className="rounded-xl bg-sparrow-mist p-3">
+        <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
           <span className="field-label">Move-in date</span>
           <input
             type="date"
             value={moveInDate}
             onChange={(e) => setMoveInDate(e.target.value)}
-            className="mt-0.5 w-full rounded-lg border border-sparrow-rule bg-white px-2 py-1 text-sm"
+            className="mt-0.5 w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-sm"
           />
         </div>
         {family.program_end_date && (
-          <div className="rounded-xl bg-sparrow-mist p-3 sm:col-span-2">
+          <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3 sm:col-span-2">
             <span className="field-label">Program end date</span>
-            <p className="text-sm text-sparrow-ink">{dayLabel(family.program_end_date)}</p>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{dayLabel(family.program_end_date)}</p>
           </div>
         )}
       </div>
@@ -1526,8 +1526,8 @@ function GeneralInfoEdit({
       </div>
 
       <div className={`flex items-center justify-between rounded-xl px-4 py-3 ${overdue ? 'bg-priority-p1/10' : 'bg-sparrow-green/10'}`}>
-        <span className="text-sm text-sparrow-ink">Program fee status</span>
-        <span className={`rounded-full px-3 py-1 text-xs font-medium ${overdue ? 'bg-priority-p1/20 text-priority-p1' : 'bg-sparrow-green/20 text-sparrow-green'}`}>
+        <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Program fee status</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-medium ${overdue ? 'bg-priority-p1/20 text-priority-p1' : 'bg-sparrow-green/20 text-sparrow-green dark:text-sparrow-dark-green'}`}>
           {overdue ? 'Overdue' : 'Current'}
         </span>
       </div>
@@ -1607,7 +1607,7 @@ function HomeworkTab({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-sparrow-rule p-3">
+      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
         <span className="field-label">Assign homework</span>
         <input
           value={title}
@@ -1617,7 +1617,7 @@ function HomeworkTab({
         />
         <div className="mt-2 flex items-end gap-2">
           <div className="flex-1">
-            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Homework area</label>
+            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Homework area</label>
             <select value={area} onChange={(e) => setArea(e.target.value as HomeworkArea)} className="field-input mt-0 w-full">
               {HOMEWORK_AREAS.map((a) => (
                 <option key={a} value={a}>
@@ -1627,7 +1627,7 @@ function HomeworkTab({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Due date</label>
+            <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Due date</label>
             <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="field-input mt-0" />
           </div>
           <button onClick={add} disabled={busy || !title.trim()} className="btn-primary shrink-0">
@@ -1637,7 +1637,7 @@ function HomeworkTab({
       </div>
 
       <ul className="space-y-2">
-        {homework.length === 0 && <li className="text-sm text-sparrow-gray">No homework assigned.</li>}
+        {homework.length === 0 && <li className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No homework assigned.</li>}
         {homework.map((hw) => (
           <li key={hw.id} className={`flex items-start gap-2 rounded-xl border p-3 ${
             hw.status !== 'complete' && isOverdue(hw.due_date)
@@ -1647,17 +1647,17 @@ function HomeworkTab({
             <button
               onClick={() => toggle(hw)}
               className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 text-white ${
-                hw.status === 'complete' ? 'border-sparrow-green bg-sparrow-green' : 'border-sparrow-rule'
+                hw.status === 'complete' ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green' : 'border-sparrow-rule dark:border-sparrow-dark-border'
               }`}
               aria-label="Toggle complete"
             >
               {hw.status === 'complete' && '✓'}
             </button>
             <div className="min-w-0 flex-1">
-              <p className={`text-sm ${hw.status === 'complete' ? 'text-sparrow-gray line-through' : 'text-sparrow-ink'}`}>
+              <p className={`text-sm ${hw.status === 'complete' ? 'text-sparrow-gray dark:text-sparrow-dark-gray line-through' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
                 {hw.title}
               </p>
-              <p className={`text-xs ${hw.status !== 'complete' && isOverdue(hw.due_date) ? 'text-priority-p1' : 'text-sparrow-gray'}`}>
+              <p className={`text-xs ${hw.status !== 'complete' && isOverdue(hw.due_date) ? 'text-priority-p1' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                 {AREA_LABEL[hw.area]} · {dueLabel(hw.due_date)}
                 {hw.status === 'submitted' && ' · submitted online'}
               </p>
@@ -1677,12 +1677,12 @@ function HomeworkTab({
             {extendingId !== hw.id && (
               <button
                 onClick={() => { setExtendingId(hw.id); setNewDue(hw.due_date ?? ''); }}
-                className="shrink-0 text-xs text-sparrow-gray hover:text-sparrow-green"
+                className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
               >
                 Adjust date
               </button>
             )}
-            <button onClick={() => remove(hw.id)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">
+            <button onClick={() => remove(hw.id)} className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
               Delete
             </button>
           </li>
@@ -1730,7 +1730,7 @@ function NotesTab({
 
   return (
     <div className="space-y-4">
-      <p className="rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink">
+      <p className="rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
         🔒 Internal — never visible to the family or to non-LCP staff.
       </p>
       <div>
@@ -1746,7 +1746,7 @@ function NotesTab({
         </button>
       </div>
       <ul className="space-y-2">
-        {notes.length === 0 && <li className="text-sm text-sparrow-gray">No notes yet.</li>}
+        {notes.length === 0 && <li className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No notes yet.</li>}
         {notes.map((n) => (
           <li key={n.id} className="rounded-xl border border-sparrow-rule/70 p-3">
             {editingId === n.id ? (
@@ -1776,9 +1776,9 @@ function NotesTab({
               </div>
             ) : (
               <>
-                <p className="text-sm text-sparrow-ink">{n.body}</p>
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{n.body}</p>
                 <div className="mt-1 flex items-center justify-between gap-2">
-                  <p className="text-xs text-sparrow-gray">
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {n.updated_at && n.updated_at !== n.created_at
                       ? `Edited ${dayLabel(n.updated_at)}`
                       : dayLabel(n.created_at)}
@@ -1787,7 +1787,7 @@ function NotesTab({
                   {n.author_id === currentUserId && (
                     <button
                       onClick={() => { setEditingId(n.id); setEditBody(n.body); }}
-                      className="text-xs text-sparrow-gray hover:text-sparrow-green"
+                      className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
                     >
                       Edit
                     </button>
@@ -1842,16 +1842,16 @@ function RewardsTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-xl bg-sparrow-mist p-4">
+      <div className="flex items-center justify-between rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-4">
         <div>
-          <p className="font-serif text-2xl font-semibold text-sparrow-green">{unspent}</p>
-          <p className="text-xs text-sparrow-gray">unspent vouchers</p>
+          <p className="font-serif text-2xl font-semibold text-sparrow-green dark:text-sparrow-dark-green">{unspent}</p>
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">unspent vouchers</p>
         </div>
         <div className="flex gap-2">
           <button onClick={award} disabled={busy} className="btn-primary">
             + Award voucher
           </button>
-          <button onClick={redeemInPerson} disabled={busy || unspent < 3} className="btn-ghost border border-sparrow-rule">
+          <button onClick={redeemInPerson} disabled={busy || unspent < 3} className="btn-ghost border border-sparrow-rule dark:border-sparrow-dark-border">
             Redeem 3 vouchers
           </button>
         </div>
@@ -1880,9 +1880,9 @@ function RewardsTab({
           <span className="field-label">Past redemptions</span>
           <ul className="mt-1 space-y-2">
             {past.map((r) => (
-              <li key={r.id} className="rounded-xl border border-sparrow-rule/70 p-3 text-sm text-sparrow-ink">
+              <li key={r.id} className="rounded-xl border border-sparrow-rule/70 p-3 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 {money(r.gift_card_value_cents)} gift card · {r.vouchers_spent} vouchers
-                <p className="mt-0.5 text-xs text-sparrow-gray">
+                <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   Fulfilled {r.fulfilled_at ? dayLabel(r.fulfilled_at) : '—'}
                 </p>
               </li>

@@ -37,35 +37,35 @@ export function DashboardHelpModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
+        className="w-full max-w-lg rounded-2xl bg-white dark:bg-sparrow-dark-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-sparrow-rule px-6 py-4">
-          <h2 className="font-serif text-lg font-semibold text-sparrow-ink">Dashboard overview</h2>
+        <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-6 py-4">
+          <h2 className="font-serif text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Dashboard overview</h2>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-xl leading-none text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-xl leading-none text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
             aria-label="Close"
           >
             ×
           </button>
         </div>
 
-        <div className="divide-y divide-sparrow-rule">
+        <div className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
           {/* Widgets section */}
           <div className="px-6 py-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Dashboard widgets
             </p>
-            <p className="mb-4 text-sm text-sparrow-gray">
-              Use <strong className="text-sparrow-ink">Edit home</strong> to show, hide, and rearrange widgets.
+            <p className="mb-4 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
+              Use <strong className="text-sparrow-ink dark:text-sparrow-dark-ink">Edit home</strong> to show, hide, and rearrange widgets.
             </p>
             <div className="space-y-3">
               {WIDGETS.map((w) => (
                 <div key={w.name}>
-                  <p className="text-sm font-medium text-sparrow-ink">{w.name}</p>
-                  <p className="text-xs text-sparrow-gray">{w.desc}</p>
+                  <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{w.name}</p>
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{w.desc}</p>
                 </div>
               ))}
             </div>
@@ -73,10 +73,10 @@ export function DashboardHelpModal({
 
           {/* Rooms section */}
           <div className="px-6 py-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Rooms
             </p>
-            <p className="mb-4 text-sm text-sparrow-gray">
+            <p className="mb-4 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               Rooms are in the sidebar below your personal tabs. Access is role-specific — not every staff member sees every room. The first time you open a room, a short walkthrough explains what's inside.
             </p>
             <div className="space-y-3">
@@ -84,8 +84,8 @@ export function DashboardHelpModal({
                 <div key={r.name} className="flex gap-3">
                   <span className="mt-0.5 text-base leading-none">{r.icon}</span>
                   <div>
-                    <p className="text-sm font-medium text-sparrow-ink">{r.name}</p>
-                    <p className="text-xs leading-relaxed text-sparrow-gray">{r.desc}</p>
+                    <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{r.name}</p>
+                    <p className="text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">{r.desc}</p>
                   </div>
                 </div>
               ))}
@@ -97,7 +97,7 @@ export function DashboardHelpModal({
             <div className="flex flex-col gap-1">
               <button
                 onClick={() => { onClose(); onReplayTour(); }}
-                className="text-left text-sm font-medium text-sparrow-green hover:underline"
+                className="text-left text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
               >
                 Replay welcome tour
               </button>
@@ -114,7 +114,7 @@ export function DashboardHelpModal({
                     onClose();
                     onReplayTour();
                   }}
-                  className="text-left text-xs text-sparrow-gray hover:text-sparrow-ink hover:underline"
+                  className="text-left text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink hover:underline"
                 >
                   Reset all tours (show again from scratch)
                 </button>

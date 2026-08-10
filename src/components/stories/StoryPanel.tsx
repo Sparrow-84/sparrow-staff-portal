@@ -51,7 +51,7 @@ const VERBAL_CONSENT_LABEL: Record<VerbalConsent, string> = {
 
 // CONTENT_CLASSES from RichTextEditor, for consistent read-mode rendering of the body.
 const BODY_DISPLAY_CLASSES =
-  'text-sm leading-relaxed text-sparrow-ink ' +
+  'text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink ' +
   '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 ' +
   '[&_li]:mb-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2';
 
@@ -200,7 +200,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
               onClick={handleDelete}
               disabled={pending}
               className={`text-sm font-medium transition ${
-                confirmDelete ? 'text-priority-p1 underline' : 'text-sparrow-gray hover:text-priority-p1'
+                confirmDelete ? 'text-priority-p1 underline' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1'
               }`}
             >
               {confirmDelete ? 'Confirm delete' : 'Delete'}
@@ -219,19 +219,19 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="field-label">Gathering method</span>
-            <p className="text-sparrow-ink">{METHOD_LABEL[story.gathering_method] ?? story.gathering_method}</p>
+            <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{METHOD_LABEL[story.gathering_method] ?? story.gathering_method}</p>
           </div>
           <div>
             <span className="field-label">Logged by</span>
-            <p className="text-sparrow-ink">{story.logged_by_name ?? loggerName(story.logged_by)}</p>
+            <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{story.logged_by_name ?? loggerName(story.logged_by)}</p>
           </div>
           <div>
             <span className="field-label">Date gathered</span>
-            <p className="text-sparrow-ink">{story.date_gathered}</p>
+            <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{story.date_gathered}</p>
           </div>
           <div>
             <span className="field-label">Used in</span>
-            <p className="text-sparrow-ink">{story.used_in || '—'}</p>
+            <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{story.used_in || '—'}</p>
           </div>
         </div>
 
@@ -239,7 +239,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
           <div className="mt-4 flex flex-wrap gap-1">
             {story.tags.map((tag) => {
               const color = storyTags.find((t) => t.name === tag)?.color;
-              const pill = LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-sparrow-sage text-sparrow-green';
+              const pill = LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green';
               return (
                 <span key={tag} className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${pill}`}>
                   {tag}
@@ -249,17 +249,17 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
           </div>
         )}
 
-        <div className="mt-5 border-t border-sparrow-rule pt-4">
+        <div className="mt-5 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           <div className={BODY_DISPLAY_CLASSES} dangerouslySetInnerHTML={{ __html: story.body }} />
         </div>
 
-        <div className="mt-5 rounded-lg border border-sparrow-rule bg-sparrow-mist/30 px-4 py-3 text-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Photo consent</p>
-          <p className="mt-2 text-sparrow-ink">
+        <div className="mt-5 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-3 text-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Photo consent</p>
+          <p className="mt-2 text-sparrow-ink dark:text-sparrow-dark-ink">
             Verbal consent to use a photo with this story: <span className="font-medium">{VERBAL_CONSENT_LABEL[story.layer3_verbal_consent]}</span>
           </p>
           {story.layer3_verbal_consent === 'yes' && story.layer3_preview_requested && (
-            <p className="mt-1 text-sparrow-gray">Participant requested to preview before publish.</p>
+            <p className="mt-1 text-sparrow-gray dark:text-sparrow-dark-gray">Participant requested to preview before publish.</p>
           )}
         </div>
 
@@ -282,7 +282,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
               onClick={handleDelete}
               disabled={pending}
               className={`text-sm font-medium transition ${
-                confirmDelete ? 'text-priority-p1 underline' : 'text-sparrow-gray hover:text-priority-p1'
+                confirmDelete ? 'text-priority-p1 underline' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1'
               }`}
             >
               {confirmDelete ? 'Confirm delete' : 'Delete'}
@@ -317,7 +317,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div>
           <label className="field-label" htmlFor="sp-subject">
-            Real name <span className="font-normal text-sparrow-gray">(internal only)</span>
+            Real name <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(internal only)</span>
           </label>
           <input
             id="sp-subject"
@@ -329,7 +329,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
         </div>
         <div>
           <label className="field-label" htmlFor="sp-alias">
-            Alias <span className="font-normal text-sparrow-gray">(used publicly)</span>
+            Alias <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(used publicly)</span>
           </label>
           <input
             id="sp-alias"
@@ -408,7 +408,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
       {/* Used in */}
       <div className="mt-4">
         <label className="field-label" htmlFor="sp-used-in">
-          Used in <span className="font-normal text-sparrow-gray">(optional)</span>
+          Used in <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
         </label>
         <input
           id="sp-used-in"
@@ -432,8 +432,8 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
       </div>
 
       {/* Photo consent section */}
-      <div className="mt-5 rounded-lg border border-sparrow-rule bg-sparrow-mist/30 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+      <div className="mt-5 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
           Photo consent
         </p>
 

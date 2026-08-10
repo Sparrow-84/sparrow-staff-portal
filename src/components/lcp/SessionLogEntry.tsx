@@ -352,14 +352,14 @@ export function SessionLogEntry({
     const track = computeCurriculumTrack(phases, sessionToTeach.unit_id, sessionToTeach.id);
     return (
       <div className="space-y-4">
-        <div className="rounded-2xl border border-sparrow-rule bg-white p-5 shadow-card">
-          <p className="text-sm font-medium text-sparrow-green">Session filed ✓</p>
+        <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-5 shadow-card">
+          <p className="text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green">Session filed ✓</p>
           {track.currentUnit && (
             <div className="mt-3">
               <CurriculumTrackHorizontal track={track} />
             </div>
           )}
-          <p className="mt-3 text-sm text-sparrow-ink">
+          <p className="mt-3 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
             {willCrossUnit ? (
               <>
                 Session complete? This moves into a new unit —{' '}
@@ -398,15 +398,15 @@ export function SessionLogEntry({
       <div className="flex items-start gap-3">
         <button
           onClick={onBack}
-          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green transition hover:bg-sparrow-sage/70"
+          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70"
         >
           ← Back
         </button>
         <div>
-          <h2 className="font-serif text-xl font-semibold text-sparrow-ink">
+          <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
             {isAdHoc ? 'Ad-hoc Session' : label}
           </h2>
-          <p className="mt-0.5 text-sm text-sparrow-gray">
+          <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {formatDateHeader(sessionDate)}
             {currentUserName && <span> · Filing as {currentUserName}</span>}
           </p>
@@ -415,11 +415,11 @@ export function SessionLogEntry({
 
       {/* Ad-hoc: family picker */}
       {isAdHoc && (
-        <section id="sle-family-picker" className={fieldClass('sle-family-picker', 'rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card')}>
+        <section id="sle-family-picker" className={fieldClass('sle-family-picker', 'rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card')}>
           <p className="mb-3 field-label">Who was present?</p>
           <div className="space-y-2">
             {families.map((f) => (
-              <label key={f.id} className="flex cursor-pointer items-center gap-2 text-sm text-sparrow-ink">
+              <label key={f.id} className="flex cursor-pointer items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(f.id)}
@@ -431,7 +431,7 @@ export function SessionLogEntry({
                     });
                     clear('sle-family-picker');
                   }}
-                  className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                  className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                 />
                 {f.display_name}
               </label>
@@ -442,17 +442,17 @@ export function SessionLogEntry({
 
       {/* Attendance + vouchers (Monday + Thursday) */}
       {!isAdHoc && (
-        <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+        <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
           <div className="mb-3 flex items-center justify-between">
             <span className="field-label">Attendance</span>
-            <button onClick={markAllPresent} className="text-xs font-medium text-sparrow-green">
+            <button onClick={markAllPresent} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
               Mark all on time
             </button>
           </div>
           <ul className="space-y-2">
             {families.map((f) => (
               <li key={f.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-sparrow-rule/70 p-2">
-                <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink">{f.display_name}</span>
+                <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
                 <div className="flex gap-1">
                   {STATUSES.map((s) => (
                     <button
@@ -465,7 +465,7 @@ export function SessionLogEntry({
                             : s === 'late'
                               ? 'bg-priority-p2 text-white'
                               : 'bg-sparrow-green text-white'
-                          : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                          : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                       }`}
                     >
                       {ATTENDANCE_LABEL[s]}
@@ -473,12 +473,12 @@ export function SessionLogEntry({
                   ))}
                 </div>
                 {showVouchers && (
-                  <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray">
+                  <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     <input
                       type="checkbox"
                       checked={vouchers.has(f.id)}
                       onChange={() => toggleVoucher(f.id)}
-                      className="h-3.5 w-3.5 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                      className="h-3.5 w-3.5 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                     />
                     Voucher
                   </label>
@@ -495,7 +495,7 @@ export function SessionLogEntry({
           {sessionToTeach ? (
             <>
               <p className="field-label">Tonight</p>
-              <p className="mt-1 text-sm font-medium text-sparrow-ink">
+              <p className="mt-1 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                 Session {sessionToTeach.session_number} · {sessionToTeach.title}
               </p>
 
@@ -506,29 +506,29 @@ export function SessionLogEntry({
                     href={tonightSlideshow.drive_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-sparrow-green shadow-sm ring-1 ring-sparrow-rule transition hover:bg-sparrow-mist"
+                    className="rounded-lg bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green shadow-sm ring-1 ring-sparrow-rule transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                   >
                     Open Slideshow ↗
                   </a>
                 ) : (
-                  <span className="rounded-lg px-3 py-1.5 text-xs text-sparrow-gray">Slideshow not added</span>
+                  <span className="rounded-lg px-3 py-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Slideshow not added</span>
                 )}
                 {tonightHandout?.drive_url ? (
                   <a
                     href={tonightHandout.drive_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-sparrow-green shadow-sm ring-1 ring-sparrow-rule transition hover:bg-sparrow-mist"
+                    className="rounded-lg bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green shadow-sm ring-1 ring-sparrow-rule transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                   >
                     Open Student Handout ↗
                   </a>
                 ) : (
-                  <span className="rounded-lg px-3 py-1.5 text-xs text-sparrow-gray">Handout not added</span>
+                  <span className="rounded-lg px-3 py-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Handout not added</span>
                 )}
               </div>
             </>
           ) : (
-            <p className="text-sm text-sparrow-gray">
+            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               No more sessions left in the curriculum to advance to.
             </p>
           )}
@@ -537,9 +537,9 @@ export function SessionLogEntry({
 
       {/* Thursday: shared group note */}
       {isThursday && (
-        <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+        <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
           <label className="field-label">Group session note</label>
-          <p className="mb-2 text-xs text-sparrow-gray">Shared recap of the session — visible to all LCP staff.</p>
+          <p className="mb-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Shared recap of the session — visible to all LCP staff.</p>
           <textarea
             value={groupNote}
             onChange={(e) => setGroupNote(e.target.value)}
@@ -578,7 +578,7 @@ export function SessionLogEntry({
       ))}
 
       {activeFamilies.length === 0 && isAdHoc && (
-        <p className="text-sm text-sparrow-gray">Select at least one family above to log notes.</p>
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Select at least one family above to log notes.</p>
       )}
 
       {/* Error + file button */}
@@ -645,10 +645,10 @@ function FamilySection({
   const openGoals = goals.filter((g) => !metGoalIds.has(g.id));
 
   return (
-    <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+    <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
       <button
         onClick={() => onOpenFamily(family.id)}
-        className="mb-3 font-medium text-sparrow-ink hover:text-sparrow-green hover:underline"
+        className="mb-3 font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:text-sparrow-green dark:hover:text-sparrow-dark-green hover:underline"
         title={`See ${family.display_name}'s past notes and goals`}
       >
         {family.display_name}
@@ -676,31 +676,31 @@ function FamilySection({
       <div className="mb-4">
         <div className="mb-2 flex items-center justify-between">
           <span className="field-label">Goals</span>
-          <button onClick={onToggleAddGoal} className="text-xs font-medium text-sparrow-green">
+          <button onClick={onToggleAddGoal} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
             {addGoalOpen ? 'Cancel' : '+ Add goal'}
           </button>
         </div>
 
         {openGoals.length === 0 && !addGoalOpen && (
-          <p className="text-xs text-sparrow-gray">No active goals.</p>
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No active goals.</p>
         )}
 
         {openGoals.length > 0 && (
           <ul className="space-y-1.5">
             {openGoals.map((goal) => (
-              <li key={goal.id} className="flex items-center gap-2 text-sm text-sparrow-ink">
+              <li key={goal.id} className="flex items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 <input
                   type="checkbox"
                   checked={metGoalIds.has(goal.id)}
                   onChange={() => onToggleGoalMet(goal.id)}
-                  className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                  className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                 />
-                <span className={metGoalIds.has(goal.id) ? 'line-through text-sparrow-gray' : ''}>
+                <span className={metGoalIds.has(goal.id) ? 'line-through text-sparrow-gray dark:text-sparrow-dark-gray' : ''}>
                   {goal.title}
                 </span>
-                <span className="text-xs text-sparrow-gray">· {GOAL_AREA_LABEL[goal.area]}</span>
+                <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">· {GOAL_AREA_LABEL[goal.area]}</span>
                 {goal.due_date && (
-                  <span className={`ml-auto shrink-0 text-xs ${isOverdue(goal.due_date) && !metGoalIds.has(goal.id) ? 'font-medium text-priority-p1' : 'text-sparrow-gray'}`}>
+                  <span className={`ml-auto shrink-0 text-xs ${isOverdue(goal.due_date) && !metGoalIds.has(goal.id) ? 'font-medium text-priority-p1' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                     {dueLabel(goal.due_date)}
                   </span>
                 )}
@@ -711,7 +711,7 @@ function FamilySection({
 
         {/* Inline add-goal form */}
         {addGoalOpen && (
-          <div className="mt-3 space-y-2 rounded-xl border border-sparrow-rule bg-sparrow-mist p-3">
+          <div className="mt-3 space-y-2 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
             <input
               type="text"
               value={goalDraft.title}
@@ -721,7 +721,7 @@ function FamilySection({
             />
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Goal area</label>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Goal area</label>
                 <select
                   value={goalDraft.area}
                   onChange={(e) => onGoalDraftChange({ ...goalDraft, area: e.target.value as GoalArea })}
@@ -733,7 +733,7 @@ function FamilySection({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Due date</label>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Due date</label>
                 <input
                   type="date"
                   value={goalDraft.due_date}
@@ -743,7 +743,7 @@ function FamilySection({
                 />
               </div>
             </div>
-            <p className="text-xs text-sparrow-gray">Saved when you file the session.</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Saved when you file the session.</p>
           </div>
         )}
       </div>
@@ -752,30 +752,30 @@ function FamilySection({
       <div>
         <div className="mb-2 flex items-center justify-between">
           <span className="field-label">Homework</span>
-          <button onClick={onToggleAssign} className="text-xs font-medium text-sparrow-green">
+          <button onClick={onToggleAssign} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
             {assignOpen ? 'Cancel' : '+ Assign'}
           </button>
         </div>
 
         {openHw.length === 0 && !assignOpen && (
-          <p className="text-xs text-sparrow-gray">No open homework.</p>
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No open homework.</p>
         )}
 
         {openHw.length > 0 && (
           <ul className="space-y-1.5">
             {openHw.map((hw) => (
-              <li key={hw.id} className="flex items-center gap-2 text-sm text-sparrow-ink">
+              <li key={hw.id} className="flex items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 <input
                   type="checkbox"
                   checked={completedIds.has(hw.id)}
                   onChange={() => onToggleComplete(hw.id)}
-                  className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                  className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                 />
-                <span className={completedIds.has(hw.id) ? 'line-through text-sparrow-gray' : ''}>
+                <span className={completedIds.has(hw.id) ? 'line-through text-sparrow-gray dark:text-sparrow-dark-gray' : ''}>
                   {hw.title}
                 </span>
                 {hw.due_date && (
-                  <span className={`ml-auto shrink-0 text-xs ${isOverdue(hw.due_date) && !completedIds.has(hw.id) ? 'font-medium text-priority-p1' : 'text-sparrow-gray'}`}>
+                  <span className={`ml-auto shrink-0 text-xs ${isOverdue(hw.due_date) && !completedIds.has(hw.id) ? 'font-medium text-priority-p1' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                     {dueLabel(hw.due_date)}
                   </span>
                 )}
@@ -786,7 +786,7 @@ function FamilySection({
 
         {/* Inline assign form */}
         {assignOpen && (
-          <div className="mt-3 space-y-2 rounded-xl border border-sparrow-rule bg-sparrow-mist p-3">
+          <div className="mt-3 space-y-2 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
             <input
               type="text"
               value={assignDraft.title}
@@ -796,7 +796,7 @@ function FamilySection({
             />
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Homework area</label>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Homework area</label>
                 <select
                   value={assignDraft.area}
                   onChange={(e) => onAssignChange({ ...assignDraft, area: e.target.value as HomeworkArea })}
@@ -808,7 +808,7 @@ function FamilySection({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Due date</label>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Due date</label>
                 <input
                   type="date"
                   value={assignDraft.due_date}
@@ -818,7 +818,7 @@ function FamilySection({
                 />
               </div>
             </div>
-            <p className="text-xs text-sparrow-gray">Saved when you file the session.</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Saved when you file the session.</p>
           </div>
         )}
       </div>

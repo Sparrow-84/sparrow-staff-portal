@@ -28,7 +28,7 @@ const STATUS_LABEL: Record<CommStatus, string> = {
 const STATUS_CHIP: Record<CommStatus, string> = {
   not_started: 'bg-slate-100 text-slate-600',
   in_progress: 'bg-amber-100 text-amber-700',
-  sent: 'bg-sparrow-green/10 text-sparrow-green',
+  sent: 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green',
 };
 
 const STATUS_CYCLE: CommStatus[] = ['not_started', 'in_progress', 'sent'];
@@ -135,7 +135,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
   const asksSent = comms.filter((c) => c.is_financial_ask && c.status === 'sent').length;
   const asksCounterColor =
     asksSent === 0 ? 'text-slate-500 bg-slate-100'
-    : asksSent === 1 ? 'text-sparrow-green bg-sparrow-green/10'
+    : asksSent === 1 ? 'text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-green/10'
     : asksSent === 2 ? 'text-amber-600 bg-amber-100'
     : 'text-red-600 bg-red-100';
 
@@ -156,16 +156,16 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setYear((y) => y - 1)}
-            className="rounded-lg px-2 py-1.5 text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="rounded-lg px-2 py-1.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
           >
             ←
           </button>
-          <span className="min-w-[64px] text-center text-sm font-semibold text-sparrow-ink">
+          <span className="min-w-[64px] text-center text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
             {year}
           </span>
           <button
             onClick={() => setYear((y) => y + 1)}
-            className="rounded-lg px-2 py-1.5 text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="rounded-lg px-2 py-1.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
           >
             →
           </button>
@@ -177,17 +177,17 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
       </div>
 
       {loading && (
-        <p className="py-8 text-center text-sm text-sparrow-gray">Loading…</p>
+        <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
       )}
 
       {!loading && comms.length === 0 && (
-        <p className="rounded-xl border border-dashed border-sparrow-rule p-8 text-center text-sm text-sparrow-gray">
+        <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           No comms entries for {year}.
         </p>
       )}
 
       {!loading && comms.length > 0 && (
-        <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+        <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
           {comms.map((comm) => {
             const expanded = expandedId === comm.id;
             const warn = isLeadTimeWarning(comm, leadTimeDays);
@@ -198,19 +198,19 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                 {/* Row */}
                 <button
                   onClick={() => setExpandedId(expanded ? null : comm.id)}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sparrow-mist"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                 >
-                  <span className="w-14 shrink-0 text-xs text-sparrow-gray">
+                  <span className="w-14 shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {shortDate(comm.publish_date)}
                   </span>
 
-                  <span className={`flex-1 text-sm font-medium ${isPast && comm.status !== 'sent' ? 'text-sparrow-gray' : 'text-sparrow-ink'}`}>
+                  <span className={`flex-1 text-sm font-medium ${isPast && comm.status !== 'sent' ? 'text-sparrow-gray dark:text-sparrow-dark-gray' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
                     {comm.title}
                   </span>
 
                   <span className="flex items-center gap-2">
                     {comm.is_financial_ask && (
-                      <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink">
+                      <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                         Ask
                       </span>
                     )}
@@ -231,16 +231,16 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                     >
                       {STATUS_LABEL[comm.status]}
                     </span>
-                    <span className="text-xs text-sparrow-gray">{expanded ? '▲' : '▼'}</span>
+                    <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{expanded ? '▲' : '▼'}</span>
                   </span>
                 </button>
 
                 {/* Accordion */}
                 {expanded && (
-                  <div className="border-t border-sparrow-rule bg-sparrow-mist/30 px-4 py-4 space-y-4">
+                  <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-4 space-y-4">
                     {/* Status selector */}
                     <div>
-                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                         Status
                       </p>
                       <div className="flex gap-2">
@@ -254,7 +254,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                             className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                               comm.status === s
                                 ? STATUS_CHIP[s] + ' ring-2 ring-offset-1 ring-current'
-                                : 'bg-white border border-sparrow-rule text-sparrow-gray hover:bg-sparrow-mist'
+                                : 'bg-white dark:bg-sparrow-dark-surface border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
                             }`}
                           >
                             {STATUS_LABEL[s]}
@@ -265,7 +265,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
 
                     {/* Notes */}
                     <div>
-                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                         Notes
                       </label>
                       <textarea
@@ -281,7 +281,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                     {/* TSM milestones — date + owner editable; label/order are fixed */}
                     {isTsm(comm) && (
                       <div>
-                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray">
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                           Production milestones
                         </p>
                         <ul className="space-y-1.5">
@@ -290,10 +290,10 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                             return (
                               <li
                                 key={m.id}
-                                className={`flex flex-wrap items-center gap-2 text-sm ${isPastMilestone ? 'text-sparrow-gray/60' : 'text-sparrow-ink'}`}
+                                className={`flex flex-wrap items-center gap-2 text-sm ${isPastMilestone ? 'text-sparrow-gray/60' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isPastMilestone ? 'bg-sparrow-rule' : 'bg-sparrow-green'}`} />
+                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isPastMilestone ? 'bg-sparrow-rule dark:bg-sparrow-dark-border' : 'bg-sparrow-green'}`} />
                                 <input
                                   type="date"
                                   value={m.due_date}
@@ -320,7 +320,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
 
                     {/* December note */}
                     {(comm.comm_type === 'tsm_christmas' || comm.comm_type === 'christmas_cards') && (
-                      <p className="rounded-lg border border-sparrow-gold/30 bg-sparrow-gold/5 px-3 py-2 text-xs text-sparrow-ink">
+                      <p className="rounded-lg border border-sparrow-gold/30 bg-sparrow-gold/5 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
                         Andrew &amp; Shelly write the founders' Christmas greeting this month.
                         Give minimum 2 weeks notice — ideally calendared months in advance.
                       </p>
@@ -328,7 +328,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
 
                     {/* January note */}
                     {comm.comm_type === 'annual_report' && (
-                      <p className="rounded-lg border border-sparrow-gold/30 bg-sparrow-gold/5 px-3 py-2 text-xs text-sparrow-ink">
+                      <p className="rounded-lg border border-sparrow-gold/30 bg-sparrow-gold/5 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
                         Andrew and Shelly each write a leadership letter in January (separately —
                         professional/forward-looking tone, distinct from December's warm personal greeting).
                         Give minimum 2 weeks notice — ideally calendared months in advance.

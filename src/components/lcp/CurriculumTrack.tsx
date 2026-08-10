@@ -99,7 +99,7 @@ function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: bool
         </div>
       )}
       {restUnits.length > 0 && !vertical && (
-        <span className="ml-2 whitespace-nowrap text-xs text-sparrow-gray">+{restUnits.length} more units</span>
+        <span className="ml-2 whitespace-nowrap text-xs text-sparrow-gray dark:text-sparrow-dark-gray">+{restUnits.length} more units</span>
       )}
     </div>
   );
@@ -143,13 +143,13 @@ export function CurriculumTrackVertical({ track }: { track: CurriculumTrack }) {
   return (
     <div>
       {done && (
-        <p className="mb-2 text-center text-[11px] font-medium text-sparrow-gray">
+        <p className="mb-2 text-center text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
           Completed: {done.name} {done.index}/{done.total}
         </p>
       )}
       <TrackDots track={track} vertical />
       {current && (
-        <p className="mt-2 text-center text-[11px] font-semibold text-sparrow-ink">
+        <p className="mt-2 text-center text-[11px] font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
           Now on: {current.name} {current.index}/{current.total}
         </p>
       )}
@@ -162,7 +162,7 @@ function TrackCaption({ track }: { track: CurriculumTrack }) {
 
   if (track.currentUnit.isFinalSession) {
     return (
-      <p className="mt-2 text-xs font-semibold text-sparrow-ink">
+      <p className="mt-2 text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
         This is the last session of the whole program — Session {track.currentUnit.localIndex} of{' '}
         {track.currentUnit.sessionCount}.
       </p>
@@ -174,9 +174,9 @@ function TrackCaption({ track }: { track: CurriculumTrack }) {
 
   return (
     <div className="mt-2 text-xs">
-      {done && <span className="text-sparrow-gray">Completed: {done.name} {done.index}/{done.total}</span>}
-      {done && current && <span className="mx-1.5 text-sparrow-rule">·</span>}
-      {current && <span className="font-semibold text-sparrow-ink">Now on: {current.name} {current.index}/{current.total}</span>}
+      {done && <span className="text-sparrow-gray dark:text-sparrow-dark-gray">Completed: {done.name} {done.index}/{done.total}</span>}
+      {done && current && <span className="mx-1.5 text-sparrow-rule dark:text-sparrow-dark-border">·</span>}
+      {current && <span className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Now on: {current.name} {current.index}/{current.total}</span>}
     </div>
   );
 }

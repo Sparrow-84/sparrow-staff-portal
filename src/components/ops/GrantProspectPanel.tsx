@@ -135,7 +135,7 @@ export function GrantProspectPanel({
         </div>
 
         <label className="block" htmlFor="prospect-name">
-          <span className="text-xs font-medium text-sparrow-gray">Name</span>
+          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Name</span>
           <input
             id="prospect-name"
             value={form.name}
@@ -146,7 +146,7 @@ export function GrantProspectPanel({
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray">
+            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
               Owner
               <InfoTip text="Who's responsible for making sure this prospect actually gets researched and, if pursued, applied for on time. Reminders go to this person." />
             </span>
@@ -162,7 +162,7 @@ export function GrantProspectPanel({
             </select>
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray">
+            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
               Reminder lead time (days)
               <InfoTip text="How many days before the application deadline the owner should get a reminder task. 30 is the default." />
             </span>
@@ -176,7 +176,7 @@ export function GrantProspectPanel({
         </div>
 
         <div>
-          <p className="mb-2 text-xs font-medium text-sparrow-gray">Status</p>
+          <p className="mb-2 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Status</p>
           <div className="flex flex-wrap gap-1.5">
             {PROSPECT_STATUSES.map((s) => (
               <button
@@ -186,7 +186,7 @@ export function GrantProspectPanel({
                 className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                   form.status === s.value
                     ? `border-transparent ${prospectStatusChip(s.value)}`
-                    : 'border-sparrow-rule text-sparrow-gray hover:border-sparrow-green'
+                    : 'border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green dark:hover:border-sparrow-dark-green'
                 }`}
               >
                 {s.label}
@@ -194,7 +194,7 @@ export function GrantProspectPanel({
             ))}
           </div>
           {MOVE_MESSAGE[form.status] && (
-            <p className="mt-2 rounded-lg bg-sparrow-sage px-3 py-2 text-xs font-medium text-sparrow-green">
+            <p className="mt-2 rounded-lg bg-sparrow-sage px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
               {MOVE_MESSAGE[form.status]}
             </p>
           )}
@@ -202,7 +202,7 @@ export function GrantProspectPanel({
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray">Application opens</span>
+            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Application opens</span>
             <input
               type="date"
               value={form.application_opens ?? ''}
@@ -211,7 +211,7 @@ export function GrantProspectPanel({
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray">Application deadline</span>
+            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Application deadline</span>
             <input
               type="date"
               value={form.application_deadline ?? ''}
@@ -220,10 +220,10 @@ export function GrantProspectPanel({
             />
           </label>
         </div>
-        <p className="text-[11px] text-sparrow-gray">Both dates are always visible, not gated by status — you usually learn these before you've decided anything.</p>
+        <p className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">Both dates are always visible, not gated by status — you usually learn these before you've decided anything.</p>
 
         <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray">
+          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
             Estimated amount
             <InfoTip text="Roughly what this opportunity is worth, if you know. If it gets awarded, this pre-fills the real grant record's amount — you can correct it there once you know the exact figure." />
           </span>
@@ -241,7 +241,7 @@ export function GrantProspectPanel({
 
         {form.status !== 'not_researched' && (
           <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray">Findings — what the research turned up</span>
+            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Findings — what the research turned up</span>
             <textarea
               value={form.findings ?? ''}
               onChange={(e) => set('findings', e.target.value || null)}
@@ -253,27 +253,27 @@ export function GrantProspectPanel({
 
         {showDecision && (
           <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray">Decision reasoning — why pursue or not</span>
+            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Decision reasoning — why pursue or not</span>
             <textarea
               value={form.decision_reasoning ?? ''}
               onChange={(e) => set('decision_reasoning', e.target.value || null)}
               rows={3}
               className="field-input"
             />
-            <p className="mt-1 text-[11px] text-sparrow-gray">Only shown once a decision's been made — nothing to justify while still researching.</p>
+            <p className="mt-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">Only shown once a decision's been made — nothing to justify while still researching.</p>
           </label>
         )}
 
         {showAction && (
           <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray">Action steps</span>
+            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Action steps</span>
             <textarea
               value={form.action_steps ?? ''}
               onChange={(e) => set('action_steps', e.target.value || null)}
               rows={3}
               className="field-input"
             />
-            <p className="mt-1 text-[11px] text-sparrow-gray">Only shown once you've decided to pursue — no action steps for something you're not doing.</p>
+            <p className="mt-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">Only shown once you've decided to pursue — no action steps for something you're not doing.</p>
           </label>
         )}
 
@@ -350,20 +350,20 @@ function LinksSection({
 
   return (
     <div>
-      <p className="mb-1 text-xs font-medium text-sparrow-gray">Links — add as many as you need</p>
+      <p className="mb-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Links — add as many as you need</p>
       <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
         {links.map((l) => (
           <div key={l.id} className="flex items-center gap-2 text-sm">
-            <a href={l.url} target="_blank" rel="noreferrer" className="flex-1 truncate font-medium text-sparrow-green underline">
+            <a href={l.url} target="_blank" rel="noreferrer" className="flex-1 truncate font-medium text-sparrow-green dark:text-sparrow-dark-green underline">
               {l.label}
             </a>
-            <button onClick={() => deleteProspectLink(l.id).then(onChanged)} className="text-xs text-sparrow-gray hover:text-priority-p1">
+            <button onClick={() => deleteProspectLink(l.id).then(onChanged)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
               Remove
             </button>
           </div>
         ))}
-        {links.length === 0 && <p className="text-xs text-sparrow-gray">No links yet.</p>}
-        <div className="flex gap-2 border-t border-dashed border-sparrow-rule pt-2">
+        {links.length === 0 && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No links yet.</p>}
+        <div className="flex gap-2 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
           <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Application portal)" className="field-input mt-0 flex-1 text-xs" />
           <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" className="field-input mt-0 flex-1 text-xs" />
           <button onClick={add} disabled={busy} className="btn-primary shrink-0 text-xs">
@@ -412,24 +412,24 @@ function DocumentsSection({
 
   return (
     <div>
-      <p className="mb-1 text-xs font-medium text-sparrow-gray">Documents — upload a file, optionally add a plain-English summary</p>
+      <p className="mb-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Documents — upload a file, optionally add a plain-English summary</p>
       <div className="space-y-3 rounded-xl border border-sparrow-rule/70 p-3">
         {docs.map((d) => (
           <div key={d.id}>
             <div className="flex items-center gap-2 text-sm">
-              <button onClick={() => open(d)} className="flex-1 truncate text-left font-medium text-sparrow-green underline">
+              <button onClick={() => open(d)} className="flex-1 truncate text-left font-medium text-sparrow-green dark:text-sparrow-dark-green underline">
                 {d.label}
               </button>
-              <span className="text-xs text-sparrow-gray">{formatDate(d.created_at)}</span>
-              <button onClick={() => deleteProspectDocument(d).then(onChanged)} className="text-xs text-sparrow-gray hover:text-priority-p1">
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{formatDate(d.created_at)}</span>
+              <button onClick={() => deleteProspectDocument(d).then(onChanged)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
                 Delete
               </button>
             </div>
             <ProspectDocumentSummary doc={d} onChanged={onChanged} />
           </div>
         ))}
-        {docs.length === 0 && <p className="text-xs text-sparrow-gray">No documents yet.</p>}
-        <div className="flex gap-2 border-t border-dashed border-sparrow-rule pt-2">
+        {docs.length === 0 && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No documents yet.</p>}
+        <div className="flex gap-2 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
           <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Eligibility form)" className="field-input mt-0 flex-1 text-xs" />
           <input ref={fileRef} type="file" className="field-input mt-0 flex-1 text-xs" />
           <button onClick={upload} disabled={busy} className="btn-primary shrink-0 text-xs">
@@ -467,7 +467,7 @@ function ProspectDocumentSummary({ doc, onChanged }: { doc: GrantProspectDocumen
         <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={5} placeholder="Plain-English summary of what this document covers…" className="field-input mt-0 text-xs" />
         <div className="flex gap-2">
           <button onClick={save} disabled={busy} className="btn-primary text-xs">Save summary</button>
-          <button onClick={() => { setDraft(doc.summary ?? ''); setEditing(false); }} className="text-xs text-sparrow-gray hover:text-sparrow-ink">Cancel</button>
+          <button onClick={() => { setDraft(doc.summary ?? ''); setEditing(false); }} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">Cancel</button>
         </div>
       </div>
     );
@@ -475,7 +475,7 @@ function ProspectDocumentSummary({ doc, onChanged }: { doc: GrantProspectDocumen
 
   if (!doc.summary) {
     return (
-      <button onClick={() => setEditing(true)} className="mt-1 text-xs text-sparrow-green hover:underline">
+      <button onClick={() => setEditing(true)} className="mt-1 text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline">
         + Add plain-English summary
       </button>
     );
@@ -483,14 +483,14 @@ function ProspectDocumentSummary({ doc, onChanged }: { doc: GrantProspectDocumen
 
   return (
     <div className="mt-1">
-      <button onClick={() => setExpanded((e) => !e)} className="flex items-center gap-1 text-xs font-medium text-sparrow-green hover:underline">
+      <button onClick={() => setExpanded((e) => !e)} className="flex items-center gap-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
         <span aria-hidden>{expanded ? '▾' : '▸'}</span>
         Plain-English summary
       </button>
       {expanded && (
-        <div className="mt-2 rounded-lg bg-sparrow-mist p-3">
-          <p className="whitespace-pre-wrap text-xs text-sparrow-ink">{doc.summary}</p>
-          <button onClick={() => setEditing(true)} className="mt-2 text-xs text-sparrow-gray hover:text-sparrow-ink">Edit</button>
+        <div className="mt-2 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
+          <p className="whitespace-pre-wrap text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{doc.summary}</p>
+          <button onClick={() => setEditing(true)} className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">Edit</button>
         </div>
       )}
     </div>

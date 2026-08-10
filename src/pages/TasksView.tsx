@@ -64,7 +64,7 @@ export function TasksView() {
   }, [load]);
 
   if (!profile) return null;
-  if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading tasks…</p>;
+  if (loading) return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading tasks…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
   return (

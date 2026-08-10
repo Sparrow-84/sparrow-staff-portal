@@ -341,7 +341,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
               <button
                 onClick={() => handleSave('future')}
                 disabled={!!saving}
-                className="w-full rounded-xl border border-sparrow-green py-2 text-sm font-medium text-sparrow-green hover:bg-sparrow-green/5"
+                className="w-full rounded-xl border border-sparrow-green dark:border-sparrow-dark-green py-2 text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green hover:bg-sparrow-green/5"
               >
                 {saving === 'future' ? 'Saving…' : 'Save this + all future'}
               </button>
@@ -366,7 +366,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
     if (confirm) {
       return (
         <div className="space-y-2">
-          <p className="text-xs text-sparrow-gray">
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             {isRecurring
               ? 'Delete just this event, or this one and all future events in the series?'
               : 'This cannot be undone.'}
@@ -436,7 +436,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
           </div>
         )}
         {canEdit && isLcpSession && (
-          <p className="text-center text-xs text-sparrow-gray">Delete this session from the LCP Session Cal.</p>
+          <p className="text-center text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Delete this session from the LCP Session Cal.</p>
         )}
       </div>
     );
@@ -453,10 +453,10 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
       {mode === 'edit' ? (
         <div className="space-y-5">
           {isLcpSession && (
-            <div className="rounded-lg border border-sparrow-rule bg-sparrow-mist/50 p-3">
-              <p className="text-sm font-medium text-sparrow-ink">{event.title}</p>
-              <p className="mt-0.5 text-xs text-sparrow-gray">{dateLabel} · {timeLabel}{event.location ? ` · ${event.location}` : ''}</p>
-              <p className="mt-1.5 text-xs text-sparrow-gray">Title, time, and location are managed on the LCP Session Cal.</p>
+            <div className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 p-3">
+              <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{event.title}</p>
+              <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{dateLabel} · {timeLabel}{event.location ? ` · ${event.location}` : ''}</p>
+              <p className="mt-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Title, time, and location are managed on the LCP Session Cal.</p>
             </div>
           )}
 
@@ -484,12 +484,12 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
           {!isLcpSession && (
             <>
-              <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink">
+              <label className="flex cursor-pointer items-center gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 <input
                   type="checkbox"
                   checked={editAllDay}
                   onChange={(e) => setEditAllDay(e.target.checked)}
-                  className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                  className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                 />
                 All day
               </label>
@@ -513,7 +513,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                 {editAllDay && (
                   <div>
                     <label className="field-label">
-                      End date <span className="font-normal text-sparrow-gray">(optional)</span>
+                      End date <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
                     </label>
                     <input
                       type="date"
@@ -538,7 +538,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                     </div>
                     <div>
                       <label className="field-label">
-                        End time <span className="font-normal text-sparrow-gray">(optional)</span>
+                        End time <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
                       </label>
                       <input
                         type="time"
@@ -553,7 +553,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
               <div>
                 <label className="field-label">
-                  Location <span className="font-normal text-sparrow-gray">(optional)</span>
+                  Location <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
                 </label>
                 <input
                   type="text"
@@ -568,7 +568,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
           {rooms.length > 0 && (
             <div>
               <label className="field-label">
-                Office room <span className="font-normal text-sparrow-gray">(optional)</span>
+                Office room <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
               </label>
               <select
                 value={editRoomId}
@@ -581,16 +581,16 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                 ))}
               </select>
               {editRoomId && rooms.find((r) => r.id === editRoomId)?.blocks_whole_office && (
-                <label className="mt-2 flex cursor-pointer items-start gap-2.5 text-sm text-sparrow-ink">
+                <label className="mt-2 flex cursor-pointer items-start gap-2.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                   <input
                     type="checkbox"
                     checked={editIsPrivateMeeting}
                     onChange={(e) => setEditIsPrivateMeeting(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                    className="mt-0.5 h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                   />
                   <span>
                     <span className="font-medium">Private meeting — do not walk through</span>
-                    <span className="mt-0.5 block text-xs text-sparrow-gray">
+                    <span className="mt-0.5 block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       This blocks the whole office. Other rooms will show as unavailable during this time.
                     </span>
                   </span>
@@ -607,22 +607,22 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                 {event.label.name}
               </span>
             ) : (
-              <span className="inline-block rounded-full bg-sparrow-mist px-3 py-1 text-xs font-medium text-sparrow-gray">
+              <span className="inline-block rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
                 {KIND_LABEL[event.kind]}
               </span>
             )}
             {isRecurring && (
-              <span className="inline-block rounded-full bg-sparrow-mist px-3 py-1 text-xs font-medium text-sparrow-gray">
+              <span className="inline-block rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
                 Recurring
               </span>
             )}
           </div>
 
           <div>
-            <p className="text-sm font-medium text-sparrow-ink">{dateLabel}</p>
-            <p className="mt-0.5 text-sm text-sparrow-gray">{timeLabel}</p>
+            <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{dateLabel}</p>
+            <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{timeLabel}</p>
             {!event.is_personal && (
-              <p className="mt-0.5 text-xs text-sparrow-gray">
+              <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 Created by {event.creator?.full_name ?? (event.created_by ? 'a staff member' : 'system')}
               </p>
             )}
@@ -630,15 +630,15 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
           {event.location && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Location</p>
-              <p className="mt-0.5 text-sm text-sparrow-ink">{event.location}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Location</p>
+              <p className="mt-0.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{event.location}</p>
             </div>
           )}
 
           {/* Attendance — hidden for personal events */}
           {!event.is_personal && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Attending?</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Attending?</p>
               <div className="mt-1.5 flex items-center gap-2">
                 <button
                   onClick={() => setAttendance(true)}
@@ -646,7 +646,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                   className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
                     isAttending
                       ? 'bg-sparrow-green text-white hover:bg-sparrow-green/90'
-                      : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                      : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                   }`}
                 >
                   Yes
@@ -657,22 +657,22 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                   className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
                     !isAttending
                       ? 'bg-priority-p1 text-white hover:bg-priority-p1/90'
-                      : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                      : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                   }`}
                 >
                   No
                 </button>
               </div>
               {attendancePrompt !== null && (
-                <div className="mt-2 rounded-lg border border-sparrow-rule bg-sparrow-mist/50 p-2.5">
-                  <p className="text-xs text-sparrow-gray">
+                <div className="mt-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 p-2.5">
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     Apply to just this occurrence, or this and every future one in the series?
                   </p>
                   <div className="mt-2 flex flex-col gap-1.5">
                     <button
                       onClick={() => void applyAttendance(attendancePrompt, 'single')}
                       disabled={attendanceLoading}
-                      className="w-full rounded-lg border border-sparrow-rule bg-white py-1.5 text-xs font-medium text-sparrow-ink hover:bg-sparrow-mist"
+                      className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface py-1.5 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                     >
                       Just this one
                     </button>
@@ -686,7 +686,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                     <button
                       onClick={() => setAttendancePrompt(null)}
                       disabled={attendanceLoading}
-                      className="w-full py-1 text-xs font-medium text-sparrow-gray hover:text-sparrow-ink"
+                      className="w-full py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                     >
                       Cancel
                     </button>
@@ -700,7 +700,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                   .map((id) => profiles.find((p) => p.id === id)?.full_name)
                   .filter(Boolean);
                 return names.length > 0 ? (
-                  <p className="mt-1.5 text-xs text-sparrow-gray">
+                  <p className="mt-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     Also attending: {names.join(', ')}
                   </p>
                 ) : null;
@@ -714,16 +714,16 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Prep Notes</p>
                   <div
-                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-amber-50 p-3 text-sm leading-relaxed text-sparrow-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
+                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-amber-50 p-3 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
                     dangerouslySetInnerHTML={{ __html: notesPreview.prep }}
                   />
                 </div>
               )}
               {notesPreview.live && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green">Live Notes</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">Live Notes</p>
                   <div
-                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-green-50 p-3 text-sm leading-relaxed text-sparrow-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
+                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-green-50 p-3 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
                     dangerouslySetInnerHTML={{ __html: notesPreview.live }}
                   />
                 </div>
@@ -732,7 +732,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Shared Notes</p>
                   <div
-                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-blue-50 p-3 text-sm leading-relaxed text-sparrow-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
+                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-blue-50 p-3 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
                     dangerouslySetInnerHTML={{ __html: notesPreview.shared }}
                   />
                 </div>
@@ -741,19 +741,19 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
           )}
 
           {/* Comments */}
-          <div className="border-t border-sparrow-rule pt-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray">Comments</p>
+          <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Comments</p>
             <ul className="mt-2 space-y-3">
               {eventComments.length === 0 && (
-                <li className="text-sm text-sparrow-gray">No comments yet.</li>
+                <li className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No comments yet.</li>
               )}
               {eventComments.map((c) => (
                 <li key={c.id} className="text-sm">
-                  <span className="font-medium text-sparrow-ink">{c.author?.full_name ?? 'Staff'}</span>
-                  <span className="ml-2 text-xs text-sparrow-gray">
+                  <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{c.author?.full_name ?? 'Staff'}</span>
+                  <span className="ml-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {new Date(c.created_at).toLocaleDateString()}
                   </span>
-                  <p className="text-sparrow-ink">{c.body}</p>
+                  <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{c.body}</p>
                 </li>
               ))}
             </ul>

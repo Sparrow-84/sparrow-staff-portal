@@ -47,7 +47,7 @@ export function RichTextField({
 
 export function RichTextView({ html, empty }: { html: string | null; empty?: string }) {
   if (!html) {
-    return empty ? <p className="text-sm italic text-sparrow-gray">{empty}</p> : null;
+    return empty ? <p className="text-sm italic text-sparrow-gray dark:text-sparrow-dark-gray">{empty}</p> : null;
   }
   return <div className="rich-text" dangerouslySetInnerHTML={{ __html: html }} />;
 }

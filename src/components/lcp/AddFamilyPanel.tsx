@@ -97,7 +97,7 @@ export function AddFamilyPanel({
       <div className="space-y-4">
         <div>
           <label className="field-label" htmlFor="fam-name">
-            Household name <span className="font-normal text-sparrow-gray">(last name)</span>
+            Household name <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(last name)</span>
           </label>
           <input
             id="fam-name"
@@ -120,7 +120,7 @@ export function AddFamilyPanel({
             onChange={(e) => { setEmail(e.target.value); clear('fam-email'); }}
             placeholder="mother@example.com"
           />
-          <p className="mt-1 text-xs text-sparrow-gray">
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             The mother signs in to the participant portal with this email, and it's also her
             contact email — no separate email needed below. It's also the allowlist — only
             this address can register for this family. One login per family.
@@ -140,13 +140,13 @@ export function AddFamilyPanel({
             value={session}
             onChange={(e) => setSession(Number(e.target.value) || 1)}
           />
-          <p className="mt-1 text-xs text-sparrow-gray">
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             Rotating-door entry — start them wherever the group currently is (of {TOTAL_SESSIONS}).
             Adjustable later from the family's Progress tab.
           </p>
         </div>
 
-        <div className="border-t border-sparrow-rule pt-4">
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           <span className="field-label">Mother</span>
           <input
             id="fam-adult-name"
@@ -167,7 +167,7 @@ export function AddFamilyPanel({
         <div>
           <div className="flex items-center justify-between">
             <span className="field-label">Children</span>
-            <button type="button" onClick={addChildRow} className="text-xs font-medium text-sparrow-green">
+            <button type="button" onClick={addChildRow} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
               + Add child
             </button>
           </div>
@@ -184,7 +184,7 @@ export function AddFamilyPanel({
                   <button
                     type="button"
                     onClick={() => removeChildRow(i)}
-                    className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1"
+                    className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
                   >
                     Remove
                   </button>

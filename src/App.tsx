@@ -3,13 +3,14 @@ import { useAuth } from './auth/AuthContext';
 import { Login } from './pages/Login';
 import { AppShell } from './components/AppShell';
 import { initOneSignal, loginOneSignal, logoutOneSignal } from './lib/push';
+import { applyTheme } from './lib/theme';
 
 initOneSignal();
 
 function Splash({ message }: { message: string }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-sparrow-mist">
-      <p className="text-sm text-sparrow-gray">{message}</p>
+    <div className="flex min-h-screen items-center justify-center bg-sparrow-mist dark:bg-sparrow-dark-bg">
+      <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{message}</p>
     </div>
   );
 }
@@ -25,6 +26,10 @@ export function App() {
     if (!session) logoutOneSignal();
   }, [session]);
 
+  useEffect(() => {
+    if (profile) applyTheme(profile.dark_mode);
+  }, [profile?.id, profile?.dark_mode]);
+
   if (loading) return <Splash message="Loading…" />;
   if (!session) return <Login />;
 
@@ -32,10 +37,10 @@ export function App() {
   // links staff on first sign-in and rejects unknown emails).
   if (!profile) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-sparrow-sage px-4">
-        <div className="max-w-sm rounded-2xl border border-sparrow-rule bg-white p-8 text-center shadow-card">
+      <div className="flex min-h-screen items-center justify-center bg-sparrow-sage dark:bg-sparrow-dark-bg px-4">
+        <div className="max-w-sm rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center shadow-card">
           <h1 className="font-serif text-xl font-semibold">Not authorized</h1>
-          <p className="mt-2 text-sm text-sparrow-gray">
+          <p className="mt-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             This account isn’t on the Sparrow staff roster. Ask an admin to add your email.
           </p>
           <button onClick={signOut} className="btn-primary mt-6 w-full">

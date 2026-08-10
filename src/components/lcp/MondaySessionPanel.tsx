@@ -358,7 +358,7 @@ export function MondaySessionPanel({
     setAssignOpen((prev) => ({ ...prev, [familyId]: false }));
   }
 
-  if (loading) return <p className="py-8 text-sm text-sparrow-gray">Loading tonight's session…</p>;
+  if (loading) return <p className="py-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading tonight's session…</p>;
 
   // "Logged" means actually saved, not just typed -- reads the last-saved
   // snapshot, not the live draft, so this badge can't overstate progress
@@ -374,13 +374,13 @@ export function MondaySessionPanel({
       <div className="flex items-start gap-3">
         <button
           onClick={onBack}
-          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green transition hover:bg-sparrow-sage/70"
+          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70"
         >
           Done for now
         </button>
         <div>
-          <h2 className="font-serif text-xl font-semibold text-sparrow-ink">{SESSION_LOG_LABEL.monday_mentoring}</h2>
-          <p className="mt-0.5 text-sm text-sparrow-gray">
+          <h2 className="font-serif text-xl font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{SESSION_LOG_LABEL.monday_mentoring}</h2>
+          <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {formatDateHeader(sessionDate)} · Shared log — everything above is already saved. Leaving
             doesn't finish or lock anything for the others tonight.
           </p>
@@ -388,17 +388,17 @@ export function MondaySessionPanel({
       </div>
 
       {/* Attendance */}
-      <section className="rounded-2xl border border-sparrow-rule bg-white p-4 shadow-card">
+      <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
         <div className="mb-3 flex items-center justify-between">
           <span className="field-label">Attendance</span>
-          <button onClick={markAllPresent} className="text-xs font-medium text-sparrow-green">
+          <button onClick={markAllPresent} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
             Mark all on time
           </button>
         </div>
         <ul className="space-y-2">
           {families.map((f) => (
             <li key={f.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-sparrow-rule/70 p-2">
-              <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink">{f.display_name}</span>
+              <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
               <div className="flex gap-1">
                 {STATUSES.map((s) => (
                   <button
@@ -411,19 +411,19 @@ export function MondaySessionPanel({
                           : s === 'late'
                             ? 'bg-priority-p2 text-white'
                             : 'bg-sparrow-green text-white'
-                        : 'bg-sparrow-mist text-sparrow-gray hover:text-sparrow-ink'
+                        : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                     }`}
                   >
                     {ATTENDANCE_LABEL[s]}
                   </button>
                 ))}
               </div>
-              <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray">
+              <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 <input
                   type="checkbox"
                   checked={vouchers[f.id] != null}
                   onChange={() => void toggleFamilyVoucher(f.id)}
-                  className="h-3.5 w-3.5 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                  className="h-3.5 w-3.5 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                 />
                 Voucher
               </label>
@@ -446,21 +446,21 @@ export function MondaySessionPanel({
                   <button
                     key={bucket}
                     onClick={() => setSelectedBucket(bucket)}
-                    className={`flex flex-col items-start gap-2 rounded-2xl border border-sparrow-rule bg-sparrow-mist p-4 text-left shadow-card transition hover:border-sparrow-green/40 ${BUCKET_CARD_BORDER[bucket]}`}
+                    className={`flex flex-col items-start gap-2 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-4 text-left shadow-card transition hover:border-sparrow-green/40 ${BUCKET_CARD_BORDER[bucket]}`}
                   >
-                    <h3 className="font-serif text-base font-semibold text-sparrow-ink">{MONDAY_BUCKET_LABEL[bucket]}</h3>
-                    <p className="text-xs text-sparrow-gray">{MONDAY_BUCKET_DESCRIPTION[bucket]}</p>
+                    <h3 className="font-serif text-base font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{MONDAY_BUCKET_LABEL[bucket]}</h3>
+                    <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{MONDAY_BUCKET_DESCRIPTION[bucket]}</p>
                     <span
                       className={`rounded-full border px-2 py-1 text-[11px] font-bold ${
                         done === total && total > 0
-                          ? 'border-sparrow-green bg-sparrow-green text-white'
-                          : 'border-sparrow-rule bg-white text-sparrow-gray'
+                          ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green text-white'
+                          : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray'
                       }`}
                     >
                       {done} of {total} logged
                     </span>
                     {status.completedAt && (
-                      <span className="text-[11px] font-medium text-sparrow-green">
+                      <span className="text-[11px] font-medium text-sparrow-green dark:text-sparrow-dark-green">
                         ✓ Done for tonight{status.completedBy ? ` — ${status.completedBy}` : ''}
                       </span>
                     )}
@@ -474,11 +474,11 @@ export function MondaySessionPanel({
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setSelectedBucket(null)}
-                className="inline-flex items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green transition hover:bg-sparrow-sage/70"
+                className="inline-flex items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70"
               >
                 ← All buckets
               </button>
-              <div className="inline-flex gap-0.5 rounded-xl border border-sparrow-rule bg-sparrow-mist p-1">
+              <div className="inline-flex gap-0.5 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1">
                 {MONDAY_BUCKETS.map((bucket) => {
                   const { done, total } = bucketCompletion(bucket);
                   const active = bucket === selectedBucket;
@@ -487,13 +487,13 @@ export function MondaySessionPanel({
                       key={bucket}
                       onClick={() => setSelectedBucket(bucket)}
                       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                        active ? 'bg-white text-sparrow-green shadow-sm' : 'text-sparrow-gray hover:text-sparrow-ink'
+                        active ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-green dark:text-sparrow-dark-green shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
                       }`}
                     >
                       {MONDAY_BUCKET_LABEL[bucket]}
                       <span
                         className={`rounded-full px-1.5 text-[10px] ${
-                          active ? 'bg-sparrow-sage text-sparrow-green' : 'bg-white text-sparrow-gray'
+                          active ? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green' : 'bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray'
                         }`}
                       >
                         {done}/{total}
@@ -534,7 +534,7 @@ export function MondaySessionPanel({
               ))}
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-sparrow-rule pt-4">
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
               <button
                 onClick={() => void saveBucketNotes(selectedBucket)}
                 disabled={bucketSaveState === 'saving'}
@@ -542,16 +542,16 @@ export function MondaySessionPanel({
               >
                 {bucketSaveState === 'saving' ? 'Saving…' : `Save ${MONDAY_BUCKET_LABEL[selectedBucket]} notes`}
               </button>
-              {bucketSaveState === 'saved' && <span className="text-sm font-medium text-sparrow-green">Saved ✓</span>}
+              {bucketSaveState === 'saved' && <span className="text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green">Saved ✓</span>}
               {bucketSaveState === 'error' && (
                 <span className="text-sm font-medium text-priority-p1">{bucketSaveError}</span>
               )}
-              <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray">
+              <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 <input
                   type="checkbox"
                   checked={bucketStatus[selectedBucket].completedAt != null}
                   onChange={() => void toggleBucketDone(selectedBucket)}
-                  className="h-3.5 w-3.5 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                  className="h-3.5 w-3.5 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                 />
                 Done with {MONDAY_BUCKET_LABEL[selectedBucket]} for tonight
               </label>
@@ -617,33 +617,33 @@ function MondayFamilyCard({
   return (
     <div className={`rounded-2xl border border-transparent p-4 ${BUCKET_FAMILY_CARD_BG[bucket]}`}>
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <button onClick={onOpenFamily} className="font-medium text-sparrow-ink hover:text-sparrow-green hover:underline">
+        <button onClick={onOpenFamily} className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:text-sparrow-green dark:hover:text-sparrow-dark-green hover:underline">
           {family.display_name}
         </button>
-        <button onClick={onToggleHistory} className="text-xs font-semibold text-sparrow-gray hover:text-sparrow-green">
+        <button onClick={onToggleHistory} className="text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green">
           History {historyOpen ? '▴' : '▾'}
         </button>
       </div>
 
       {historyOpen && (
-        <div className="mb-3 rounded-xl bg-white p-3">
+        <div className="mb-3 rounded-xl bg-white dark:bg-sparrow-dark-surface p-3">
           {historyData === 'loading' || historyData === undefined ? (
-            <p className="text-xs text-sparrow-gray">Loading…</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
           ) : historyData.length === 0 ? (
-            <p className="text-xs text-sparrow-gray">No prior notes yet.</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No prior notes yet.</p>
           ) : (
             <ul className="space-y-2">
               {historyData.map((n) => (
                 <li key={n.id} className="border-t border-sparrow-rule/70 pt-2 first:border-t-0 first:pt-0">
-                  <p className="text-xs text-sparrow-gray">
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {n.session_log_type ? SESSION_LOG_LABEL[n.session_log_type] : 'Note'} · {dayLabel(n.created_at)}
                   </p>
-                  <p className="text-sm text-sparrow-ink">{n.body}</p>
+                  <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{n.body}</p>
                 </li>
               ))}
             </ul>
           )}
-          <button onClick={onOpenFamily} className="mt-2 text-xs font-semibold text-sparrow-green">
+          <button onClick={onOpenFamily} className="mt-2 text-xs font-semibold text-sparrow-green dark:text-sparrow-dark-green">
             See full history →
           </button>
         </div>
@@ -654,32 +654,32 @@ function MondayFamilyCard({
         onChange={(e) => onNoteChange(e.target.value)}
         rows={2}
         placeholder={`${family.display_name}'s ${bucket === 'finance' ? 'finance' : bucket === 'life_skills' ? 'life skills' : 'mentoring'} note…`}
-        className="field-input bg-white"
+        className="field-input bg-white dark:bg-sparrow-dark-surface"
       />
 
       {/* Goals — shared across all 3 buckets, not duplicated */}
       <div className="mt-3 border-t border-white/60 pt-3">
         <div className="mb-1 flex items-center justify-between">
           <span className="field-label">Goals</span>
-          <button onClick={onToggleAddGoal} className="text-xs font-medium text-sparrow-green">
+          <button onClick={onToggleAddGoal} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
             {addGoalOpen ? 'Cancel' : '+ Add goal'}
           </button>
         </div>
-        {goals.length === 0 && !addGoalOpen && <p className="text-xs text-sparrow-gray">None yet.</p>}
+        {goals.length === 0 && !addGoalOpen && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">None yet.</p>}
         {goals.length > 0 && (
           <ul className="space-y-1.5">
             {goals.map((goal) => (
-              <li key={goal.id} className="flex items-center gap-2 text-sm text-sparrow-ink">
+              <li key={goal.id} className="flex items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 <input
                   type="checkbox"
                   onChange={() => onToggleGoalMet(goal.id)}
-                  className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                  className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                 />
                 <span>
                   {GOAL_AREA_LABEL[goal.area]}: {goal.title}
                 </span>
                 {goal.due_date && (
-                  <span className={`ml-auto shrink-0 text-xs ${isOverdue(goal.due_date) ? 'font-medium text-priority-p1' : 'text-sparrow-gray'}`}>
+                  <span className={`ml-auto shrink-0 text-xs ${isOverdue(goal.due_date) ? 'font-medium text-priority-p1' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                     {dueLabel(goal.due_date)}
                   </span>
                 )}
@@ -688,7 +688,7 @@ function MondayFamilyCard({
           </ul>
         )}
         {addGoalOpen && (
-          <div className="mt-2 space-y-2 rounded-xl bg-white p-3">
+          <div className="mt-2 space-y-2 rounded-xl bg-white dark:bg-sparrow-dark-surface p-3">
             <input
               type="text"
               value={goalDraft.title}
@@ -698,7 +698,7 @@ function MondayFamilyCard({
             />
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Goal area</label>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Goal area</label>
                 <select
                   value={goalDraft.area}
                   onChange={(e) => onGoalDraftChange({ ...goalDraft, area: e.target.value as GoalArea })}
@@ -710,7 +710,7 @@ function MondayFamilyCard({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Due date</label>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Due date</label>
                 <input
                   type="date"
                   value={goalDraft.due_date}
@@ -730,25 +730,25 @@ function MondayFamilyCard({
       <div className="mt-3 border-t border-white/60 pt-3">
         <div className="mb-1 flex items-center justify-between">
           <span className="field-label">Homework</span>
-          <button onClick={onToggleAssign} className="text-xs font-medium text-sparrow-green">
+          <button onClick={onToggleAssign} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
             {assignOpen ? 'Cancel' : '+ Assign'}
           </button>
         </div>
-        {homework.length === 0 && !assignOpen && <p className="text-xs text-sparrow-gray">None yet.</p>}
+        {homework.length === 0 && !assignOpen && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">None yet.</p>}
         {homework.length > 0 && (
           <ul className="space-y-1.5">
             {homework.map((hw) => (
-              <li key={hw.id} className="flex items-center gap-2 text-sm text-sparrow-ink">
+              <li key={hw.id} className="flex items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
                 <input
                   type="checkbox"
                   onChange={() => onToggleHomeworkComplete(hw.id)}
-                  className="h-4 w-4 rounded border-sparrow-rule text-sparrow-green focus:ring-sparrow-green"
+                  className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                 />
                 <span>
                   {AREA_LABEL[hw.area]}: {hw.title}
                 </span>
                 {hw.due_date && (
-                  <span className={`ml-auto shrink-0 text-xs ${isOverdue(hw.due_date) ? 'font-medium text-priority-p1' : 'text-sparrow-gray'}`}>
+                  <span className={`ml-auto shrink-0 text-xs ${isOverdue(hw.due_date) ? 'font-medium text-priority-p1' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                     {dueLabel(hw.due_date)}
                   </span>
                 )}
@@ -757,7 +757,7 @@ function MondayFamilyCard({
           </ul>
         )}
         {assignOpen && (
-          <div className="mt-2 space-y-2 rounded-xl bg-white p-3">
+          <div className="mt-2 space-y-2 rounded-xl bg-white dark:bg-sparrow-dark-surface p-3">
             <input
               type="text"
               value={assignDraft.title}
@@ -767,7 +767,7 @@ function MondayFamilyCard({
             />
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Homework area</label>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Homework area</label>
                 <select
                   value={assignDraft.area}
                   onChange={(e) => onAssignDraftChange({ ...assignDraft, area: e.target.value as HomeworkArea })}
@@ -779,7 +779,7 @@ function MondayFamilyCard({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray">Due date</label>
+                <label className="mb-1 block text-[11px] font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Due date</label>
                 <input
                   type="date"
                   value={assignDraft.due_date}

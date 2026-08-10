@@ -75,7 +75,7 @@ export function NewConversationPanel({
       subtitle={isGroup ? 'Group — pick people and name it' : 'Pick someone to message'}
       footer={
         <div className="flex items-center justify-between gap-3">
-          <span className="text-xs text-sparrow-gray">
+          <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             {ids.length === 0 ? 'No one selected' : isGroup ? `${ids.length} people` : '1 person'}
           </span>
           <button onClick={() => void create()} disabled={!canCreate || busy} className="btn-primary">
@@ -112,19 +112,19 @@ export function NewConversationPanel({
               <button
                 onClick={() => toggle(p.id)}
                 className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition ${
-                  on ? 'bg-sparrow-sage' : 'hover:bg-sparrow-mist'
+                  on ? 'bg-sparrow-sage' : 'hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
                 }`}
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sparrow-green text-xs font-semibold text-white">
                   {initials(p.full_name)}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-sparrow-ink">{p.full_name}</span>
-                  <span className="block truncate text-xs capitalize text-sparrow-gray">{p.department}</span>
+                  <span className="block truncate text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{p.full_name}</span>
+                  <span className="block truncate text-xs capitalize text-sparrow-gray dark:text-sparrow-dark-gray">{p.department}</span>
                 </span>
                 <span
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-[11px] ${
-                    on ? 'border-sparrow-green bg-sparrow-green text-white' : 'border-sparrow-rule text-transparent'
+                    on ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green text-white' : 'border-sparrow-rule dark:border-sparrow-dark-border text-transparent'
                   }`}
                   aria-hidden
                 >
@@ -135,7 +135,7 @@ export function NewConversationPanel({
           );
         })}
         {people.length === 0 && !error && (
-          <li className="px-2 py-6 text-center text-sm text-sparrow-gray">Loading staff…</li>
+          <li className="px-2 py-6 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading staff…</li>
         )}
       </ul>
     </Drawer>

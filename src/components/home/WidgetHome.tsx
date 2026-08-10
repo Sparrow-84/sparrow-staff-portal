@@ -169,7 +169,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
   }, [me, tasks, comments, notifications, wins, visibleEvents, notedEventIds, attendance, reports, load, onNavigate, weekendVisible]);
 
   if (!me || !ctx) return null;
-  if (loading) return <p className="p-8 text-sm text-sparrow-gray">Loading your dashboard…</p>;
+  if (loading) return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading your dashboard…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
   const shown = editing ? draft : layout;
@@ -231,17 +231,17 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold">Good to see you, {firstName}.</h1>
-          <p className="mt-1 text-sm text-sparrow-gray">{dateLabel}</p>
+          <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{dateLabel}</p>
         </div>
         {editing ? (
           <div className="flex items-center gap-2">
             {notPlaced.length > 0 && (
               <div className="relative">
-                <button onClick={() => setAddOpen((o) => !o)} className="btn-ghost border border-sparrow-rule">
+                <button onClick={() => setAddOpen((o) => !o)} className="btn-ghost border border-sparrow-rule dark:border-sparrow-dark-border">
                   + Add widget
                 </button>
                 {addOpen && (
-                  <div className="absolute right-0 z-30 mt-1 w-52 overflow-hidden rounded-xl border border-sparrow-rule bg-white shadow-card">
+                  <div className="absolute right-0 z-30 mt-1 w-52 overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-card">
                     {notPlaced.map((d) => (
                       <button
                         key={d.key}
@@ -249,7 +249,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
                           setDraft((cur) => [...cur, d.key]);
                           setAddOpen(false);
                         }}
-                        className="block w-full px-3 py-2 text-left text-sm hover:bg-sparrow-mist"
+                        className="block w-full px-3 py-2 text-left text-sm hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                       >
                         {d.label}
                       </button>
@@ -265,19 +265,19 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setHelpOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule text-sm font-semibold text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-sparrow-rule dark:border-sparrow-dark-border text-sm font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
               aria-label="Dashboard help"
               title="Dashboard overview"
             >
               ?
             </button>
-            <button onClick={startEdit} className="btn-ghost border border-sparrow-rule">Edit home</button>
+            <button onClick={startEdit} className="btn-ghost border border-sparrow-rule dark:border-sparrow-dark-border">Edit home</button>
           </div>
         )}
       </div>
 
       {editing && (
-        <p className="mt-3 text-xs text-sparrow-gray">
+        <p className="mt-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           Drag the top bar of any card to reorder. Remove with &times;. Add more with &ldquo;+ Add widget.&rdquo;
         </p>
       )}
@@ -288,7 +288,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
             return (
               <div
                 key="__placeholder__"
-                className={`min-h-[8rem] rounded-2xl border-2 border-dashed border-sparrow-green bg-sparrow-sage/40 flex items-center justify-center${dragIsWide ? ' sm:col-span-2' : ''}`}
+                className={`min-h-[8rem] rounded-2xl border-2 border-dashed border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage/40 flex items-center justify-center${dragIsWide ? ' sm:col-span-2' : ''}`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
                   if (dragKey !== null && dropIndex !== null) {
@@ -298,7 +298,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
                   setDropIndex(null);
                 }}
               >
-                <span className="text-xs font-medium text-sparrow-green">Drop here</span>
+                <span className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">Drop here</span>
               </div>
             );
           }
@@ -357,11 +357,11 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
                 isBeingDragged && dropIndex === null ? 'opacity-30' : '',
               ].join(' ')}
             >
-              <div className="flex cursor-grab select-none items-center justify-between rounded-t-2xl bg-sparrow-mist px-3 py-2 text-xs text-sparrow-gray active:cursor-grabbing">
+              <div className="flex cursor-grab select-none items-center justify-between rounded-t-2xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray active:cursor-grabbing">
                 <span aria-hidden>⠿ Drag to reorder</span>
                 <button
                   onClick={() => setDraft((cur) => cur.filter((k) => k !== key))}
-                  className="cursor-default rounded px-1.5 font-semibold hover:bg-sparrow-rule/60 hover:text-sparrow-ink"
+                  className="cursor-default rounded px-1.5 font-semibold hover:bg-sparrow-rule/60 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                   aria-label={`Remove ${def.label}`}
                 >
                   ×
@@ -374,7 +374,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
       </div>
 
       {shown.length === 0 && (
-        <p className="mt-10 text-center text-sm text-sparrow-gray">
+        <p className="mt-10 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           Your home is empty. {editing ? 'Add a widget to get started.' : 'Click "Edit home" to add widgets.'}
         </p>
       )}

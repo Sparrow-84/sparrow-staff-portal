@@ -30,42 +30,42 @@ export function TabHelpModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
+        className="w-full max-w-lg rounded-2xl bg-white dark:bg-sparrow-dark-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-sparrow-rule px-6 py-4">
-          <h2 className="font-serif text-lg font-semibold text-sparrow-ink">{title}</h2>
+        <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-6 py-4">
+          <h2 className="font-serif text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{title}</h2>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-xl leading-none text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-xl leading-none text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
             aria-label="Close"
           >
             ×
           </button>
         </div>
 
-        <div className="divide-y divide-sparrow-rule">
+        <div className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
           {intro && (
             <div className="px-6 py-4">
-              <p className="text-sm leading-relaxed text-sparrow-gray">{intro}</p>
+              <p className="text-sm leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">{intro}</p>
             </div>
           )}
 
           {sections.map((s) => (
             <div key={s.heading} className="px-6 py-5">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                 {s.heading}
               </p>
               <div className="space-y-3">
                 {s.items.map((item) => (
                   <div key={item.label}>
-                    <p className="text-sm font-medium text-sparrow-ink">{item.label}</p>
-                    <p className="text-xs leading-relaxed text-sparrow-gray">{item.desc}</p>
+                    <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{item.label}</p>
+                    <p className="text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">{item.desc}</p>
                   </div>
                 ))}
               </div>
               {s.note && (
-                <p className="mt-3 rounded-lg bg-sparrow-mist px-3 py-2 text-xs text-sparrow-gray">
+                <p className="mt-3 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   {s.note}
                 </p>
               )}

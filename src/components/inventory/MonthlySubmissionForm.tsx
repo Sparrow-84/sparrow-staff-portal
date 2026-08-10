@@ -79,7 +79,7 @@ function AdditionForm({
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
             !form.is_batch
               ? 'bg-sparrow-green text-white'
-              : 'bg-white border border-sparrow-rule text-sparrow-gray hover:bg-sparrow-mist'
+              : 'bg-white dark:bg-sparrow-dark-surface border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
           }`}
         >
           Individual item
@@ -89,7 +89,7 @@ function AdditionForm({
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
             form.is_batch
               ? 'bg-sparrow-green text-white'
-              : 'bg-white border border-sparrow-rule text-sparrow-gray hover:bg-sparrow-mist'
+              : 'bg-white dark:bg-sparrow-dark-surface border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
           }`}
         >
           Batch group
@@ -111,7 +111,7 @@ function AdditionForm({
             ))}
           </select>
           {form.batch_category && BATCH_CATEGORY_HINTS[form.batch_category] && (
-            <p className="mt-1 text-xs text-sparrow-gray">
+            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               {BATCH_CATEGORY_HINTS[form.batch_category]}
             </p>
           )}
@@ -126,7 +126,7 @@ function AdditionForm({
             placeholder='e.g. "Ryobi cordless drill, serial #12345" — be specific'
             className={fieldClass('add-desc')}
           />
-          <p className="mt-1 text-xs text-sparrow-gray">
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             Include brand, model, and serial # for electronics, power tools, and appliances.
           </p>
         </div>
@@ -154,8 +154,8 @@ function AdditionForm({
                 onClick={() => set({ condition: c })}
                 className={`flex-1 rounded-lg border py-1.5 text-sm font-medium transition capitalize ${
                   form.condition === c
-                    ? 'border-sparrow-green bg-sparrow-green/10 text-sparrow-green'
-                    : 'border-sparrow-rule bg-white text-sparrow-gray hover:bg-sparrow-mist'
+                    ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
+                    : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
                 }`}
               >
                 {c}
@@ -179,7 +179,7 @@ function AdditionForm({
       <div>
         <label className="field-label" htmlFor="add-cost">Cost *</label>
         <div className="flex gap-2 items-center">
-          <span className="text-sparrow-gray text-sm">$</span>
+          <span className="text-sparrow-gray dark:text-sparrow-dark-gray text-sm">$</span>
           <input
             id="add-cost"
             type="number"
@@ -198,8 +198,8 @@ function AdditionForm({
                   onClick={() => set({ cost_basis: b })}
                   className={`rounded-md border px-2 py-1 text-xs font-medium transition ${
                     form.cost_basis === b
-                      ? 'border-sparrow-green bg-sparrow-green/10 text-sparrow-green'
-                      : 'border-sparrow-rule bg-white text-sparrow-gray hover:bg-sparrow-mist'
+                      ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
+                      : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
                   }`}
                 >
                   {b === 'per_item' ? 'each' : 'total'}
@@ -209,7 +209,7 @@ function AdditionForm({
           )}
         </div>
         {form.cost > 0 && form.quantity > 1 && (
-          <p className="mt-1 text-xs text-sparrow-gray">
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             {form.cost_basis === 'per_item'
               ? `Total: ${formatCost(form.cost * form.quantity)}`
               : `Per item: ${formatCost(Math.round(form.cost / form.quantity))}`}
@@ -222,8 +222,8 @@ function AdditionForm({
               onClick={() => set({ cost_source: s })}
               className={`rounded-md border px-2 py-1 text-xs transition ${
                 form.cost_source === s
-                  ? 'border-sparrow-green bg-sparrow-green/10 text-sparrow-green font-medium'
-                  : 'border-sparrow-rule bg-white text-sparrow-gray hover:bg-sparrow-mist'
+                  ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green font-medium'
+                  : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
               }`}
             >
               {s === 'known' ? 'Known (receipt / handoff)' : 'Estimated (best guess)'}
@@ -231,7 +231,7 @@ function AdditionForm({
           ))}
         </div>
         {form.cost_source === 'estimated' && (
-          <p className="mt-1 text-xs text-sparrow-gray">
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             For donated items, check Facebook Marketplace for a realistic used price.
           </p>
         )}
@@ -261,14 +261,14 @@ function AdditionForm({
               onChange={(e) => set({ is_donated: e.target.checked })}
               className="h-4 w-4 accent-sparrow-green"
             />
-            <span className="text-sm text-sparrow-ink">Donated</span>
+            <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Donated</span>
           </label>
         </div>
       </div>
 
       {!form.is_batch && (
         <div>
-          <label className="field-label">Serial number <span className="normal-case font-normal text-sparrow-gray">(required for electronics, power tools, appliances)</span></label>
+          <label className="field-label">Serial number <span className="normal-case font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(required for electronics, power tools, appliances)</span></label>
           <input
             value={form.serial_number ?? ''}
             onChange={(e) => set({ serial_number: e.target.value || null })}
@@ -381,7 +381,7 @@ function RemovalForm({
             placeholder='e.g. "Large brown leather couch" — be specific'
             className={fieldClass('rm-what')}
           />
-          <p className="mt-1 text-xs text-sparrow-gray">
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             Only list items physically off the property. Broken items still on site are not gone yet.
           </p>
         </div>
@@ -399,7 +399,7 @@ function RemovalForm({
             className="field-input"
           />
           {maxQty && qtyRemoved < maxQty && (
-            <p className="mt-1 text-xs text-sparrow-gray">
+            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               {maxQty - qtyRemoved} of {maxQty} will remain.
             </p>
           )}
@@ -459,8 +459,8 @@ function AdditionRow({
   return (
     <div className="flex items-start gap-3 rounded-xl border border-sparrow-green/25 bg-sparrow-green/5 px-4 py-3">
       <div className="flex-1 min-w-0 space-y-0.5">
-        <p className="text-sm font-medium text-sparrow-ink truncate">{entry.description}</p>
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray">
+        <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink truncate">{entry.description}</p>
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           <span>{displayAdditionCost(entry)}</span>
           {entry.cost_source === 'estimated' && (
             <span className="text-sparrow-gold">estimated</span>
@@ -474,7 +474,7 @@ function AdditionRow({
       </div>
       <button
         onClick={onDelete}
-        className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1 transition"
+        className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 transition"
         aria-label="Remove entry"
       >
         ✕
@@ -495,15 +495,15 @@ function RemovalRow({
   return (
     <div className="flex items-start gap-3 rounded-xl border border-priority-p1/25 bg-priority-p1/5 px-4 py-3">
       <div className="flex-1 min-w-0 space-y-0.5">
-        <p className="text-sm font-medium text-sparrow-ink truncate">{entry.description}</p>
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray">
+        <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink truncate">{entry.description}</p>
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           {entry.quantity_removed > 1 && <span>Qty removed: {entry.quantity_removed}</span>}
           <span>{EXIT_METHOD_LABELS[entry.how_it_left]}</span>
         </div>
       </div>
       <button
         onClick={onDelete}
-        className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1 transition"
+        className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 transition"
         aria-label="Remove entry"
       >
         ✕
@@ -619,7 +619,7 @@ export function MonthlySubmissionForm({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-40 text-sparrow-gray text-sm">
+      <div className="flex items-center justify-center h-40 text-sparrow-gray dark:text-sparrow-dark-gray text-sm">
         Loading…
       </div>
     );
@@ -640,18 +640,18 @@ export function MonthlySubmissionForm({
     <div className="mx-auto max-w-2xl px-4 py-6 space-y-6">
       {/* Header */}
       <div>
-        <button onClick={onBack} className="text-xs text-sparrow-gray hover:text-sparrow-green transition mb-3">
+        <button onClick={onBack} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition mb-3">
           ← Back
         </button>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="font-serif text-2xl font-semibold">{locationName}</h1>
-            <p className="text-sparrow-gray text-sm mt-0.5">{monthName(month)} {year} — Monthly inventory</p>
+            <p className="text-sparrow-gray dark:text-sparrow-dark-gray text-sm mt-0.5">{monthName(month)} {year} — Monthly inventory</p>
           </div>
           {isReadOnly && (
             <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
               sub.status === 'approved'
-                ? 'bg-sparrow-green/10 text-sparrow-green'
+                ? 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
                 : 'bg-priority-p3/15 text-priority-p3'
             }`}>
               {sub.status === 'approved' ? 'Approved' : 'Submitted — awaiting review'}
@@ -663,14 +663,14 @@ export function MonthlySubmissionForm({
       {/* Section A — Additions */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-medium text-sparrow-ink">
+          <h2 className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
             Section A — Items that arrived this month
           </h2>
           {!sectionAOk && (
             <span className="text-xs text-priority-p1">Required</span>
           )}
           {sectionAOk && (
-            <span className="text-xs text-sparrow-green">✓ Resolved</span>
+            <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green">✓ Resolved</span>
           )}
         </div>
 
@@ -694,7 +694,7 @@ export function MonthlySubmissionForm({
               <button
                 onClick={() => { setShowAddForm(true); handleNothingCameIn(false); }}
                 disabled={sub.nothing_came_in}
-                className="w-full rounded-xl border border-dashed border-sparrow-rule py-3 text-sm text-sparrow-gray hover:border-sparrow-green/40 hover:text-sparrow-green transition disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border py-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/40 hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 + Add item
               </button>
@@ -711,25 +711,25 @@ export function MonthlySubmissionForm({
                 disabled={additions.length > 0}
                 className="h-4 w-4 accent-sparrow-green"
               />
-              <span className="text-sm text-sparrow-gray">Nothing came in this month</span>
+              <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Nothing came in this month</span>
             </label>
           </>
         )}
       </section>
 
-      <div className="border-t border-sparrow-rule" />
+      <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border" />
 
       {/* Section B — Removals */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-medium text-sparrow-ink">
+          <h2 className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
             Section B — Items that left this month
           </h2>
           {!sectionBOk && (
             <span className="text-xs text-priority-p1">Required</span>
           )}
           {sectionBOk && (
-            <span className="text-xs text-sparrow-green">✓ Resolved</span>
+            <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green">✓ Resolved</span>
           )}
         </div>
 
@@ -753,7 +753,7 @@ export function MonthlySubmissionForm({
               <button
                 onClick={() => { setShowRemovalForm(true); handleNothingLeft(false); }}
                 disabled={sub.nothing_left}
-                className="w-full rounded-xl border border-dashed border-sparrow-rule py-3 text-sm text-sparrow-gray hover:border-priority-p1/40 hover:text-priority-p1 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border py-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-priority-p1/40 hover:text-priority-p1 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 + Log removal
               </button>
@@ -770,7 +770,7 @@ export function MonthlySubmissionForm({
                 disabled={removals.length > 0}
                 className="h-4 w-4 accent-sparrow-green"
               />
-              <span className="text-sm text-sparrow-gray">Nothing left this month</span>
+              <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Nothing left this month</span>
             </label>
           </>
         )}
@@ -778,7 +778,7 @@ export function MonthlySubmissionForm({
 
       {/* Submit */}
       {!isReadOnly && (
-        <div className="border-t border-sparrow-rule pt-4">
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           {err && <p className="text-sm text-priority-p1 mb-3">{err}</p>}
           <div className="flex items-center gap-4">
             <button
@@ -789,7 +789,7 @@ export function MonthlySubmissionForm({
               {submitting ? 'Submitting…' : 'Submit for review'}
             </button>
             {!ready && (
-              <p className="text-xs text-sparrow-gray">
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 {!sectionAOk && !sectionBOk
                   ? 'Resolve both sections to submit'
                   : !sectionAOk
@@ -798,7 +798,7 @@ export function MonthlySubmissionForm({
               </p>
             )}
           </div>
-          <p className="mt-2 text-xs text-sparrow-gray">
+          <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             Once submitted, your sheet is locked and sent to Susanna for review.
           </p>
         </div>

@@ -53,7 +53,7 @@ function statusLabel(status: Tenant['status']): string {
 function statusBadgeClass(status: Tenant['status']): string {
   return status === 'evicted'
     ? 'bg-priority-p1/10 text-priority-p1'
-    : 'bg-sparrow-mist text-sparrow-gray';
+    : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray';
 }
 
 // ── Archive detail panel ──────────────────────────────────────────────
@@ -92,14 +92,14 @@ function ArchiveDetailPanel({ open, tenant, space, onClose }: PanelProps) {
       <aside
         role="dialog"
         aria-modal="true"
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl transition-transform ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white dark:bg-sparrow-dark-surface shadow-xl transition-transform ${open ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {tenant && (
           <>
-            <div className="flex items-center justify-between border-b border-sparrow-rule px-5 py-4">
+            <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
               <div>
                 <h2 className="font-serif text-lg font-semibold">{tenant.name || 'Unnamed household'}</h2>
-                <p className="text-xs text-sparrow-gray">
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   {space ? `Lot ${space.label} · ` : ''}{statusLabel(tenant.status)}
                 </p>
               </div>
@@ -114,13 +114,13 @@ function ArchiveDetailPanel({ open, tenant, space, onClose }: PanelProps) {
               {tenant.move_out_date && (
                 <div>
                   <p className="field-label">Move-out date</p>
-                  <p className="text-sparrow-ink">{tenant.move_out_date}</p>
+                  <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{tenant.move_out_date}</p>
                 </div>
               )}
               {tenant.move_in_date && (
                 <div>
                   <p className="field-label">Move-in date (as reported)</p>
-                  <p className="text-sparrow-ink">{tenant.move_in_date}</p>
+                  <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{tenant.move_in_date}</p>
                 </div>
               )}
 
@@ -130,10 +130,10 @@ function ArchiveDetailPanel({ open, tenant, space, onClose }: PanelProps) {
                   <p className="field-label mb-2">Adults</p>
                   <div className="space-y-2">
                     {members.map((m) => (
-                      <div key={m.id} className="rounded-lg border border-sparrow-rule p-2.5">
-                        <p className="font-medium text-sparrow-ink">{m.name}</p>
+                      <div key={m.id} className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border p-2.5">
+                        <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{m.name}</p>
                         {(m.phone || m.email) && (
-                          <p className="text-xs text-sparrow-gray">
+                          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                             {[m.phone, m.email].filter(Boolean).join(' · ')}
                           </p>
                         )}
@@ -146,7 +146,7 @@ function ArchiveDetailPanel({ open, tenant, space, onClose }: PanelProps) {
               {(tenant.children ?? 0) > 0 && (
                 <div>
                   <p className="field-label">Children</p>
-                  <p className="text-sparrow-ink">
+                  <p className="text-sparrow-ink dark:text-sparrow-dark-ink">
                     {tenant.children} child{(tenant.children ?? 0) !== 1 ? 'ren' : ''}
                     {tenant.children_names ? `: ${tenant.children_names}` : ''}
                   </p>
@@ -156,7 +156,7 @@ function ArchiveDetailPanel({ open, tenant, space, onClose }: PanelProps) {
               {tenant.emergency_contact_notes && (
                 <div>
                   <p className="field-label">Emergency contact</p>
-                  <p className="rounded bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink">
+                  <p className="rounded bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
                     {tenant.emergency_contact_notes}
                   </p>
                 </div>
@@ -165,25 +165,25 @@ function ArchiveDetailPanel({ open, tenant, space, onClose }: PanelProps) {
               {tenant.notes && (
                 <div>
                   <p className="field-label">Notes</p>
-                  <p className="rounded bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink">{tenant.notes}</p>
+                  <p className="rounded bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{tenant.notes}</p>
                 </div>
               )}
 
               <div>
                 <p className="field-label mb-2">Notices</p>
                 {loading ? (
-                  <p className="text-xs text-sparrow-gray">Loading…</p>
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
                 ) : notices.length === 0 ? (
-                  <p className="text-sparrow-gray">None on record.</p>
+                  <p className="text-sparrow-gray dark:text-sparrow-dark-gray">None on record.</p>
                 ) : (
-                  <ul className="divide-y divide-sparrow-rule rounded-xl border border-sparrow-rule">
+                  <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border">
                     {notices.map((n) => (
                       <li key={n.id} className="px-3 py-2">
                         <span className={`mr-2 rounded px-1.5 py-0.5 text-xs font-bold ${n.notice_type === 'E' ? 'bg-priority-p1 text-white' : 'bg-priority-p2 text-white'}`}>
                           {n.notice_type === 'E' ? 'Eviction' : `Notice ${n.notice_type}`}
                         </span>
-                        <span className="text-xs text-sparrow-gray">{n.notice_date}</span>
-                        <p className="mt-1 text-xs text-sparrow-ink">{n.description}</p>
+                        <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{n.notice_date}</span>
+                        <p className="mt-1 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{n.description}</p>
                         {n.creator && (
                           <p className="mt-0.5 text-xs text-sparrow-gray/70">{n.creator.full_name}</p>
                         )}
@@ -289,7 +289,7 @@ export function ArchiveTab({ spaces, tenants }: Props) {
           <button
             onClick={exportCSV}
             disabled={pastTenants.length === 0}
-            className="shrink-0 rounded-lg border border-sparrow-rule bg-white px-3 py-2 text-sm font-medium text-sparrow-ink hover:bg-sparrow-mist disabled:opacity-40"
+            className="shrink-0 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 disabled:opacity-40"
           >
             Export CSV
           </button>
@@ -297,22 +297,22 @@ export function ArchiveTab({ spaces, tenants }: Props) {
 
         {q ? (
           searchResults.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-sparrow-rule bg-white p-8 text-center text-sm text-sparrow-gray">
+            <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               No matches.
             </p>
           ) : (
-            <ul className="divide-y divide-sparrow-rule overflow-hidden rounded-xl border border-sparrow-rule bg-white">
+            <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
               {searchResults.map((t) => {
                 const lot = spaceById.get(t.space_id ?? '');
                 return (
                   <li key={t.id}>
                     <button
                       onClick={() => openTenant(t)}
-                      className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-sparrow-mist"
+                      className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-sparrow-ink">{t.name || '—'}</p>
-                        <p className="text-xs text-sparrow-gray">
+                        <p className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{t.name || '—'}</p>
+                        <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                           {lot ? `Lot ${lot.label}` : 'Lot unknown'}
                           {(t.move_in_date || t.move_out_date) ? ` · ${t.move_in_date ?? '?'}${t.move_out_date ? ` – ${t.move_out_date}` : ''}` : ''}
                         </p>
@@ -327,7 +327,7 @@ export function ArchiveTab({ spaces, tenants }: Props) {
             </ul>
           )
         ) : pastTenants.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-sparrow-rule bg-white p-8 text-center text-sm text-sparrow-gray">
+          <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             No archived residents yet.
           </p>
         ) : (
@@ -337,25 +337,25 @@ export function ArchiveTab({ spaces, tenants }: Props) {
               return (
                 <section
                   key={space.id}
-                  className="overflow-hidden rounded-xl border border-sparrow-rule bg-white"
+                  className="overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface"
                 >
-                  <div className="flex items-center justify-between border-b border-sparrow-rule bg-sparrow-mist/50 px-4 py-2.5">
-                    <p className="text-sm font-semibold text-sparrow-ink">Lot {space.label}</p>
-                    <p className="text-xs text-sparrow-gray">
+                  <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 px-4 py-2.5">
+                    <p className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Lot {space.label}</p>
+                    <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       {residents.length} past resident{residents.length !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <ul className="divide-y divide-sparrow-rule">
+                  <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
                     {residents.map((t) => (
                       <li key={t.id}>
                         <button
                           onClick={() => openTenant(t)}
-                          className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-sparrow-mist"
+                          className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sparrow-ink">{t.name || '—'}</p>
+                            <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{t.name || '—'}</p>
                             {(t.move_in_date || t.move_out_date) && (
-                              <p className="text-xs text-sparrow-gray">
+                              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                                 {t.move_in_date ?? '?'}{t.move_out_date ? ` – ${t.move_out_date}` : ''}
                               </p>
                             )}

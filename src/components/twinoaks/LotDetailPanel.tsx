@@ -64,7 +64,7 @@ interface Props {
 function Info({ tip }: { tip: string }) {
   return (
     <span className="group relative ml-1 inline-block align-middle">
-      <span className="cursor-default text-[10px] text-sparrow-gray">ⓘ</span>
+      <span className="cursor-default text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray">ⓘ</span>
       <span className="pointer-events-none absolute top-full left-0 z-50 mt-1.5 w-56 rounded-lg bg-sparrow-ink px-3 py-2 text-xs leading-snug text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
         {tip}
       </span>
@@ -86,7 +86,7 @@ function Field({ label, tip, children }: { label: string; tip?: string; children
 
 function SectionHead({ label }: { label: string }) {
   return (
-    <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-sparrow-gray">
+    <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-sparrow-gray dark:text-sparrow-dark-gray">
       {label}
     </p>
   );
@@ -113,8 +113,8 @@ function PillGroup<T extends string>({
           onClick={() => onChange(o.value)}
           className={`rounded-full border px-3 py-0.5 text-xs font-medium transition disabled:opacity-40 ${
             value === o.value
-              ? 'border-sparrow-green bg-sparrow-green text-white'
-              : 'border-sparrow-rule bg-white text-sparrow-gray hover:border-sparrow-green/50 hover:text-sparrow-ink'
+              ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green text-white'
+              : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/50 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
           }`}
         >
           {o.label}
@@ -496,12 +496,12 @@ export function LotDetailPanel({
       <aside
         role="dialog"
         aria-modal="true"
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl transition-transform ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white dark:bg-sparrow-dark-surface shadow-xl transition-transform ${open ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {space && (
           <>
             {/* ── Header ── */}
-            <div className="flex items-center justify-between border-b border-sparrow-rule px-5 py-4">
+            <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
               <div className="flex items-center gap-2">
                 <h2 className="font-serif text-lg font-semibold">
                   {mode === 'lot-edit' ? 'Edit lot details — ' : ''}Lot {space.label}
@@ -514,7 +514,7 @@ export function LotDetailPanel({
               </div>
               <div className="flex items-center gap-2">
                 {canManage && mode === 'view' && (
-                  <button onClick={() => setMode('edit')} className="btn-ghost text-sparrow-green">Edit</button>
+                  <button onClick={() => setMode('edit')} className="btn-ghost text-sparrow-green dark:text-sparrow-dark-green">Edit</button>
                 )}
                 <button onClick={onClose} className="btn-ghost" aria-label="Close">✕</button>
               </div>
@@ -578,14 +578,14 @@ export function LotDetailPanel({
                   {/* Designation */}
                   <div>
                     <SectionHead label="Special designation" />
-                    <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-lg border border-sparrow-rule p-3 hover:bg-sparrow-mist">
+                    <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border p-3 hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2">
                       <input
                         type="checkbox"
                         checked={hasDesignation}
                         onChange={(e) => setHasDesignation(e.target.checked)}
                         className="h-4 w-4 rounded accent-sparrow-green"
                       />
-                      <span className="text-sparrow-ink">This is a special-use home</span>
+                      <span className="text-sparrow-ink dark:text-sparrow-dark-ink">This is a special-use home</span>
                     </label>
 
                     {hasDesignation && (
@@ -593,7 +593,7 @@ export function LotDetailPanel({
                         {DESIGNATIONS.map((d) => (
                           <label
                             key={d.value}
-                            className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${designation === d.value ? 'border-sparrow-green bg-sparrow-mist' : 'border-sparrow-rule hover:bg-sparrow-mist'}`}
+                            className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${designation === d.value ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-mist dark:bg-sparrow-dark-surface2' : 'border-sparrow-rule dark:border-sparrow-dark-border hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'}`}
                           >
                             <input
                               type="radio"
@@ -604,8 +604,8 @@ export function LotDetailPanel({
                               className="mt-0.5 accent-sparrow-green"
                             />
                             <div className="flex-1">
-                              <p className="font-medium text-sparrow-ink">{d.label}</p>
-                              <p className="text-xs text-sparrow-gray">{d.description}</p>
+                              <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{d.label}</p>
+                              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{d.description}</p>
                               {(designation === d.value) && (d.value === 'lcp' || d.value === 'other') && (
                                 <input
                                   className="field-input mt-2 text-xs"
@@ -623,10 +623,10 @@ export function LotDetailPanel({
                   </div>
 
                   {/* Ownership */}
-                  <div className="border-t border-sparrow-rule pt-4">
+                  <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
                     <SectionHead label="Ownership" />
                     {isLcp && (
-                      <p className="mb-2 flex gap-1.5 rounded-lg bg-sparrow-mist px-3 py-2 text-xs text-sparrow-gray">
+                      <p className="mb-2 flex gap-1.5 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                         <span className="shrink-0">ⓘ</span>
                         <span>LCP homes are never resident-owned. Select Sparrow-owned (Sparrow holds the title) or Donated use (a church or individual made it available to Sparrow).</span>
                       </p>
@@ -635,12 +635,12 @@ export function LotDetailPanel({
                       {ownershipOptions.map((o) => (
                         <label
                           key={o.value}
-                          className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${effectiveOwnership === o.value ? 'border-sparrow-green bg-sparrow-mist' : 'border-sparrow-rule hover:bg-sparrow-mist'}`}
+                          className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${effectiveOwnership === o.value ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-mist dark:bg-sparrow-dark-surface2' : 'border-sparrow-rule dark:border-sparrow-dark-border hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'}`}
                         >
                           <input type="radio" name="ownership" value={o.value} checked={effectiveOwnership === o.value} onChange={() => setOwnership(o.value)} className="mt-0.5 accent-sparrow-green" />
                           <div>
-                            <p className="font-medium text-sparrow-ink">{o.label}</p>
-                            <p className="text-xs text-sparrow-gray">{o.description}</p>
+                            <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{o.label}</p>
+                            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{o.description}</p>
                           </div>
                         </label>
                       ))}
@@ -648,7 +648,7 @@ export function LotDetailPanel({
                   </div>
 
                   {/* Resident / Participant */}
-                  <div className="border-t border-sparrow-rule pt-4">
+                  <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
                     <div className="mb-3 flex items-center justify-between">
                       <SectionHead label={residentLabel} />
                       {tenant && (
@@ -658,7 +658,7 @@ export function LotDetailPanel({
                       )}
                     </div>
 
-                    <div className="mb-4 flex gap-2 rounded-lg bg-sparrow-mist px-3 py-2 text-xs text-sparrow-gray">
+                    <div className="mb-4 flex gap-2 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       <span className="shrink-0">ⓘ</span>
                       <span>Operational reference only. Official lease records are held by Centurion. Dates entered here are working references, not legal records.</span>
                     </div>
@@ -673,11 +673,11 @@ export function LotDetailPanel({
                         <p className="field-label mb-2">Adults <Info tip="Add each adult separately. Phone and email are optional." /></p>
                         <div className="space-y-2">
                           {memberDrafts.map((m, i) => (
-                            <div key={i} className="space-y-2 rounded-lg border border-sparrow-rule p-3">
+                            <div key={i} className="space-y-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border p-3">
                               <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold text-sparrow-gray">Adult {i + 1}</p>
+                                <p className="text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Adult {i + 1}</p>
                                 {m.id ? (
-                                  <button type="button" onClick={() => void archiveMemberById(m.id!, m.name)} className="text-xs text-sparrow-gray hover:text-priority-p1 hover:underline">Member moved out</button>
+                                  <button type="button" onClick={() => void archiveMemberById(m.id!, m.name)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 hover:underline">Member moved out</button>
                                 ) : (
                                   <button type="button" onClick={() => removeMember(i)} className="text-xs text-priority-p1 hover:underline">Remove</button>
                                 )}
@@ -689,7 +689,7 @@ export function LotDetailPanel({
                               </div>
                             </div>
                           ))}
-                          <button type="button" onClick={addMember} className="text-xs font-medium text-sparrow-green hover:underline">+ Add adult</button>
+                          <button type="button" onClick={addMember} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">+ Add adult</button>
                         </div>
                       </div>
 
@@ -708,9 +708,9 @@ export function LotDetailPanel({
                         <p className="field-label mb-2">Pets <Info tip="Record pets for lease compliance and park management. Type, name (optional), and any notes (breed, registration, etc.)" /></p>
                         <div className="space-y-2">
                           {petDrafts.map((p, i) => (
-                            <div key={i} className="space-y-2 rounded-lg border border-sparrow-rule p-3">
+                            <div key={i} className="space-y-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border p-3">
                               <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold text-sparrow-gray">Pet {i + 1}</p>
+                                <p className="text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Pet {i + 1}</p>
                                 <button type="button" onClick={() => removePet(i)} className="text-xs text-priority-p1 hover:underline">Remove</button>
                               </div>
                               <div className="grid grid-cols-2 gap-2">
@@ -722,7 +722,7 @@ export function LotDetailPanel({
                               <input className="field-input" value={p.notes} onChange={(e) => updatePet(i, { notes: e.target.value })} placeholder="Breed, notes, registration status…" />
                             </div>
                           ))}
-                          <button type="button" onClick={addPet} className="text-xs font-medium text-sparrow-green hover:underline">+ Add pet</button>
+                          <button type="button" onClick={addPet} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">+ Add pet</button>
                         </div>
                       </div>
 
@@ -745,7 +745,7 @@ export function LotDetailPanel({
 
                   {/* Home details */}
                   {ownership !== 'sparrow_owned' && (
-                    <div className="border-t border-sparrow-rule pt-4">
+                    <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
                       <SectionHead label="Home details" />
                       <div className="space-y-3">
                         <Field label="Home type">
@@ -771,16 +771,16 @@ export function LotDetailPanel({
                   )}
 
                   {/* Lot details — greyed, locked in edit mode */}
-                  <div className="rounded-xl border border-dashed border-sparrow-rule bg-sparrow-mist/50 p-4 opacity-60">
+                  <div className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 p-4 opacity-60">
                     <div className="mb-2 flex items-center justify-between">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-sparrow-gray">Lot details</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-sparrow-gray dark:text-sparrow-dark-gray">Lot details</p>
                       {canManage && (
-                        <button onClick={enterLotEdit} className="text-xs font-medium text-sparrow-green opacity-100" style={{ opacity: 1 }}>
+                        <button onClick={enterLotEdit} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green opacity-100" style={{ opacity: 1 }}>
                           Edit lot details
                         </button>
                       )}
                     </div>
-                    <div className="space-y-0.5 text-xs text-sparrow-gray">
+                    <div className="space-y-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       <p>Lot {space.label} · {status}</p>
                       {(space.street_number || space.street_name) && (
                         <p>{[space.street_number, space.street_name].filter(Boolean).join(' ')}</p>
@@ -793,10 +793,10 @@ export function LotDetailPanel({
                   {error && <p className="text-sm text-priority-p1">{error}</p>}
                 </div>
 
-                <div className="flex items-center justify-between border-t border-sparrow-rule px-5 py-4">
+                <div className="flex items-center justify-between border-t border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
                   <button
                     onClick={() => { if (window.confirm('Clear all resident and home info from the form? The lot will stay as-is until you Save.')) clearForm(); }}
-                    className="text-xs text-sparrow-gray hover:text-priority-p1 hover:underline"
+                    className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 hover:underline"
                   >
                     Clear all
                   </button>
@@ -812,7 +812,7 @@ export function LotDetailPanel({
             {mode === 'lot-edit' && (
               <>
                 <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
-                  <p className="text-xs text-sparrow-gray">Lot details change rarely. Edit carefully.</p>
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Lot details change rarely. Edit carefully.</p>
                   <Field label="Availability" tip={isProgramHome ? 'Filled: participant placed here. Vacant: empty.' : 'Occupied: active lease. Reserved: placement in progress. Vacant: available.'}>
                     <PillGroup options={availabilityOptions(effectiveOwnership)} value={status} onChange={setStatus} />
                   </Field>
@@ -847,7 +847,7 @@ export function LotDetailPanel({
                   </Field>
                   {lotError && <p className="text-sm text-priority-p1">{lotError}</p>}
                 </div>
-                <div className="flex items-center justify-end gap-2 border-t border-sparrow-rule px-5 py-4">
+                <div className="flex items-center justify-end gap-2 border-t border-sparrow-rule dark:border-sparrow-dark-border px-5 py-4">
                   <button onClick={cancelLotEdit} className="btn-ghost">Cancel</button>
                   <button onClick={saveLot} disabled={lotPending} className="btn-primary">{lotPending ? 'Saving…' : 'Save lot details'}</button>
                 </div>
@@ -858,16 +858,16 @@ export function LotDetailPanel({
             {showMoveOut && tenant && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/95 px-8 text-center">
                 <h3 className="mb-2 font-serif text-lg font-semibold">How did they leave?</h3>
-                <p className="mb-4 text-sm text-sparrow-gray">
+                <p className="mb-4 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                   The household record and all members will be archived. The lot will show as vacant. This cannot be undone.
                 </p>
                 <div className="mb-6 w-full max-w-xs text-left">
-                  <label className="mb-1 block text-xs font-medium text-sparrow-gray">Move-out date</label>
+                  <label className="mb-1 block text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Move-out date</label>
                   <input
                     type="date"
                     value={moveOutDate}
                     onChange={(e) => setMoveOutDate(e.target.value)}
-                    className="w-full rounded-lg border border-sparrow-rule px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sparrow-green"
+                    className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                   />
                 </div>
                 <div className="flex flex-wrap justify-center gap-2">
@@ -935,7 +935,7 @@ function ViewBody({
             <button
               onClick={onPhotoInputClick}
               disabled={photoUploading}
-              className="absolute bottom-2 right-2 rounded-md bg-white/80 px-2 py-1 text-xs font-medium text-sparrow-ink hover:bg-white disabled:opacity-50"
+              className="absolute bottom-2 right-2 rounded-md bg-white/80 px-2 py-1 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-white dark:hover:bg-sparrow-dark-surface disabled:opacity-50"
             >
               {photoUploading ? 'Uploading…' : 'Replace photo'}
             </button>
@@ -945,7 +945,7 @@ function ViewBody({
         <button
           onClick={onPhotoInputClick}
           disabled={photoUploading}
-          className="mb-4 flex w-full items-center justify-center rounded-lg border-2 border-dashed border-sparrow-rule py-5 text-sm text-sparrow-gray hover:border-sparrow-green hover:text-sparrow-green disabled:opacity-50"
+          className="mb-4 flex w-full items-center justify-center rounded-lg border-2 border-dashed border-sparrow-rule dark:border-sparrow-dark-border py-5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:text-sparrow-green dark:hover:text-sparrow-dark-green disabled:opacity-50"
         >
           {photoUploading ? 'Uploading…' : '+ Add lot photo'}
         </button>
@@ -954,41 +954,41 @@ function ViewBody({
 
       {/* Chips */}
       <div className="mb-4 flex flex-wrap gap-2">
-        <span className="rounded-full bg-sparrow-mist px-2 py-0.5 text-xs capitalize text-sparrow-gray">{statusLabel}</span>
-        {ownershipLabel && <span className="rounded-full bg-sparrow-mist px-2 py-0.5 text-xs font-medium text-sparrow-ink">{ownershipLabel}</span>}
+        <span className="rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2 py-0.5 text-xs capitalize text-sparrow-gray dark:text-sparrow-dark-gray">{statusLabel}</span>
+        {ownershipLabel && <span className="rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2 py-0.5 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{ownershipLabel}</span>}
         {space.designation_type === 'lcp' && (
           <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">LCP{space.designation_label ? ` · ${space.designation_label}` : ''}</span>
         )}
         {space.designation_type === 'sv' && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Service Volunteer</span>}
         {space.designation_type === 'pm' && <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-700">Property Manager</span>}
         {space.designation_type === 'other' && space.designation_label && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{space.designation_label}</span>}
-        {space.affordable_housing_discount && <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-xs font-medium text-sparrow-green">AH discount</span>}
+        {space.affordable_housing_discount && <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">AH discount</span>}
       </div>
 
       {/* Resident */}
       <div className="mb-5 space-y-3">
         <p className="field-label">{residentLabel}</p>
-        <p className="flex gap-1.5 rounded-lg bg-sparrow-mist px-3 py-2 text-xs text-sparrow-gray">
+        <p className="flex gap-1.5 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           <span className="shrink-0">ⓘ</span>
           <span>Operational reference only. Official records held by Centurion.</span>
         </p>
-        {tenant?.name && <p className="font-medium text-sparrow-ink">{tenant.name}</p>}
+        {tenant?.name && <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{tenant.name}</p>}
         {members.length > 0 ? (
           <div className="space-y-2">
             {members.map((m) => (
-              <div key={m.id} className="rounded-lg border border-sparrow-rule p-2.5">
-                <p className="font-medium text-sparrow-ink">{m.name}</p>
-                <p className="text-xs text-sparrow-gray">
+              <div key={m.id} className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border p-2.5">
+                <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{m.name}</p>
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   {[m.phone, m.email].filter(Boolean).join(' · ')}
                 </p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sparrow-gray">{space.status === 'vacant' ? 'Vacant.' : 'No adults on file.'}</p>
+          <p className="text-sparrow-gray dark:text-sparrow-dark-gray">{space.status === 'vacant' ? 'Vacant.' : 'No adults on file.'}</p>
         )}
         {tenant && (
-          <div className="space-y-1 text-sparrow-gray">
+          <div className="space-y-1 text-sparrow-gray dark:text-sparrow-dark-gray">
             {(tenant.children ?? 0) > 0 && (
               <p>{tenant.children} child{(tenant.children ?? 0) !== 1 ? 'ren' : ''}{tenant.children_names ? `: ${tenant.children_names}` : ''}</p>
             )}
@@ -998,10 +998,10 @@ function ViewBody({
             {tenant.move_in_date && <p>Move-in (as reported): {tenant.move_in_date}</p>}
             {tenant.emergency_contact_notes && (
               <div className="rounded bg-sparrow-cream px-2 py-1.5 text-xs">
-                <span className="font-medium text-sparrow-ink">Emergency: </span>{tenant.emergency_contact_notes}
+                <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Emergency: </span>{tenant.emergency_contact_notes}
               </div>
             )}
-            {tenant.notes && <div className="rounded bg-sparrow-cream px-2 py-1.5 text-xs text-sparrow-ink">{tenant.notes}</div>}
+            {tenant.notes && <div className="rounded bg-sparrow-cream px-2 py-1.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{tenant.notes}</div>}
           </div>
         )}
       </div>
@@ -1010,7 +1010,7 @@ function ViewBody({
       {space.ownership !== 'sparrow_owned' && (space.vin || space.hud_label || space.title_holder) && (
         <div className="mb-5">
           <p className="field-label mb-1">Home details</p>
-          <div className="space-y-0.5 text-sparrow-gray">
+          <div className="space-y-0.5 text-sparrow-gray dark:text-sparrow-dark-gray">
             <p>{space.type === 'rv' ? 'RV' : 'Manufactured home'}</p>
             {space.vin && <p>VIN: {space.vin}</p>}
             {space.hud_label && <p>HUD label: {space.hud_label}</p>}
@@ -1020,16 +1020,16 @@ function ViewBody({
       )}
 
       {/* Lot details — greyed */}
-      <div className="mb-5 rounded-xl border border-dashed border-sparrow-rule bg-sparrow-mist/50 p-4 opacity-60">
+      <div className="mb-5 rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 p-4 opacity-60">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-sparrow-gray">Lot details</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-sparrow-gray dark:text-sparrow-dark-gray">Lot details</p>
           {canManage && (
-            <button onClick={onEditLot} className="text-xs font-medium text-sparrow-green opacity-100" style={{ opacity: 1 }}>
+            <button onClick={onEditLot} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green opacity-100" style={{ opacity: 1 }}>
               Edit lot details
             </button>
           )}
         </div>
-        <div className="space-y-0.5 text-xs text-sparrow-gray">
+        <div className="space-y-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           <p>Lot {space.label} · {statusLabel}</p>
           {(space.street_number || space.street_name) && (
             <p>{[space.street_number, space.street_name].filter(Boolean).join(' ')}</p>
@@ -1045,20 +1045,20 @@ function ViewBody({
         <div className="mb-2 flex items-center justify-between">
           <p className="field-label">Notices</p>
           {canManage && (
-            <button onClick={onToggleNoticeForm} className="text-xs font-medium text-sparrow-green hover:underline">
+            <button onClick={onToggleNoticeForm} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
               {showNoticeForm ? 'Cancel' : '+ Add notice'}
             </button>
           )}
         </div>
 
         {showNoticeForm && (
-          <div className="mb-3 space-y-3 rounded-xl border border-sparrow-rule p-4">
+          <div className="mb-3 space-y-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-4">
             <div>
               <p className="field-label mb-1">Notice type</p>
               <div className="flex flex-wrap gap-2">
                 {NOTICE_TYPES.map((n) => (
                   <button key={n.value} type="button" onClick={() => onSetNoticeType(n.value)}
-                    className={`rounded-full border px-3 py-0.5 text-xs font-medium ${noticeType === n.value ? 'border-priority-p1 bg-priority-p1 text-white' : 'border-sparrow-rule text-sparrow-gray hover:border-priority-p1 hover:text-priority-p1'}`}>
+                    className={`rounded-full border px-3 py-0.5 text-xs font-medium ${noticeType === n.value ? 'border-priority-p1 bg-priority-p1 text-white' : 'border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:border-priority-p1 hover:text-priority-p1'}`}>
                     {n.label}
                   </button>
                 ))}
@@ -1100,9 +1100,9 @@ function ViewBody({
         )}
 
         {notices.length === 0 ? (
-          <p className="text-sparrow-gray">None on record.</p>
+          <p className="text-sparrow-gray dark:text-sparrow-dark-gray">None on record.</p>
         ) : (
-          <ul className="divide-y divide-sparrow-rule rounded-xl border border-sparrow-rule">
+          <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border">
             {notices.map((n) => (
               <li key={n.id} className="px-3 py-2">
                 <div className="flex items-start justify-between gap-2">
@@ -1110,12 +1110,12 @@ function ViewBody({
                     <span className={`mr-2 rounded px-1.5 py-0.5 text-xs font-bold ${NOTICE_COLOR[n.notice_type]}`}>
                       {n.notice_type === 'E' ? 'Eviction' : `Notice ${n.notice_type}`}
                     </span>
-                    <span className="text-xs text-sparrow-gray">{n.notice_date}</span>
-                    <p className="mt-1 text-xs text-sparrow-ink">{n.description}</p>
-                    <p className="text-xs text-sparrow-gray capitalize">{n.delivery_method.replace(/_/g, ' ')}{n.delivery_notes ? ` — ${n.delivery_notes}` : ''}</p>
+                    <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{n.notice_date}</span>
+                    <p className="mt-1 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{n.description}</p>
+                    <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray capitalize">{n.delivery_method.replace(/_/g, ' ')}{n.delivery_notes ? ` — ${n.delivery_notes}` : ''}</p>
                   </div>
                   {canManage && (
-                    <button onClick={() => onDeleteNotice(n.id)} className="shrink-0 text-xs text-sparrow-gray hover:text-priority-p1">✕</button>
+                    <button onClick={() => onDeleteNotice(n.id)} className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">✕</button>
                   )}
                 </div>
               </li>
@@ -1128,17 +1128,17 @@ function ViewBody({
       <div className="mb-5">
         <div className="flex items-center justify-between">
           <p className="field-label">Work orders</p>
-          {canManage && <button onClick={() => onNewWorkOrder(space.id)} className="text-xs font-medium text-sparrow-green hover:underline">+ New</button>}
+          {canManage && <button onClick={() => onNewWorkOrder(space.id)} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">+ New</button>}
         </div>
         {workOrders.length === 0 ? (
-          <p className="mt-1 text-sparrow-gray">None.</p>
+          <p className="mt-1 text-sparrow-gray dark:text-sparrow-dark-gray">None.</p>
         ) : (
-          <ul className="mt-1 divide-y divide-sparrow-rule rounded-lg border border-sparrow-rule">
+          <ul className="mt-1 divide-y divide-sparrow-rule dark:divide-sparrow-dark-border rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border">
             {workOrders.map((w) => (
               <li key={w.id}>
-                <button onClick={() => onSelectWorkOrder(w)} className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-sparrow-mist">
-                  <span className="text-sparrow-ink">{w.description}</span>
-                  <span className="ml-2 shrink-0 text-xs capitalize text-sparrow-gray">{w.status.replace('_', ' ')}</span>
+                <button onClick={() => onSelectWorkOrder(w)} className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2">
+                  <span className="text-sparrow-ink dark:text-sparrow-dark-ink">{w.description}</span>
+                  <span className="ml-2 shrink-0 text-xs capitalize text-sparrow-gray dark:text-sparrow-dark-gray">{w.status.replace('_', ' ')}</span>
                 </button>
               </li>
             ))}
