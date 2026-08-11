@@ -85,4 +85,31 @@
     content: attr(data-placeholder);
     @apply text-sparrow-gray dark:text-sparrow-dark-gray;
   }
+
+  /* Section heading for a block of curriculum content (e.g. "Mentor Brief",
+     "From Her Handout") -- distinct from .field-label, which is for actual
+     form-field labels above an input, not a heading introducing read-only
+     content. Scales up under .rich-text-scale-md/lg alongside the content
+     below it. */
+  .session-content-heading {
+    @apply mb-1 font-serif text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green;
+  }
+
+  /* Monday/Thursday live-session text-size toggle (Small/Medium/Large) --
+     Small is the existing default (no extra class needed); Medium/Large
+     scale both the section headings above and the .rich-text content below
+     them together. */
+  .rich-text-scale-md .session-content-heading { @apply text-base; }
+  .rich-text-scale-md .rich-text { @apply text-base; }
+  .rich-text-scale-md .rich-text h1 { @apply text-2xl; }
+  .rich-text-scale-md .rich-text h2 { @apply text-xl; }
+  .rich-text-scale-md .rich-text h3 { @apply text-lg; }
+  .rich-text-scale-md .rich-text h4 { @apply text-base; }
+
+  .rich-text-scale-lg .session-content-heading { @apply text-lg; }
+  .rich-text-scale-lg .rich-text { @apply text-lg; }
+  .rich-text-scale-lg .rich-text h1 { @apply text-3xl; }
+  .rich-text-scale-lg .rich-text h2 { @apply text-2xl; }
+  .rich-text-scale-lg .rich-text h3 { @apply text-xl; }
+  .rich-text-scale-lg .rich-text h4 { @apply text-lg; }
 }

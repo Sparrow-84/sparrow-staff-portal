@@ -30,7 +30,7 @@ export function dayLabel(iso: string): string {
   const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
   if (same(d, today)) return 'Today';
   if (same(d, tomorrow)) return 'Tomorrow';
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export function timeLabel(iso: string): string {

@@ -58,6 +58,9 @@ export function SessionSplitLayout({
   children: ReactNode;
 }) {
   const [notesOpen, setNotesOpen] = useState(true);
+  const [textScale, setTextScale] = useState<'sm' | 'md' | 'lg'>(
+    () => (localStorage.getItem('lcp-session-text-scale') as 'sm' | 'md' | 'lg' | null) ?? 'sm',
+  );
   const [leftPct, setLeftPct] = useState(38);
   const [notes, setNotes] = useState('');
   const [prepDraft, setPrepDraft] = useState(thursdayNotes?.prepNotes ?? '');
@@ -66,6 +69,7 @@ export function SessionSplitLayout({
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
 
+  useEffect(() => { localStorage.setItem('lcp-session-text-scale', textScale); }, [textScale]);
   useEffect(() => { setPrepDraft(thursdayNotes?.prepNotes ?? ''); }, [thursdayNotes?.prepNotes]);
   useEffect(() => { setCurriculumDraft(thursdayNotes?.curriculumNotes ?? ''); }, [thursdayNotes?.curriculumNotes]);
 
@@ -114,6 +118,24 @@ export function SessionSplitLayout({
             {formatDateHeader(sessionDate)}
           </span>
         </div>
+        {(sessionType === 'monday_mentoring' || sessionType === 'thursday_group') && (
+          <div className="hidden items-center gap-0.5 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-0.5 text-xs md:flex">
+            {(['sm', 'md', 'lg'] as const).map((size) => (
+              <button
+                key={size}
+                onClick={() => setTextScale(size)}
+                title={size === 'sm' ? 'Small text' : size === 'md' ? 'Medium text' : 'Large text'}
+                className={`rounded px-2 py-1 font-medium transition ${
+                  textScale === size
+                    ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-green dark:text-sparrow-dark-green shadow-sm'
+                    : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
+                }`}
+              >
+                {size === 'sm' ? 'S' : size === 'md' ? 'M' : 'L'}
+              </button>
+            ))}
+          </div>
+        )}
         <button
           onClick={() => setNotesOpen((v) => !v)}
           className={`hidden rounded-lg px-3 py-1.5 text-xs font-medium transition md:block ${
@@ -132,7 +154,9 @@ export function SessionSplitLayout({
         {/* Notes pane — desktop only */}
         {notesOpen && (
           <div
-            className="hidden shrink-0 flex-col overflow-hidden border-r border-sparrow-rule dark:border-sparrow-dark-border md:flex"
+            className={`hidden shrink-0 flex-col overflow-hidden border-r border-sparrow-rule dark:border-sparrow-dark-border md:flex ${
+              textScale !== 'sm' ? `rich-text-scale-${textScale}` : ''
+            }`}
             style={{ width: `${leftPct}%` }}
           >
             {sessionType === 'monday_mentoring' ? (
@@ -161,15 +185,15 @@ export function SessionSplitLayout({
                         Session {mondayContent.sessionNumber} · {mondayContent.sessionTitle}
                       </p>
                       <div className="mb-4">
-                        <p className="field-label mb-1">Mentor Brief</p>
+                        <p className="session-content-heading">Mentor Brief</p>
                         <RichTextView html={mondayContent.brief} empty="Not filled in yet — add it in Curriculum Admin." />
                       </div>
                       <div className="mb-4">
-                        <p className="field-label mb-1">From Her Handout</p>
+                        <p className="session-content-heading">From Her Handout</p>
                         <RichTextView html={mondayContent.handoutEcho} empty="Not filled in yet — add it in Curriculum Admin." />
                       </div>
                       <div>
-                        <p className="field-label mb-1">Going Deeper</p>
+                        <p className="session-content-heading">Going Deeper</p>
                         <RichTextView html={mondayContent.goingDeeper} empty="Not filled in yet — add it in Curriculum Admin." />
                       </div>
                     </>

@@ -143,6 +143,7 @@ export function SessionLogEntry({
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>(() =>
     Object.fromEntries(families.map((f) => [f.id, 'on_time'])),
   );
+  const [attendanceReason, setAttendanceReason] = useState<Record<string, string>>({});
 
   // ── vouchers (Monday + Thursday only) ────────────────────────────
   const [vouchers, setVouchers] = useState<Set<string>>(new Set());
@@ -223,7 +224,7 @@ export function SessionLogEntry({
         const status = attendance[family.id] ?? 'on_time';
         const voucherAwarded = vouchers.has(family.id);
 
-        await upsertSessionAttendance(logId, family.id, status, voucherAwarded, currentUserId);
+        await upsertSessionAttendance(logId, family.id, status, voucherAwarded, currentUserId, attendanceReason[family.id]);
 
         if (voucherAwarded) {
           await awardVoucher(family.id, `Session attendance — ${label}`, currentUserId);
@@ -310,6 +311,7 @@ export function SessionLogEntry({
 
   function toggleAttendance(familyId: string, status: AttendanceStatus) {
     setAttendance((prev) => ({ ...prev, [familyId]: status }));
+    if (status === 'on_time') setAttendanceReason((prev) => ({ ...prev, [familyId]: '' }));
   }
 
   function toggleVoucher(familyId: string) {
@@ -322,6 +324,7 @@ export function SessionLogEntry({
 
   function markAllPresent() {
     setAttendance(Object.fromEntries(families.map((f) => [f.id, 'on_time'])));
+    setAttendanceReason({});
   }
 
   function toggleComplete(hwId: string) {
@@ -451,37 +454,47 @@ export function SessionLogEntry({
           </div>
           <ul className="space-y-2">
             {families.map((f) => (
-              <li key={f.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-sparrow-rule/70 p-2">
-                <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
-                <div className="flex gap-1">
-                  {STATUSES.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => toggleAttendance(f.id, s)}
-                      className={`rounded-lg px-2 py-1 text-[11px] font-medium transition ${
-                        attendance[f.id] === s
-                          ? s === 'no_show'
-                            ? 'bg-priority-p1 text-white'
-                            : s === 'late'
-                              ? 'bg-priority-p2 text-white'
-                              : 'bg-sparrow-green text-white'
-                          : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
-                      }`}
-                    >
-                      {ATTENDANCE_LABEL[s]}
-                    </button>
-                  ))}
+              <li key={f.id} className="rounded-xl border border-sparrow-rule/70 p-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
+                  <div className="flex gap-1">
+                    {STATUSES.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => toggleAttendance(f.id, s)}
+                        className={`rounded-lg px-2 py-1 text-[11px] font-medium transition ${
+                          attendance[f.id] === s
+                            ? s === 'no_show'
+                              ? 'bg-priority-p1 text-white'
+                              : s === 'late'
+                                ? 'bg-priority-p2 text-white'
+                                : 'bg-sparrow-green text-white'
+                            : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
+                        }`}
+                      >
+                        {ATTENDANCE_LABEL[s]}
+                      </button>
+                    ))}
+                  </div>
+                  {showVouchers && (
+                    <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                      <input
+                        type="checkbox"
+                        checked={vouchers.has(f.id)}
+                        onChange={() => toggleVoucher(f.id)}
+                        className="h-3.5 w-3.5 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
+                      />
+                      Voucher
+                    </label>
+                  )}
                 </div>
-                {showVouchers && (
-                  <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-                    <input
-                      type="checkbox"
-                      checked={vouchers.has(f.id)}
-                      onChange={() => toggleVoucher(f.id)}
-                      className="h-3.5 w-3.5 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
-                    />
-                    Voucher
-                  </label>
+                {attendance[f.id] !== 'on_time' && (
+                  <input
+                    value={attendanceReason[f.id] ?? ''}
+                    onChange={(e) => setAttendanceReason((prev) => ({ ...prev, [f.id]: e.target.value }))}
+                    placeholder="Reason (optional) — e.g. sick, car trouble"
+                    className="field-input mt-2"
+                  />
                 )}
               </li>
             ))}

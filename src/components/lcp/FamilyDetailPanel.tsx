@@ -2,10 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { localDate } from '@/lib/date';
 import {
   AREA_LABEL,
+  ATTENDANCE_LABEL,
   FAMILY_STATUS,
   GOAL_AREA_LABEL,
   GOAL_AREAS,
   HOMEWORK_AREAS,
+  SESSION_LOG_LABEL,
+  type AttendanceHistoryEntry,
   type ChildInput,
   type ComplianceNote,
   type CurriculumSession,
@@ -45,6 +48,7 @@ import {
   deleteHomework,
   deleteHouseholdChild,
   deleteProgramFeePayment,
+  fetchAttendanceHistoryForFamily,
   fetchComplianceNotes,
   fetchGoalResponsesForFamily,
   fetchGoalsForFamily,
@@ -289,7 +293,7 @@ export function FamilyDetailPanel({
         />
       )}
       {tab === 'messages' && (
-        <div className="h-[60vh]">
+        <div key={family.id} className="h-[60vh]">
           <StaffThread
             familyId={family.id}
             currentUserId={currentUserId}
@@ -326,6 +330,11 @@ function ProgressTab({
   const [confirmGraduate, setConfirmGraduate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [attendanceHistory, setAttendanceHistory] = useState<AttendanceHistoryEntry[]>([]);
+
+  useEffect(() => {
+    void fetchAttendanceHistoryForFamily(family.id).then(setAttendanceHistory);
+  }, [family.id]);
 
   const allUnits = phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order);
   const currentProgramUnit = programUnitId ? allUnits.find((u) => u.id === programUnitId) : null;
@@ -458,6 +467,23 @@ function ProgressTab({
           something's overdue or she's missed 2+ of her last 4 sessions.
         </p>
       </div>
+
+      {attendanceHistory.length > 0 && (
+        <div>
+          <span className="field-label">Attendance history</span>
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            Every Monday/Thursday session, most recent first — select and copy to tally elsewhere.
+          </p>
+          <ul className="mt-1.5 max-h-56 space-y-1 overflow-y-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-2 text-sm">
+            {attendanceHistory.map((a) => (
+              <li key={a.session_log_id} className="text-sparrow-ink dark:text-sparrow-dark-ink">
+                {dayLabel(a.session_date)} · {SESSION_LOG_LABEL[a.session_type]} · {ATTENDANCE_LABEL[a.status]}
+                {a.reason && ` — ${a.reason}`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
         <span className="field-label">Participation</span>

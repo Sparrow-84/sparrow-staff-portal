@@ -3,6 +3,7 @@ import { localDate, localDateOf } from './date';
 import { withTzOffset, toLocalDate } from './calendar';
 import type {
   Attendance,
+  AttendanceHistoryEntry,
   AttendanceStatus,
   ComplianceLabelRow,
   ComplianceNote,
@@ -982,11 +983,19 @@ export async function upsertSessionAttendance(
   status: AttendanceStatus,
   voucherAwarded: boolean,
   markedBy: string,
+  reason?: string | null,
 ): Promise<void> {
   const { error } = await supabase
     .from('lcp_session_attendance')
     .upsert(
-      { session_log_id: sessionLogId, family_id: familyId, status, voucher_awarded: voucherAwarded, marked_by: markedBy },
+      {
+        session_log_id: sessionLogId,
+        family_id: familyId,
+        status,
+        reason: status === 'on_time' ? null : reason?.trim() || null,
+        voucher_awarded: voucherAwarded,
+        marked_by: markedBy,
+      },
       { onConflict: 'session_log_id,family_id' },
     );
   if (error) throw new Error(error.message);
@@ -995,10 +1004,31 @@ export async function upsertSessionAttendance(
 export async function fetchAttendanceForSessionLog(sessionLogId: string): Promise<SessionAttendance[]> {
   const { data, error } = await supabase
     .from('lcp_session_attendance')
-    .select('id, session_log_id, family_id, status, voucher_awarded, marked_by, marked_at')
+    .select('id, session_log_id, family_id, status, reason, voucher_awarded, marked_by, marked_at')
     .eq('session_log_id', sessionLogId);
   if (error) throw new Error(error.message);
   return (data ?? []) as SessionAttendance[];
+}
+
+/** Reverse-chronological attendance list for one family, across every
+ * session type -- for the Progress tab's plain skim/copy list. */
+export async function fetchAttendanceHistoryForFamily(familyId: string): Promise<AttendanceHistoryEntry[]> {
+  const { data, error } = await supabase
+    .from('lcp_session_attendance')
+    .select('status, reason, session_log:lcp_session_logs!inner(id, session_date, session_type)')
+    .eq('family_id', familyId)
+    .order('session_date', { referencedTable: 'session_log', ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown[]).map((r) => {
+    const row = r as { status: AttendanceStatus; reason: string | null; session_log: { id: string; session_date: string; session_type: SessionLogType } };
+    return {
+      session_log_id: row.session_log.id,
+      session_date: row.session_log.session_date,
+      session_type: row.session_log.session_type,
+      status: row.status,
+      reason: row.reason,
+    };
+  });
 }
 
 /** Room-wide, joined to the real session date (not marked_at) -- for

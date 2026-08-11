@@ -252,9 +252,18 @@ export interface SessionAttendance {
   session_log_id: string;
   family_id: string;
   status: AttendanceStatus;
+  reason: string | null;
   voucher_awarded: boolean;
   marked_by: string | null;
   marked_at: string;
+}
+
+export interface AttendanceHistoryEntry {
+  session_log_id: string;
+  session_date: string;
+  session_type: SessionLogType;
+  status: AttendanceStatus;
+  reason: string | null;
 }
 
 export interface Voucher {

@@ -11,6 +11,7 @@ import { ImagePicker } from '@/components/chat/ImagePicker';
 
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🎉', '🙌'];
 const MAX_TEXTAREA_HEIGHT = 128; // max-h-32
+const draftKey = (familyId: string) => `lcp-staff-draft:${familyId}`;
 
 function renderBody(body: string): ReactNode {
   const re = /\*\*((?:[^*]|\*(?!\*))+)\*\*|\*([^*\n]+)\*/g;
@@ -39,7 +40,9 @@ export function StaffThread({
   messages: Message[];
   onChanged: () => void;
 }) {
-  const [draft, setDraft] = useState('');
+  // Persisted per family so navigating away and back (which unmounts this
+  // component entirely) doesn't wipe out what Shelly was typing.
+  const [draft, setDraft] = useState(() => localStorage.getItem(draftKey(familyId)) ?? '');
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
   const [pickingImage, setPickingImage] = useState(false);
@@ -58,6 +61,11 @@ export function StaffThread({
   useEffect(() => {
     void fetchLcpReactions(familyId).then(setReactions);
   }, [familyId, messages.length]);
+
+  useEffect(() => {
+    if (draft) localStorage.setItem(draftKey(familyId), draft);
+    else localStorage.removeItem(draftKey(familyId));
+  }, [draft, familyId]);
 
   useEffect(() => {
     if (!emojiPickerId) return;
