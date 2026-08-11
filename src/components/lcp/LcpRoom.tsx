@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import {
+  acknowledgeHousingSavingsAnnouncement,
   fetchAllAttendanceWithSessionDate,
   fetchAllComplianceFollowUps,
   fetchAllGoals,
-  fetchAllHousingSavingsMonths,
   fetchAllProgramFeePayments,
   fetchEvents,
   fetchAllHomework,
@@ -16,6 +16,7 @@ import {
   fetchRedemptions,
   fetchRecentSessionLogs,
   fetchSessions,
+  recomputeLcpPerfectWeeks,
   updateFamily,
 } from '@/lib/lcp';
 import { fetchProfiles } from '@/lib/data';
@@ -29,7 +30,6 @@ import {
   type Family,
   type Goal,
   type Homework,
-  type HousingSavingsMonth,
   type LcpEvent,
   type LcpMoveInRequest,
   type LcpPhaseWithUnits,
@@ -151,7 +151,6 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [complianceFollowUpNotes, setComplianceFollowUpNotes] = useState<ComplianceNote[]>([]);
   const [allGoals, setAllGoals] = useState<Goal[]>([]);
-  const [housingMonths, setHousingMonths] = useState<HousingSavingsMonth[]>([]);
   const [tocRequests, setTocRequests] = useState<LcpMoveInRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -172,7 +171,13 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
 
   const load = useCallback(async () => {
     try {
-      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs, cf, goals, attendance, hm, mir] = await Promise.all([
+      // Best-effort, same idiom as the calendar's birthday/stat-holiday sync --
+      // evaluates any newly-elapsed weeks before families' cached totals are
+      // read below, but a failure here (e.g. migration 0150 not run yet)
+      // shouldn't block the rest of the room from loading.
+      await recomputeLcpPerfectWeeks().catch(() => undefined);
+
+      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs, cf, goals, attendance, mir] = await Promise.all([
         fetchFamilies(),
         fetchAllHomework(),
         fetchEvents(),
@@ -190,7 +195,6 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
         fetchAllComplianceFollowUps().catch(() => []),
         fetchAllGoals(),
         fetchAllAttendanceWithSessionDate(),
-        fetchAllHousingSavingsMonths().catch(() => []),
         fetchOpenLcpMoveInRequests().catch(() => []),
       ]);
       const correctedFam = await recomputeFamilyStatuses(fam, hw, goals, attendance);
@@ -200,7 +204,6 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
       setSessionLogs(logs);
       setComplianceFollowUpNotes(cf);
       setAllGoals(goals);
-      setHousingMonths(hm);
       setTocRequests(mir.filter((r) => r.status === 'needs_info'));
       setSessions(se);
       setRedemptions(red);
@@ -326,7 +329,6 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
           feeDatesByFamily={feeDatesByFamily}
           complianceFollowUps={complianceFollowUpNotes}
           goals={allGoals}
-          housingMonths={housingMonths}
           tocRequests={tocRequests}
           currentUserId={profile?.id ?? ''}
           onOpenFamily={openFamily}
@@ -334,6 +336,10 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
           onGoToCurriculum={() => setTab('curriculum')}
           onGoToTwinOaks={() => onNavigate?.('twin-oaks')}
           canEditCurriculum={canEditCurriculum}
+          onAcknowledgeSavingsAward={async (familyId, cents) => {
+            await acknowledgeHousingSavingsAnnouncement(familyId, cents);
+            void load();
+          }}
         />
       ) : tab === 'session-log' ? (
         <div className="mt-6">

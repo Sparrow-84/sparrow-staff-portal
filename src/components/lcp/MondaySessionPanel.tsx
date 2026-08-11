@@ -143,6 +143,9 @@ export function MondaySessionPanel({
   const [assignDraft, setAssignDraft] = useState<Record<string, AssignDraft>>({});
 
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
+  // Keyed by `${familyId}:${bucket}` -- history is scoped to whichever bucket
+  // is open (Finance/Life Skills/Mentoring each only show their own past notes),
+  // so a family's cached history can't leak across buckets.
   const [historyByFamily, setHistoryByFamily] = useState<Record<string, StaffNoteWithSession[] | 'loading'>>({});
 
   // Bootstrap: find-or-create tonight's shared log, then load whatever's already there.
@@ -325,12 +328,13 @@ export function MondaySessionPanel({
     }
   }
 
-  async function toggleHistory(familyId: string) {
-    setHistoryOpen((prev) => ({ ...prev, [familyId]: !prev[familyId] }));
-    if (!historyByFamily[familyId]) {
-      setHistoryByFamily((prev) => ({ ...prev, [familyId]: 'loading' }));
-      const notes = await fetchStaffNotesWithSession(familyId, 3);
-      setHistoryByFamily((prev) => ({ ...prev, [familyId]: notes }));
+  async function toggleHistory(familyId: string, bucket: MondayBucket) {
+    const key = `${familyId}:${bucket}`;
+    setHistoryOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+    if (!historyByFamily[key]) {
+      setHistoryByFamily((prev) => ({ ...prev, [key]: 'loading' }));
+      const notes = await fetchStaffNotesWithSession(familyId, 3, bucket);
+      setHistoryByFamily((prev) => ({ ...prev, [key]: notes }));
     }
   }
 
@@ -540,9 +544,9 @@ export function MondaySessionPanel({
                   bucket={selectedBucket}
                   note={notesByBucket[selectedBucket][f.id] ?? ''}
                   onNoteChange={(body) => setNoteDraft(selectedBucket, f.id, body)}
-                  historyOpen={historyOpen[f.id] ?? false}
-                  historyData={historyByFamily[f.id]}
-                  onToggleHistory={() => toggleHistory(f.id)}
+                  historyOpen={historyOpen[`${f.id}:${selectedBucket}`] ?? false}
+                  historyData={historyByFamily[`${f.id}:${selectedBucket}`]}
+                  onToggleHistory={() => toggleHistory(f.id, selectedBucket)}
                   onOpenFamily={() => onOpenFamily(f.id)}
                   goals={liveGoals[f.id] ?? []}
                   onToggleGoalMet={(goalId) => toggleGoalMet(f.id, goalId)}
@@ -658,14 +662,12 @@ function MondayFamilyCard({
           {historyData === 'loading' || historyData === undefined ? (
             <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
           ) : historyData.length === 0 ? (
-            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No prior notes yet.</p>
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No prior {MONDAY_BUCKET_LABEL[bucket]} notes yet.</p>
           ) : (
             <ul className="space-y-2">
               {historyData.map((n) => (
                 <li key={n.id} className="border-t border-sparrow-rule/70 pt-2 first:border-t-0 first:pt-0">
-                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-                    {n.session_log_type ? SESSION_LOG_LABEL[n.session_log_type] : 'Note'} · {dayLabel(n.created_at)}
-                  </p>
+                  <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{dayLabel(n.created_at)}</p>
                   <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{n.body}</p>
                 </li>
               ))}

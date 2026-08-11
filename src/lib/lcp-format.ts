@@ -22,8 +22,13 @@ export function ageFromDob(iso: string | null): number | null {
   return age;
 }
 
+// Callers pass both shapes: plain dates ("YYYY-MM-DD", e.g. due_date/move_in_date)
+// and full timestamps ("...T...Z", e.g. created_at/starts_at). parseLocalDate's
+// split-on-'-' only works on the former -- feeding it a timestamp produces NaN
+// and "Invalid Date". Timestamps already carry their own offset, so `new Date()`
+// parses them correctly with no local-midnight adjustment needed.
 export function dayLabel(iso: string): string {
-  const d = parseLocalDate(iso);
+  const d = iso.includes('T') ? new Date(iso) : parseLocalDate(iso);
   const today = new Date();
   const tomorrow = new Date();
   tomorrow.setDate(today.getDate() + 1);

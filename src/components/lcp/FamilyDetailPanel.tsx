@@ -22,6 +22,7 @@ import {
   type HouseholdChild,
   type HousingSavingsMonth,
   type LcpMoveInRequest,
+  type LcpPerfectWeek,
   type LcpPhaseWithUnits,
   type Message,
   type ProgramFeeMethod,
@@ -39,7 +40,6 @@ import {
   addProgramFeePayment,
   addStaffNote,
   updateStaffNote,
-  answerHousingSavingsMonth,
   assignHomework,
   awardVoucher,
   createGoal,
@@ -56,6 +56,7 @@ import {
   fetchHouseholdAdult,
   fetchHouseholdChildren,
   fetchHousingSavingsMonths,
+  fetchPerfectWeeksForFamily,
   fetchMessages,
   fetchProgramFeePayments,
   fetchRedemptions,
@@ -132,6 +133,7 @@ export function FamilyDetailPanel({
   const [householdAdult, setHouseholdAdult] = useState<HouseholdAdult | null>(null);
   const [householdChildren, setHouseholdChildren] = useState<HouseholdChild[]>([]);
   const [housingSavingsMonths, setHousingSavingsMonths] = useState<HousingSavingsMonth[]>([]);
+  const [perfectWeeks, setPerfectWeeks] = useState<LcpPerfectWeek[]>([]);
   const [complianceNotes, setComplianceNotes] = useState<ComplianceNote[]>([]);
   const [reloadError, setReloadError] = useState<string | null>(null);
 
@@ -142,7 +144,7 @@ export function FamilyDetailPanel({
   // other 11 from refreshing, or a save on one tab looks broken on every tab.
   const reloadDetail = useCallback(async () => {
     if (!familyId) return;
-    const [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn] = await Promise.allSettled([
+    const [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn, pw] = await Promise.allSettled([
       fetchHomeworkForFamily(familyId),
       fetchMessages(familyId),
       fetchStaffNotes(familyId),
@@ -155,6 +157,7 @@ export function FamilyDetailPanel({
       fetchHouseholdChildren(familyId),
       fetchHousingSavingsMonths(familyId),
       fetchComplianceNotes(familyId),
+      fetchPerfectWeeksForFamily(familyId),
     ]);
     if (hw.status === 'fulfilled') setHomework(hw.value);
     if (msg.status === 'fulfilled') setMessages(msg.value);
@@ -168,8 +171,9 @@ export function FamilyDetailPanel({
     if (hc.status === 'fulfilled') setHouseholdChildren(hc.value);
     if (sm.status === 'fulfilled') setHousingSavingsMonths(sm.value);
     if (cn.status === 'fulfilled') setComplianceNotes(cn.value);
+    if (pw.status === 'fulfilled') setPerfectWeeks(pw.value);
 
-    const failed = [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn].filter((r) => r.status === 'rejected');
+    const failed = [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn, pw].filter((r) => r.status === 'rejected');
     setReloadError(
       failed.length > 0
         ? `${failed.length} part${failed.length > 1 ? 's' : ''} of this family's record didn't load — probably a database update still pending. Other tabs are unaffected.`
@@ -250,6 +254,7 @@ export function FamilyDetailPanel({
           vouchers={vouchers}
           redemptions={redemptions}
           housingSavingsMonths={housingSavingsMonths}
+          perfectWeeks={perfectWeeks}
           currentUserId={currentUserId}
           onChanged={() => {
             void reloadDetail();
@@ -587,131 +592,91 @@ function ProgressTab({
 }
 
 // ── Housing savings ──────────────────────────────────────────────────
-// Replaces the old freeform +/-$100 buttons with a real per-month record:
-// one $100 award per full calendar month in the program, answered yes/no by
-// staff. Open-ended (no cap) -- keeps going until the family leaves the
-// program. A month locks once answered; correcting one requires an explicit
-// confirm step first (never a single misclick away from changing history).
+// Migration 0150 replaced the old staff-answered "did she have a perfect
+// month" system with a fully automatic one: every 4 perfect weeks (on-time
+// both Monday Mentoring + Thursday Group, homework done on time -- need not
+// be consecutive or line up with a calendar month) = $100, computed by
+// recompute_lcp_perfect_weeks() and cached onto housing_savings_cents.
+// `months` below is now purely historical -- whatever was answered under
+// the old system before the switchover, kept visible but no longer
+// editable (housing_savings_legacy_cents froze that total; nothing here
+// recalculates it).
 function monthStartFromIso(iso: string): Date {
   const [y, m] = iso.slice(0, 7).split('-').map(Number);
   return new Date(y, m - 1, 1);
 }
-function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-}
-function fullMonthsSince(startIso: string): string[] {
-  const cursor = monthStartFromIso(startIso);
-  const now = new Date();
-  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const months: string[] = [];
-  while (cursor < thisMonth) {
-    months.push(monthKey(cursor));
-    cursor.setMonth(cursor.getMonth() + 1);
-  }
-  return months;
-}
 function monthAbbrev(iso: string): string {
   return monthStartFromIso(iso).toLocaleDateString('en-US', { month: 'short' });
 }
-function monthFull(iso: string): string {
-  return monthStartFromIso(iso).toLocaleDateString('en-US', { month: 'long' });
+function weekAbbrev(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function HousingSavingsCard({
   family,
   months,
-  currentUserId,
-  onChanged,
+  weeks,
 }: {
   family: Family;
   months: HousingSavingsMonth[];
-  currentUserId: string;
-  onChanged: () => void;
+  weeks: LcpPerfectWeek[];
 }) {
-  const [busy, setBusy] = useState(false);
-  // Two-step correction: clicking an already-answered month asks for
-  // confirmation first; only after that does the Yes/No re-answer show.
-  const [correcting, setCorrecting] = useState<{ month: string; confirmed: boolean } | null>(null);
-
-  const byMonth = new Map(months.map((m) => [m.month, m]));
-  const eligible = fullMonthsSince(family.move_in_date ?? family.created_at);
-  const pendingMonth = eligible.find((m) => !byMonth.has(m)) ?? null;
-
-  async function answer(month: string, awarded: boolean) {
-    setBusy(true);
-    await answerHousingSavingsMonth(family.id, month, awarded, currentUserId);
-    setBusy(false);
-    setCorrecting(null);
-    onChanged();
-  }
+  const completeCount = weeks.filter((w) => w.complete).length;
+  const towardNext = completeCount % 4;
 
   return (
     <div className="rounded-xl bg-sparrow-cream p-4">
       <span className="font-serif text-base font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">🏡 Housing Savings</span>
       <p className="mt-1 font-serif text-lg font-semibold text-sparrow-green dark:text-sparrow-dark-green">{money(family.housing_savings_cents)}</p>
 
-      {pendingMonth && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sparrow-gold/40 bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-2.5 text-sm">
-          <span>
-            Did {family.display_name} have a perfect month in {monthFull(pendingMonth)}?
-          </span>
-          <div className="flex shrink-0 gap-2">
-            <button disabled={busy} onClick={() => answer(pendingMonth, true)} className="btn-primary">
-              Yes, +$100
-            </button>
-            <button disabled={busy} onClick={() => answer(pendingMonth, false)} className="btn-ghost border border-sparrow-rule dark:border-sparrow-dark-border">
-              No
-            </button>
-          </div>
+      <div className="mt-3">
+        <div className="flex items-center justify-between">
+          <span className="field-label">Perfect weeks (on-time both nights + homework on time)</span>
+          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">{towardNext} of 4 toward the next $100</span>
         </div>
-      )}
-
-      {eligible.length > 0 && (
-        <div className="mt-3">
-          <span className="field-label">Full months in the program</span>
+        {weeks.length === 0 ? (
+          <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            No weeks evaluated yet -- this fills in automatically once both a Monday and a Thursday session have been logged for a week.
+          </p>
+        ) : (
           <div className="mt-1 flex flex-wrap gap-3">
-            {eligible.map((m) => {
-              const answered = byMonth.get(m);
-              const isCorrecting = correcting?.month === m;
-              return (
-                <div key={m} className="flex flex-col items-center gap-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
-                  {!answered ? (
-                    <span className="grid h-6 w-6 place-items-center rounded-full border-2 border-sparrow-rule dark:border-sparrow-dark-border" />
-                  ) : isCorrecting && !correcting.confirmed ? (
-                    <div className="flex flex-col items-center gap-1">
-                      <button
-                        onClick={() => setCorrecting({ month: m, confirmed: true })}
-                        className="whitespace-nowrap rounded-full border border-sparrow-rule dark:border-sparrow-dark-border px-1.5 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink"
-                      >
-                        Change?
-                      </button>
-                      <button onClick={() => setCorrecting(null)} className="text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray underline">
-                        Cancel
-                      </button>
-                    </div>
-                  ) : isCorrecting && correcting.confirmed ? (
-                    <div className="flex gap-1">
-                      <button disabled={busy} onClick={() => answer(m, true)} className="rounded-full border border-sparrow-rule dark:border-sparrow-dark-border px-1.5 py-0.5 text-[10px] font-medium">
-                        Yes
-                      </button>
-                      <button disabled={busy} onClick={() => answer(m, false)} className="rounded-full border border-sparrow-rule dark:border-sparrow-dark-border px-1.5 py-0.5 text-[10px] font-medium">
-                        No
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setCorrecting({ month: m, confirmed: false })}
-                      className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${
-                        answered.awarded ? 'bg-sparrow-green text-white' : 'border-2 border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-transparent'
-                      }`}
-                    >
-                      {answered.awarded ? '✓' : ''}
-                    </button>
-                  )}
-                  <span>{monthAbbrev(m)}</span>
-                </div>
-              );
-            })}
+            {weeks.map((w) => (
+              <div key={w.id} className="flex flex-col items-center gap-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+                <span
+                  className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${
+                    w.complete
+                      ? 'bg-sparrow-green text-white'
+                      : 'border-2 border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-transparent'
+                  }`}
+                >
+                  {w.complete ? '✓' : ''}
+                </span>
+                <span>{weekAbbrev(w.week_start)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {months.length > 0 && (
+        <div className="mt-4 border-t border-sparrow-rule/60 dark:border-sparrow-dark-border pt-3">
+          <span className="field-label">Earned before the switch to weekly tracking</span>
+          <div className="mt-1 flex flex-wrap gap-3">
+            {months.map((m) => (
+              <div key={m.id} className="flex flex-col items-center gap-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+                <span
+                  className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${
+                    m.awarded
+                      ? 'bg-sparrow-green text-white'
+                      : 'border-2 border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-transparent'
+                  }`}
+                >
+                  {m.awarded ? '✓' : ''}
+                </span>
+                <span>{monthAbbrev(m.month)}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -1029,6 +994,7 @@ function FinanceTab({
   vouchers,
   redemptions,
   housingSavingsMonths,
+  perfectWeeks,
   currentUserId,
   onChanged,
 }: {
@@ -1037,6 +1003,7 @@ function FinanceTab({
   vouchers: Voucher[];
   redemptions: Redemption[];
   housingSavingsMonths: HousingSavingsMonth[];
+  perfectWeeks: LcpPerfectWeek[];
   currentUserId: string;
   onChanged: () => void;
 }) {
@@ -1048,7 +1015,7 @@ function FinanceTab({
       </div>
 
       <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
-        <HousingSavingsCard family={family} months={housingSavingsMonths} currentUserId={currentUserId} onChanged={onChanged} />
+        <HousingSavingsCard family={family} months={housingSavingsMonths} weeks={perfectWeeks} />
       </div>
 
       <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">

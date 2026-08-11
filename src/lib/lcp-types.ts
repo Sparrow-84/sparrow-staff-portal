@@ -22,6 +22,11 @@ export interface Family {
   current_session_number: number;
   joined_unit_id: number | null;
   housing_savings_cents: number;
+  // Frozen total under the old month-based system + what's already been shown
+  // to staff via the "just earned $100" FYI card -- see HousingSavingsCard/
+  // migration 0150. Neither is the real balance; housing_savings_cents is.
+  housing_savings_legacy_cents: number;
+  housing_savings_announced_cents: number;
   active: boolean;
   created_at: string;
   toc_space_id: string | null;
@@ -293,6 +298,19 @@ export interface HousingSavingsMonth {
   awarded: boolean;
   answered_by: string | null;
   answered_at: string;
+}
+
+/** One system-evaluated week toward housing savings (migration 0150, replaces
+ *  the manually-answered monthly system above going forward). `week_start` is
+ *  always a Monday. Only weeks where both a Monday Mentoring and a Thursday
+ *  Group session actually happened get evaluated at all -- a week with
+ *  neither logged just never gets a row, rather than counting as a miss. */
+export interface LcpPerfectWeek {
+  id: string;
+  family_id: string;
+  week_start: string;
+  complete: boolean;
+  evaluated_at: string;
 }
 
 // Reusable, shared label library (mirrors the Calendar/Tasks label picker

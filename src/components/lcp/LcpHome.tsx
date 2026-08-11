@@ -10,7 +10,6 @@ import {
   type Family,
   type Goal,
   type Homework,
-  type HousingSavingsMonth,
   type LcpEvent,
   type LcpMoveInRequest,
   type LcpPhaseWithUnits,
@@ -18,24 +17,9 @@ import {
   type Redemption,
   type SessionLog,
 } from '@/lib/lcp-types';
-import { dayLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
+import { dayLabel, isFeeOverdue, isOverdue, money } from '@/lib/lcp-format';
 import type { FamilyDetailTab } from './FamilyDetailPanel';
 
-function monthStartFromIso(iso: string): Date {
-  const [y, m] = iso.slice(0, 7).split('-').map(Number);
-  return new Date(y, m - 1, 1);
-}
-function fullMonthsSince(startIso: string): string[] {
-  const cursor = monthStartFromIso(startIso);
-  const now = new Date();
-  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const months: string[] = [];
-  while (cursor < thisMonth) {
-    months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-01`);
-    cursor.setMonth(cursor.getMonth() + 1);
-  }
-  return months;
-}
 function todayISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -56,7 +40,6 @@ interface Props {
   feeDatesByFamily: Map<string, string[]>;
   complianceFollowUps: ComplianceNote[];
   goals: Goal[];
-  housingMonths: HousingSavingsMonth[];
   tocRequests: LcpMoveInRequest[];
   currentUserId: string;
   onOpenFamily: (familyId: string, tab?: FamilyDetailTab) => void;
@@ -64,6 +47,7 @@ interface Props {
   onGoToCurriculum: () => void;
   onGoToTwinOaks: (requestId: string) => void;
   canEditCurriculum: boolean;
+  onAcknowledgeSavingsAward: (familyId: string, currentCents: number) => Promise<void>;
 }
 
 export function LcpHome({
@@ -77,7 +61,6 @@ export function LcpHome({
   feeDatesByFamily,
   complianceFollowUps: complianceFollowUpNotes,
   goals,
-  housingMonths,
   tocRequests,
   currentUserId,
   onOpenFamily,
@@ -85,6 +68,7 @@ export function LcpHome({
   onGoToCurriculum,
   onGoToTwinOaks,
   canEditCurriculum,
+  onAcknowledgeSavingsAward,
 }: Props) {
   // Compliance follow-ups, goals, housing savings, and TOC requests all come
   // in as props (room-level state, refreshed by the same onChanged={load}
@@ -149,23 +133,19 @@ export function LcpHome({
   const openHomework = homework.filter((h) => h.status !== 'complete' && h.due_date && h.due_date <= today);
   const openGoals = goals.filter((g) => g.status !== 'met' && g.due_date && g.due_date <= today);
 
-  // Housing savings: which families have a completed month nobody's answered.
-  const pendingSavingsPrompts = useMemo(() => {
-    const byFamily = new Map<string, HousingSavingsMonth[]>();
-    for (const m of housingMonths) {
-      const list = byFamily.get(m.family_id) ?? [];
-      list.push(m);
-      byFamily.set(m.family_id, list);
-    }
-    return families
-      .map((f) => {
-        const answered = new Set((byFamily.get(f.id) ?? []).map((m) => m.month));
-        const eligible = fullMonthsSince(f.move_in_date ?? f.created_at);
-        const pending = eligible.find((m) => !answered.has(m));
-        return pending ? { family: f, month: pending } : null;
-      })
-      .filter((x): x is { family: Family; month: string } => x !== null);
-  }, [families, housingMonths]);
+  // Housing savings: fully automatic now (migration 0150) -- nothing to answer.
+  // This is just a quiet FYI when a family's cached total has moved past what
+  // staff were last shown, not a to-do -- doesn't count toward totalOpen below.
+  const [busyAckId, setBusyAckId] = useState<string | null>(null);
+  const savingsAwardsToShow = useMemo(
+    () => families.filter((f) => f.housing_savings_cents > f.housing_savings_announced_cents),
+    [families],
+  );
+  async function acknowledgeSavings(familyId: string, cents: number) {
+    setBusyAckId(familyId);
+    await onAcknowledgeSavingsAward(familyId, cents);
+    setBusyAckId(null);
+  }
 
   const pendingRedemptions = redemptions.filter((r) => r.status === 'requested');
 
@@ -214,22 +194,47 @@ export function LcpHome({
     openHomework.length +
     openGoals.length +
     (canEditCurriculum ? curriculumNotes.length : 0) +
-    pendingSavingsPrompts.length +
     pendingRedemptions.length +
     (materialsNeedPrep ? 1 : 0);
 
   if (loading) return <p className="py-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>;
 
+  const savingsFyi = savingsAwardsToShow.length > 0 && (
+    <div className="space-y-2">
+      {savingsAwardsToShow.map((f) => (
+        <div
+          key={f.id}
+          className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-sparrow-gold/40 bg-sparrow-cream p-4 text-sm"
+        >
+          <span>
+            🏡 <span className="font-medium">{f.display_name}</span> just crossed into {money(f.housing_savings_cents)} in Housing Savings.
+          </span>
+          <button
+            disabled={busyAckId === f.id}
+            onClick={() => void acknowledgeSavings(f.id, f.housing_savings_cents)}
+            className="btn-ghost border border-sparrow-rule dark:border-sparrow-dark-border text-xs"
+          >
+            Got it
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
   if (totalOpen === 0 && justPrepped == null) {
     return (
-      <div className="mt-6 flex items-center gap-3 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-sage/60 p-5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green">
-        🎉 You're all caught up.
+      <div className="mt-6 space-y-3">
+        {savingsFyi}
+        <div className="flex items-center gap-3 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-sage/60 p-5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green">
+          🎉 You're all caught up.
+        </div>
       </div>
     );
   }
 
   return (
     <div className="mt-6 space-y-3">
+      {savingsFyi}
       {unfiledSessions.length > 0 && (
         <SignalCard title="📅 Thursday sessions never filed" count={unfiledSessions.length} tone="urgent">
           {unfiledSessions.map((ev) => (
@@ -317,20 +322,6 @@ export function LcpHome({
               detail={s.curriculum_notes}
               cta="Review →"
               onClick={onGoToCurriculum}
-            />
-          ))}
-        </SignalCard>
-      )}
-
-      {pendingSavingsPrompts.length > 0 && (
-        <SignalCard title="🏡 Housing savings — needs an answer" count={pendingSavingsPrompts.length} tone="amber">
-          {pendingSavingsPrompts.map(({ family, month }) => (
-            <SignalRow
-              key={family.id}
-              who={family.display_name}
-              detail={`Did she have a perfect month in ${monthStartFromIso(month).toLocaleDateString('en-US', { month: 'long' })}?`}
-              cta="Answer →"
-              onClick={() => onOpenFamily(family.id, 'finance')}
             />
           ))}
         </SignalCard>

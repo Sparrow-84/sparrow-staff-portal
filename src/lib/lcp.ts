@@ -29,6 +29,7 @@ import type {
   LcpEvent,
   LcpMoveInRequest,
   LcpMoveInRequestDetail,
+  LcpPerfectWeek,
   LcpPhaseWithUnits,
   LcpUnitSlim,
   Message,
@@ -60,7 +61,7 @@ export async function fetchFamilies(active = true): Promise<Family[]> {
   const { data, error } = await supabase
     .from('families')
     .select(
-      'id, display_name, login_email, status, current_session_number, joined_unit_id, housing_savings_cents, active, created_at, toc_space_id, toc_tenant_id, move_in_date, program_end_date, emergency_contact_notes, toc_synced_at',
+      'id, display_name, login_email, status, current_session_number, joined_unit_id, housing_savings_cents, housing_savings_legacy_cents, housing_savings_announced_cents, active, created_at, toc_space_id, toc_tenant_id, move_in_date, program_end_date, emergency_contact_notes, toc_synced_at',
     )
     .eq('active', active)
     .order('display_name');
@@ -74,7 +75,15 @@ export async function fetchFamilies(active = true): Promise<Family[]> {
     if (e2) throw new Error(e2.message);
     return ((d2 ?? []) as Omit<
       Family,
-      'joined_unit_id' | 'toc_space_id' | 'toc_tenant_id' | 'move_in_date' | 'program_end_date' | 'emergency_contact_notes' | 'toc_synced_at'
+      | 'joined_unit_id'
+      | 'toc_space_id'
+      | 'toc_tenant_id'
+      | 'move_in_date'
+      | 'program_end_date'
+      | 'emergency_contact_notes'
+      | 'toc_synced_at'
+      | 'housing_savings_legacy_cents'
+      | 'housing_savings_announced_cents'
     >[]).map((f) => ({
       ...f,
       joined_unit_id: null,
@@ -84,6 +93,8 @@ export async function fetchFamilies(active = true): Promise<Family[]> {
       program_end_date: null,
       emergency_contact_notes: null,
       toc_synced_at: null,
+      housing_savings_legacy_cents: f.housing_savings_cents,
+      housing_savings_announced_cents: f.housing_savings_cents,
     }));
   }
   return (data ?? []) as Family[];
@@ -135,6 +146,36 @@ export async function answerHousingSavingsMonth(
   const totalCents = (data ?? []).filter((m) => (m as { awarded: boolean }).awarded).length * 10_000;
   await updateFamily(familyId, { housing_savings_cents: totalCents });
   return totalCents;
+}
+
+// ── Perfect weeks (housing savings, migration 0150) ──────────────────
+export async function fetchPerfectWeeksForFamily(familyId: string): Promise<LcpPerfectWeek[]> {
+  const { data, error } = await supabase
+    .from('lcp_perfect_weeks')
+    .select('id, family_id, week_start, complete, evaluated_at')
+    .eq('family_id', familyId)
+    .order('week_start', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as LcpPerfectWeek[];
+}
+
+/** Fire-and-forget, same idiom as syncLcpFamilyBirthdayEvents/syncStatHolidayEvents
+ *  in calendar.ts -- evaluates any newly-elapsed weeks and refreshes every active
+ *  family's cached housing_savings_cents before LcpHome reads it. */
+export async function recomputeLcpPerfectWeeks(): Promise<void> {
+  const { error } = await supabase.rpc('recompute_lcp_perfect_weeks');
+  if (error) throw new Error(error.message);
+}
+
+/** Marks the "just earned $100" FYI as seen for one family -- moves
+ *  housing_savings_announced_cents up to the real current total. Purely a
+ *  seen/unseen marker; never touches the actual balance. */
+export async function acknowledgeHousingSavingsAnnouncement(familyId: string, currentCents: number): Promise<void> {
+  const { error } = await supabase
+    .from('families')
+    .update({ housing_savings_announced_cents: currentCents })
+    .eq('id', familyId);
+  if (error) throw new Error(error.message);
 }
 
 export interface FamilyInput {
@@ -614,7 +655,11 @@ export async function fetchStaffNotes(familyId: string): Promise<StaffNote[]> {
 // Same as fetchStaffNotes, but joined with the parent session log's type/date —
 // used by History-in-panel and the By Participant / By Monday Type home views,
 // which all need to show what kind of session a note came from.
-export async function fetchStaffNotesWithSession(familyId: string, limit?: number): Promise<StaffNoteWithSession[]> {
+export async function fetchStaffNotesWithSession(
+  familyId: string,
+  limit?: number,
+  bucket?: MondayBucket,
+): Promise<StaffNoteWithSession[]> {
   let query = supabase
     .from('lcp_staff_notes')
     .select(
@@ -623,6 +668,7 @@ export async function fetchStaffNotesWithSession(familyId: string, limit?: numbe
     )
     .eq('family_id', familyId)
     .order('created_at', { ascending: false });
+  if (bucket) query = query.eq('bucket', bucket);
   if (limit) query = query.limit(limit);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
