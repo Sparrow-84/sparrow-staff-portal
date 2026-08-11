@@ -46,7 +46,7 @@ const EMPTY_CONN_FORM: ConnectionInput = {
   owner_id: null,
 };
 
-export function PartnershipEventsTab() {
+export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (name: string, organization: string | null) => void }) {
   const { profile } = useAuth();
   const [events, setEvents] = useState<PartnershipEvent[]>([]);
   const [connections, setConnections] = useState<PartnershipConnection[]>([]);
@@ -431,13 +431,13 @@ export function PartnershipEventsTab() {
                         {eventName(conn.event_id)}
                       </td>
                       <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                        <a
-                          href={`/partnerships?action=add&name=${encodeURIComponent(conn.name)}&org=${encodeURIComponent(conn.organization ?? '')}`}
+                        <button
+                          onClick={() => onBecomePartner(conn.name, conn.organization)}
                           className="whitespace-nowrap text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                           title="Open Add Partner panel with this person's details"
                         >
                           Become a partner →
-                        </a>
+                        </button>
                       </td>
                     </tr>
                   );

@@ -55,7 +55,15 @@ export function AddPartnerPanel({
   onCreated: (partnerId: string) => void;
   interests?: PartnershipInterest[];
   onInterestsCreated?: () => void;
-  initialValues?: { name: string; phone: string; email: string; notes: string | null; source?: string } | null;
+  initialValues?: {
+    name: string;
+    phone: string;
+    email: string;
+    notes: string | null;
+    source?: string;
+    organization?: string | null;
+    originLabel?: string;
+  } | null;
   onCreatedFromContact?: (partnerId: string) => void;
 }) {
   const [name, setName] = useState('');
@@ -65,6 +73,7 @@ export function AddPartnerPanel({
   const [stage, setStage] = useState<PartnerStage>('prospect');
   const [ownerId, setOwnerId] = useState<string>('');
   const [contactName, setContactName] = useState('');
+  const [organization, setOrganization] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -84,6 +93,7 @@ export function AddPartnerPanel({
       setStage('prospect');
       setOwnerId(defaultOwnerId ?? '');
       setContactName('');
+      setOrganization(initialValues?.organization ?? '');
       setEmail(initialValues?.email ?? '');
       setPhone(initialValues?.phone ?? '');
       setAddress('');
@@ -142,7 +152,7 @@ export function AddPartnerPanel({
         secondary_types: secondaryTypes,
         stage,
         owner_id: ownerId || null,
-        organization: null,
+        organization: organization.trim() || null,
         contact_name: contactName.trim() || null,
         email: email.trim() || null,
         phone: phone.trim() || null,
@@ -190,7 +200,7 @@ export function AddPartnerPanel({
       <div className="space-y-4">
         {initialValues && (
           <p className="rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green dark:text-sparrow-dark-green">
-            Prefilled from {initialValues.name}'s My Contacts entry. Pick a type and confirm the cadence to add them to the Directory.
+            Prefilled from {initialValues.name}'s {initialValues.originLabel ?? 'My Contacts entry'}. Pick a type and confirm the cadence to add them to the Directory.
           </p>
         )}
         <div>
@@ -201,6 +211,17 @@ export function AddPartnerPanel({
             value={name}
             onChange={(e) => { setName(e.target.value); clear('pa-name'); setDuplicateWarning(null); }}
             placeholder="Person, church, or organization"
+          />
+        </div>
+
+        <div>
+          <label className="field-label" htmlFor="pa-organization">Organization (optional)</label>
+          <input
+            id="pa-organization"
+            className="field-input"
+            value={organization}
+            onChange={(e) => setOrganization(e.target.value)}
+            placeholder="Who they're with, if separate from the name above"
           />
         </div>
 

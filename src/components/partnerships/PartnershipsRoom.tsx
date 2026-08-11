@@ -128,6 +128,7 @@ export function PartnershipsRoom() {
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [addPrefill, setAddPrefill] = useState<{ name: string; organization: string | null } | null>(null);
   const [batchOpen, setBatchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -308,7 +309,14 @@ export function PartnershipsRoom() {
           {activeTab === 'comms' && <PartnershipCommsTab profiles={profiles} />}
           {activeTab === 'collateral' && <PartnershipCollateralTab profiles={profiles} />}
           {activeTab === 'social' && <PartnershipSocialTab profiles={profiles} />}
-          {activeTab === 'events' && <PartnershipEventsTab />}
+          {activeTab === 'events' && (
+            <PartnershipEventsTab
+              onBecomePartner={(name, organization) => {
+                setAddPrefill({ name, organization });
+                setAddOpen(true);
+              }}
+            />
+          )}
           {activeTab === 'prayer' && <PrayerMeetingTab />}
           {activeTab === 'contacts' && <PartnershipContactsTab profiles={profiles} />}
           {activeTab === 'calendar' && (
@@ -458,10 +466,15 @@ export function PartnershipsRoom() {
         open={addOpen}
         profiles={profiles}
         defaultOwnerId={profile?.id ?? null}
-        onClose={() => setAddOpen(false)}
+        onClose={() => { setAddOpen(false); setAddPrefill(null); }}
         onCreated={async (id) => { await load(); openPartner(id); }}
         interests={interests}
         onInterestsCreated={load}
+        initialValues={
+          addPrefill
+            ? { name: addPrefill.name, phone: '', email: '', notes: null, organization: addPrefill.organization, originLabel: 'meaningful connection' }
+            : undefined
+        }
       />
       <BatchTouchpointModal
         open={batchOpen}
