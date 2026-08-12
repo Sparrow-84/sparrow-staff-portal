@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
-import { setTaskStatus, updateTask } from '@/lib/data';
+import { deleteTask, setTaskStatus, updateTask } from '@/lib/data';
 import type { Profile, TaskComment, TaskStatus, TaskWithPeople } from '@/lib/types';
 import { TaskPanel } from './TaskPanel';
 import { TaskListView } from './tasks/TaskListView';
@@ -147,6 +147,12 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
       onChanged();
     });
   }
+  function clearArchived(taskIds: string[]) {
+    startTransition(async () => {
+      await Promise.all(taskIds.map((id) => deleteTask(id)));
+      onChanged();
+    });
+  }
   function moveToDate(taskId: string, dateIso: string | null) {
     const t = tasks.find((x) => x.id === taskId);
     if (!t || t.due_date === dateIso) return;
@@ -266,6 +272,7 @@ export function TaskWorkspace({ currentUser, profiles, tasks, comments, today, o
             showAssignee={showAssignee}
             onOpen={openEdit}
             onToggle={toggleDone}
+            onClearAll={clearArchived}
           />
         )}
       </div>

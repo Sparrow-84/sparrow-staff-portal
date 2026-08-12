@@ -233,7 +233,21 @@ function PlannerTask({
           }}
           className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer accent-sparrow-green"
         />
-        <button onClick={onOpen} className="min-w-0 flex-1 text-left">
+        {/*
+          Plain clickable div, not a <button> -- a native <button> nested inside
+          a draggable ancestor can swallow the browser's drag-initiation gesture
+          in some engines when the drag starts on top of it, which is exactly
+          what made dated tasks (title = nested button) hard to drag back to
+          Unscheduled while undated tasks (a bare draggable button, no nested
+          interactive child) always dragged fine.
+        */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={onOpen}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpen(); }}
+          className="min-w-0 flex-1 cursor-pointer text-left"
+        >
           {task.label && task.label_color && (
             <div className="mb-0.5">
               <LabelPill label={task.label} color={task.label_color} />
@@ -246,7 +260,7 @@ function PlannerTask({
           >
             {task.title}
           </p>
-        </button>
+        </div>
       </div>
     </div>
   );

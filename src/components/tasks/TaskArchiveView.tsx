@@ -18,31 +18,63 @@ interface Props {
   showAssignee: boolean;
   onOpen: (task: TaskWithPeople) => void;
   onToggle: (task: TaskWithPeople) => void;
+  onClearAll: (taskIds: string[]) => void;
 }
 
-export function TaskArchiveView({ tasks, delegatedTasks, today, showAssignee, onOpen, onToggle }: Props) {
+export function TaskArchiveView({ tasks, delegatedTasks, today, showAssignee, onOpen, onToggle, onClearAll }: Props) {
   const [tab, setTab] = useState<'done' | 'assigned'>('done');
+  const [confirmingClear, setConfirmingClear] = useState(false);
+
+  const delegatedDone = delegatedTasks.filter((t) => t.status === 'done');
+
+  function switchTab(next: 'done' | 'assigned') {
+    setTab(next);
+    setConfirmingClear(false);
+  }
+
+  function clearAll() {
+    const ids = tab === 'done' ? tasks.map((t) => t.id) : delegatedDone.map((t) => t.id);
+    onClearAll(ids);
+    setConfirmingClear(false);
+  }
+
+  const clearCount = tab === 'done' ? tasks.length : delegatedDone.length;
 
   return (
     <div>
       {/* Tab switcher */}
-      <div className="mb-4 inline-flex rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-1 text-sm">
-        <button
-          onClick={() => setTab('done')}
-          className={`rounded-lg px-3 py-1.5 font-medium transition ${
-            tab === 'done' ? 'bg-sparrow-green text-white' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
-          }`}
-        >
-          Done {tasks.length > 0 && <span className="ml-1 opacity-70">· {tasks.length}</span>}
-        </button>
-        <button
-          onClick={() => setTab('assigned')}
-          className={`rounded-lg px-3 py-1.5 font-medium transition ${
-            tab === 'assigned' ? 'bg-sparrow-green text-white' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
-          }`}
-        >
-          Assigned out {delegatedTasks.length > 0 && <span className="ml-1 opacity-70">· {delegatedTasks.length}</span>}
-        </button>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-1 text-sm">
+          <button
+            onClick={() => switchTab('done')}
+            className={`rounded-lg px-3 py-1.5 font-medium transition ${
+              tab === 'done' ? 'bg-sparrow-green text-white' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
+            }`}
+          >
+            Done {tasks.length > 0 && <span className="ml-1 opacity-70">· {tasks.length}</span>}
+          </button>
+          <button
+            onClick={() => switchTab('assigned')}
+            className={`rounded-lg px-3 py-1.5 font-medium transition ${
+              tab === 'assigned' ? 'bg-sparrow-green text-white' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
+            }`}
+          >
+            Assigned out {delegatedTasks.length > 0 && <span className="ml-1 opacity-70">· {delegatedTasks.length}</span>}
+          </button>
+        </div>
+        {clearCount > 0 && (
+          confirmingClear ? (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-sparrow-gray dark:text-sparrow-dark-gray">Permanently delete {clearCount}?</span>
+              <button onClick={clearAll} className="btn-primary px-2 py-1 text-xs">Yes, clear</button>
+              <button onClick={() => setConfirmingClear(false)} className="btn-ghost px-2 py-1 text-xs">Cancel</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmingClear(true)} className="btn-ghost border border-sparrow-rule dark:border-sparrow-dark-border text-xs">
+              Clear all {tab === 'done' ? 'done' : 'completed'}
+            </button>
+          )
+        )}
       </div>
 
       {tab === 'done' && (
