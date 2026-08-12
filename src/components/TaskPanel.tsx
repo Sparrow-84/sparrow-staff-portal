@@ -23,6 +23,7 @@ import { parseMentionIds } from '@/lib/chat';
 import { MentionInput } from '@/components/chat/MentionInput';
 import { LabelPill } from '@/components/LabelPill';
 import { TaskLabelPicker } from '@/components/tasks/TaskLabelPicker';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 // ── Recurrence helpers ────────────────────────────────────────────────────────
 
@@ -240,11 +241,12 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
     [task, occurrenceDates, dueDate],
   );
 
+  const { fieldClass, fieldError, clear, validate } = useRequiredFields([
+    { key: 't-title', label: 'Task title', valid: title.trim().length > 0 },
+  ]);
+
   function save() {
-    if (!title.trim()) {
-      setError('A title is required.');
-      return;
-    }
+    if (!validate()) return;
     if (recurring && !task?.recurrence_id && (!dueDate || !rUntilDate)) {
       setError('Recurring tasks need a due date and a "Repeat until" date — fill both in, or uncheck "Repeat this task."');
       return;
@@ -433,18 +435,19 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
         )}
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          <label className="field-label" htmlFor="t-title">
+          <label className="field-label field-label-required" htmlFor="t-title">
             Task
           </label>
           <input
             id="t-title"
-            className="field-input text-base disabled:opacity-60"
+            className={fieldClass('t-title', 'field-input text-base disabled:opacity-60')}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => { setTitle(e.target.value); clear('t-title'); }}
             placeholder="What needs doing?"
             disabled={readOnly}
             autoFocus
           />
+          {fieldError('t-title') && <p className="mt-1 text-xs text-priority-p1">{fieldError('t-title')}</p>}
 
           <div className="mt-4">
             <label className="field-label" htmlFor="t-notes">
@@ -701,8 +704,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
 
                   {/* Until date */}
                   <div>
-                    <label className="field-label" htmlFor="r-until">
-                      Repeat until <span className="text-red-600">*</span>
+                    <label className="field-label field-label-required" htmlFor="r-until">
+                      Repeat until
                     </label>
                     <input
                       id="r-until"

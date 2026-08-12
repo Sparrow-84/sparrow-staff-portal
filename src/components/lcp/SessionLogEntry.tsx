@@ -195,7 +195,7 @@ export function SessionLogEntry({
   const [filing, setFiling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { missingMessage, validate, fieldClass, clear } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear } = useRequiredFields([
     { key: 'sle-family-picker', label: 'At least one family present', valid: sessionType !== 'ad_hoc' || selectedIds.size > 0 },
   ]);
 
@@ -419,7 +419,7 @@ export function SessionLogEntry({
       {/* Ad-hoc: family picker */}
       {isAdHoc && (
         <section id="sle-family-picker" className={fieldClass('sle-family-picker', 'rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card')}>
-          <p className="mb-3 field-label">Who was present?</p>
+          <p className="mb-3 field-label field-label-required">Who was present?</p>
           <div className="space-y-2">
             {families.map((f) => (
               <label key={f.id} className="flex cursor-pointer items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
@@ -440,6 +440,7 @@ export function SessionLogEntry({
               </label>
             ))}
           </div>
+          {fieldError('sle-family-picker') && <p className="mt-1 text-xs text-priority-p1">{fieldError('sle-family-picker')}</p>}
         </section>
       )}
 

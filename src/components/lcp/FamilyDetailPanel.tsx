@@ -895,7 +895,7 @@ function ProgramFeeTab({
   const [busy, setBusy] = useState(false);
 
   const dollars = parseFloat(amount);
-  const { missingMessage, validate, fieldClass, clear, reset: resetFeeValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetFeeValidation } = useRequiredFields([
     { key: 'fee-date', label: 'Date', valid: !!paidDate },
     { key: 'fee-amount', label: 'Amount', valid: !isNaN(dollars) && dollars > 0 },
   ]);
@@ -930,23 +930,29 @@ function ProgramFeeTab({
     <div className="space-y-4">
       <span className="field-label">Log a payment</span>
       <div className="grid gap-2 sm:grid-cols-4">
-        <input
-          id="fee-date"
-          type="date"
-          value={paidDate}
-          onChange={(e) => { setPaidDate(e.target.value); clear('fee-date'); }}
-          className={fieldClass('fee-date', 'field-input mt-0')}
-        />
-        <input
-          id="fee-amount"
-          type="number"
-          step="0.01"
-          min="0"
-          value={amount}
-          onChange={(e) => { setAmount(e.target.value); clear('fee-amount'); }}
-          placeholder="Amount"
-          className={fieldClass('fee-amount', 'field-input mt-0')}
-        />
+        <div>
+          <input
+            id="fee-date"
+            type="date"
+            value={paidDate}
+            onChange={(e) => { setPaidDate(e.target.value); clear('fee-date'); }}
+            className={fieldClass('fee-date', 'field-input mt-0')}
+          />
+          {fieldError('fee-date') && <p className="mt-1 text-xs text-priority-p1">{fieldError('fee-date')}</p>}
+        </div>
+        <div>
+          <input
+            id="fee-amount"
+            type="number"
+            step="0.01"
+            min="0"
+            value={amount}
+            onChange={(e) => { setAmount(e.target.value); clear('fee-amount'); }}
+            placeholder="Amount"
+            className={fieldClass('fee-amount', 'field-input mt-0')}
+          />
+          {fieldError('fee-amount') && <p className="mt-1 text-xs text-priority-p1">{fieldError('fee-amount')}</p>}
+        </div>
         <select value={method} onChange={(e) => setMethod(e.target.value as ProgramFeeMethod)} className="field-input mt-0">
           {(Object.keys(PROGRAM_FEE_METHOD_LABEL) as ProgramFeeMethod[]).map((m) => (
             <option key={m} value={m}>{PROGRAM_FEE_METHOD_LABEL[m]}</option>
@@ -1045,8 +1051,19 @@ function ComplianceTab({
   const [followUpNote, setFollowUpNote] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const {
+    fieldClass: complianceFieldClass,
+    fieldError: complianceFieldError,
+    clear: clearComplianceField,
+    validate: validateCompliance,
+  } = useRequiredFields([
+    { key: 'comp-label', label: 'Label', valid: !!labelId },
+    { key: 'comp-what', label: 'What happened', valid: whatHappened.trim().length > 0 },
+    { key: 'comp-how', label: 'How it was handled', valid: howHandled.trim().length > 0 },
+  ]);
+
   async function save() {
-    if (!labelId || !whatHappened.trim() || !howHandled.trim()) return;
+    if (!validateCompliance() || !labelId) return;
     setBusy(true);
     await addComplianceNote(
       {
@@ -1083,28 +1100,37 @@ function ComplianceTab({
         was handled.
       </p>
 
-      <ComplianceLabelPicker value={labelId} currentUserId={currentUserId} onChange={setLabelId} />
+      <ComplianceLabelPicker
+        value={labelId}
+        currentUserId={currentUserId}
+        onChange={(id) => { setLabelId(id); clearComplianceField('comp-label'); }}
+        required
+        invalid={!!complianceFieldError('comp-label')}
+      />
+      {complianceFieldError('comp-label') && <p className="text-xs text-priority-p1">{complianceFieldError('comp-label')}</p>}
 
       <div>
-        <span className="field-label">What happened</span>
+        <span className="field-label field-label-required">What happened</span>
         <textarea
           value={whatHappened}
-          onChange={(e) => setWhatHappened(e.target.value)}
+          onChange={(e) => { setWhatHappened(e.target.value); clearComplianceField('comp-what'); }}
           placeholder="e.g. Missed the scheduled drug test on Tuesday, no notice given."
           rows={2}
-          className="field-input mt-1"
+          className={complianceFieldClass('comp-what', 'field-input mt-1')}
         />
+        {complianceFieldError('comp-what') && <p className="mt-1 text-xs text-priority-p1">{complianceFieldError('comp-what')}</p>}
       </div>
 
       <div>
-        <span className="field-label">How it was handled</span>
+        <span className="field-label field-label-required">How it was handled</span>
         <textarea
           value={howHandled}
-          onChange={(e) => setHowHandled(e.target.value)}
+          onChange={(e) => { setHowHandled(e.target.value); clearComplianceField('comp-how'); }}
           placeholder="e.g. Met with her Wednesday, rescheduled for Friday, told her a second miss means a written warning per the handbook."
           rows={2}
-          className="field-input mt-1"
+          className={complianceFieldClass('comp-how', 'field-input mt-1')}
         />
+        {complianceFieldError('comp-how') && <p className="mt-1 text-xs text-priority-p1">{complianceFieldError('comp-how')}</p>}
       </div>
 
       <div>
@@ -1137,7 +1163,7 @@ function ComplianceTab({
         )}
       </div>
 
-      <button onClick={save} disabled={busy || !labelId || !whatHappened.trim() || !howHandled.trim()} className="btn-primary">
+      <button onClick={save} disabled={busy} className="btn-primary">
         Save note
       </button>
 

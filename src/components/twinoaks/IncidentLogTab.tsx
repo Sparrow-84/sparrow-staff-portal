@@ -55,7 +55,7 @@ function IncidentPanel({ open, incident, spaces, onClose, onChanged }: PanelProp
   const [followUp, setFollowUp] = useState('');
   const [status, setStatus] = useState<IncidentStatus>('open');
 
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'i-desc', label: 'Description', valid: description.trim().length > 0 },
   ]);
 
@@ -242,7 +242,7 @@ function IncidentPanel({ open, incident, spaces, onClose, onChanged }: PanelProp
           </div>
 
           <div>
-            <label className="field-label" htmlFor="i-desc">
+            <label className="field-label field-label-required" htmlFor="i-desc">
               Description
             </label>
             <textarea
@@ -254,6 +254,7 @@ function IncidentPanel({ open, incident, spaces, onClose, onChanged }: PanelProp
               placeholder="What happened?"
               disabled={!canEdit}
             />
+            {fieldError('i-desc') && <p className="mt-1 text-xs text-priority-p1">{fieldError('i-desc')}</p>}
           </div>
 
           <div>

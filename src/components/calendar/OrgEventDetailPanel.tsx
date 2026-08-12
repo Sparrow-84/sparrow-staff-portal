@@ -72,7 +72,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
   useEffect(() => { void fetchOfficeRooms().then(setRooms); }, []);
 
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'org-edit-title', label: 'Title', valid: editTitle.trim().length > 0 },
     { key: 'org-edit-date', label: 'Date', valid: !!editDate },
     { key: 'org-edit-start-time', label: 'Start time', valid: editAllDay || !!editStartTime },
@@ -462,7 +462,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
           {!isLcpSession && (
             <div>
-              <label className="field-label" htmlFor="org-edit-title">Title</label>
+              <label className="field-label field-label-required" htmlFor="org-edit-title">Title</label>
               <input
                 id="org-edit-title"
                 type="text"
@@ -470,6 +470,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                 onChange={(e) => { setEditTitle(e.target.value); clear('org-edit-title'); }}
                 className={fieldClass('org-edit-title')}
               />
+              {fieldError('org-edit-title') && <p className="mt-1 text-xs text-priority-p1">{fieldError('org-edit-title')}</p>}
             </div>
           )}
 
@@ -496,7 +497,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
 
               <div className="grid grid-cols-2 gap-3">
                 <div className={editAllDay ? 'col-span-1' : 'col-span-2'}>
-                  <label className="field-label" htmlFor="org-edit-date">{editAllDay ? 'Start date' : 'Date'}</label>
+                  <label className="field-label field-label-required" htmlFor="org-edit-date">{editAllDay ? 'Start date' : 'Date'}</label>
                   <input
                     id="org-edit-date"
                     type="date"
@@ -509,6 +510,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                     }}
                     className={fieldClass('org-edit-date')}
                   />
+                  {fieldError('org-edit-date') && <p className="mt-1 text-xs text-priority-p1">{fieldError('org-edit-date')}</p>}
                 </div>
                 {editAllDay && (
                   <div>
@@ -527,7 +529,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                 {!editAllDay && (
                   <>
                     <div>
-                      <label className="field-label" htmlFor="org-edit-start-time">Start time</label>
+                      <label className="field-label field-label-required" htmlFor="org-edit-start-time">Start time</label>
                       <input
                         id="org-edit-start-time"
                         type="time"
@@ -535,6 +537,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                         onChange={(e) => { setEditStartTime(e.target.value); clear('org-edit-start-time'); }}
                         className={fieldClass('org-edit-start-time')}
                       />
+                      {fieldError('org-edit-start-time') && <p className="mt-1 text-xs text-priority-p1">{fieldError('org-edit-start-time')}</p>}
                     </div>
                     <div>
                       <label className="field-label">

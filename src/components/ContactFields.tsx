@@ -4,7 +4,7 @@ export function ContactFields({ form, onChange }: { form: PersonalContactInput; 
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="col-span-2">
-        <label className="field-label">Name *</label>
+        <label className="field-label field-label-required">Name</label>
         <input
           className="field-input w-full"
           required

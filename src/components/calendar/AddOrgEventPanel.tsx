@@ -195,7 +195,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
     return generateDates(date, frequency, [...daysOfWeek], effectiveUntil);
   })();
 
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'event-title', label: 'Title', valid: title.trim().length > 0 },
     { key: 'event-date', label: 'Date', valid: !!date },
     { key: 'event-start-time', label: 'Start time', valid: allDay || !!startTime },
@@ -331,7 +331,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
     >
       <div className="space-y-5">
         <div>
-          <label className="field-label" htmlFor="event-title">Title</label>
+          <label className="field-label field-label-required" htmlFor="event-title">Title</label>
           <input
             id="event-title"
             type="text"
@@ -340,6 +340,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
             placeholder="e.g. Community BBQ"
             className={fieldClass('event-title')}
           />
+          {fieldError('event-title') && <p className="mt-1 text-xs text-priority-p1">{fieldError('event-title')}</p>}
         </div>
 
         <div>
@@ -392,7 +393,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
 
         <div className="grid grid-cols-2 gap-3">
           <div className={allDay ? 'col-span-1' : 'col-span-2'}>
-            <label className="field-label" htmlFor="event-date">{recurring ? 'Start date' : allDay && !recurring ? 'Start date' : 'Date'}</label>
+            <label className="field-label field-label-required" htmlFor="event-date">{recurring ? 'Start date' : allDay && !recurring ? 'Start date' : 'Date'}</label>
             <input
               id="event-date"
               type="date"
@@ -400,6 +401,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
               onChange={(e) => { setDate(e.target.value); clear('event-date'); }}
               className={fieldClass('event-date')}
             />
+            {fieldError('event-date') && <p className="mt-1 text-xs text-priority-p1">{fieldError('event-date')}</p>}
           </div>
 
           {/* End date — only for all-day, non-recurring events */}
@@ -421,7 +423,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
           {!allDay && (
             <>
               <div>
-                <label className="field-label" htmlFor="event-start-time">Start time</label>
+                <label className="field-label field-label-required" htmlFor="event-start-time">Start time</label>
                 <input
                   id="event-start-time"
                   type="time"
@@ -429,6 +431,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
                   onChange={(e) => { setStartTime(e.target.value); clear('event-start-time'); }}
                   className={fieldClass('event-start-time')}
                 />
+                {fieldError('event-start-time') && <p className="mt-1 text-xs text-priority-p1">{fieldError('event-start-time')}</p>}
               </div>
               <div>
                 <label className="field-label">

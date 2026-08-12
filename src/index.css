@@ -35,6 +35,12 @@
   .field-input-error {
     @apply border-priority-p1 focus:border-priority-p1 focus:ring-priority-p1;
   }
+  /* Red asterisk after a required field's label — pair with .field-input-error
+     and a "Required" caption (via useRequiredFields' fieldError) on the input itself. */
+  .field-label-required::after {
+    content: ' *';
+    @apply text-priority-p1;
+  }
 
   /* Pasted curriculum content (Teacher Guide, devotionals, mentor content) —
      structure from the paste (bold/headings/tables/quotes) is kept, but styled

@@ -9,11 +9,13 @@ export function CadenceInput({
   onCommit,
   disabled,
   presets = CADENCE_PRESETS,
+  invalid,
 }: {
   value: number | null;
   onCommit: (days: number) => void;
   disabled?: boolean;
   presets?: CadencePreset[];
+  invalid?: boolean;
 }) {
   const [preset, setPreset] = useState(() => presetLabelForDays(value, presets));
   const [customDays, setCustomDays] = useState<string>(value != null ? String(value) : '');
@@ -36,7 +38,7 @@ export function CadenceInput({
         value={preset}
         disabled={disabled}
         onChange={(e) => handlePresetChange(e.target.value)}
-        className="field-input mt-0 min-w-[110px] py-1 text-xs"
+        className={`field-input mt-0 min-w-[110px] py-1 text-xs ${invalid ? 'field-input-error' : ''}`}
       >
         {presets.map((p) => (
           <option key={p.label} value={p.label}>
@@ -58,7 +60,7 @@ export function CadenceInput({
             if (v !== value) onCommit(v);
           }}
           placeholder="days"
-          className="field-input mt-0 w-16 py-1 text-xs"
+          className={`field-input mt-0 w-16 py-1 text-xs ${invalid ? 'field-input-error' : ''}`}
         />
       )}
     </div>

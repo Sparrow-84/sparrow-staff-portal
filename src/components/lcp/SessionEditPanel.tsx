@@ -77,6 +77,7 @@ export function SessionEditPanel({
     missingMessage: saveMissing,
     validate: validateSession,
     fieldClass: sessionFieldClass,
+    fieldError: sessionFieldError,
     clear: clearSessionField,
     reset: resetSessionValidation,
   } = useRequiredFields([
@@ -87,6 +88,7 @@ export function SessionEditPanel({
     missingMessage: resMissing,
     validate: validateResource,
     fieldClass: resFieldClass,
+    fieldError: resFieldError,
     clear: clearResField,
     reset: resetResValidation,
   } = useRequiredFields([
@@ -273,7 +275,7 @@ export function SessionEditPanel({
         </p>
 
         <div>
-          <label className="field-label" htmlFor="res-title">Title</label>
+          <label className="field-label field-label-required" htmlFor="res-title">Title</label>
           <input
             id="res-title"
             type="text"
@@ -281,6 +283,7 @@ export function SessionEditPanel({
             onChange={(e) => { setResTitle(e.target.value); clearResField('res-title'); }}
             className={resFieldClass('res-title')}
           />
+          {resFieldError('res-title') && <p className="mt-1 text-xs text-priority-p1">{resFieldError('res-title')}</p>}
         </div>
 
         {resKind === 'devotional' && (
@@ -399,7 +402,7 @@ export function SessionEditPanel({
           {/* Session identity */}
           <div className="space-y-4">
             <div>
-              <label className="field-label" htmlFor="ses-title">Title</label>
+              <label className="field-label field-label-required" htmlFor="ses-title">Title</label>
               <input
                 id="ses-title"
                 type="text"
@@ -407,6 +410,7 @@ export function SessionEditPanel({
                 onChange={(e) => { setTitle(e.target.value); clearSessionField('ses-title'); }}
                 className={sessionFieldClass('ses-title')}
               />
+              {sessionFieldError('ses-title') && <p className="mt-1 text-xs text-priority-p1">{sessionFieldError('ses-title')}</p>}
             </div>
 
             <div>

@@ -50,9 +50,9 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const {
-    missingMessage: createMissingMessage,
     validate: validateCreate,
     fieldClass: createFieldClass,
+    fieldError: createFieldError,
     clear: clearCreate,
     reset: resetCreateValidation,
   } = useRequiredFields([
@@ -60,9 +60,9 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
   ]);
 
   const {
-    missingMessage: editMissingMessage,
     validate: validateEdit,
     fieldClass: editFieldClass,
+    fieldError: editFieldError,
     clear: clearEdit,
     reset: resetEditValidation,
   } = useRequiredFields([
@@ -283,7 +283,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                 >
                   ← Back
                 </button>
-                <span className="text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">New label</span>
+                <span className="text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink field-label-required">New label</span>
               </div>
               <input
                 id="label-create-name"
@@ -295,7 +295,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                 className={createFieldClass('label-create-name')}
                 autoFocus
               />
-              {createMissingMessage && <p className="text-xs text-priority-p1">{createMissingMessage}</p>}
+              {createFieldError('label-create-name') && <p className="mt-1 text-xs text-priority-p1">{createFieldError('label-create-name')}</p>}
               <div>
                 <p className="mb-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Color</p>
                 <div className="flex flex-wrap gap-2">
@@ -378,7 +378,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                           ✕
                         </button>
                       </div>
-                      {editMissingMessage && <p className="text-xs text-priority-p1">{editMissingMessage}</p>}
+                      {editFieldError('label-edit-name') && <p className="mt-1 text-xs text-priority-p1">{editFieldError('label-edit-name')}</p>}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">

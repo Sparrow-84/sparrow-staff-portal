@@ -44,7 +44,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
   const [editLocation, setEditLocation] = useState('');
   const [editMandatory, setEditMandatory] = useState(false);
 
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'lcp-edit-title', label: 'Title', valid: editTitle.trim().length > 0 },
     { key: 'lcp-edit-date', label: 'Date', valid: !!editDate },
     { key: 'lcp-edit-start-time', label: 'Start time', valid: !!editStartTime },
@@ -278,7 +278,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
       {mode === 'edit' ? (
         <div className="space-y-5">
           <div>
-            <label className="field-label" htmlFor="lcp-edit-title">Title</label>
+            <label className="field-label field-label-required" htmlFor="lcp-edit-title">Title</label>
             <input
               id="lcp-edit-title"
               type="text"
@@ -286,6 +286,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
               onChange={(e) => { setEditTitle(e.target.value); clear('lcp-edit-title'); }}
               className={fieldClass('lcp-edit-title')}
             />
+            {fieldError('lcp-edit-title') && <p className="mt-1 text-xs text-priority-p1">{fieldError('lcp-edit-title')}</p>}
           </div>
 
           <div>
@@ -299,7 +300,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="field-label" htmlFor="lcp-edit-date">Date</label>
+              <label className="field-label field-label-required" htmlFor="lcp-edit-date">Date</label>
               <input
                 id="lcp-edit-date"
                 type="date"
@@ -307,9 +308,10 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
                 onChange={(e) => { setEditDate(e.target.value); clear('lcp-edit-date'); }}
                 className={fieldClass('lcp-edit-date')}
               />
+              {fieldError('lcp-edit-date') && <p className="mt-1 text-xs text-priority-p1">{fieldError('lcp-edit-date')}</p>}
             </div>
             <div>
-              <label className="field-label" htmlFor="lcp-edit-start-time">Start time</label>
+              <label className="field-label field-label-required" htmlFor="lcp-edit-start-time">Start time</label>
               <input
                 id="lcp-edit-start-time"
                 type="time"
@@ -317,6 +319,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
                 onChange={(e) => { setEditStartTime(e.target.value); clear('lcp-edit-start-time'); }}
                 className={fieldClass('lcp-edit-start-time')}
               />
+              {fieldError('lcp-edit-start-time') && <p className="mt-1 text-xs text-priority-p1">{fieldError('lcp-edit-start-time')}</p>}
             </div>
             <div>
               <label className="field-label">

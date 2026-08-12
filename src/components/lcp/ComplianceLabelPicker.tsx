@@ -7,6 +7,8 @@ interface Props {
   value: string | null;
   currentUserId: string;
   onChange: (labelId: string) => void;
+  required?: boolean;
+  invalid?: boolean;
 }
 
 type View = 'list' | 'create';
@@ -21,7 +23,7 @@ function swatchClass(color: string): string {
 // here on purpose: these are a compliance record, not a personal list --
 // a label already used on a note shouldn't be able to disappear out from
 // under it.
-export function ComplianceLabelPicker({ value, currentUserId, onChange }: Props) {
+export function ComplianceLabelPicker({ value, currentUserId, onChange, required, invalid }: Props) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>('list');
   const [labels, setLabels] = useState<ComplianceLabelRow[]>([]);
@@ -81,8 +83,12 @@ export function ComplianceLabelPicker({ value, currentUserId, onChange }: Props)
 
   return (
     <div ref={wrapRef} className="relative">
-      <label className="field-label">Label</label>
-      <button type="button" onClick={openDropdown} className="field-input flex items-center justify-between text-left">
+      <label className={`field-label ${required ? 'field-label-required' : ''}`}>Label</label>
+      <button
+        type="button"
+        onClick={openDropdown}
+        className={`field-input flex items-center justify-between text-left ${invalid ? 'field-input-error' : ''}`}
+      >
         {selected ? (
           <LabelPill label={selected.name} color={selected.color} />
         ) : (

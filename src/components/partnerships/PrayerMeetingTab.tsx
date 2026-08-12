@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 import {
   consecutiveMisses,
   fetchMeetingsWithAttendance,
@@ -44,11 +45,16 @@ function LogMeetingPanel({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const { fieldClass, fieldError, clear, validate } = useRequiredFields([
+    { key: 'prayer-meeting-date', label: 'Meeting date', valid: date.trim().length > 0 },
+  ]);
+
   function toggle(id: string) {
     setAttended((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
   async function save() {
+    if (!validate()) return;
     if (!profile?.id) return;
     setBusy(true);
     setErr(null);
@@ -91,8 +97,17 @@ function LogMeetingPanel({
       <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Log this week's meeting</p>
 
       <div>
-        <label className="field-label">Meeting date</label>
-        <input type="date" className="field-input" value={date} onChange={(e) => setDate(e.target.value)} />
+        <label className="field-label field-label-required" htmlFor="prayer-meeting-date">Meeting date</label>
+        <input
+          id="prayer-meeting-date"
+          type="date"
+          className={fieldClass('prayer-meeting-date')}
+          value={date}
+          onChange={(e) => { setDate(e.target.value); clear('prayer-meeting-date'); }}
+        />
+        {fieldError('prayer-meeting-date') && (
+          <p className="mt-1 text-xs text-priority-p1">{fieldError('prayer-meeting-date')}</p>
+        )}
       </div>
 
       <div>

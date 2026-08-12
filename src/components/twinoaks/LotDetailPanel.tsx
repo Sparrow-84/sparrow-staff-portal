@@ -237,6 +237,7 @@ export function LotDetailPanel({
     missingMessage: noticeMissingMessage,
     validate: validateNotice,
     fieldClass: noticeFieldClass,
+    fieldError: noticeFieldError,
     clear: clearNoticeField,
     reset: resetNoticeValidation,
   } = useRequiredFields([
@@ -542,6 +543,7 @@ export function LotDetailPanel({
                   noticeError={noticeError}
                   noticeMissingMessage={noticeMissingMessage}
                   noticeFieldClass={noticeFieldClass}
+                  noticeFieldError={noticeFieldError}
                   onClearNoticeField={clearNoticeField}
                   noticePending={noticePending}
                   photoUploading={photoUploading}
@@ -889,7 +891,7 @@ function ViewBody({
   space, tenant, members, pets, notices, workOrders, canManage,
   residentLabel, isProgramHome,
   showNoticeForm, noticeType, noticeDate, noticeDesc, noticeDelivery,
-  noticeDeliveryNotes, noticeError, noticeMissingMessage, noticeFieldClass,
+  noticeDeliveryNotes, noticeError, noticeMissingMessage, noticeFieldClass, noticeFieldError,
   onClearNoticeField, noticePending,
   photoUploading, photoError, onPhotoUpload: _onPhotoUpload, onPhotoInputClick,
   onSetNoticeType, onSetNoticeDate, onSetNoticeDesc, onSetNoticeDelivery,
@@ -903,6 +905,7 @@ function ViewBody({
   noticeDesc: string; noticeDelivery: NoticeDelivery; noticeDeliveryNotes: string;
   noticeError: string | null; noticeMissingMessage: string | null;
   noticeFieldClass: (key: string, base?: string) => string;
+  noticeFieldError: (key: string) => string | null;
   onClearNoticeField: (key: string) => void;
   noticePending: boolean;
   photoUploading: boolean; photoError: string | null;
@@ -1065,7 +1068,7 @@ function ViewBody({
               </div>
             </div>
             <div>
-              <label className="field-label mb-1" htmlFor="lot-notice-date">Date given</label>
+              <label className="field-label field-label-required mb-1" htmlFor="lot-notice-date">Date given</label>
               <input
                 id="lot-notice-date"
                 type="date"
@@ -1073,9 +1076,10 @@ function ViewBody({
                 value={noticeDate}
                 onChange={(e) => { onSetNoticeDate(e.target.value); onClearNoticeField('lot-notice-date'); }}
               />
+              {noticeFieldError('lot-notice-date') && <p className="mt-1 text-xs text-priority-p1">{noticeFieldError('lot-notice-date')}</p>}
             </div>
             <div>
-              <label className="field-label mb-1" htmlFor="lot-notice-desc">What was the notice for?</label>
+              <label className="field-label field-label-required mb-1" htmlFor="lot-notice-desc">What was the notice for?</label>
               <textarea
                 id="lot-notice-desc"
                 className={noticeFieldClass('lot-notice-desc')}
@@ -1084,6 +1088,7 @@ function ViewBody({
                 onChange={(e) => { onSetNoticeDesc(e.target.value); onClearNoticeField('lot-notice-desc'); }}
                 placeholder="Describe the violation or reason"
               />
+              {noticeFieldError('lot-notice-desc') && <p className="mt-1 text-xs text-priority-p1">{noticeFieldError('lot-notice-desc')}</p>}
             </div>
             <div>
               <p className="field-label mb-1">How was it delivered?</p>

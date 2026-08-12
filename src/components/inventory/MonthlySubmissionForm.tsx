@@ -38,7 +38,7 @@ function AdditionForm({
 
   const set = (patch: Partial<NewAddition>) => setForm((f) => ({ ...f, ...patch }));
 
-  const { missingMessage, validate, fieldClass, clear } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear } = useRequiredFields([
     {
       key: 'add-desc',
       label: form.is_batch ? 'Batch category' : 'Description',
@@ -98,7 +98,7 @@ function AdditionForm({
 
       {form.is_batch ? (
         <div>
-          <label className="field-label" htmlFor="add-desc">Batch category *</label>
+          <label className="field-label field-label-required" htmlFor="add-desc">Batch category</label>
           <select
             id="add-desc"
             value={form.batch_category ?? ''}
@@ -110,6 +110,7 @@ function AdditionForm({
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+          {fieldError('add-desc') && <p className="mt-1 text-xs text-priority-p1">{fieldError('add-desc')}</p>}
           {form.batch_category && BATCH_CATEGORY_HINTS[form.batch_category] && (
             <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               {BATCH_CATEGORY_HINTS[form.batch_category]}
@@ -118,7 +119,7 @@ function AdditionForm({
         </div>
       ) : (
         <div>
-          <label className="field-label" htmlFor="add-desc">Description *</label>
+          <label className="field-label field-label-required" htmlFor="add-desc">Description</label>
           <input
             id="add-desc"
             value={form.description}
@@ -126,6 +127,7 @@ function AdditionForm({
             placeholder='e.g. "Ryobi cordless drill, serial #12345" — be specific'
             className={fieldClass('add-desc')}
           />
+          {fieldError('add-desc') && <p className="mt-1 text-xs text-priority-p1">{fieldError('add-desc')}</p>}
           <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             Include brand, model, and serial # for electronics, power tools, and appliances.
           </p>
@@ -177,7 +179,7 @@ function AdditionForm({
       </div>
 
       <div>
-        <label className="field-label" htmlFor="add-cost">Cost *</label>
+        <label className="field-label field-label-required" htmlFor="add-cost">Cost</label>
         <div className="flex gap-2 items-center">
           <span className="text-sparrow-gray dark:text-sparrow-dark-gray text-sm">$</span>
           <input
@@ -208,6 +210,7 @@ function AdditionForm({
             </div>
           )}
         </div>
+        {fieldError('add-cost') && <p className="mt-1 text-xs text-priority-p1">{fieldError('add-cost')}</p>}
         {form.cost > 0 && form.quantity > 1 && (
           <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             {form.cost_basis === 'per_item'
@@ -239,7 +242,7 @@ function AdditionForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="field-label" htmlFor="add-location">Location *</label>
+          <label className="field-label field-label-required" htmlFor="add-location">Location</label>
           <select
             id="add-location"
             value={form.sub_location_id ?? ''}
@@ -251,6 +254,7 @@ function AdditionForm({
               <option key={sl.id} value={sl.id}>{sl.name}</option>
             ))}
           </select>
+          {fieldError('add-location') && <p className="mt-1 text-xs text-priority-p1">{fieldError('add-location')}</p>}
         </div>
 
         <div className="flex flex-col justify-end">
@@ -317,7 +321,7 @@ function RemovalForm({
   const description = selectedItem ? selectedItem.description : freeText;
   const maxQty = selectedItem ? selectedItem.quantity : undefined;
 
-  const { missingMessage, validate, fieldClass, clear } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear } = useRequiredFields([
     { key: 'rm-what', label: 'What left', valid: !!(selectedItemId || freeText.trim()) },
     { key: 'rm-how', label: 'How it left', valid: !!howItLeft },
   ]);
@@ -346,7 +350,7 @@ function RemovalForm({
     <div className="rounded-xl border border-priority-p1/30 bg-priority-p1/5 p-4 space-y-4">
       {items.length > 0 ? (
         <div>
-          <label className="field-label" htmlFor="rm-what">What left? *</label>
+          <label className="field-label field-label-required" htmlFor="rm-what">What left?</label>
           <select
             id="rm-what"
             value={selectedItemId}
@@ -370,10 +374,11 @@ function RemovalForm({
               className="field-input mt-2"
             />
           )}
+          {fieldError('rm-what') && <p className="mt-1 text-xs text-priority-p1">{fieldError('rm-what')}</p>}
         </div>
       ) : (
         <div>
-          <label className="field-label" htmlFor="rm-what">What left? *</label>
+          <label className="field-label field-label-required" htmlFor="rm-what">What left?</label>
           <input
             id="rm-what"
             value={freeText}
@@ -381,6 +386,7 @@ function RemovalForm({
             placeholder='e.g. "Large brown leather couch" — be specific'
             className={fieldClass('rm-what')}
           />
+          {fieldError('rm-what') && <p className="mt-1 text-xs text-priority-p1">{fieldError('rm-what')}</p>}
           <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             Only list items physically off the property. Broken items still on site are not gone yet.
           </p>
@@ -406,7 +412,7 @@ function RemovalForm({
         </div>
 
         <div>
-          <label className="field-label" htmlFor="rm-how">How did it leave? *</label>
+          <label className="field-label field-label-required" htmlFor="rm-how">How did it leave?</label>
           <select
             id="rm-how"
             value={howItLeft}
@@ -418,6 +424,7 @@ function RemovalForm({
               ([k, v]) => <option key={k} value={k}>{v}</option>,
             )}
           </select>
+          {fieldError('rm-how') && <p className="mt-1 text-xs text-priority-p1">{fieldError('rm-how')}</p>}
         </div>
       </div>
 

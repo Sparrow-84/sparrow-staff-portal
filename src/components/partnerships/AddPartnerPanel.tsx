@@ -109,7 +109,7 @@ export function AddPartnerPanel({
 
   // Cadence + lead time are required (migration 0080 — NOT NULL at the DB level). Validate here
   // so a save attempt never hits the DB constraint as its only feedback.
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'pa-name', label: 'Name', valid: name.trim().length > 0 },
     { key: 'pa-cadence', label: 'Cadence (days)', valid: cadence != null && cadence > 0 },
     { key: 'pa-lead-time', label: 'Lead time (days)', valid: leadTime != null && leadTime > 0 },
@@ -204,7 +204,7 @@ export function AddPartnerPanel({
           </p>
         )}
         <div>
-          <label className="field-label" htmlFor="pa-name">Name *</label>
+          <label className="field-label field-label-required" htmlFor="pa-name">Name</label>
           <input
             id="pa-name"
             className={fieldClass('pa-name')}
@@ -212,6 +212,7 @@ export function AddPartnerPanel({
             onChange={(e) => { setName(e.target.value); clear('pa-name'); setDuplicateWarning(null); }}
             placeholder="Person, church, or organization"
           />
+          {fieldError('pa-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-name')}</p>}
         </div>
 
         <div>
@@ -282,19 +283,23 @@ export function AddPartnerPanel({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="field-label" htmlFor="pa-cadence">Cadence *</label>
+            <label className="field-label field-label-required" htmlFor="pa-cadence">Cadence</label>
             <CadenceInput
               value={cadence}
               onCommit={(v) => { setCadence(v); clear('pa-cadence'); }}
+              invalid={!!fieldError('pa-cadence')}
             />
+            {fieldError('pa-cadence') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-cadence')}</p>}
           </div>
           <div>
-            <label className="field-label" htmlFor="pa-lead-time">Lead time *</label>
+            <label className="field-label field-label-required" htmlFor="pa-lead-time">Lead time</label>
             <CadenceInput
               value={leadTime}
               onCommit={(v) => { setLeadTime(v); clear('pa-lead-time'); }}
               presets={LEAD_TIME_PRESETS}
+              invalid={!!fieldError('pa-lead-time')}
             />
+            {fieldError('pa-lead-time') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-lead-time')}</p>}
           </div>
         </div>
         <p className="-mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">

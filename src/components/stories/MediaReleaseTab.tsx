@@ -36,6 +36,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
     missingMessage: eventMissingMessage,
     validate: validateEvent,
     fieldClass: eventFieldClass,
+    fieldError: eventFieldError,
     clear: clearEvent,
     reset: resetEventValidation,
   } = useRequiredFields([
@@ -56,6 +57,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
     missingMessage: consentMissingMessage,
     validate: validateConsent,
     fieldClass: consentFieldClass,
+    fieldError: consentFieldError,
     clear: clearConsent,
     reset: resetConsentValidation,
   } = useRequiredFields([
@@ -191,7 +193,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
           <div className="mt-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="field-label" htmlFor="mr-event-name">
+                <label className="field-label field-label-required" htmlFor="mr-event-name">
                   Event name
                 </label>
                 <input
@@ -201,9 +203,10 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                   onChange={(e) => { setEventName(e.target.value); clearEvent('mr-event-name'); }}
                   placeholder="e.g. Monthly Community Dinner"
                 />
+                {eventFieldError('mr-event-name') && <p className="mt-1 text-xs text-priority-p1">{eventFieldError('mr-event-name')}</p>}
               </div>
               <div>
-                <label className="field-label" htmlFor="mr-event-date">
+                <label className="field-label field-label-required" htmlFor="mr-event-date">
                   Date
                 </label>
                 <input
@@ -213,6 +216,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                   value={eventDate}
                   onChange={(e) => { setEventDate(e.target.value); clearEvent('mr-event-date'); }}
                 />
+                {eventFieldError('mr-event-date') && <p className="mt-1 text-xs text-priority-p1">{eventFieldError('mr-event-date')}</p>}
               </div>
             </div>
             <label className="mt-3 flex items-center gap-2 text-sm">
@@ -311,7 +315,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
           <div className="mt-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="field-label" htmlFor="mr-p-name">
+                <label className="field-label field-label-required" htmlFor="mr-p-name">
                   Participant name
                 </label>
                 <input
@@ -321,6 +325,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                   onChange={(e) => { setParticipantName(e.target.value); clearConsent('mr-p-name'); }}
                   placeholder="First name or initials"
                 />
+                {consentFieldError('mr-p-name') && <p className="mt-1 text-xs text-priority-p1">{consentFieldError('mr-p-name')}</p>}
               </div>
               <div>
                 <label className="field-label" htmlFor="mr-p-date">

@@ -65,7 +65,7 @@ function TallyRow({
 
   const valueId = `tally-value-${tally.id}`;
   const parsedDraft = parseFloat(draftValue);
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: valueId, label: 'Filed value', valid: draftValue.trim() !== '' && !isNaN(parsedDraft) && parsedDraft >= 0 },
   ]);
 
@@ -152,7 +152,7 @@ function TallyRow({
                 ✕
               </button>
             </span>
-            {missingMessage && <span className="text-[11px] text-priority-p1">{missingMessage}</span>}
+            {fieldError(valueId) && <span className="text-[11px] text-priority-p1">{fieldError(valueId)}</span>}
           </span>
         ) : (
           <button

@@ -119,7 +119,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
     resetValidation();
   }, [open, story, currentUserId]);
 
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'sp-title', label: 'Title', valid: title.trim().length > 0 },
     { key: 'sp-subject', label: 'Real name', valid: subjectName.trim().length > 0 },
     { key: 'sp-alias', label: 'Alias', valid: subjectAlias.trim().length > 0 },
@@ -302,7 +302,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
       }
     >
       {/* Title */}
-      <label className="field-label" htmlFor="sp-title">
+      <label className="field-label field-label-required" htmlFor="sp-title">
         Title
       </label>
       <input
@@ -312,11 +312,12 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
         onChange={(e) => { setTitle(e.target.value); clear('sp-title'); }}
         placeholder="e.g. From Survival to Stability"
       />
+      {fieldError('sp-title') && <p className="mt-1 text-xs text-priority-p1">{fieldError('sp-title')}</p>}
 
       {/* Real name + Alias */}
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div>
-          <label className="field-label" htmlFor="sp-subject">
+          <label className="field-label field-label-required" htmlFor="sp-subject">
             Real name <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(internal only)</span>
           </label>
           <input
@@ -326,9 +327,10 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
             onChange={(e) => { setSubjectName(e.target.value); clear('sp-subject'); }}
             placeholder="e.g. Maria R."
           />
+          {fieldError('sp-subject') && <p className="mt-1 text-xs text-priority-p1">{fieldError('sp-subject')}</p>}
         </div>
         <div>
-          <label className="field-label" htmlFor="sp-alias">
+          <label className="field-label field-label-required" htmlFor="sp-alias">
             Alias <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(used publicly)</span>
           </label>
           <input
@@ -338,12 +340,13 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
             onChange={(e) => { setSubjectAlias(e.target.value); clear('sp-alias'); }}
             placeholder="e.g. Grace"
           />
+          {fieldError('sp-alias') && <p className="mt-1 text-xs text-priority-p1">{fieldError('sp-alias')}</p>}
         </div>
       </div>
 
       {/* Date gathered */}
       <div className="mt-4">
-        <label className="field-label" htmlFor="sp-date">
+        <label className="field-label field-label-required" htmlFor="sp-date">
           Date gathered
         </label>
         <input
@@ -353,6 +356,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
           value={dateGathered}
           onChange={(e) => { setDateGathered(e.target.value); clear('sp-date'); }}
         />
+        {fieldError('sp-date') && <p className="mt-1 text-xs text-priority-p1">{fieldError('sp-date')}</p>}
       </div>
 
       {/* Gathering method + Logged by */}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
 import { LEAD_TIME_PRESETS } from '@/lib/cadence';
 import type { Profile } from '@/lib/types';
@@ -126,6 +127,13 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const { fieldClass, fieldError, clear, validate } = useRequiredFields([
+    { key: 'pct-item-name', label: 'Item name', valid: form.item_name.trim().length > 0 },
+    { key: 'pct-owner', label: 'Owner', valid: !!form.owner_id },
+    { key: 'pct-cadence', label: 'Cadence (days)', valid: !!form.cadence_days && form.cadence_days >= 1 },
+    { key: 'pct-lead-time', label: 'Lead time (days)', valid: !!form.lead_time_days && form.lead_time_days >= 1 },
+  ]);
+
   // Same standing-owner pattern used across the room: Bethany (dept=partnerships) + anyone
   // explicitly granted room access. Exec excluded — never a selectable standing owner here.
   const ownerProfiles = profiles.filter(
@@ -161,10 +169,7 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.item_name.trim()) return;
-    if (!form.owner_id) { setFormError('Owner is required — every item needs someone responsible for its review.'); return; }
-    if (!form.cadence_days || form.cadence_days < 1) { setFormError('Cadence (days) is required.'); return; }
-    if (!form.lead_time_days || form.lead_time_days < 1) { setFormError('Lead time (days) is required.'); return; }
+    if (!validate()) return;
     setFormError(null);
     setSaving(true);
     try {
@@ -304,27 +309,29 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
         <form onSubmit={handleAdd} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="field-label">Item name *</label>
+              <label className="field-label field-label-required" htmlFor="pct-item-name">Item name</label>
               <input
-                className="field-input w-full"
-                required
+                id="pct-item-name"
+                className={fieldClass('pct-item-name', 'field-input w-full')}
                 value={form.item_name}
-                onChange={(e) => setForm((f) => ({ ...f, item_name: e.target.value }))}
+                onChange={(e) => { setForm((f) => ({ ...f, item_name: e.target.value })); clear('pct-item-name'); }}
               />
+              {fieldError('pct-item-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pct-item-name')}</p>}
             </div>
             <div>
-              <label className="field-label">Owner *</label>
+              <label className="field-label field-label-required" htmlFor="pct-owner">Owner</label>
               <select
-                className="field-input w-full"
-                required
+                id="pct-owner"
+                className={fieldClass('pct-owner', 'field-input w-full')}
                 value={form.owner_id}
-                onChange={(e) => setForm((f) => ({ ...f, owner_id: e.target.value }))}
+                onChange={(e) => { setForm((f) => ({ ...f, owner_id: e.target.value })); clear('pct-owner'); }}
               >
                 <option value="">Select an owner…</option>
                 {ownerProfiles.map((p) => (
                   <option key={p.id} value={p.id}>{p.full_name}</option>
                 ))}
               </select>
+              {fieldError('pct-owner') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pct-owner')}</p>}
             </div>
             <div>
               <label className="field-label">Qty on hand</label>
@@ -335,19 +342,23 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
               />
             </div>
             <div>
-              <label className="field-label">Cadence *</label>
+              <label className="field-label field-label-required" htmlFor="pct-cadence">Cadence</label>
               <CadenceInput
                 value={form.cadence_days}
-                onCommit={(v) => setForm((f) => ({ ...f, cadence_days: v }))}
+                onCommit={(v) => { setForm((f) => ({ ...f, cadence_days: v })); clear('pct-cadence'); }}
+                invalid={!!fieldError('pct-cadence')}
               />
+              {fieldError('pct-cadence') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pct-cadence')}</p>}
             </div>
             <div>
-              <label className="field-label">Lead time *</label>
+              <label className="field-label field-label-required" htmlFor="pct-lead-time">Lead time</label>
               <CadenceInput
                 value={form.lead_time_days}
-                onCommit={(v) => setForm((f) => ({ ...f, lead_time_days: v }))}
+                onCommit={(v) => { setForm((f) => ({ ...f, lead_time_days: v })); clear('pct-lead-time'); }}
                 presets={LEAD_TIME_PRESETS}
+                invalid={!!fieldError('pct-lead-time')}
               />
+              {fieldError('pct-lead-time') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pct-lead-time')}</p>}
             </div>
             <div>
               <label className="field-label">Review cycle (informational)</label>

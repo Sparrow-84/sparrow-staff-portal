@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
@@ -64,6 +65,15 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedConnId, setSelectedConnId] = useState<string | null>(null);
 
+  const eventFields = useRequiredFields([
+    { key: 'pet-event-name', label: 'Event name', valid: eventForm.event_name.trim().length > 0 },
+    { key: 'pet-event-date', label: 'Date', valid: !!eventForm.event_date },
+  ]);
+
+  const connFields = useRequiredFields([
+    { key: 'pet-conn-name', label: 'Name', valid: connForm.name.trim().length > 0 },
+  ]);
+
   // Exec is excluded even if flagged with partnerships_access — same standing-owner
   // exclusion used for partner records (AddPartnerPanel/PartnerTableView).
   const ownerProfiles = profiles.filter(
@@ -84,7 +94,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
 
   async function handleAddEvent(e: React.FormEvent) {
     e.preventDefault();
-    if (!eventForm.event_name.trim() || !eventForm.event_date) return;
+    if (!eventFields.validate()) return;
     setSavingEvent(true);
     try {
       await createEvent(eventForm);
@@ -116,7 +126,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
 
   async function handleAddConn(e: React.FormEvent) {
     e.preventDefault();
-    if (!connForm.name.trim()) return;
+    if (!connFields.validate()) return;
     setSavingConn(true);
     try {
       await createConnection(connForm);
@@ -163,23 +173,25 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
           <form onSubmit={handleAddEvent} className="mb-4 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <label className="field-label">Event name *</label>
+                <label className="field-label field-label-required" htmlFor="pet-event-name">Event name</label>
                 <input
-                  className="field-input w-full"
-                  required
+                  id="pet-event-name"
+                  className={eventFields.fieldClass('pet-event-name', 'field-input w-full')}
                   value={eventForm.event_name}
-                  onChange={(e) => setEventForm((f) => ({ ...f, event_name: e.target.value }))}
+                  onChange={(e) => { setEventForm((f) => ({ ...f, event_name: e.target.value })); eventFields.clear('pet-event-name'); }}
                 />
+                {eventFields.fieldError('pet-event-name') && <p className="mt-1 text-xs text-priority-p1">{eventFields.fieldError('pet-event-name')}</p>}
               </div>
               <div>
-                <label className="field-label">Date *</label>
+                <label className="field-label field-label-required" htmlFor="pet-event-date">Date</label>
                 <input
+                  id="pet-event-date"
                   type="date"
-                  className="field-input w-full"
-                  required
+                  className={eventFields.fieldClass('pet-event-date', 'field-input w-full')}
                   value={eventForm.event_date}
-                  onChange={(e) => setEventForm((f) => ({ ...f, event_date: e.target.value }))}
+                  onChange={(e) => { setEventForm((f) => ({ ...f, event_date: e.target.value })); eventFields.clear('pet-event-date'); }}
                 />
+                {eventFields.fieldError('pet-event-date') && <p className="mt-1 text-xs text-priority-p1">{eventFields.fieldError('pet-event-date')}</p>}
               </div>
               <div>
                 <label className="field-label">Location</label>
@@ -281,13 +293,14 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
           <form onSubmit={handleAddConn} className="mb-4 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="field-label">Name *</label>
+                <label className="field-label field-label-required" htmlFor="pet-conn-name">Name</label>
                 <input
-                  className="field-input w-full"
-                  required
+                  id="pet-conn-name"
+                  className={connFields.fieldClass('pet-conn-name', 'field-input w-full')}
                   value={connForm.name}
-                  onChange={(e) => setConnForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) => { setConnForm((f) => ({ ...f, name: e.target.value })); connFields.clear('pet-conn-name'); }}
                 />
+                {connFields.fieldError('pet-conn-name') && <p className="mt-1 text-xs text-priority-p1">{connFields.fieldError('pet-conn-name')}</p>}
               </div>
               <div>
                 <label className="field-label">Organization</label>

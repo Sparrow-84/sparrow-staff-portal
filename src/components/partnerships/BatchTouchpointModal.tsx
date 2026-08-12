@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
 import { logTouchpointBatch } from '@/lib/partnerships';
 import {
@@ -32,6 +33,11 @@ export function BatchTouchpointModal({
   const [error, setError] = useState<string | null>(null);
   const [loggedCount, setLoggedCount] = useState<number | null>(null);
 
+  const { fieldClass, fieldError, clear, validate, reset: resetValidation } = useRequiredFields([
+    { key: 'btm-partners', label: 'Partners', valid: selectedIds.length > 0 },
+    { key: 'btm-date', label: 'Date', valid: !!occurredOn },
+  ]);
+
   useEffect(() => {
     if (open) {
       setSearch('');
@@ -42,6 +48,7 @@ export function BatchTouchpointModal({
       setSummary('');
       setError(null);
       setLoggedCount(null);
+      resetValidation();
     }
   }, [open]);
 
@@ -65,6 +72,7 @@ export function BatchTouchpointModal({
 
   function toggle(id: string) {
     setLoggedCount(null);
+    clear('btm-partners');
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]));
   }
 
@@ -73,6 +81,7 @@ export function BatchTouchpointModal({
   // search + deselect doesn't silently drop selections made under the earlier, broader filter.
   function toggleSelectAllFiltered() {
     setLoggedCount(null);
+    clear('btm-partners');
     setSelectedIds((prev) =>
       allFilteredSelected
         ? prev.filter((id) => !filteredIds.includes(id))
@@ -81,7 +90,7 @@ export function BatchTouchpointModal({
   }
 
   async function submit() {
-    if (selectedIds.length === 0 || !occurredOn) return;
+    if (!validate()) return;
     setBusy(true);
     setError(null);
     try {
@@ -123,7 +132,7 @@ export function BatchTouchpointModal({
 
         <div className="space-y-4 px-6 py-5">
           <div>
-            <span className="field-label">Partners</span>
+            <span className="field-label field-label-required">Partners</span>
             <input
               type="text"
               value={search}
@@ -169,6 +178,7 @@ export function BatchTouchpointModal({
               )}
             </div>
             <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{selectedIds.length} selected</p>
+            {fieldError('btm-partners') && <p className="mt-1 text-xs text-priority-p1">{fieldError('btm-partners')}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -187,13 +197,14 @@ export function BatchTouchpointModal({
               </select>
             </div>
             <div>
-              <span className="field-label">Date</span>
+              <span className="field-label field-label-required">Date</span>
               <input
                 type="date"
                 value={occurredOn}
-                onChange={(e) => setOccurredOn(e.target.value)}
-                className="field-input mt-0"
+                onChange={(e) => { setOccurredOn(e.target.value); clear('btm-date'); }}
+                className={fieldClass('btm-date', 'field-input mt-0')}
               />
+              {fieldError('btm-date') && <p className="mt-1 text-xs text-priority-p1">{fieldError('btm-date')}</p>}
             </div>
           </div>
 
@@ -214,7 +225,7 @@ export function BatchTouchpointModal({
 
           <button
             onClick={submit}
-            disabled={busy || selectedIds.length === 0 || !occurredOn}
+            disabled={busy}
             className="btn-primary w-full"
           >
             {busy

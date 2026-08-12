@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Drawer } from '../lcp/Drawer';
 import { RichOrPlainView } from '../lcp/RichText';
 import { RichTextEditor } from '../stories/RichTextEditor';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { updateEvent, type EventInput, type PartnershipEvent } from '@/lib/partnerships-tabs';
 
 function shortDate(iso: string): string {
@@ -25,6 +26,11 @@ export function EventDetailPanel({
   const [form, setForm] = useState<EventInput | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const { fieldClass, fieldError, clear, validate } = useRequiredFields([
+    { key: 'ed-event-name', label: 'Event name', valid: (form?.event_name.trim().length ?? 0) > 0 },
+    { key: 'ed-event-date', label: 'Date', valid: !!form?.event_date },
+  ]);
+
   useEffect(() => {
     if (open && event) {
       setEditing(false);
@@ -42,7 +48,7 @@ export function EventDetailPanel({
 
   async function save() {
     if (!event || !form) return;
-    if (!form.event_name.trim() || !form.event_date) return;
+    if (!validate()) return;
     setBusy(true);
     try {
       await updateEvent(event.id, form);
@@ -110,21 +116,25 @@ export function EventDetailPanel({
       ) : (
         <div className="space-y-4">
           <div>
-            <label className="field-label">Event name *</label>
+            <label className="field-label field-label-required" htmlFor="ed-event-name">Event name</label>
             <input
-              className="field-input w-full"
+              id="ed-event-name"
+              className={fieldClass('ed-event-name', 'field-input w-full')}
               value={form.event_name}
-              onChange={(e) => setForm((f) => f && { ...f, event_name: e.target.value })}
+              onChange={(e) => { setForm((f) => f && { ...f, event_name: e.target.value }); clear('ed-event-name'); }}
             />
+            {fieldError('ed-event-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('ed-event-name')}</p>}
           </div>
           <div>
-            <label className="field-label">Date *</label>
+            <label className="field-label field-label-required" htmlFor="ed-event-date">Date</label>
             <input
+              id="ed-event-date"
               type="date"
-              className="field-input w-full"
+              className={fieldClass('ed-event-date', 'field-input w-full')}
               value={form.event_date}
-              onChange={(e) => setForm((f) => f && { ...f, event_date: e.target.value })}
+              onChange={(e) => { setForm((f) => f && { ...f, event_date: e.target.value }); clear('ed-event-date'); }}
             />
+            {fieldError('ed-event-date') && <p className="mt-1 text-xs text-priority-p1">{fieldError('ed-event-date')}</p>}
           </div>
           <div>
             <label className="field-label">Location</label>

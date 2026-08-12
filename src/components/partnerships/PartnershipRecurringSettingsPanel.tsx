@@ -77,7 +77,7 @@ export function PartnershipRecurringSettingsPanel({
               <p className="mb-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{helpText}</p>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="field-label">Cadence *</label>
+                  <label className="field-label field-label-required">Cadence</label>
                   <CadenceInput
                     value={setting.cadence_days}
                     onCommit={(v) => void patch({ cadence_days: v })}
@@ -85,7 +85,7 @@ export function PartnershipRecurringSettingsPanel({
                   />
                 </div>
                 <div>
-                  <label className="field-label">Lead time *</label>
+                  <label className="field-label field-label-required">Lead time</label>
                   <CadenceInput
                     value={setting.lead_time_days}
                     onCommit={(v) => void patch({ lead_time_days: v })}
@@ -94,7 +94,7 @@ export function PartnershipRecurringSettingsPanel({
                   />
                 </div>
                 <div>
-                  <label className="field-label">Owner *</label>
+                  <label className="field-label field-label-required">Owner</label>
                   <select
                     value={setting.owner_id}
                     disabled={busy}

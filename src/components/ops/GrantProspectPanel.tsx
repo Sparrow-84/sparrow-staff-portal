@@ -54,7 +54,7 @@ export function GrantProspectPanel({
   const [links, setLinks] = useState<GrantProspectLink[]>([]);
   const [docs, setDocs] = useState<GrantProspectDocument[]>([]);
 
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'prospect-name', label: 'Name', valid: form.name.trim().length > 0 },
   ]);
 
@@ -135,13 +135,14 @@ export function GrantProspectPanel({
         </div>
 
         <label className="block" htmlFor="prospect-name">
-          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Name</span>
+          <span className="field-label-required text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Name</span>
           <input
             id="prospect-name"
             value={form.name}
             onChange={(e) => { set('name', e.target.value); clear('prospect-name'); }}
             className={fieldClass('prospect-name')}
           />
+          {fieldError('prospect-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('prospect-name')}</p>}
         </label>
 
         <div className="grid grid-cols-2 gap-3">
@@ -277,7 +278,6 @@ export function GrantProspectPanel({
           </label>
         )}
 
-        {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
         <button onClick={save} disabled={busy} className="btn-primary w-full">
           Save changes
         </button>

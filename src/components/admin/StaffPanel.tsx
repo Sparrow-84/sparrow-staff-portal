@@ -7,6 +7,7 @@ import {
   type Profile,
 } from '@/lib/types';
 import { createStaff, updateStaff, type StaffInput } from '@/lib/admin';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 interface Props {
   open: boolean;
@@ -68,11 +69,13 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
     }
   }, [open, staff]);
 
+  const { fieldClass, fieldError, clear, validate } = useRequiredFields([
+    { key: 's-name', label: 'Full name', valid: fullName.trim().length > 0 },
+    { key: 's-email', label: 'Google email', valid: email.trim().length > 0 },
+  ]);
+
   function save() {
-    if (!fullName.trim() || !email.trim()) {
-      setError('Name and email are required.');
-      return;
-    }
+    if (!validate()) return;
     const base: StaffInput = {
       full_name: fullName.trim(),
       email: email.trim(),
@@ -128,26 +131,35 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          <label className="field-label" htmlFor="s-name">
+          <label className="field-label field-label-required" htmlFor="s-name">
             Full name
           </label>
-          <input id="s-name" className="field-input" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          <input
+            id="s-name"
+            className={fieldClass('s-name')}
+            value={fullName}
+            onChange={(e) => { setFullName(e.target.value); clear('s-name'); }}
+          />
+          {fieldError('s-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('s-name')}</p>}
 
           <div className="mt-4">
-            <label className="field-label" htmlFor="s-email">
+            <label className="field-label field-label-required" htmlFor="s-email">
               Google email <span className="text-sparrow-gray dark:text-sparrow-dark-gray">(sign-in address)</span>
             </label>
             {staff ? (
               <p className="mt-1 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{email}</p>
             ) : (
-              <input
-                id="s-email"
-                type="email"
-                className="field-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@sparrowinc.org"
-              />
+              <>
+                <input
+                  id="s-email"
+                  type="email"
+                  className={fieldClass('s-email')}
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); clear('s-email'); }}
+                  placeholder="name@sparrowinc.org"
+                />
+                {fieldError('s-email') && <p className="mt-1 text-xs text-priority-p1">{fieldError('s-email')}</p>}
+              </>
             )}
           </div>
 

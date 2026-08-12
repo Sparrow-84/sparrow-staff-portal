@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
 import { emitFirstTimeDonorTask, emitRevisitTask, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner } from '@/lib/partnerships';
@@ -90,6 +91,10 @@ export function PartnerDetailPanel({
   const [stageUpdate, setStageUpdate] = useState<PartnerStage>('active');
   const [donorTierUpdate, setDonorTierUpdate] = useState<DonorTier | ''>('');
 
+  const { fieldClass: logFieldClass, fieldError: logFieldError, clear: clearLogField, validate: validateLog } = useRequiredFields([
+    { key: 'pdp-occurred-on', label: 'Date', valid: !!occurredOn },
+  ]);
+
   const partnerId = partner?.id;
 
   const reload = useCallback(async () => {
@@ -145,7 +150,7 @@ export function PartnerDetailPanel({
   }
 
   async function log() {
-    if (!partner) return;
+    if (!partner || !validateLog()) return;
     setBusy(true);
     await logTouchpoint(
       { partner_id: partner.id, method, occurred_on: occurredOn, summary: summary.trim() || null },
@@ -336,13 +341,14 @@ export function PartnerDetailPanel({
                   </select>
                 </div>
                 <div>
-                  <span className="field-label">Date</span>
+                  <span className="field-label field-label-required">Date</span>
                   <input
                     type="date"
                     value={occurredOn}
-                    onChange={(e) => setOccurredOn(e.target.value)}
-                    className="field-input mt-0"
+                    onChange={(e) => { setOccurredOn(e.target.value); clearLogField('pdp-occurred-on'); }}
+                    className={logFieldClass('pdp-occurred-on', 'field-input mt-0')}
                   />
+                  {logFieldError('pdp-occurred-on') && <p className="mt-1 text-xs text-priority-p1">{logFieldError('pdp-occurred-on')}</p>}
                 </div>
               </div>
 
@@ -394,7 +400,7 @@ export function PartnerDetailPanel({
                 </div>
               </div>
 
-              <button onClick={log} disabled={busy || !occurredOn} className="btn-primary w-full">
+              <button onClick={log} disabled={busy} className="btn-primary w-full">
                 {busy ? 'Saving…' : 'Log touchpoint'}
               </button>
             </div>
@@ -953,7 +959,7 @@ function EditField({
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        <span className="field-label">{label}</span>
+        <span className={`field-label ${required ? 'field-label-required' : ''}`}>{label}</span>
         {action}
       </div>
       <input

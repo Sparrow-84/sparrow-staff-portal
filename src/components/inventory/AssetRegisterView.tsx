@@ -36,7 +36,7 @@ function ItemEditPanel({
   const [subLocations, setSubLocations] = useState<InvSubLocation[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const { missingMessage, validate, fieldClass, clear } = useRequiredFields([
+  const { validate, fieldClass, fieldError, clear } = useRequiredFields([
     { key: `reg-item-desc-${item.id}`, label: 'Description', valid: description.trim().length > 0 },
   ]);
 
@@ -78,13 +78,14 @@ function ItemEditPanel({
     <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-4 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="sm:col-span-2">
-          <label className={labelCls} htmlFor={`reg-item-desc-${item.id}`}>Description</label>
+          <label className={`${labelCls} field-label-required`} htmlFor={`reg-item-desc-${item.id}`}>Description</label>
           <input
             id={`reg-item-desc-${item.id}`}
             className={fieldClass(`reg-item-desc-${item.id}`)}
             value={description}
             onChange={(e) => { setDescription(e.target.value); clear(`reg-item-desc-${item.id}`); }}
           />
+          {fieldError(`reg-item-desc-${item.id}`) && <p className="mt-1 text-xs text-priority-p1">{fieldError(`reg-item-desc-${item.id}`)}</p>}
         </div>
         <div>
           <label className={labelCls}>Serial / model #</label>
@@ -161,7 +162,6 @@ function ItemEditPanel({
           <textarea className={inputCls} rows={2} value={reviewFlag} onChange={(e) => setReviewFlag(e.target.value)} placeholder="Leave blank once resolved" />
         </div>
       </div>
-      {missingMessage && <p className="text-xs text-priority-p1">{missingMessage}</p>}
       <div className="flex items-center gap-2 pt-1">
         <button
           onClick={() => void handleSave()}

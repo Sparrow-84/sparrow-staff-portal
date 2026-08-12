@@ -144,7 +144,7 @@ function DetailsTab({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const skipNextAutosave = useRef(true);
 
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'grant-funder-name', label: 'Funder name', valid: form.funder_name.trim().length > 0 },
   ]);
 
@@ -269,7 +269,7 @@ function DetailsTab({
       </div>
 
       <label className="block" htmlFor="grant-funder-name">
-        <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Funder name *</span>
+        <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray field-label-required">Funder name</span>
         <input
           id="grant-funder-name"
           value={form.funder_name}
@@ -277,6 +277,7 @@ function DetailsTab({
           className={fieldClass('grant-funder-name')}
         />
       </label>
+      {fieldError('grant-funder-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('grant-funder-name')}</p>}
 
       <label className="block">
         <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Amount</span>
@@ -581,7 +582,7 @@ function DocumentsTab({
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const { missingMessage, validate, fieldClass, clear } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear } = useRequiredFields([
     { key: 'grant-doc-label', label: 'Label', valid: label.trim().length > 0 },
     { key: 'grant-doc-file', label: 'File', valid: !!fileName },
   ]);
@@ -622,6 +623,7 @@ function DocumentsTab({
           placeholder="Label (e.g. Signed grant agreement)"
           className={fieldClass('grant-doc-label', 'field-input mt-0')}
         />
+        {fieldError('grant-doc-label') && <p className="mt-1 text-xs text-priority-p1">{fieldError('grant-doc-label')}</p>}
         <input
           id="grant-doc-file"
           ref={fileRef}
@@ -629,6 +631,7 @@ function DocumentsTab({
           onChange={(e) => { setFileName(e.target.files?.[0]?.name ?? null); clear('grant-doc-file'); }}
           className={fieldClass('grant-doc-file', 'field-input mt-0')}
         />
+        {fieldError('grant-doc-file') && <p className="mt-1 text-xs text-priority-p1">{fieldError('grant-doc-file')}</p>}
         <button onClick={upload} disabled={busy} className="btn-primary w-full">
           Upload
         </button>

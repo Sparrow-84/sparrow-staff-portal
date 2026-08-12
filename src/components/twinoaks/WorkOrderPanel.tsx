@@ -71,7 +71,7 @@ export function WorkOrderPanel({
     resetValidation();
   }, [open, workOrder, prefillSpaceId, spaces]);
 
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'w-desc', label: 'Description', valid: description.trim().length > 0 },
     { key: 'w-loc', label: 'Lot or location', valid: !!spaceId || location.trim().length > 0 },
   ]);
@@ -156,7 +156,7 @@ export function WorkOrderPanel({
               </select>
             </div>
             <div>
-              <label className="field-label" htmlFor="w-loc">
+              <label className="field-label field-label-required" htmlFor="w-loc">
                 Spot / location
               </label>
               <input
@@ -166,11 +166,12 @@ export function WorkOrderPanel({
                 onChange={(e) => { setLocation(e.target.value); clear('w-loc'); }}
                 placeholder="e.g. front porch — or where, if no lot"
               />
+              {fieldError('w-loc') && <p className="mt-1 text-xs text-priority-p1">{fieldError('w-loc')}</p>}
             </div>
           </div>
 
           <div className="mt-4">
-            <label className="field-label" htmlFor="w-desc">
+            <label className="field-label field-label-required" htmlFor="w-desc">
               Description
             </label>
             <textarea
@@ -180,6 +181,7 @@ export function WorkOrderPanel({
               value={description}
               onChange={(e) => { setDescription(e.target.value); clear('w-desc'); }}
             />
+            {fieldError('w-desc') && <p className="mt-1 text-xs text-priority-p1">{fieldError('w-desc')}</p>}
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">

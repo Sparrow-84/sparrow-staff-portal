@@ -90,7 +90,7 @@ export function NewConversationPanel({
 
       {isGroup && (
         <div className="mb-4">
-          <label className="field-label" htmlFor="group-name">
+          <label className="field-label field-label-required" htmlFor="group-name">
             Group name
           </label>
           <input

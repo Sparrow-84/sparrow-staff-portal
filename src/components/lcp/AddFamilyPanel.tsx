@@ -39,7 +39,7 @@ export function AddFamilyPanel({
   }, [open]);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'fam-name', label: 'Household name', valid: name.trim().length > 0 },
     { key: 'fam-email', label: 'Sign-in email', valid: emailValid },
     { key: 'fam-adult-name', label: "Mother's name", valid: adultName.trim().length > 0 },
@@ -96,7 +96,7 @@ export function AddFamilyPanel({
     >
       <div className="space-y-4">
         <div>
-          <label className="field-label" htmlFor="fam-name">
+          <label className="field-label field-label-required" htmlFor="fam-name">
             Household name <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(last name)</span>
           </label>
           <input
@@ -106,10 +106,11 @@ export function AddFamilyPanel({
             onChange={(e) => { setName(e.target.value); clear('fam-name'); }}
             placeholder="e.g. Wenger"
           />
+          {fieldError('fam-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('fam-name')}</p>}
         </div>
 
         <div>
-          <label className="field-label" htmlFor="fam-email">
+          <label className="field-label field-label-required" htmlFor="fam-email">
             Sign-in email
           </label>
           <input
@@ -120,6 +121,7 @@ export function AddFamilyPanel({
             onChange={(e) => { setEmail(e.target.value); clear('fam-email'); }}
             placeholder="mother@example.com"
           />
+          {fieldError('fam-email') && <p className="mt-1 text-xs text-priority-p1">{fieldError('fam-email')}</p>}
           <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             The mother signs in to the participant portal with this email, and it's also her
             contact email — no separate email needed below. It's also the allowlist — only
@@ -147,7 +149,7 @@ export function AddFamilyPanel({
         </div>
 
         <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
-          <span className="field-label">Mother</span>
+          <span className="field-label field-label-required">Mother</span>
           <input
             id="fam-adult-name"
             className={fieldClass('fam-adult-name')}
@@ -155,6 +157,7 @@ export function AddFamilyPanel({
             onChange={(e) => { setAdultName(e.target.value); clear('fam-adult-name'); }}
             placeholder="Full name"
           />
+          {fieldError('fam-adult-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('fam-adult-name')}</p>}
           <input
             id="fam-adult-phone"
             className={fieldClass('fam-adult-phone', 'field-input mt-2')}
@@ -162,6 +165,7 @@ export function AddFamilyPanel({
             onChange={(e) => { setAdultPhone(e.target.value); clear('fam-adult-phone'); }}
             placeholder="Phone"
           />
+          {fieldError('fam-adult-phone') && <p className="mt-1 text-xs text-priority-p1">{fieldError('fam-adult-phone')}</p>}
         </div>
 
         <div>
@@ -195,7 +199,7 @@ export function AddFamilyPanel({
         </div>
 
         <div>
-          <label className="field-label" htmlFor="fam-emergency">
+          <label className="field-label field-label-required" htmlFor="fam-emergency">
             Emergency contact
           </label>
           <textarea
@@ -206,6 +210,7 @@ export function AddFamilyPanel({
             onChange={(e) => { setEmergencyContact(e.target.value); clear('fam-emergency'); }}
             placeholder="Name, relationship, phone number"
           />
+          {fieldError('fam-emergency') && <p className="mt-1 text-xs text-priority-p1">{fieldError('fam-emergency')}</p>}
         </div>
 
         {error && <p className="text-sm text-priority-p1">{error}</p>}

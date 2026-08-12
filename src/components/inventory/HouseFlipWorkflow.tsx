@@ -584,7 +584,7 @@ function LeaveBehindScreen({
   const [formSaving, setFormSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'lb-desc', label: 'Description', valid: desc.trim().length > 0 },
   ]);
 
@@ -684,6 +684,7 @@ function LeaveBehindScreen({
                 : 'w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
             }
           />
+          {fieldError('lb-desc') && <p className="mt-1 text-xs text-priority-p1">{fieldError('lb-desc')}</p>}
 
           <div className="grid grid-cols-2 gap-3">
             <select
@@ -972,7 +973,7 @@ function NewItemsScreen({
   const formRef = useRef<HTMLFormElement>(null);
 
   const parsedCost = Number(cost);
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'ni-desc', label: 'Description', valid: desc.trim().length > 0 },
     { key: 'ni-cost', label: 'Cost', valid: cost.trim().length > 0 && !isNaN(parsedCost) && parsedCost >= 0 },
   ]);
@@ -1130,6 +1131,7 @@ function NewItemsScreen({
               }
             />
           )}
+          {fieldError('ni-desc') && <p className="mt-1 text-xs text-priority-p1">{fieldError('ni-desc')}</p>}
 
           {!isBatch && (
             <input
@@ -1190,6 +1192,7 @@ function NewItemsScreen({
               <option value="total">Total</option>
             </select>
           </div>
+          {fieldError('ni-cost') && <p className="mt-1 text-xs text-priority-p1">{fieldError('ni-cost')}</p>}
 
           <select
             name="cost_source"

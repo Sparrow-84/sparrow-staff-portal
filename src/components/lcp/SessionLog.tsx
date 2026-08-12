@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 import {
   EVENT_LABEL,
   SESSION_LOG_LABEL,
@@ -72,6 +73,9 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [manualDate, setManualDate] = useState(todayISO());
   const [manualType, setManualType] = useState<SessionLogType>('monday_mentoring');
+  const { fieldClass, fieldError, clear, validate } = useRequiredFields([
+    { key: 'manual-session-date', label: 'Date', valid: manualDate.trim().length > 0 },
+  ]);
 
   const [mondayContent, setMondayContent] = useState<MondayMentorContent | null>(null);
   const [mondayLoading, setMondayLoading] = useState(false);
@@ -264,6 +268,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
   }
 
   function openManual() {
+    if (!validate()) return;
     setEntry({ sessionType: manualType, sessionDate: manualDate, eventId: null, label: SESSION_LOG_LABEL[manualType] });
     setShowDatePicker(false);
   }
@@ -357,14 +362,21 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
               <p className="mb-3 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Log a session</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="field-label">Date</label>
+                  <label className="field-label field-label-required" htmlFor="manual-session-date">Date</label>
                   <input
+                    id="manual-session-date"
                     type="date"
                     value={manualDate}
                     max={todayISO()}
-                    onChange={(e) => setManualDate(e.target.value > todayISO() ? todayISO() : e.target.value)}
-                    className="field-input"
+                    onChange={(e) => {
+                      setManualDate(e.target.value > todayISO() ? todayISO() : e.target.value);
+                      clear('manual-session-date');
+                    }}
+                    className={fieldClass('manual-session-date')}
                   />
+                  {fieldError('manual-session-date') && (
+                    <p className="mt-1 text-xs text-priority-p1">{fieldError('manual-session-date')}</p>
+                  )}
                 </div>
                 <div>
                   <label className="field-label">Session type</label>

@@ -129,7 +129,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
     ? generateDates(date, frequency, [...daysOfWeek], effectiveUntil)
     : [date];
 
-  const { missingMessage, validate, fieldClass, clear, reset: resetValidation } = useRequiredFields([
+  const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'lcp-event-title', label: 'Title', valid: title.trim().length > 0 },
     { key: 'lcp-event-date', label: 'Date', valid: !!date },
     { key: 'lcp-event-start-time', label: 'Start time', valid: !!startTime },
@@ -232,7 +232,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
 
         {/* Title */}
         <div>
-          <label className="field-label" htmlFor="lcp-event-title">Title</label>
+          <label className="field-label field-label-required" htmlFor="lcp-event-title">Title</label>
           <input
             id="lcp-event-title"
             type="text"
@@ -241,6 +241,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
             placeholder="e.g. Monday Mentoring"
             className={fieldClass('lcp-event-title')}
           />
+          {fieldError('lcp-event-title') && <p className="mt-1 text-xs text-priority-p1">{fieldError('lcp-event-title')}</p>}
         </div>
 
         {/* Kind */}
@@ -256,7 +257,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
         {/* Date + Times */}
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className="field-label" htmlFor="lcp-event-date">{recurring ? 'Start date' : 'Date'}</label>
+            <label className="field-label field-label-required" htmlFor="lcp-event-date">{recurring ? 'Start date' : 'Date'}</label>
             <input
               id="lcp-event-date"
               type="date"
@@ -264,9 +265,10 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
               onChange={(e) => { setDate(e.target.value); clear('lcp-event-date'); }}
               className={fieldClass('lcp-event-date')}
             />
+            {fieldError('lcp-event-date') && <p className="mt-1 text-xs text-priority-p1">{fieldError('lcp-event-date')}</p>}
           </div>
           <div>
-            <label className="field-label" htmlFor="lcp-event-start-time">Start time</label>
+            <label className="field-label field-label-required" htmlFor="lcp-event-start-time">Start time</label>
             <input
               id="lcp-event-start-time"
               type="time"
@@ -274,6 +276,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
               onChange={(e) => { setStartTime(e.target.value); clear('lcp-event-start-time'); }}
               className={fieldClass('lcp-event-start-time')}
             />
+            {fieldError('lcp-event-start-time') && <p className="mt-1 text-xs text-priority-p1">{fieldError('lcp-event-start-time')}</p>}
           </div>
           <div>
             <label className="field-label">End time <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span></label>
@@ -433,7 +436,7 @@ export function AddEventPanel({ open, currentUserId, profiles, onClose, onCreate
 
               {/* Days of week */}
               <div>
-                <label className="field-label">On these days</label>
+                <label className="field-label field-label-required">On these days</label>
                 <div className="mt-1 flex gap-1.5">
                   {DOW_ABBR.map((abbr, dow) => (
                     <button

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
 import {
@@ -67,6 +68,10 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
   const [postedOpen, setPostedOpen] = useState(false);
   const [setting, setSetting] = useState<PartnershipRecurringSetting | null>(null);
 
+  const { fieldClass, fieldError, clear, validate } = useRequiredFields([
+    { key: 'pst-content-idea', label: 'Content idea', valid: form.content_idea.trim().length > 0 },
+  ]);
+
   function load() {
     setLoading(true);
     fetchSocialPosts()
@@ -84,7 +89,7 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.content_idea.trim()) return;
+    if (!validate()) return;
     setSaving(true);
     try {
       await createSocialPost({
@@ -192,14 +197,15 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
               />
             </div>
             <div className="col-span-2">
-              <label className="field-label">Content idea *</label>
+              <label className="field-label field-label-required" htmlFor="pst-content-idea">Content idea</label>
               <textarea
-                className="field-input w-full resize-none"
+                id="pst-content-idea"
+                className={fieldClass('pst-content-idea', 'field-input w-full resize-none')}
                 rows={2}
-                required
                 value={form.content_idea}
-                onChange={(e) => setForm((f) => ({ ...f, content_idea: e.target.value }))}
+                onChange={(e) => { setForm((f) => ({ ...f, content_idea: e.target.value })); clear('pst-content-idea'); }}
               />
+              {fieldError('pst-content-idea') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pst-content-idea')}</p>}
             </div>
             <div className="col-span-2">
               <label className="field-label">Notes (optional)</label>

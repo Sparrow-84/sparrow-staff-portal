@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 import type { Profile } from '@/lib/types';
 import { localDate } from '@/lib/date';
 import { Drawer } from '../lcp/Drawer';
@@ -49,6 +50,19 @@ export function ConnectionDetailPanel({
   const [noteText, setNoteText] = useState('');
   const [logBusy, setLogBusy] = useState(false);
 
+  const { fieldClass, fieldError, clear, validate } = useRequiredFields([
+    { key: 'cdp-name', label: 'Name', valid: (form?.name.trim().length ?? 0) > 0 },
+  ]);
+
+  const {
+    fieldClass: noteFieldClass,
+    fieldError: noteFieldError,
+    clear: clearNoteField,
+    validate: validateNote,
+  } = useRequiredFields([
+    { key: 'cdp-note-text', label: 'Note', valid: noteText.trim().length > 0 },
+  ]);
+
   const ownerProfiles = profiles.filter(
     (p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec',
   );
@@ -73,7 +87,7 @@ export function ConnectionDetailPanel({
   }, [open, connection]);
 
   async function logInteraction() {
-    if (!connection || !noteText.trim()) return;
+    if (!connection || !validateNote()) return;
     setLogBusy(true);
     try {
       await addConnectionNote(connection.id, noteDate, noteText.trim(), currentUserId);
@@ -93,7 +107,7 @@ export function ConnectionDetailPanel({
 
   async function save() {
     if (!connection || !form) return;
-    if (!form.name.trim()) return;
+    if (!validate()) return;
     setBusy(true);
     try {
       await updateConnection(connection.id, form);
@@ -172,12 +186,13 @@ export function ConnectionDetailPanel({
                 />
                 <textarea
                   value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
+                  onChange={(e) => { setNoteText(e.target.value); clearNoteField('cdp-note-text'); }}
                   rows={2}
                   placeholder="What happened this time…"
-                  className="field-input"
+                  className={noteFieldClass('cdp-note-text', 'field-input')}
                 />
-                <button onClick={() => void logInteraction()} disabled={logBusy || !noteText.trim()} className="btn-primary text-xs">
+                {noteFieldError('cdp-note-text') && <p className="text-xs text-priority-p1">{noteFieldError('cdp-note-text')}</p>}
+                <button onClick={() => void logInteraction()} disabled={logBusy} className="btn-primary text-xs">
                   {logBusy ? 'Saving…' : 'Save'}
                 </button>
               </div>
@@ -218,12 +233,14 @@ export function ConnectionDetailPanel({
       ) : (
         <div className="space-y-4">
           <div>
-            <label className="field-label">Name *</label>
+            <label className="field-label field-label-required" htmlFor="cdp-name">Name</label>
             <input
-              className="field-input w-full"
+              id="cdp-name"
+              className={fieldClass('cdp-name', 'field-input w-full')}
               value={form.name}
-              onChange={(e) => setForm((f) => f && { ...f, name: e.target.value })}
+              onChange={(e) => { setForm((f) => f && { ...f, name: e.target.value }); clear('cdp-name'); }}
             />
+            {fieldError('cdp-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('cdp-name')}</p>}
           </div>
           <div>
             <label className="field-label">Organization</label>

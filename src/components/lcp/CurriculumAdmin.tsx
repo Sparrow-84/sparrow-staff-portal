@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { fetchAllResources, fetchCurriculum, updateCurriculumUnit } from '@/lib/lcp';
 import type {
   CurriculumPhase,
@@ -261,6 +262,11 @@ function UnitSection({
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const monthFieldId = `unit-${unit.id}-month`;
+  const { fieldClass, fieldError, clear, validate } = useRequiredFields([
+    { key: monthFieldId, label: 'Month', valid: monthLabel.trim().length > 0 },
+  ]);
+
   useEffect(() => {
     setArtifact(unit.artifact ?? '');
     setSupplement(unit.supplement ?? '');
@@ -269,6 +275,7 @@ function UnitSection({
   }, [unit.artifact, unit.supplement, unit.month_label, unit.encouragement_text]);
 
   async function save() {
+    if (!validate()) return;
     setSaving(true);
     setErr(null);
     try {
@@ -323,14 +330,16 @@ function UnitSection({
       {isEditing && (
         <div className="space-y-3 border-t border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-3">
           <div>
-            <label className="field-label">Month</label>
+            <label className="field-label field-label-required" htmlFor={monthFieldId}>Month</label>
             <input
+              id={monthFieldId}
               type="text"
               value={monthLabel}
-              onChange={(e) => setMonthLabel(e.target.value)}
+              onChange={(e) => { setMonthLabel(e.target.value); clear(monthFieldId); }}
               placeholder="e.g. Month 1–2"
-              className="field-input"
+              className={fieldClass(monthFieldId)}
             />
+            {fieldError(monthFieldId) && <p className="mt-1 text-xs text-priority-p1">{fieldError(monthFieldId)}</p>}
           </div>
           <div>
             <label className="field-label">
