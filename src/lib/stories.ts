@@ -162,6 +162,14 @@ export async function createMediaEvent(input: StoryMediaEventInput): Promise<voi
   if (error) throw new Error(error.message);
 }
 
+export async function updateMediaEvent(
+  id: string,
+  patch: Partial<Pick<StoryMediaEventInput, 'event_name' | 'event_date' | 'sandwich_board_posted' | 'notes'>>,
+): Promise<void> {
+  const { error } = await supabase.from('story_media_events').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // ── Layer 2 Consents ─────────────────────────────────────────────────
 
 export async function getLayer2Consents(): Promise<StoryLayer2Consent[]> {

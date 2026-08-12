@@ -2,6 +2,7 @@ import { useState, useTransition } from 'react';
 import {
   createLayer2Consent,
   createMediaEvent,
+  updateMediaEvent,
   type ChildrenPhotoConsent,
   type StoryLayer2Consent,
   type StoryMediaEvent,
@@ -24,6 +25,7 @@ interface Props {
 export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: Props) {
   // Layer 1 inline form state
   const [showEventForm, setShowEventForm] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [sandwichBoard, setSandwichBoard] = useState(true);
@@ -68,6 +70,17 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
     setEventError(null);
     resetEventValidation();
     setShowEventForm(false);
+    setEditingEventId(null);
+  }
+
+  function startEditEvent(ev: StoryMediaEvent) {
+    setEditingEventId(ev.id);
+    setEventName(ev.event_name);
+    setEventDate(ev.event_date);
+    setSandwichBoard(ev.sandwich_board_posted);
+    setEventNotes(ev.notes ?? '');
+    setEventError(null);
+    setShowEventForm(true);
   }
 
   function resetConsentForm() {
@@ -85,13 +98,22 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
     if (!validateEvent()) return;
     startEventTransition(async () => {
       try {
-        await createMediaEvent({
-          event_name: eventName.trim(),
-          event_date: eventDate,
-          sandwich_board_posted: sandwichBoard,
-          notes: eventNotes.trim() || null,
-          logged_by: currentUserId,
-        });
+        if (editingEventId) {
+          await updateMediaEvent(editingEventId, {
+            event_name: eventName.trim(),
+            event_date: eventDate,
+            sandwich_board_posted: sandwichBoard,
+            notes: eventNotes.trim() || null,
+          });
+        } else {
+          await createMediaEvent({
+            event_name: eventName.trim(),
+            event_date: eventDate,
+            sandwich_board_posted: sandwichBoard,
+            notes: eventNotes.trim() || null,
+            logged_by: currentUserId,
+          });
+        }
         onChanged();
         resetEventForm();
       } catch (e) {
@@ -222,7 +244,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 Cancel
               </button>
               <button onClick={saveEvent} disabled={eventPending} className="btn-primary">
-                {eventPending ? 'Saving…' : 'Save event'}
+                {eventPending ? 'Saving…' : editingEventId ? 'Save changes' : 'Save event'}
               </button>
             </div>
           </div>
@@ -239,6 +261,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                   <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Date</th>
                   <th className="px-4 py-2 text-center font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Board posted</th>
                   <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Notes</th>
+                  <th className="px-4 py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
@@ -254,6 +277,14 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{ev.notes ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button
+                        onClick={() => startEditEvent(ev)}
+                        className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
