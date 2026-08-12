@@ -131,12 +131,14 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
         // All Staff: on by default, off if opted_out
         return attendanceMap.get(ev.id) !== 'opted_out';
       }
-      // Dept event: check access first
+      // Dept event: a personal invite (explicit attending row) always shows,
+      // even for someone outside that department -- inviting a specific person
+      // to one event shouldn't require giving them the whole department's
+      // calendar access. Without that, department access is still required.
+      if (attendanceMap.get(ev.id) === 'attending') return true;
       if (!myDepts.has(ev.department)) return false;
       // Creator always sees their own events on the widget
-      if (ev.created_by === me.id) return true;
-      // Everyone else needs an explicit attending row
-      return attendanceMap.get(ev.id) === 'attending';
+      return ev.created_by === me.id;
     });
   }, [events, attendance, me]);
 

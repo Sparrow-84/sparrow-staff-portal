@@ -274,7 +274,7 @@ export function ChatThread({
                     </div>
                   )}
 
-                  <div className="relative max-w-[72%]">
+                  <div className={`relative ${isEditing ? 'w-full max-w-[min(36rem,100%)]' : 'max-w-[72%]'}`}>
                     {showName && (
                       <p className="mb-0.5 pl-1 text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
                         {m.author?.full_name ?? 'Staff'}
@@ -292,7 +292,7 @@ export function ChatThread({
                             if (e.key === 'Escape') setEditingId(null);
                           }}
                           autoFocus
-                          rows={2}
+                          rows={4}
                           spellCheck
                           className="w-full resize-none text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none"
                         />
