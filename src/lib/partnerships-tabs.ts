@@ -86,6 +86,15 @@ export interface PartnershipRecurringSetting {
   updated_at: string;
 }
 
+export interface ConnectionNote {
+  id: string;
+  connection_id: string;
+  occurred_on: string;
+  note: string;
+  logged_by: string | null;
+  created_at: string;
+}
+
 export interface PartnershipConnection {
   id: string;
   event_id: string | null;
@@ -473,6 +482,31 @@ export async function updateConnection(
     .from('partnership_connections')
     .update(patch)
     .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/** Multiple dated interactions with the same connection -- not a cadenced
+ *  touchpoint (a connection has no cadence yet), just a plain log so a second
+ *  or third conversation doesn't have to get crammed into what_discussed. */
+export async function fetchConnectionNotes(connectionId: string): Promise<ConnectionNote[]> {
+  const { data, error } = await supabase
+    .from('partnership_connection_notes')
+    .select('*')
+    .eq('connection_id', connectionId)
+    .order('occurred_on', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ConnectionNote[];
+}
+
+export async function addConnectionNote(
+  connectionId: string,
+  occurredOn: string,
+  note: string,
+  loggedBy: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('partnership_connection_notes')
+    .insert({ connection_id: connectionId, occurred_on: occurredOn, note, logged_by: loggedBy });
   if (error) throw new Error(error.message);
 }
 

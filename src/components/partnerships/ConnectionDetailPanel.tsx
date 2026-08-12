@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { Profile } from '@/lib/types';
+import { localDate } from '@/lib/date';
 import { Drawer } from '../lcp/Drawer';
-import { updateConnection, type ConnectionInput, type PartnershipConnection, type PartnershipEvent } from '@/lib/partnerships-tabs';
+import {
+  addConnectionNote,
+  fetchConnectionNotes,
+  updateConnection,
+  type ConnectionInput,
+  type ConnectionNote,
+  type PartnershipConnection,
+  type PartnershipEvent,
+} from '@/lib/partnerships-tabs';
 import { BusinessCardPhotos } from './BusinessCardPhotos';
 
 function shortDate(iso: string | null): string {
@@ -18,6 +27,7 @@ export function ConnectionDetailPanel({
   connection,
   events,
   profiles,
+  currentUserId,
   onClose,
   onChanged,
 }: {
@@ -25,12 +35,19 @@ export function ConnectionDetailPanel({
   connection: PartnershipConnection | null;
   events: PartnershipEvent[];
   profiles: Profile[];
+  currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<EditableFields | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const [notes, setNotes] = useState<ConnectionNote[]>([]);
+  const [logOpen, setLogOpen] = useState(false);
+  const [noteDate, setNoteDate] = useState('');
+  const [noteText, setNoteText] = useState('');
+  const [logBusy, setLogBusy] = useState(false);
 
   const ownerProfiles = profiles.filter(
     (p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec',
@@ -48,8 +65,25 @@ export function ConnectionDetailPanel({
         followup_due: connection.followup_due,
         owner_id: connection.owner_id,
       });
+      setLogOpen(false);
+      setNoteDate(localDate());
+      setNoteText('');
+      void fetchConnectionNotes(connection.id).then(setNotes).catch(() => setNotes([]));
     }
   }, [open, connection]);
+
+  async function logInteraction() {
+    if (!connection || !noteText.trim()) return;
+    setLogBusy(true);
+    try {
+      await addConnectionNote(connection.id, noteDate, noteText.trim(), currentUserId);
+      setNotes(await fetchConnectionNotes(connection.id));
+      setNoteText('');
+      setLogOpen(false);
+    } finally {
+      setLogBusy(false);
+    }
+  }
 
   if (!connection || !form) return null;
 
@@ -120,6 +154,44 @@ export function ConnectionDetailPanel({
           <div>
             <p className="field-label">Next action</p>
             <p className="whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{connection.next_action ?? '—'}</p>
+          </div>
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="field-label">Other interactions</p>
+              <button onClick={() => setLogOpen((v) => !v)} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+                {logOpen ? 'Cancel' : '+ Log another interaction'}
+              </button>
+            </div>
+            {logOpen && (
+              <div className="mt-2 space-y-2 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
+                <input
+                  type="date"
+                  value={noteDate}
+                  onChange={(e) => setNoteDate(e.target.value)}
+                  className="field-input"
+                />
+                <textarea
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  rows={2}
+                  placeholder="What happened this time…"
+                  className="field-input"
+                />
+                <button onClick={() => void logInteraction()} disabled={logBusy || !noteText.trim()} className="btn-primary text-xs">
+                  {logBusy ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            )}
+            {notes.length > 0 && (
+              <ul className="mt-2 space-y-2">
+                {notes.map((n) => (
+                  <li key={n.id} className="rounded-lg bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2 p-2">
+                    <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{shortDate(n.occurred_on)}</p>
+                    <p className="mt-0.5 whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{n.note}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div>
             <p className="field-label">Follow-up due</p>

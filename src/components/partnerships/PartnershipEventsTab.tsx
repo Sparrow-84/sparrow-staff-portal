@@ -459,6 +459,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
         connection={connections.find((c) => c.id === selectedConnId) ?? null}
         events={events}
         profiles={profiles}
+        currentUserId={profile?.id ?? ''}
         onClose={() => setSelectedConnId(null)}
         onChanged={load}
       />

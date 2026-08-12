@@ -51,3 +51,18 @@ export function RichTextView({ html, empty }: { html: string | null; empty?: str
   }
   return <div className="rich-text" dangerouslySetInnerHTML={{ __html: html }} />;
 }
+
+const LOOKS_LIKE_HTML = /<[a-z][\s\S]*>/i;
+
+/** For a field that used to store plain text and only recently switched to storing
+ *  HTML from a rich text editor (e.g. after adding formatting to an existing plain
+ *  textarea) -- older rows have literal newlines, which dangerouslySetInnerHTML
+ *  would silently collapse. Falls back to whitespace-pre-wrap for anything that
+ *  doesn't already look like it contains real tags. */
+export function RichOrPlainView({ text, empty }: { text: string | null; empty?: string }) {
+  if (!text) {
+    return empty ? <p className="text-sm italic text-sparrow-gray dark:text-sparrow-dark-gray">{empty}</p> : null;
+  }
+  if (LOOKS_LIKE_HTML.test(text)) return <RichTextView html={text} />;
+  return <p className="whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{text}</p>;
+}

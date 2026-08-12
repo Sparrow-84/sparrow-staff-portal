@@ -29,11 +29,19 @@ import {
   type TouchpointMethod,
 } from '@/lib/partnerships-types';
 import { Drawer } from '../lcp/Drawer';
+import { RichTextView } from '../lcp/RichText';
+import { RichTextEditor } from '../stories/RichTextEditor';
 import { LEAD_TIME_PRESETS } from '@/lib/cadence';
 import { CadenceInput } from './CadenceInput';
 import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import { createInterest, setPartnerInterests, type PartnershipInterest } from '@/lib/partnership-interests';
 import { BusinessCardPhotos } from './BusinessCardPhotos';
+
+// For the collapsed "last touchpoint" preview only -- the full note (with
+// formatting) renders in the Touchpoint history list below via RichTextView.
+function plainTextPreview(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'inactive'];
 const TIERS: DonorTier[] = ['first_time', 'recurring', 'major', 'lapsed'];
@@ -246,7 +254,7 @@ export function PartnerDetailPanel({
               </span>
             </div>
             {lastTouchpoint.summary && (
-              <p className="mt-1 line-clamp-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{lastTouchpoint.summary}</p>
+              <p className="mt-1 line-clamp-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{plainTextPreview(lastTouchpoint.summary)}</p>
             )}
           </div>
         ) : (
@@ -339,12 +347,11 @@ export function PartnerDetailPanel({
               </div>
 
               {/* Notes */}
-              <textarea
+              <RichTextEditor
                 value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                rows={2}
+                onChange={setSummary}
                 placeholder="What was discussed, any follow-up needed, etc. (optional)"
-                className="field-input"
+                className="min-h-[6rem]"
               />
 
               {/* Inline updates */}
@@ -735,7 +742,7 @@ export function PartnerDetailPanel({
                   <span>{TOUCHPOINT_METHOD[t.method]} · {shortDate(t.occurred_on)}</span>
                   <span>{loggerName(t.logged_by)}</span>
                 </div>
-                {t.summary && <p className="mt-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{t.summary}</p>}
+                {t.summary && <RichTextView html={t.summary} />}
               </li>
             ))}
           </ul>
@@ -755,9 +762,7 @@ export function PartnerDetailPanel({
 
             {donations.length === 0 ? (
               <p className="mt-1 text-sm text-sparrow-gray/70">
-                {donorStat === null
-                  ? 'Giving history will appear here once the Givebutter connection is active.'
-                  : 'No gifts on record yet.'}
+                No gifts on record yet — any new Givebutter donation from this person will show up here automatically.
               </p>
             ) : (
               <ul className="mt-2 space-y-2">

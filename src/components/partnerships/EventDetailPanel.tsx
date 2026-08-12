@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Drawer } from '../lcp/Drawer';
+import { RichOrPlainView } from '../lcp/RichText';
+import { RichTextEditor } from '../stories/RichTextEditor';
 import { updateEvent, type EventInput, type PartnershipEvent } from '@/lib/partnerships-tabs';
 
 function shortDate(iso: string): string {
@@ -102,7 +104,7 @@ export function EventDetailPanel({
           </div>
           <div>
             <p className="field-label">Notes</p>
-            <p className="whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{event.notes ?? '—'}</p>
+            <RichOrPlainView text={event.notes} empty="—" />
           </div>
         </div>
       ) : (
@@ -142,11 +144,10 @@ export function EventDetailPanel({
           </div>
           <div>
             <label className="field-label">Notes</label>
-            <textarea
-              rows={4}
-              className="field-input w-full"
+            <RichTextEditor
               value={form.notes ?? ''}
-              onChange={(e) => setForm((f) => f && { ...f, notes: e.target.value || null })}
+              onChange={(html) => setForm((f) => f && { ...f, notes: html || null })}
+              className="min-h-[8rem]"
             />
           </div>
         </div>

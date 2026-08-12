@@ -23,6 +23,7 @@ export function BatchTouchpointModal({
   onLogged: () => void;
 }) {
   const [search, setSearch] = useState('');
+  const [subscribersOnly, setSubscribersOnly] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [method, setMethod] = useState<TouchpointMethod>('email');
   const [occurredOn, setOccurredOn] = useState('');
@@ -34,6 +35,7 @@ export function BatchTouchpointModal({
   useEffect(() => {
     if (open) {
       setSearch('');
+      setSubscribersOnly(false);
       setSelectedIds([]);
       setMethod('email');
       setOccurredOn(localDate());
@@ -47,14 +49,16 @@ export function BatchTouchpointModal({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return sorted;
-    return sorted.filter(
-      (p) =>
+    return sorted.filter((p) => {
+      if (subscribersOnly && !p.newsletter_subscribed) return false;
+      if (!q) return true;
+      return (
         p.name.toLowerCase().includes(q) ||
         (p.organization ?? '').toLowerCase().includes(q) ||
-        PARTNER_TYPE[p.type].label.toLowerCase().includes(q),
-    );
-  }, [sorted, search]);
+        PARTNER_TYPE[p.type].label.toLowerCase().includes(q)
+      );
+    });
+  }, [sorted, search, subscribersOnly]);
 
   const filteredIds = useMemo(() => filtered.map((p) => p.id), [filtered]);
   const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.includes(id));
@@ -127,6 +131,15 @@ export function BatchTouchpointModal({
               placeholder="Search by name, organization, or type…"
               className="field-input mt-0"
             />
+            <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              <input
+                type="checkbox"
+                checked={subscribersOnly}
+                onChange={(e) => setSubscribersOnly(e.target.checked)}
+                className="h-3.5 w-3.5 rounded accent-sparrow-green"
+              />
+              Newsletter subscribers only
+            </label>
             <div className="mt-2 max-h-56 space-y-0.5 overflow-y-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-2">
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border-b border-sparrow-rule/60 px-2 py-1.5 text-sm font-medium">
                 <input
