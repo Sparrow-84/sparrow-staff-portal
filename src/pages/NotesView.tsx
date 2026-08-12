@@ -3,7 +3,9 @@ import { useAuth } from '@/auth/AuthContext';
 import { MeetingNotesView } from '@/components/calendar/MeetingNotesView';
 import { OrphanedNoteView } from '@/components/calendar/OrphanedNoteView';
 import { fetchMyNotesIndex, fetchSharedNotesIndex, type MyNoteEntry, type SharedNoteEntry } from '@/lib/notesHub';
-import { fetchMyIdeas, createIdea, setIdeaCompleted, deleteIdea, type Idea } from '@/lib/ideas';
+import { fetchMyIdeas, fetchTeamIdeas, createIdea, setIdeaCompleted, setIdeaShared, deleteIdea, type Idea } from '@/lib/ideas';
+import { fetchProfiles } from '@/lib/data';
+import type { Profile } from '@/lib/types';
 import type { CalendarEvent } from '@/lib/calendar';
 
 type Tab = 'mine' | 'shared' | 'ideas';
@@ -140,7 +142,10 @@ function NoteList({
 }
 
 function IdeasTab({ userId }: { userId: string }) {
+  const [scope, setScope] = useState<'mine' | 'team'>('mine');
   const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [teamIdeas, setTeamIdeas] = useState<Idea[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -148,8 +153,16 @@ function IdeasTab({ userId }: { userId: string }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetchMyIdeas(userId).then(setIdeas).finally(() => setLoading(false));
+    void Promise.all([fetchMyIdeas(userId), fetchTeamIdeas(), fetchProfiles()])
+      .then(([mine, team, profs]) => {
+        setIdeas(mine);
+        setTeamIdeas(team);
+        setProfiles(profs);
+      })
+      .finally(() => setLoading(false));
   }, [userId]);
+
+  const authorName = (id: string) => profiles.find((p) => p.id === id)?.full_name ?? '—';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -170,28 +183,38 @@ function IdeasTab({ userId }: { userId: string }) {
 
   async function toggle(idea: Idea) {
     const completed = !idea.completed_at;
-    setIdeas((prev) =>
-      prev.map((i) => (i.id === idea.id ? { ...i, completed_at: completed ? new Date().toISOString() : null } : i)),
-    );
+    const patch = { completed_at: completed ? new Date().toISOString() : null };
+    setIdeas((prev) => prev.map((i) => (i.id === idea.id ? { ...i, ...patch } : i)));
+    setTeamIdeas((prev) => prev.map((i) => (i.id === idea.id ? { ...i, ...patch } : i)));
     await setIdeaCompleted(idea.id, completed);
   }
 
   async function remove(idea: Idea) {
     setIdeas((prev) => prev.filter((i) => i.id !== idea.id));
+    setTeamIdeas((prev) => prev.filter((i) => i.id !== idea.id));
     await deleteIdea(idea.id);
+  }
+
+  async function share(idea: Idea, shared: boolean) {
+    setIdeas((prev) => prev.map((i) => (i.id === idea.id ? { ...i, shared } : i)));
+    setTeamIdeas((prev) => (shared ? [{ ...idea, shared }, ...prev] : prev.filter((i) => i.id !== idea.id)));
+    await setIdeaShared(idea.id, shared);
   }
 
   const active = ideas.filter((i) => !i.completed_at);
   const done = ideas.filter((i) => i.completed_at);
+  const teamActive = teamIdeas.filter((i) => !i.completed_at);
+  const teamDone = teamIdeas.filter((i) => i.completed_at);
 
-  function Row({ idea }: { idea: Idea }) {
+  function Row({ idea, mine }: { idea: Idea; mine: boolean }) {
     return (
       <div className="group flex items-start gap-3 rounded-lg px-2 py-2.5 hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2">
         <input
           type="checkbox"
           checked={Boolean(idea.completed_at)}
-          onChange={() => void toggle(idea)}
-          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
+          onChange={() => (mine ? void toggle(idea) : undefined)}
+          disabled={!mine}
+          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green disabled:cursor-default"
         />
         <div className="min-w-0 flex-1">
           <p className={`text-sm font-medium ${idea.completed_at ? 'text-sparrow-gray dark:text-sparrow-dark-gray line-through' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
@@ -202,20 +225,35 @@ function IdeasTab({ userId }: { userId: string }) {
               {idea.description}
             </p>
           )}
-          <p className="mt-1 text-[11px] text-sparrow-gray/60">Added {formatDate(idea.created_at)}</p>
+          <p className="mt-1 text-[11px] text-sparrow-gray/60">
+            {mine ? `Added ${formatDate(idea.created_at)}` : `${authorName(idea.created_by)} · ${formatDate(idea.created_at)}`}
+          </p>
         </div>
-        <button
-          onClick={() => void remove(idea)}
-          title="Delete"
-          aria-label="Delete idea"
-          className="shrink-0 rounded p-1 text-sparrow-gray/50 opacity-0 hover:text-priority-p1 group-hover:opacity-100"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 6h18" />
-            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-          </svg>
-        </button>
+        {mine && (
+          <>
+            <button
+              onClick={() => void share(idea, !idea.shared)}
+              title={idea.shared ? 'Shared with the team — click to make private' : 'Share with the team'}
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium opacity-0 group-hover:opacity-100 ${
+                idea.shared ? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green opacity-100' : 'border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray'
+              }`}
+            >
+              {idea.shared ? 'Shared ✓' : 'Share'}
+            </button>
+            <button
+              onClick={() => void remove(idea)}
+              title="Delete"
+              aria-label="Delete idea"
+              className="shrink-0 rounded p-1 text-sparrow-gray/50 opacity-0 hover:text-priority-p1 group-hover:opacity-100"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -255,31 +293,71 @@ function IdeasTab({ userId }: { userId: string }) {
         </div>
       </form>
 
+      <div className="mb-3 inline-flex rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1">
+        {(['mine', 'team'] as const).map((s) => (
+          <button
+            key={s}
+            onClick={() => setScope(s)}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition ${
+              scope === s ? 'bg-sparrow-green text-white' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
+            }`}
+          >
+            {s === 'mine' ? 'My Ideas' : `Team Ideas${teamIdeas.length > 0 ? ` · ${teamIdeas.length}` : ''}`}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
-      ) : ideas.length === 0 ? (
+      ) : scope === 'mine' ? (
+        ideas.length === 0 ? (
+          <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
+            Nothing here yet — drop a quick idea above any time one comes to you.
+          </p>
+        ) : (
+          <>
+            {active.map((idea) => (
+              <Row key={idea.id} idea={idea} mine />
+            ))}
+            {done.length > 0 && (
+              <>
+                <p className="mt-3 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray/70">
+                  Checked off
+                </p>
+                {done.map((idea) => (
+                  <Row key={idea.id} idea={idea} mine />
+                ))}
+              </>
+            )}
+          </>
+        )
+      ) : teamIdeas.length === 0 ? (
         <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-          Nothing here yet — drop a quick idea above any time one comes to you.
+          No shared ideas yet — hover one of your own ideas and click "Share" to put it here.
         </p>
       ) : (
         <>
-          {active.map((idea) => (
-            <Row key={idea.id} idea={idea} />
+          {teamActive.map((idea) => (
+            <Row key={idea.id} idea={idea} mine={idea.created_by === userId} />
           ))}
-          {done.length > 0 && (
+          {teamDone.length > 0 && (
             <>
               <p className="mt-3 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray/70">
                 Checked off
               </p>
-              {done.map((idea) => (
-                <Row key={idea.id} idea={idea} />
+              {teamDone.map((idea) => (
+                <Row key={idea.id} idea={idea} mine={idea.created_by === userId} />
               ))}
             </>
           )}
         </>
       )}
 
-      <p className="mt-6 text-xs text-sparrow-gray/70">Only you can see this list — nothing here is shared with other staff.</p>
+      <p className="mt-6 text-xs text-sparrow-gray/70">
+        {scope === 'mine'
+          ? 'Private by default — hover an idea and click "Share" to put it in Team Ideas for everyone to see.'
+          : 'Visible to all staff. Only the person who wrote each idea can check it off or delete it.'}
+      </p>
     </div>
   );
 }
