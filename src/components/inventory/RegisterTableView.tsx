@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { RegisterItem, ItemEditPatch } from '@/lib/inventory';
 import { formatCost, FILING_STATUS_META, type InvBentonSchedule } from '@/lib/inventory-types';
 import { ItemEditPanel } from './AssetRegisterView';
@@ -106,7 +106,7 @@ const COLUMNS: { key: SortKey; label: string; align?: 'right'; defaultWidth: num
 ];
 
 const MIN_COL_WIDTH = 44;
-const WIDTHS_STORAGE_KEY = 'sparrow-inv-register-table-col-widths-v2';
+const WIDTHS_STORAGE_KEY = 'sparrow-inv-register-table-col-widths-v3';
 
 function loadStoredWidths(): Record<string, number> {
   try {
@@ -139,18 +139,24 @@ export function RegisterTableView({
     localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(colWidths));
   }, [colWidths]);
 
-  // A resize drag ends with a mouseup, which the browser follows with a
+  // Grid template applied to every row (header + body) so all columns line
+  // up. Using CSS Grid rather than a native <table>/<colgroup> — table
+  // column widths driven by <col> are notoriously inconsistent about
+  // reflecting live JS updates across browsers, whereas grid-template-columns
+  // is a plain inline style the browser re-applies exactly on every render.
+  const gridTemplate = COLUMNS.map((c) => `${colWidths[c.key]}px`).join(' ');
+
+  // A resize drag ends with a pointerup, which the browser follows with a
   // click on whatever element the cursor lands on — often the header label,
   // not the handle — so relying on stopPropagation from the handle alone
   // isn't enough. This ref suppresses exactly the one click that follows a
-  // resize interaction, whether or not the mouse actually moved.
+  // resize interaction, whether or not the pointer actually moved.
   const suppressSortRef = useRef(false);
 
   // Drag-to-resize via the Pointer Events API with explicit pointer capture:
   // once captured, every subsequent pointermove/pointerup for this drag is
   // delivered to the handle itself no matter where the cursor physically
-  // ends up — a plain onMouseMove/window listener can silently stop
-  // tracking once the cursor drifts off a thin handle mid-drag.
+  // ends up.
   function startResize(key: SortKey, e: ReactPointerEvent<HTMLSpanElement>) {
     e.preventDefault();
     e.stopPropagation();
@@ -201,92 +207,88 @@ export function RegisterTableView({
     });
   }, [items, sortKey, sortDir]);
 
-  const thBase = 'relative border-r border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray cursor-pointer select-none hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition overflow-hidden';
-  const tdBase = 'border-r border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink whitespace-nowrap overflow-hidden text-ellipsis';
+  const cellBase = 'border-r border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 overflow-hidden text-ellipsis whitespace-nowrap';
 
   return (
     <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="border-collapse table-fixed">
-          <colgroup>
+        <div role="table" style={{ minWidth: 'max-content' }}>
+          {/* Header row */}
+          <div
+            role="row"
+            className="grid bg-sparrow-green/10 sticky top-0 z-10"
+            style={{ gridTemplateColumns: gridTemplate }}
+          >
             {COLUMNS.map((col) => (
-              <col key={col.key} style={{ width: colWidths[col.key] }} />
+              <div
+                key={col.key}
+                role="columnheader"
+                onClick={() => handleHeaderClick(col.key)}
+                title={col.label}
+                className={`relative ${cellBase} py-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray cursor-pointer select-none hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+              >
+                <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
+                  {col.label}{' '}
+                  {sortKey === col.key && <span>{sortDir === 'asc' ? '▲' : '▼'}</span>}
+                </span>
+                {/* Drag handle — resizes this column without triggering sort */}
+                <span
+                  onPointerDown={(e) => startResize(col.key, e)}
+                  style={{ touchAction: 'none' }}
+                  className="absolute top-0 right-0 h-full w-3 cursor-col-resize hover:bg-sparrow-green/30 active:bg-sparrow-green/50"
+                />
+              </div>
             ))}
-          </colgroup>
-          <thead className="bg-sparrow-green/10 sticky top-0 z-10">
-            <tr>
-              {COLUMNS.map((col) => (
-                <th
-                  key={col.key}
-                  onClick={() => handleHeaderClick(col.key)}
-                  className={`${thBase} ${col.align === 'right' ? 'text-right' : ''}`}
-                  title={col.label}
+          </div>
+
+          {/* Body rows */}
+          {sorted.map((item) => {
+            const filingMeta = FILING_STATUS_META[item.filing_status];
+            const isExpanded = expandedId === item.id;
+            return (
+              <div key={item.id} role="rowgroup">
+                <div
+                  role="row"
+                  onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                  className={`grid border-t border-sparrow-rule dark:border-sparrow-dark-border cursor-pointer transition ${
+                    item.status === 'removed' ? 'opacity-50' : ''
+                  } ${isExpanded ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2' : 'hover:bg-sparrow-mist/30 dark:hover:bg-sparrow-dark-surface2/60'}`}
+                  style={{ gridTemplateColumns: gridTemplate }}
                 >
-                  <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
-                    {col.label}{' '}
-                    {sortKey === col.key && <span>{sortDir === 'asc' ? '▲' : '▼'}</span>}
-                  </span>
-                  {/* Drag handle — resizes this column without triggering sort */}
-                  <span
-                    onPointerDown={(e) => startResize(col.key, e)}
-                    style={{ touchAction: 'none' }}
-                    className="absolute top-0 right-0 h-full w-3 cursor-col-resize hover:bg-sparrow-green/30 active:bg-sparrow-green/50"
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink`}>{SCHEDULE_BARE[item.benton_schedule]}</div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink`} title={item.description}>{item.description}</div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink`} title={buildingOf(item)}>{buildingOf(item)}</div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink`} title={roomOf(item)}>{roomOf(item)}</div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink`} title={item.serial_number ?? ''}>{item.serial_number ?? '—'}</div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink capitalize`}>{item.condition}</div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink`}>{item.is_donated ? 'Yes' : 'No'}</div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink text-right`}>{yearOf(item) ?? '—'}</div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink text-right`}>{item.quantity}</div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink text-right`}>{formatCost(item.unit_cost)}</div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink text-right font-medium`}>{formatCost(item.unit_cost * item.quantity)}</div>
+                  <div role="cell" className={cellBase}>
+                    <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium ${filingMeta.chip}`}>{filingMeta.label}</span>
+                  </div>
+                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink`}>
+                    {item.status === 'removed' ? (
+                      <span className="rounded-full bg-priority-p1/10 px-1.5 py-0.5 text-[10px] font-medium text-priority-p1">Removed</span>
+                    ) : 'Active'}
+                  </div>
+                  <div role="cell" className={cellBase}>
+                    {item.review_flag && <span title={item.review_flag}>⚠</span>}
+                  </div>
+                </div>
+                {isExpanded && (
+                  <ItemEditPanel
+                    item={item}
+                    onSave={(patch) => onSave(item.id, patch)}
+                    onCancel={() => setExpandedId(null)}
                   />
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((item) => {
-              const filingMeta = FILING_STATUS_META[item.filing_status];
-              const isExpanded = expandedId === item.id;
-              return (
-                <Fragment key={item.id}>
-                  <tr
-                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                    className={`border-t border-sparrow-rule dark:border-sparrow-dark-border cursor-pointer transition ${
-                      item.status === 'removed' ? 'opacity-50' : ''
-                    } ${isExpanded ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2' : 'hover:bg-sparrow-mist/30 dark:hover:bg-sparrow-dark-surface2/60'}`}
-                  >
-                    <td className={tdBase}>{SCHEDULE_BARE[item.benton_schedule]}</td>
-                    <td className={tdBase} title={item.description}>{item.description}</td>
-                    <td className={tdBase} title={buildingOf(item)}>{buildingOf(item)}</td>
-                    <td className={tdBase} title={roomOf(item)}>{roomOf(item)}</td>
-                    <td className={tdBase} title={item.serial_number ?? ''}>{item.serial_number ?? '—'}</td>
-                    <td className={`${tdBase} capitalize`}>{item.condition}</td>
-                    <td className={tdBase}>{item.is_donated ? 'Yes' : 'No'}</td>
-                    <td className={`${tdBase} text-right`}>{yearOf(item) ?? '—'}</td>
-                    <td className={`${tdBase} text-right`}>{item.quantity}</td>
-                    <td className={`${tdBase} text-right`}>{formatCost(item.unit_cost)}</td>
-                    <td className={`${tdBase} text-right font-medium`}>{formatCost(item.unit_cost * item.quantity)}</td>
-                    <td className={tdBase}>
-                      <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium ${filingMeta.chip}`}>{filingMeta.label}</span>
-                    </td>
-                    <td className={tdBase}>
-                      {item.status === 'removed' ? (
-                        <span className="rounded-full bg-priority-p1/10 px-1.5 py-0.5 text-[10px] font-medium text-priority-p1">Removed</span>
-                      ) : 'Active'}
-                    </td>
-                    <td className={tdBase}>
-                      {item.review_flag && <span title={item.review_flag}>⚠</span>}
-                    </td>
-                  </tr>
-                  {isExpanded && (
-                    <tr>
-                      <td colSpan={COLUMNS.length} className="p-0">
-                        <ItemEditPanel
-                          item={item}
-                          onSave={(patch) => onSave(item.id, patch)}
-                          onCancel={() => setExpandedId(null)}
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
       {sorted.length === 0 && (
         <p className="p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No items match this filter.</p>
