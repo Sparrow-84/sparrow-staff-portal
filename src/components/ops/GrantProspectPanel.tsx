@@ -75,6 +75,28 @@ export function GrantProspectPanel({
     if (open) void reload();
   }, [prospect, open]);
 
+  // Autosave a few seconds after the last edit — the button stays for anyone who wants
+  // the peace of mind of an explicit save, but nothing is lost if you just click away.
+  // Must run before the `!prospect` early return below so this hook fires on every
+  // render — skipping it when prospect is null changes the hook count between renders
+  // and crashes the whole app the moment a row is clicked.
+  useEffect(() => {
+    if (skipNextAutosave.current) {
+      skipNextAutosave.current = false;
+      return;
+    }
+    if (!prospect || !form.name.trim()) return; // don't autosave over a required field left blank
+    const id = prospect.id;
+    setAutoSaveLabel('Saving…');
+    const t = setTimeout(() => {
+      updateProspect(id, form)
+        .then(() => { setAutoSaveLabel('Saved'); onChanged(); })
+        .catch(() => setAutoSaveLabel(null));
+    }, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]);
+
   if (!prospect) return null;
   const prospectId = prospect.id;
 
@@ -93,24 +115,6 @@ export function GrantProspectPanel({
       setBusy(false);
     }
   }
-
-  // Autosave a few seconds after the last edit — the button stays for anyone who wants
-  // the peace of mind of an explicit save, but nothing is lost if you just click away.
-  useEffect(() => {
-    if (skipNextAutosave.current) {
-      skipNextAutosave.current = false;
-      return;
-    }
-    if (!form.name.trim()) return; // don't autosave over a required field left blank
-    setAutoSaveLabel('Saving…');
-    const t = setTimeout(() => {
-      updateProspect(prospectId, form)
-        .then(() => { setAutoSaveLabel('Saved'); onChanged(); })
-        .catch(() => setAutoSaveLabel(null));
-    }, 1200);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form]);
 
   async function setStatus(status: GrantProspectStatus) {
     if (status === 'awarded') {
