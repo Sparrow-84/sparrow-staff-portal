@@ -163,6 +163,9 @@ const COLUMNS: { key: ColKey; label: string; align?: 'right'; defaultWidth: numb
 const MIN_COL_WIDTH = 44;
 const WIDTHS_STORAGE_KEY = 'sparrow-inv-register-table-col-widths-v3';
 const HIDDEN_STORAGE_KEY = 'sparrow-inv-register-table-hidden-cols-v1';
+const ORDER_STORAGE_KEY = 'sparrow-inv-register-table-col-order-v1';
+
+const DEFAULT_ORDER: ColKey[] = COLUMNS.map((c) => c.key);
 
 function loadStoredWidths(): Record<string, number> {
   try {
@@ -182,12 +185,29 @@ function loadHiddenCols(): ColKey[] {
   }
 }
 
+function loadColumnOrder(): ColKey[] {
+  try {
+    const raw = localStorage.getItem(ORDER_STORAGE_KEY);
+    const stored = raw ? (JSON.parse(raw) as ColKey[]) : null;
+    if (!stored) return DEFAULT_ORDER;
+    // Guard against a stored order from before a column was added/removed —
+    // keep only known keys, then append any new ones that aren't in it yet.
+    const known = stored.filter((k) => DEFAULT_ORDER.includes(k));
+    const missing = DEFAULT_ORDER.filter((k) => !known.includes(k));
+    return [...known, ...missing];
+  } catch {
+    return DEFAULT_ORDER;
+  }
+}
+
 // ── Columns visibility dropdown ─────────────────────────────────────────────
 
 function ColumnsMenu({
+  columns,
   hidden,
   onToggle,
 }: {
+  columns: { key: ColKey; label: string }[];
   hidden: Set<ColKey>;
   onToggle: (key: ColKey) => void;
 }) {
@@ -217,7 +237,7 @@ function ColumnsMenu({
       </button>
       {open && (
         <div className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-card py-1 max-h-80 overflow-y-auto">
-          {COLUMNS.map((col) => (
+          {columns.map((col) => (
             <label
               key={col.key}
               className="flex items-center gap-2 px-3 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 cursor-pointer"
@@ -256,6 +276,9 @@ export function RegisterTableView({
   });
 
   const [hiddenCols, setHiddenCols] = useState<Set<ColKey>>(() => new Set(loadHiddenCols()));
+  const [columnOrder, setColumnOrder] = useState<ColKey[]>(loadColumnOrder);
+  const [draggingKey, setDraggingKey] = useState<ColKey | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<ColKey | null>(null);
 
   useEffect(() => {
     localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(colWidths));
@@ -264,6 +287,10 @@ export function RegisterTableView({
   useEffect(() => {
     localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify([...hiddenCols]));
   }, [hiddenCols]);
+
+  useEffect(() => {
+    localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(columnOrder));
+  }, [columnOrder]);
 
   function toggleColumn(key: ColKey) {
     setHiddenCols((prev) => {
@@ -274,7 +301,29 @@ export function RegisterTableView({
     });
   }
 
-  const visibleColumns = useMemo(() => COLUMNS.filter((c) => !hiddenCols.has(c.key)), [hiddenCols]);
+  // Pick up a column header and drop it on another to move it there — native
+  // HTML5 drag-and-drop, not the same mechanism as the resize handle, so the
+  // two never compete for the same gesture. The resize handle sets
+  // draggable={false} explicitly to guarantee it's never picked up as the
+  // drag source no matter how a browser resolves overlapping gestures.
+  function handleColumnDrop(targetKey: ColKey) {
+    const draggedKey = draggingKey;
+    setDraggingKey(null);
+    setDragOverKey(null);
+    if (!draggedKey || draggedKey === targetKey) return;
+    setColumnOrder((prev) => {
+      const next = prev.filter((k) => k !== draggedKey);
+      const targetIdx = next.indexOf(targetKey);
+      next.splice(targetIdx, 0, draggedKey);
+      return next;
+    });
+  }
+
+  const orderedColumns = useMemo(
+    () => columnOrder.map((key) => COLUMNS.find((c) => c.key === key)!).filter(Boolean),
+    [columnOrder],
+  );
+  const visibleColumns = useMemo(() => orderedColumns.filter((c) => !hiddenCols.has(c.key)), [orderedColumns, hiddenCols]);
 
   // Grid template applied to every row (header + body) so all columns line
   // up. Using CSS Grid rather than a native <table>/<colgroup> — table
@@ -349,7 +398,7 @@ export function RegisterTableView({
   return (
     <div className="space-y-2">
       <div className="flex justify-end">
-        <ColumnsMenu hidden={hiddenCols} onToggle={toggleColumn} />
+        <ColumnsMenu columns={orderedColumns} hidden={hiddenCols} onToggle={toggleColumn} />
       </div>
 
       {/* Sized to fit exactly the visible columns — not stretched to fill the
@@ -368,16 +417,26 @@ export function RegisterTableView({
                 <div
                   key={col.key}
                   role="columnheader"
+                  draggable
+                  onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDraggingKey(col.key); }}
+                  onDragEnd={() => { setDraggingKey(null); setDragOverKey(null); }}
+                  onDragOver={(e) => { e.preventDefault(); if (draggingKey && draggingKey !== col.key) setDragOverKey(col.key); }}
+                  onDragLeave={() => setDragOverKey((k) => (k === col.key ? null : k))}
+                  onDrop={(e) => { e.preventDefault(); handleColumnDrop(col.key); }}
                   onClick={() => handleHeaderClick(col.key)}
                   title={col.label}
-                  className={`relative ${cellBase} py-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray cursor-pointer select-none hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                  className={`relative ${cellBase} py-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray cursor-grab active:cursor-grabbing select-none hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition ${col.align === 'right' ? 'text-right' : 'text-left'} ${
+                    draggingKey === col.key ? 'opacity-40' : ''
+                  } ${dragOverKey === col.key ? 'bg-sparrow-green/30' : ''}`}
                 >
                   <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
                     {col.label}{' '}
                     {sortKey === col.key && <span>{sortDir === 'asc' ? '▲' : '▼'}</span>}
                   </span>
-                  {/* Drag handle — resizes this column without triggering sort */}
+                  {/* Resize handle — explicitly non-draggable so it's never picked up
+                      as the column-move drag source, only ever the resize gesture. */}
                   <span
+                    draggable={false}
                     onPointerDown={(e) => startResize(col.key, e)}
                     style={{ touchAction: 'none' }}
                     className="absolute top-0 right-0 h-full w-3 cursor-col-resize hover:bg-sparrow-green/30 active:bg-sparrow-green/50"
