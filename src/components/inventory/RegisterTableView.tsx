@@ -439,7 +439,13 @@ export function RegisterTableView({
           surrounding page — so there's no leftover blank strip that reads as
           a phantom extra column when there's more room than the table needs. */}
       <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden" style={{ width: 'fit-content', maxWidth: '100%' }}>
-        <div className="overflow-x-auto">
+        {/* Bounded height with its own scrollbar (not just horizontal) — a
+            sticky header only pins to the top of whichever ancestor is
+            actually doing the scrolling. Without a height limit here, this
+            div never scrolls itself (it just grows to fit every row), so
+            the sticky header would have nothing to stick to as the page
+            scrolled past it instead. */}
+        <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
           <div role="table" style={{ minWidth: 'max-content' }}>
             {/* Header row */}
             <div
