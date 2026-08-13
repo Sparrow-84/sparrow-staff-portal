@@ -53,8 +53,11 @@ function compare(a: RegisterItem, b: RegisterItem, key: SortKey): number {
       return (a.serial_number ?? '').localeCompare(b.serial_number ?? '');
     case 'condition':
       return a.condition.localeCompare(b.condition);
-    case 'donated':
-      return Number(a.is_donated) - Number(b.is_donated);
+    case 'donated': {
+      // Unknown sorts before No, which sorts before Yes.
+      const rank = (v: boolean | null) => (v === null ? -1 : v ? 1 : 0);
+      return rank(a.is_donated) - rank(b.is_donated);
+    }
     case 'year': {
       const ay = yearOf(a); const by = yearOf(b);
       if (ay === null && by === null) return 0;
@@ -261,7 +264,9 @@ export function RegisterTableView({
                   <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink`} title={roomOf(item)}>{roomOf(item)}</div>
                   <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink`} title={item.serial_number ?? ''}>{item.serial_number ?? '—'}</div>
                   <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink capitalize`}>{item.condition}</div>
-                  <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink`}>{item.is_donated ? 'Yes' : 'No'}</div>
+                  <div role="cell" className={`${cellBase} text-sm ${item.is_donated === null ? 'italic text-sparrow-gray dark:text-sparrow-dark-gray' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
+                    {item.is_donated === null ? 'Unknown' : item.is_donated ? 'Yes' : 'No'}
+                  </div>
                   <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink text-right`}>{yearOf(item) ?? '—'}</div>
                   <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink text-right`}>{item.quantity}</div>
                   <div role="cell" className={`${cellBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink text-right`}>{formatCost(item.unit_cost)}</div>

@@ -142,7 +142,10 @@ export interface InvItem {
   is_batch: boolean;
   batch_category: string | null;
   condition: InvItemCondition;
-  is_donated: boolean;
+  // null = unknown/never recorded — distinct from false ("known not donated").
+  // See feedback from the 2026-08 historical-accuracy pass: most legacy
+  // register items never said either way and shouldn't be guessed at.
+  is_donated: boolean | null;
   quantity: number;
   unit_cost: number;
   cost_source: InvCostSource;

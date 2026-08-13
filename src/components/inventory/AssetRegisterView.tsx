@@ -117,11 +117,17 @@ export function ItemEditPanel({
             <option value="used">Used</option>
           </select>
         </div>
-        <div className="flex items-end pb-1.5">
-          <label className="flex items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
-            <input type="checkbox" checked={isDonated} onChange={(e) => setIsDonated(e.target.checked)} />
-            Donated
-          </label>
+        <div>
+          <label className={labelCls}>Donated</label>
+          <select
+            className={inputCls}
+            value={isDonated === null ? 'unknown' : isDonated ? 'yes' : 'no'}
+            onChange={(e) => setIsDonated(e.target.value === 'unknown' ? null : e.target.value === 'yes')}
+          >
+            <option value="unknown">Unknown</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
         </div>
         <div>
           <label className={labelCls}>Filing status</label>

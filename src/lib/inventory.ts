@@ -180,7 +180,7 @@ export type ItemEditPatch = Partial<{
   quantity: number;
   unit_cost: number;
   condition: InvItemCondition;
-  is_donated: boolean;
+  is_donated: boolean | null;
   sub_location_id: string | null;
   notes: string | null;
   who_has_it: string | null;

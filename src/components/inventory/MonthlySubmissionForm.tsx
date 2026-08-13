@@ -16,9 +16,9 @@ import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 // ── Addition entry form ───────────────────────────────────────────────────
 
-const EMPTY_ADD: NewAddition = {
+const EMPTY_ADD: Omit<NewAddition, 'is_donated'> = {
   is_batch: false, batch_category: null, description: '',
-  serial_number: null, condition: 'used', is_donated: false,
+  serial_number: null, condition: 'used',
   quantity: 1, cost: 0, cost_basis: 'per_item', cost_source: 'known',
   sub_location_id: null, notes: null,
 };
@@ -32,11 +32,16 @@ function AdditionForm({
   onSave: (entry: NewAddition) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState<NewAddition>(EMPTY_ADD);
+  const [form, setForm] = useState<Omit<NewAddition, 'is_donated'>>(EMPTY_ADD);
+  // Not a plain boolean here on purpose — starts unanswered so staff must
+  // explicitly pick Yes or No rather than silently inheriting a default.
+  // (This is exactly the gap that left ~150 historical items recorded as
+  // "not donated" when nobody had actually ever confirmed that.)
+  const [donated, setDonated] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  const set = (patch: Partial<NewAddition>) => setForm((f) => ({ ...f, ...patch }));
+  const set = (patch: Partial<Omit<NewAddition, 'is_donated'>>) => setForm((f) => ({ ...f, ...patch }));
 
   const { missingMessage, validate, fieldClass, fieldError, clear } = useRequiredFields([
     {
@@ -46,6 +51,7 @@ function AdditionForm({
     },
     { key: 'add-cost', label: 'Cost', valid: form.cost > 0 },
     { key: 'add-location', label: 'Location', valid: !!form.sub_location_id },
+    { key: 'add-donated', label: 'Donated', valid: donated !== null },
   ]);
 
   async function save() {
@@ -55,6 +61,7 @@ function AdditionForm({
     try {
       const entry: NewAddition = {
         ...form,
+        is_donated: donated as boolean,
         description: form.is_batch
           ? (form.batch_category ?? '')
           : form.description.trim(),
@@ -257,16 +264,25 @@ function AdditionForm({
           {fieldError('add-location') && <p className="mt-1 text-xs text-priority-p1">{fieldError('add-location')}</p>}
         </div>
 
-        <div className="flex flex-col justify-end">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.is_donated}
-              onChange={(e) => set({ is_donated: e.target.checked })}
-              className="h-4 w-4 accent-sparrow-green"
-            />
-            <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Donated</span>
-          </label>
+        <div>
+          <label className="field-label field-label-required">Donated</label>
+          <div className="flex gap-2 mt-1">
+            {([['Yes', true], ['No', false]] as const).map(([label, value]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => { setDonated(value); clear('add-donated'); }}
+                className={`flex-1 rounded-lg border py-1.5 text-sm font-medium transition ${
+                  donated === value
+                    ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
+                    : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {fieldError('add-donated') && <p className="mt-1 text-xs text-priority-p1">{fieldError('add-donated')}</p>}
         </div>
       </div>
 

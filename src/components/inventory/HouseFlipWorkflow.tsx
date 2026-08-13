@@ -968,6 +968,8 @@ function NewItemsScreen({
   const [nothingNew, setNothingNew] = useState(false);
   const [desc,       setDesc]       = useState('');
   const [cost,       setCost]       = useState('');
+  // Starts unanswered — must be explicitly chosen, no silent "Purchased" default.
+  const [donated,    setDonated]    = useState<'true' | 'false' | ''>('');
   const [formErr,    setFormErr]    = useState('');
   const [formSaving, setFormSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -976,12 +978,14 @@ function NewItemsScreen({
   const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'ni-desc', label: 'Description', valid: desc.trim().length > 0 },
     { key: 'ni-cost', label: 'Cost', valid: cost.trim().length > 0 && !isNaN(parsedCost) && parsedCost >= 0 },
+    { key: 'ni-donated', label: 'Donated', valid: donated !== '' },
   ]);
 
   function resetForm() {
     setDesc('');
     setCost('');
     setIsBatch(false);
+    setDonated('');
     resetValidation();
   }
 
@@ -998,7 +1002,7 @@ function NewItemsScreen({
         is_batch:        isBatch,
         batch_category:  isBatch ? (fd.get('batch_category') as string) : null,
         condition:       fd.get('condition') as string,
-        is_donated:      fd.get('is_donated') === 'true',
+        is_donated:      donated === 'true',
         quantity:        Number(fd.get('quantity')) || 1,
         cost: parsedCost,
         cost_basis:      fd.get('cost_basis') as string,
@@ -1151,14 +1155,20 @@ function NewItemsScreen({
               <option value="used">Used</option>
             </select>
             <select
-              name="is_donated"
-              defaultValue="false"
-              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              value={donated}
+              onChange={(e) => { setDonated(e.target.value as 'true' | 'false'); clear('ni-donated'); }}
+              className={
+                fieldClass('ni-donated', '').includes('field-input-error')
+                  ? 'rounded-lg border border-priority-p1 bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
+                  : 'rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
+              }
             >
+              <option value="">Donated? Select…</option>
               <option value="false">Purchased</option>
               <option value="true">Donated</option>
             </select>
           </div>
+          {fieldError('ni-donated') && <p className="mt-1 text-xs text-priority-p1">{fieldError('ni-donated')}</p>}
 
           <div className="grid grid-cols-3 gap-3">
             <input
