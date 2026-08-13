@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 /** Right-side slide-in panel (matches the Twin Oaks detail panels). */
 export function Drawer({
@@ -19,6 +19,15 @@ export function Drawer({
   /** Wider panel for content-heavy views (long story bodies, multi-tab family detail). Default width otherwise. */
   wide?: boolean;
 }) {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Reset scroll to the top whenever the drawer opens or swaps to a different record —
+  // otherwise a fresh/newly-created record can open already scrolled partway down from
+  // whatever the previously-viewed record's scroll position happened to be.
+  useEffect(() => {
+    if (open) contentRef.current?.scrollTo(0, 0);
+  }, [open, title]);
+
   return (
     <>
       <div
@@ -44,7 +53,7 @@ export function Drawer({
             ✕
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div ref={contentRef} className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border px-5 py-3">{footer}</div>}
       </aside>
     </>

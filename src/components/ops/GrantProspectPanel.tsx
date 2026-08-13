@@ -51,8 +51,10 @@ export function GrantProspectPanel({
 }) {
   const [form, setForm] = useState<ProspectInput>(() => toInput(prospect));
   const [busy, setBusy] = useState(false);
+  const [autoSaveLabel, setAutoSaveLabel] = useState<string | null>(null);
   const [links, setLinks] = useState<GrantProspectLink[]>([]);
   const [docs, setDocs] = useState<GrantProspectDocument[]>([]);
+  const skipNextAutosave = useRef(true);
 
   const { validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'prospect-name', label: 'Name', valid: form.name.trim().length > 0 },
@@ -68,6 +70,8 @@ export function GrantProspectPanel({
   useEffect(() => {
     setForm(toInput(prospect));
     resetValidation();
+    setAutoSaveLabel(null);
+    skipNextAutosave.current = true;
     if (open) void reload();
   }, [prospect, open]);
 
@@ -83,11 +87,30 @@ export function GrantProspectPanel({
     setBusy(true);
     try {
       await updateProspect(prospectId, form);
+      setAutoSaveLabel(null);
       onChanged();
     } finally {
       setBusy(false);
     }
   }
+
+  // Autosave a few seconds after the last edit — the button stays for anyone who wants
+  // the peace of mind of an explicit save, but nothing is lost if you just click away.
+  useEffect(() => {
+    if (skipNextAutosave.current) {
+      skipNextAutosave.current = false;
+      return;
+    }
+    if (!form.name.trim()) return; // don't autosave over a required field left blank
+    setAutoSaveLabel('Saving…');
+    const t = setTimeout(() => {
+      updateProspect(prospectId, form)
+        .then(() => { setAutoSaveLabel('Saved'); onChanged(); })
+        .catch(() => setAutoSaveLabel(null));
+    }, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]);
 
   async function setStatus(status: GrantProspectStatus) {
     if (status === 'awarded') {
@@ -110,9 +133,6 @@ export function GrantProspectPanel({
       setBusy(false);
     }
   }
-
-  const showDecision = !['not_researched', 'researching'].includes(form.status);
-  const showAction = ['decided_pursue', 'applied', 'awarded'].includes(form.status);
 
   return (
     <Drawer open={open} onClose={onClose} title={prospect.name} subtitle="Grant prospect">
@@ -240,47 +260,40 @@ export function GrantProspectPanel({
 
         <DocumentsSection prospectId={prospect.id} docs={docs} currentUserId={currentUserId} onChanged={reload} />
 
-        {form.status !== 'not_researched' && (
-          <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Findings — what the research turned up</span>
-            <textarea
-              value={form.findings ?? ''}
-              onChange={(e) => set('findings', e.target.value || null)}
-              rows={3}
-              className="field-input"
-            />
-          </label>
-        )}
+        <label className="block">
+          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Findings — what the research turned up</span>
+          <textarea
+            value={form.findings ?? ''}
+            onChange={(e) => set('findings', e.target.value || null)}
+            rows={3}
+            className="field-input"
+          />
+        </label>
 
-        {showDecision && (
-          <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Decision reasoning — why pursue or not</span>
-            <textarea
-              value={form.decision_reasoning ?? ''}
-              onChange={(e) => set('decision_reasoning', e.target.value || null)}
-              rows={3}
-              className="field-input"
-            />
-            <p className="mt-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">Only shown once a decision's been made — nothing to justify while still researching.</p>
-          </label>
-        )}
+        <label className="block">
+          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Decision reasoning — why pursue or not</span>
+          <textarea
+            value={form.decision_reasoning ?? ''}
+            onChange={(e) => set('decision_reasoning', e.target.value || null)}
+            rows={3}
+            className="field-input"
+          />
+        </label>
 
-        {showAction && (
-          <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Action steps</span>
-            <textarea
-              value={form.action_steps ?? ''}
-              onChange={(e) => set('action_steps', e.target.value || null)}
-              rows={3}
-              className="field-input"
-            />
-            <p className="mt-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">Only shown once you've decided to pursue — no action steps for something you're not doing.</p>
-          </label>
-        )}
+        <label className="block">
+          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Action steps</span>
+          <textarea
+            value={form.action_steps ?? ''}
+            onChange={(e) => set('action_steps', e.target.value || null)}
+            rows={3}
+            className="field-input"
+          />
+        </label>
 
         <button onClick={save} disabled={busy} className="btn-primary w-full">
           Save changes
         </button>
+        {autoSaveLabel && <p className="-mt-2 text-center text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">{autoSaveLabel}</p>}
       </div>
     </Drawer>
   );

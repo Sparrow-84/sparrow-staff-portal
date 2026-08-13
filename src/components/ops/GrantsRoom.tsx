@@ -49,7 +49,6 @@ export function GrantsRoom() {
   const [prospects, setProspects] = useState<GrantProspect[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [tierLabels, setTierLabels] = useState<GrantProspectLabel[]>([]);
-  const [sourceLabels, setSourceLabels] = useState<GrantProspectLabel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,18 +69,16 @@ export function GrantsRoom() {
 
   const load = useCallback(async () => {
     try {
-      const [g, p, pr, tl, sl] = await Promise.all([
+      const [g, p, pr, tl] = await Promise.all([
         fetchGrants(),
         fetchProspects(),
         fetchProfiles(),
         fetchProspectLabels('tier'),
-        fetchProspectLabels('source'),
       ]);
       setGrants(g);
       setProspects(p);
       setProfiles(pr.filter((x) => x.ops_access));
       setTierLabels(tl);
-      setSourceLabels(sl);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load grants.');
     } finally {
@@ -266,7 +263,6 @@ export function GrantsRoom() {
             profiles={profiles}
             ownerColors={ownerColors}
             tierLabels={tierLabels}
-            sourceLabels={sourceLabels}
             onOpen={openProspect}
           />
         </>
@@ -279,7 +275,6 @@ export function GrantsRoom() {
             profiles={profiles}
             ownerColors={ownerColors}
             tierLabels={tierLabels}
-            sourceLabels={sourceLabels}
             onOpen={openProspect}
           />
         </div>
@@ -466,14 +461,12 @@ function ProspectsTable({
   profiles,
   ownerColors,
   tierLabels,
-  sourceLabels,
   onOpen,
 }: {
   prospects: GrantProspect[];
   profiles: Profile[];
   ownerColors: Record<string, string>;
   tierLabels: GrantProspectLabel[];
-  sourceLabels: GrantProspectLabel[];
   onOpen: (id: string) => void;
 }) {
   const [sortKey, setSortKey] = useState<'name' | 'owner' | 'deadline' | 'amount'>('deadline');
@@ -502,23 +495,23 @@ function ProspectsTable({
           <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
             <th className="w-6 px-3 py-2" />
             <Th label="Name" k="name" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tier / Source</th>
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tier</th>
             <Th label="Est. amount" k="amount" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <Th label="Owner" k="owner" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <Th label="Deadline" k="deadline" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Action steps</th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((p) => {
             const owner = profiles.find((x) => x.id === p.owner_id);
             const tier = tierLabels.find((l) => l.id === p.tier_label_id);
-            const source = sourceLabels.find((l) => l.id === p.source_label_id);
             const overdue = (daysSince(p.application_deadline) ?? -9999) > 0;
             return (
               <tr key={p.id} onClick={() => onOpen(p.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white dark:bg-sparrow-dark-surface hover:bg-sparrow-mist/40">
                 <td className="px-3 py-2.5"><span className="block h-2 w-2 rounded-full" style={{ background: PROSPECT_DOT[p.status] ?? '#9CA3AF' }} /></td>
                 <td className="whitespace-nowrap px-3 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{p.name}</td>
-                <td className="px-3 py-2.5"><div className="flex flex-wrap gap-1"><LabelCell label={tier} /><LabelCell label={source} /></div></td>
+                <td className="px-3 py-2.5"><LabelCell label={tier} /></td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{p.est_amount ? formatMoney(p.est_amount) : '—'}</td>
                 <td className="px-3 py-2.5"><OwnerCell owner={owner} ownerColors={ownerColors} /></td>
                 <td className="whitespace-nowrap px-3 py-2.5">
@@ -532,6 +525,7 @@ function ProspectsTable({
                     <span className="text-sparrow-gray dark:text-sparrow-dark-gray">No deadline set</span>
                   )}
                 </td>
+                <td className="max-w-xs truncate px-3 py-2.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray" title={p.action_steps ?? undefined}>{p.action_steps || '—'}</td>
               </tr>
             );
           })}
@@ -547,14 +541,12 @@ function NotMovingTable({
   profiles,
   ownerColors,
   tierLabels,
-  sourceLabels,
   onOpen,
 }: {
   prospects: GrantProspect[];
   profiles: Profile[];
   ownerColors: Record<string, string>;
   tierLabels: GrantProspectLabel[];
-  sourceLabels: GrantProspectLabel[];
   onOpen: (id: string) => void;
 }) {
   if (prospects.length === 0) return <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Nothing here yet.</p>;
@@ -565,7 +557,7 @@ function NotMovingTable({
         <thead>
           <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Name</th>
-            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tier / Source</th>
+            <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tier</th>
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Owner</th>
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Why</th>
           </tr>
@@ -574,11 +566,10 @@ function NotMovingTable({
           {prospects.map((p) => {
             const owner = profiles.find((x) => x.id === p.owner_id);
             const tier = tierLabels.find((l) => l.id === p.tier_label_id);
-            const source = sourceLabels.find((l) => l.id === p.source_label_id);
             return (
               <tr key={p.id} onClick={() => onOpen(p.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white dark:bg-sparrow-dark-surface hover:bg-sparrow-mist/40">
                 <td className="whitespace-nowrap px-3 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{p.name}</td>
-                <td className="px-3 py-2.5"><div className="flex flex-wrap gap-1"><LabelCell label={tier} /><LabelCell label={source} /></div></td>
+                <td className="px-3 py-2.5"><LabelCell label={tier} /></td>
                 <td className="px-3 py-2.5"><OwnerCell owner={owner} ownerColors={ownerColors} /></td>
                 <td className="max-w-xs truncate px-3 py-2.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{p.decision_reasoning || '—'}</td>
               </tr>
