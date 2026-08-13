@@ -139,12 +139,12 @@ export function OnboardingView({ onDone }: { onDone: () => void }) {
           const parentDone = hasSubs ? subs.every((s) => s.done) : item.done;
 
           return (
-            <li key={item.id} className={`rounded-xl border transition-colors ${parentDone ? 'border-sparrow-green/30 bg-sparrow-sage/30' : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface'}`}>
+            <li key={item.id} className={`rounded-xl border transition-colors ${parentDone ? 'border-sparrow-green/30 bg-sparrow-sage/30 dark:bg-sparrow-green/10' : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface'}`}>
               {/* Top-level item header */}
               <div className="flex items-start gap-3 p-4">
                 {hasSubs ? (
                   // Section header — not directly checkable; completion derived from subtasks
-                  <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors ${parentDone ? 'bg-sparrow-green text-white' : 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green'}`}>
+                  <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors ${parentDone ? 'bg-sparrow-green text-white' : 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green'}`}>
                     {parentDone ? '✓' : idx + 1}
                   </div>
                 ) : (
@@ -194,7 +194,7 @@ export function OnboardingView({ onDone }: { onDone: () => void }) {
                   <button
                     onClick={() => toggle(item)}
                     disabled={toggling === item.id}
-                    className="shrink-0 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-1.5 text-sm font-medium text-sparrow-gray dark:text-sparrow-dark-gray transition hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:bg-sparrow-sage hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
+                    className="shrink-0 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-1.5 text-sm font-medium text-sparrow-gray dark:text-sparrow-dark-gray transition hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:bg-sparrow-sage dark:hover:bg-sparrow-green/15 hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
                   >
                     Mark done
                   </button>
@@ -207,7 +207,7 @@ export function OnboardingView({ onDone }: { onDone: () => void }) {
                   {subs.map((sub) => (
                     <li
                       key={sub.id}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${sub.done ? 'bg-sparrow-sage/50' : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2'}`}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${sub.done ? 'bg-sparrow-sage/50 dark:bg-sparrow-green/15' : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2'}`}
                     >
                       <button
                         onClick={() => toggle(sub)}
@@ -248,7 +248,7 @@ export function OnboardingView({ onDone }: { onDone: () => void }) {
                         <button
                           onClick={() => toggle(sub)}
                           disabled={toggling === sub.id}
-                          className="shrink-0 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray transition hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:bg-sparrow-sage hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
+                          className="shrink-0 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray transition hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:bg-sparrow-sage dark:hover:bg-sparrow-green/15 hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
                         >
                           Done
                         </button>

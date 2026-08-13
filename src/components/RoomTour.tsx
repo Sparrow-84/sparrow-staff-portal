@@ -60,7 +60,7 @@ export function RoomTour({
         <p className="mt-2 text-sm leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">{current.body}</p>
 
         {current.tag && (
-          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-sparrow-sage px-3 py-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
             <span>{current.tag.icon}</span>
             <span>{current.tag.label}</span>
           </div>

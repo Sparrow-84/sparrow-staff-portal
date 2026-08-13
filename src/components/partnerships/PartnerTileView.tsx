@@ -101,7 +101,7 @@ export function PartnerTileView({
                   </span>
                 )}
                 {tier === 'lapsed' && p.type === 'donor' && (
-                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">
+                  <span className="rounded-full bg-orange-100 dark:bg-orange-500/15 px-2 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-300">
                     Lapsed giving
                   </span>
                 )}

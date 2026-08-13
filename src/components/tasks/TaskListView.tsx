@@ -49,7 +49,7 @@ export function TaskListView({ tasks, today, currentUserId, showAssignee, onTogg
           </h2>
           <ul
             className={`divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border bg-white dark:bg-sparrow-dark-surface transition ${
-              overKey === key ? 'border-sparrow-gold bg-amber-50' : 'border-sparrow-rule dark:border-sparrow-dark-border'
+              overKey === key ? 'border-sparrow-gold bg-amber-50 dark:bg-amber-500/15' : 'border-sparrow-rule dark:border-sparrow-dark-border'
             }`}
           >
             {items.map((t) => (
@@ -133,7 +133,7 @@ function TaskRow({
               <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{task.assignee.full_name}</span>
             )}
             {assignedByOther && task.creator && (
-              <span className="rounded-full bg-sparrow-cream px-2 py-0.5 text-[11px] text-sparrow-ink dark:text-sparrow-dark-ink">
+              <span className="rounded-full bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-2 py-0.5 text-[11px] text-sparrow-ink dark:text-sparrow-dark-ink">
                 Assigned by {task.creator.full_name.split(' ')[0]}
               </span>
             )}

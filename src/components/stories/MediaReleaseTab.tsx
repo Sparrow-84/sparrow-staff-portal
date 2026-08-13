@@ -153,7 +153,7 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
   return (
     <div className="space-y-8">
       {/* Rules box — all 3 layers */}
-      <div className="rounded-xl border border-sparrow-gold/30 bg-sparrow-cream px-4 py-3 text-sm">
+      <div className="rounded-xl border border-sparrow-gold/30 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-4 py-3 text-sm">
         <p className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Three-layer photo release framework</p>
         <ul className="mt-2 space-y-1.5 text-sparrow-gray dark:text-sparrow-dark-gray">
           <li>

@@ -269,7 +269,7 @@ export function SessionEditPanel({
 
   function renderResourceForm() {
     return (
-      <div className="space-y-3 rounded-xl border border-sparrow-green/30 bg-sparrow-sage/20 p-3">
+      <div className="space-y-3 rounded-xl border border-sparrow-green/30 bg-sparrow-sage/20 dark:bg-sparrow-green/15 p-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
           {editMode.kind === 'add' ? `New ${RESOURCE_LABEL[resKind]}` : `Edit ${RESOURCE_LABEL[resKind]}`}
         </p>
@@ -539,7 +539,7 @@ export function SessionEditPanel({
                   <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">— written by staff from the Session Log while teaching</span>
                 </p>
                 {curriculumNotes.trim() && !curriculumNotesReviewedAt && (
-                  <span className="shrink-0 rounded-full bg-sparrow-cream px-2 py-0.5 text-[11px] font-bold text-sparrow-gold">
+                  <span className="shrink-0 rounded-full bg-sparrow-cream dark:bg-sparrow-gold/15 px-2 py-0.5 text-[11px] font-bold text-sparrow-gold">
                     🔔 Unreviewed
                   </span>
                 )}
@@ -651,7 +651,7 @@ function StatusChip({ label, ready }: { label: string; ready: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-        ready ? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green' : 'border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray'
+        ready ? 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green' : 'border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray'
       }`}
     >
       <span>{ready ? '✓' : '○'}</span>

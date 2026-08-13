@@ -395,7 +395,7 @@ export function MondaySessionPanel({
       <div className="flex items-start gap-3">
         <button
           onClick={onBack}
-          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70"
+          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70 dark:hover:bg-sparrow-green/25"
         >
           Done for now
         </button>
@@ -506,7 +506,7 @@ export function MondaySessionPanel({
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setSelectedBucket(null)}
-                className="inline-flex items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70"
+                className="inline-flex items-center gap-1 rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70 dark:hover:bg-sparrow-green/25"
               >
                 ← All buckets
               </button>
@@ -525,7 +525,7 @@ export function MondaySessionPanel({
                       {MONDAY_BUCKET_LABEL[bucket]}
                       <span
                         className={`rounded-full px-1.5 text-[10px] ${
-                          active ? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green' : 'bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray'
+                          active ? 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green' : 'bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray'
                         }`}
                       >
                         {done}/{total}

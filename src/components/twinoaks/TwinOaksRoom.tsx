@@ -223,7 +223,7 @@ export function TwinOaksRoom() {
             <button
               key={r.id}
               onClick={() => setReviewRequest(r)}
-              className="flex w-full items-center justify-between rounded-xl border border-sparrow-gold/40 bg-sparrow-cream px-4 py-3 text-left text-sm"
+              className="flex w-full items-center justify-between rounded-xl border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-4 py-3 text-left text-sm"
             >
               <span>
                 🏡 <strong>{r.family_display_name}</strong> from LCP is moving into <strong>{r.space_label}</strong>

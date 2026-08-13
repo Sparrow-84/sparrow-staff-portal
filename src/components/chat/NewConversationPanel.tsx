@@ -112,7 +112,7 @@ export function NewConversationPanel({
               <button
                 onClick={() => toggle(p.id)}
                 className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition ${
-                  on ? 'bg-sparrow-sage' : 'hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
+                  on ? 'bg-sparrow-sage dark:bg-sparrow-green/15' : 'hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
                 }`}
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sparrow-green text-xs font-semibold text-white">

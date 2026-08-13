@@ -239,7 +239,7 @@ export function StaffThread({
                       >
                         {/* Quote preview */}
                         {quotedMsg && (
-                          <div className={`mb-2 rounded-lg border-l-2 pl-2 pr-2 py-1 text-xs ${fromStaff ? 'border-white/40 bg-white/10 text-white/80' : 'border-sparrow-green/40 bg-white/50 text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
+                          <div className={`mb-2 rounded-lg border-l-2 pl-2 pr-2 py-1 text-xs ${fromStaff ? 'border-white/40 bg-white/10 text-white/80' : 'border-sparrow-green/40 bg-white/50 dark:bg-black/20 text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                             <p className="font-medium">{quotedMsg.sender_kind === 'staff' ? 'Staff' : 'Family'}</p>
                             <p className="truncate">{quotedMsg.body || (quotedMsg.voice_url ? '🎤 Voice message' : quotedMsg.image_url ? '🖼 Photo' : '')}</p>
                           </div>
@@ -424,7 +424,7 @@ function MsgActionBtn({
       onClick={onClick}
       className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
         danger
-          ? 'text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-red-50 hover:text-red-500'
+          ? 'text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-red-50 dark:hover:bg-red-500/15 hover:text-red-500 dark:hover:text-red-300'
           : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
       }`}
     >

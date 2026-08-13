@@ -204,7 +204,7 @@ export function LcpHome({
       {savingsAwardsToShow.map((f) => (
         <div
           key={f.id}
-          className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-sparrow-gold/40 bg-sparrow-cream p-4 text-sm"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 p-4 text-sm"
         >
           <span>
             🏡 <span className="font-medium">{f.display_name}</span> just crossed into {money(f.housing_savings_cents)} in Housing Savings.
@@ -225,7 +225,7 @@ export function LcpHome({
     return (
       <div className="mt-6 space-y-3">
         {savingsFyi}
-        <div className="flex items-center gap-3 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-sage/60 p-5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green">
+        <div className="flex items-center gap-3 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-sage/60 dark:bg-sparrow-green/15 p-5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green">
           🎉 You're all caught up.
         </div>
       </div>
@@ -363,7 +363,7 @@ export function LcpHome({
       )}
 
       {justPrepped != null && nextThursdaySession?.id === justPrepped && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-sage/40 p-4 text-sm">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-sage/40 dark:bg-sparrow-green/15 p-4 text-sm">
           <span className="font-medium text-sparrow-green dark:text-sparrow-dark-green">📦 Materials marked gathered ✓</span>
           <button onClick={() => void undoMaterialsDone(justPrepped)} className="shrink-0 text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
             Undo

@@ -140,7 +140,7 @@ export function SessionSplitLayout({
           onClick={() => setNotesOpen((v) => !v)}
           className={`hidden rounded-lg px-3 py-1.5 text-xs font-medium transition md:block ${
             notesOpen
-              ? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green'
+              ? 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green'
               : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
           }`}
         >
@@ -170,7 +170,7 @@ export function SessionSplitLayout({
                   </p>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
-                  <div className="mb-4 whitespace-pre-line rounded-lg bg-sparrow-sage/30 p-3 text-xs italic leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink">
+                  <div className="mb-4 whitespace-pre-line rounded-lg bg-sparrow-sage/30 dark:bg-sparrow-green/15 p-3 text-xs italic leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink">
                     {MONDAY_GUIDE_INSTRUCTIONS}
                   </div>
 

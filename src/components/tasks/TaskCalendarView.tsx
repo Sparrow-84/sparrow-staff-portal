@@ -157,7 +157,7 @@ export function TaskCalendarView({ tasks, today, onOpen, onMoveDate }: Props) {
               onDragLeave={() => setOverDate((d) => (d === iso ? null : d))}
               onDrop={(e) => onDrop(e, iso)}
               className={`min-h-24 border-b border-r border-sparrow-rule dark:border-sparrow-dark-border p-1 align-top ${
-                inMonth ? 'bg-white dark:bg-sparrow-dark-surface' : 'bg-sparrow-mist/50'
+                inMonth ? 'bg-white dark:bg-sparrow-dark-surface' : 'bg-sparrow-mist/50 dark:bg-black/20'
               } ${overDate === iso ? 'ring-2 ring-inset ring-sparrow-gold' : ''}`}
             >
               <div className="mb-1 flex justify-end">

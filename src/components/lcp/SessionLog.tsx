@@ -296,7 +296,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
       <div className="grid gap-4 md:grid-cols-[1fr_11rem]">
       {/* ── Section 1: what you can log right now ───────────────────── */}
-      <section className="rounded-2xl bg-sparrow-sage/40 p-4 sm:p-5">
+      <section className="rounded-2xl bg-sparrow-sage/40 dark:bg-sparrow-green/15 p-4 sm:p-5">
         <h2 className="font-serif text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Log tonight's session</h2>
         <p className="mt-0.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           Today's scheduled sessions, or start one for a different date.

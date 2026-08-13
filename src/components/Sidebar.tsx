@@ -57,10 +57,10 @@ function NavContent({
 }) {
   const { unreadTotal } = useChat();
   const itemBase = 'flex items-center gap-2 rounded-lg px-3 py-2 text-left transition';
-  const active = 'bg-sparrow-sage font-medium text-sparrow-green dark:text-sparrow-dark-green';
+  const active = 'bg-sparrow-sage dark:bg-sparrow-green/15 font-medium text-sparrow-green dark:text-sparrow-dark-green';
   const idle = 'text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink';
 
-  const section = 'flex flex-col gap-1 rounded-xl bg-sparrow-mist/50 p-2';
+  const section = 'flex flex-col gap-1 rounded-xl bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2/60 p-2';
   const sectionLabel = 'px-2 pb-1 text-xs font-bold uppercase tracking-wider text-sparrow-green dark:text-sparrow-dark-green';
 
   return (

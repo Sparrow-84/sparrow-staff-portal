@@ -202,7 +202,7 @@ export function GrantProspectLabelPicker({ kind, kindDisplayName, value, current
                       key={c.id}
                       type="button"
                       onClick={() => setCreateColor(c.id)}
-                      className={`h-5 w-5 rounded-full ${c.swatch} transition ${createColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink' : 'opacity-70 hover:opacity-100'}`}
+                      className={`h-5 w-5 rounded-full ${c.swatch} transition ${createColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink dark:ring-sparrow-dark-ink dark:ring-offset-sparrow-dark-surface' : 'opacity-70 hover:opacity-100'}`}
                       aria-label={c.id}
                     />
                   ))}
@@ -221,7 +221,7 @@ export function GrantProspectLabelPicker({ kind, kindDisplayName, value, current
                 <span className="text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Manage {kindDisplayName.toLowerCase()} labels</span>
               </div>
               {labels.map((label) => (
-                <div key={label.id} className="rounded-lg bg-sparrow-mist/50 p-2">
+                <div key={label.id} className="rounded-lg bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2 p-2">
                   {editingId === label.id ? (
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-1.5">
@@ -230,7 +230,7 @@ export function GrantProspectLabelPicker({ kind, kindDisplayName, value, current
                             key={c.id}
                             type="button"
                             onClick={() => setEditColor(c.id)}
-                            className={`h-4 w-4 rounded-full ${c.swatch} transition ${editColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink' : 'opacity-70 hover:opacity-100'}`}
+                            className={`h-4 w-4 rounded-full ${c.swatch} transition ${editColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink dark:ring-sparrow-dark-ink dark:ring-offset-sparrow-dark-surface' : 'opacity-70 hover:opacity-100'}`}
                             aria-label={c.id}
                           />
                         ))}

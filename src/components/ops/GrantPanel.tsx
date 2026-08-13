@@ -86,7 +86,7 @@ export function GrantPanel({
   return (
     <Drawer open={open} onClose={onClose} title={grant.funder_name} subtitle="Grant record">
       {grant.prior_consent_required && (
-        <p className="mb-3 flex items-start gap-2 rounded-lg border border-sparrow-green/40 bg-sparrow-sage px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+        <p className="mb-3 flex items-start gap-2 rounded-lg border border-sparrow-green/40 bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
           <span aria-hidden>⚠️</span>
           Prior consent required — do not take action on this grant (insurance, management,
           ownership, or debt changes) without the funder's sign-off first.
@@ -374,7 +374,7 @@ function DetailsTab({
         </div>
       </div>
 
-      <label className="flex items-center gap-2 rounded-xl border border-sparrow-green/30 bg-sparrow-sage/50 p-3">
+      <label className="flex items-center gap-2 rounded-xl border border-sparrow-green/30 bg-sparrow-sage/50 dark:bg-sparrow-green/15 p-3">
         <input
           type="checkbox"
           checked={form.prior_consent_required}

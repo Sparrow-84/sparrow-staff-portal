@@ -858,7 +858,7 @@ export function LotDetailPanel({
 
             {/* ── Move out confirmation ── */}
             {showMoveOut && tenant && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/95 px-8 text-center">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/95 dark:bg-sparrow-dark-surface/95 px-8 text-center">
                 <h3 className="mb-2 font-serif text-lg font-semibold">How did they leave?</h3>
                 <p className="mb-4 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
                   The household record and all members will be archived. The lot will show as vacant. This cannot be undone.
@@ -869,7 +869,7 @@ export function LotDetailPanel({
                     type="date"
                     value={moveOutDate}
                     onChange={(e) => setMoveOutDate(e.target.value)}
-                    className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
+                    className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-2 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                   />
                 </div>
                 <div className="flex flex-wrap justify-center gap-2">
@@ -960,12 +960,12 @@ function ViewBody({
         <span className="rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2 py-0.5 text-xs capitalize text-sparrow-gray dark:text-sparrow-dark-gray">{statusLabel}</span>
         {ownershipLabel && <span className="rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2 py-0.5 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{ownershipLabel}</span>}
         {space.designation_type === 'lcp' && (
-          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">LCP{space.designation_label ? ` · ${space.designation_label}` : ''}</span>
+          <span className="rounded-full bg-purple-100 dark:bg-purple-500/15 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300">LCP{space.designation_label ? ` · ${space.designation_label}` : ''}</span>
         )}
-        {space.designation_type === 'sv' && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Service Volunteer</span>}
-        {space.designation_type === 'pm' && <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-700">Property Manager</span>}
-        {space.designation_type === 'other' && space.designation_label && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{space.designation_label}</span>}
-        {space.affordable_housing_discount && <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">AH discount</span>}
+        {space.designation_type === 'sv' && <span className="rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">Service Volunteer</span>}
+        {space.designation_type === 'pm' && <span className="rounded-full bg-teal-100 dark:bg-teal-500/15 px-2 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-300">Property Manager</span>}
+        {space.designation_type === 'other' && space.designation_label && <span className="rounded-full bg-slate-100 dark:bg-slate-500/15 px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">{space.designation_label}</span>}
+        {space.affordable_housing_discount && <span className="rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 px-2 py-0.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">AH discount</span>}
       </div>
 
       {/* Resident */}
@@ -1000,11 +1000,11 @@ function ViewBody({
             )}
             {tenant.move_in_date && <p>Move-in (as reported): {tenant.move_in_date}</p>}
             {tenant.emergency_contact_notes && (
-              <div className="rounded bg-sparrow-cream px-2 py-1.5 text-xs">
+              <div className="rounded bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-2 py-1.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
                 <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Emergency: </span>{tenant.emergency_contact_notes}
               </div>
             )}
-            {tenant.notes && <div className="rounded bg-sparrow-cream px-2 py-1.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{tenant.notes}</div>}
+            {tenant.notes && <div className="rounded bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-2 py-1.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{tenant.notes}</div>}
           </div>
         )}
       </div>

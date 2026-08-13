@@ -419,7 +419,7 @@ export function FilingView() {
               onChange={(e) => setFilingYear(Number(e.target.value))}
               min={2020}
               max={2030}
-              className="w-20 rounded border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
+              className="w-20 rounded border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
             />
             <button
               onClick={() => void handleMarkFiled()}

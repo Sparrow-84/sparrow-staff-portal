@@ -453,7 +453,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
       {mode === 'edit' ? (
         <div className="space-y-5">
           {isLcpSession && (
-            <div className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 p-3">
+            <div className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2/50 p-3">
               <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{event.title}</p>
               <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{dateLabel} · {timeLabel}{event.location ? ` · ${event.location}` : ''}</p>
               <p className="mt-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Title, time, and location are managed on the LCP Session Cal.</p>
@@ -606,7 +606,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
         <div className="space-y-5">
           <div className="flex flex-wrap gap-2">
             {event.label ? (
-              <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${LABEL_COLORS.find((c) => c.id === event.label!.color)?.pill ?? 'bg-slate-100 text-slate-600'}`}>
+              <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${LABEL_COLORS.find((c) => c.id === event.label!.color)?.pill ?? 'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300'}`}>
                 {event.label.name}
               </span>
             ) : (
@@ -667,7 +667,7 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                 </button>
               </div>
               {attendancePrompt !== null && (
-                <div className="mt-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 p-2.5">
+                <div className="mt-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2/50 p-2.5">
                   <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     Apply to just this occurrence, or this and every future one in the series?
                   </p>
@@ -715,9 +715,9 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
             <div className="space-y-3">
               {notesPreview.prep && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Prep Notes</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">Prep Notes</p>
                   <div
-                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-amber-50 p-3 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
+                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-amber-50 dark:bg-amber-500/10 p-3 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
                     dangerouslySetInnerHTML={{ __html: notesPreview.prep }}
                   />
                 </div>
@@ -726,16 +726,16 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">Live Notes</p>
                   <div
-                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-green-50 p-3 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
+                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-green-50 dark:bg-green-500/10 p-3 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
                     dangerouslySetInnerHTML={{ __html: notesPreview.live }}
                   />
                 </div>
               )}
               {notesPreview.shared && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Shared Notes</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">Shared Notes</p>
                   <div
-                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-blue-50 p-3 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
+                    className="mt-1.5 max-h-36 overflow-y-auto rounded-lg bg-blue-50 dark:bg-blue-500/10 p-3 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink [&_b]:font-semibold [&_li]:mb-0.5 [&_ol]:list-decimal [&_ol]:pl-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4"
                     dangerouslySetInnerHTML={{ __html: notesPreview.shared }}
                   />
                 </div>

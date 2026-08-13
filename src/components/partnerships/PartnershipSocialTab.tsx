@@ -23,9 +23,9 @@ const PLATFORM_LABEL: Record<SocialPlatform, string> = {
 };
 
 const PLATFORM_CHIP: Record<SocialPlatform, string> = {
-  facebook: 'bg-blue-100 text-blue-700',
-  instagram: 'bg-pink-100 text-pink-700',
-  both: 'bg-purple-100 text-purple-700',
+  facebook: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300',
+  instagram: 'bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-300',
+  both: 'bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300',
 };
 
 const STATUS_LABEL: Record<SocialStatus, string> = {
@@ -35,8 +35,8 @@ const STATUS_LABEL: Record<SocialStatus, string> = {
 };
 
 const STATUS_CHIP: Record<SocialStatus, string> = {
-  planned: 'bg-slate-100 text-slate-600',
-  scheduled: 'bg-amber-100 text-amber-700',
+  planned: 'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300',
+  scheduled: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300',
   posted: 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green',
 };
 

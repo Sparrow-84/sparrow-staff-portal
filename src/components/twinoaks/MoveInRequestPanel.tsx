@@ -85,7 +85,7 @@ export function MoveInRequestPanel({
       }
     >
       <div className="space-y-4">
-        <p className="rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
+        <p className="rounded-lg bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
           Only resident info moves over — name, phone, email, children's names, move-in date, emergency
           contact. Nothing about their LCP program (session log, curriculum position, etc.) is shared.
         </p>

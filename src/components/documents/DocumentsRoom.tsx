@@ -112,7 +112,7 @@ export function DocumentsRoom() {
                         href={doc.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="shrink-0 rounded-lg border border-sparrow-green dark:border-sparrow-dark-green px-3 py-1.5 text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage"
+                        className="shrink-0 rounded-lg border border-sparrow-green dark:border-sparrow-dark-green px-3 py-1.5 text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage dark:hover:bg-sparrow-green/15"
                       >
                         Open ↗
                       </a>

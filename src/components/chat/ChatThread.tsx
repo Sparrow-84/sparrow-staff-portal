@@ -311,7 +311,7 @@ export function ChatThread({
                       >
                         {/* Quote preview */}
                         {quotedMsg && (
-                          <div className={`mb-2 rounded-lg border-l-2 pl-2 pr-2 py-1 text-xs ${mine ? 'border-white/40 bg-white/10 text-white/80' : 'border-sparrow-green/40 bg-white/50 text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
+                          <div className={`mb-2 rounded-lg border-l-2 pl-2 pr-2 py-1 text-xs ${mine ? 'border-white/40 bg-white/10 text-white/80' : 'border-sparrow-green/40 bg-white/50 dark:bg-white/10 text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
                             <p className="font-medium">{quotedMsg.author?.full_name ?? 'Staff'}</p>
                             <p className="truncate">{quotedMsg.body || (quotedMsg.voice_url ? '🎤 Voice message' : quotedMsg.image_url ? '🖼 Photo' : '')}</p>
                           </div>
@@ -529,7 +529,7 @@ function ActionButtons({
           <button
             onClick={onDelete}
             title="Delete"
-            className="flex h-7 w-7 items-center justify-center rounded-full text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-red-50 hover:text-red-500 transition"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-red-50 dark:hover:bg-red-500/15 hover:text-red-500 dark:hover:text-red-400 transition"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <polyline points="3,6 5,6 21,6" />

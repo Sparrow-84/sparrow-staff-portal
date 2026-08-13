@@ -148,7 +148,7 @@ function TodayTasksWidget({ ctx }: { ctx: WidgetContext }) {
             <button
               onClick={() => complete(t)}
               aria-label="Complete task"
-              className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-sparrow-rule dark:border-sparrow-dark-border transition hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:bg-sparrow-sage"
+              className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-sparrow-rule dark:border-sparrow-dark-border transition hover:border-sparrow-green dark:hover:border-sparrow-dark-green hover:bg-sparrow-sage dark:hover:bg-sparrow-green/15"
             >
               {isFading && <span className="h-2.5 w-2.5 rounded-full bg-sparrow-green" />}
             </button>
@@ -169,7 +169,7 @@ function DatePickerChip({ active, today, onOpen, onPick }: { active: boolean; to
         type="date"
         autoFocus
         min={today}
-        className="rounded-md border border-sparrow-rule dark:border-sparrow-dark-border px-1.5 py-1 text-xs text-sparrow-ink dark:text-sparrow-dark-ink focus:border-sparrow-green dark:focus:border-sparrow-dark-green focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
+        className="rounded-md border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-1.5 py-1 text-xs text-sparrow-ink dark:text-sparrow-dark-ink focus:border-sparrow-green dark:focus:border-sparrow-dark-green focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
         onChange={(e) => onPick(e.target.value)}
       />
     );
@@ -374,7 +374,7 @@ function NotificationsWidget({ ctx }: { ctx: WidgetContext }) {
           <li key={n.id}>
             <button
               onClick={() => void open(n)}
-              className="block w-full rounded-lg bg-sparrow-sage/40 px-2 py-1.5 text-left transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
+              className="block w-full rounded-lg bg-sparrow-sage/40 dark:bg-sparrow-green/10 px-2 py-1.5 text-left transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
             >
               <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{describe(n)}</p>
               {n.body && <p className="truncate text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{n.body}</p>}
@@ -663,7 +663,7 @@ function DayDetailPopup({
                   <button
                     key={`${o.event.id}-${i}`}
                     onClick={() => { onOpenEvent(o.event); onClose(); }}
-                    className="block w-full rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-left hover:bg-sparrow-sage/30"
+                    className="block w-full rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-left hover:bg-sparrow-sage/30 dark:hover:bg-sparrow-green/10"
                   >
                     <p className="flex items-center gap-1.5 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                       <span className="min-w-0 truncate">{o.event.title}</span>
@@ -800,7 +800,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
               className={`min-h-[100px] min-w-[64px] flex-1 cursor-pointer rounded-lg p-1.5 transition-colors hover:ring-1 hover:ring-sparrow-green/40 ${
                 isToday
                   ? 'bg-sparrow-green/10 ring-1 ring-sparrow-green/30'
-                  : 'bg-sparrow-mist/40'
+                  : 'bg-sparrow-mist/40 dark:bg-black/20'
               }`}
             >
               <div className="mb-1.5 text-center">
@@ -838,7 +838,7 @@ function MyWeekWidget({ ctx }: { ctx: WidgetContext }) {
                   <button
                     key={t.id}
                     onClick={(e) => { e.stopPropagation(); ctx.onOpenTask(t); }}
-                    className="mb-0.5 flex w-full items-center gap-1 rounded bg-white/60 px-1 py-0.5 text-left text-[10px] hover:bg-white dark:hover:bg-sparrow-dark-surface"
+                    className="mb-0.5 flex w-full items-center gap-1 rounded bg-white/60 dark:bg-sparrow-dark-surface2/60 px-1 py-0.5 text-left text-[10px] hover:bg-white dark:hover:bg-sparrow-dark-surface"
                     onMouseEnter={(e) => setTooltip({ kind: 'task', task: t, x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => setTooltip(null)}
                   >

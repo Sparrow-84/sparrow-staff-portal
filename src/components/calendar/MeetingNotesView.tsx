@@ -378,9 +378,9 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
       <div className="flex flex-1 overflow-hidden">
         {/* Prep Notes */}
         <div className="flex flex-1 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border">
-          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-amber-50 px-6 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Prep Notes</p>
-            <p className="text-xs text-amber-600/70">Before the meeting · only visible to you</p>
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-amber-50 dark:bg-amber-500/15 px-6 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Prep Notes</p>
+            <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Before the meeting · only visible to you</p>
           </div>
           <div
             ref={prepRef}
@@ -388,15 +388,15 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
             suppressContentEditableWarning
             onInput={handlePrepInput}
             onPaste={handlePaste}
-            className={`${CONTENT_CLASSES} bg-amber-50/20`}
+            className={`${CONTENT_CLASSES} bg-amber-50/20 dark:bg-amber-500/10`}
           />
         </div>
 
         {/* Live Notes */}
         <div className="flex flex-1 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border">
-          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-green-50 px-6 py-3">
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-green-50 dark:bg-green-500/15 px-6 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">Live Notes</p>
-            <p className="text-xs text-sparrow-green/60">During the meeting · only visible to you</p>
+            <p className="text-xs text-sparrow-green/60 dark:text-sparrow-dark-green/60">During the meeting · only visible to you</p>
           </div>
           <div
             ref={liveRef}
@@ -404,15 +404,15 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
             suppressContentEditableWarning
             onInput={handleLiveInput}
             onPaste={handlePaste}
-            className={`${CONTENT_CLASSES} bg-green-50/20`}
+            className={`${CONTENT_CLASSES} bg-green-50/20 dark:bg-green-500/10`}
           />
         </div>
 
         {/* Shared Notes */}
         <div className="flex flex-1 flex-col">
-          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-blue-50 px-6 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Shared Notes</p>
-            <p className="text-xs text-blue-600/70">Visible to everyone with calendar access</p>
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-blue-50 dark:bg-blue-500/15 px-6 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Shared Notes</p>
+            <p className="text-xs text-blue-600/70 dark:text-blue-400/70">Visible to everyone with calendar access</p>
           </div>
           <div
             ref={sharedRef}
@@ -420,7 +420,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
             suppressContentEditableWarning
             onInput={handleSharedInput}
             onPaste={handlePaste}
-            className={`${CONTENT_CLASSES} bg-blue-50/20`}
+            className={`${CONTENT_CLASSES} bg-blue-50/20 dark:bg-blue-500/10`}
           />
         </div>
       </div>

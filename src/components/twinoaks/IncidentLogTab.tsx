@@ -476,7 +476,7 @@ export function IncidentLogTab({ spaces }: TabProps) {
                     <span
                       className={`shrink-0 mt-0.5 rounded px-1.5 py-0.5 text-xs font-medium ring-1 ${
                         i.status === 'open'
-                          ? 'bg-amber-50 text-amber-700 ring-amber-200'
+                          ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-200'
                           : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray ring-sparrow-rule'
                       }`}
                     >

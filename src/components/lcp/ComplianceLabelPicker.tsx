@@ -161,7 +161,7 @@ export function ComplianceLabelPicker({ value, currentUserId, onChange, required
                       key={c.id}
                       type="button"
                       onClick={() => setCreateColor(c.id)}
-                      className={`h-5 w-5 rounded-full ${c.swatch} transition ${createColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink' : 'opacity-70 hover:opacity-100'}`}
+                      className={`h-5 w-5 rounded-full ${c.swatch} transition ${createColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink dark:ring-sparrow-dark-ink dark:ring-offset-sparrow-dark-surface' : 'opacity-70 hover:opacity-100'}`}
                       aria-label={c.id}
                     />
                   ))}

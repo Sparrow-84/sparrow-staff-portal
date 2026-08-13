@@ -215,7 +215,7 @@ export function GrantProspectPanel({
             ))}
           </div>
           {MOVE_MESSAGE[form.status] && (
-            <p className="mt-2 rounded-lg bg-sparrow-sage px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+            <p className="mt-2 rounded-lg bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
               {MOVE_MESSAGE[form.status]}
             </p>
           )}

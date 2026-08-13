@@ -95,7 +95,7 @@ export function MultiSelectDropdown({
             {options.map((o) => (
               <label
                 key={o.value}
-                className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-sparrow-mist/60"
+                className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-sparrow-mist/60 dark:hover:bg-sparrow-dark-surface2/60"
               >
                 <input
                   type="checkbox"
@@ -121,7 +121,7 @@ export function MultiSelectDropdown({
                 <button
                   type="button"
                   onClick={() => setCreating(true)}
-                  className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:bg-sparrow-mist/60"
+                  className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:bg-sparrow-mist/60 dark:hover:bg-sparrow-dark-surface2/60"
                 >
                   + New…
                 </button>
@@ -141,7 +141,7 @@ export function MultiSelectDropdown({
                         type="button"
                         key={c.id}
                         onClick={() => setNewColor(c.id)}
-                        className={`h-5 w-5 rounded-full ${c.swatch} ${newColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink' : ''}`}
+                        className={`h-5 w-5 rounded-full ${c.swatch} ${newColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink dark:ring-sparrow-dark-ink dark:ring-offset-sparrow-dark-surface' : ''}`}
                         aria-label={c.id}
                       />
                     ))}

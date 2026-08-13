@@ -44,7 +44,7 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
           </p>
 
           {/* ── Do I have a to-do right now? ── The most important section */}
-          <section className="rounded-xl bg-sparrow-mist/60 px-4 py-4">
+          <section className="rounded-xl bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2 px-4 py-4">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
               Do I have a to-do right now?
             </h3>

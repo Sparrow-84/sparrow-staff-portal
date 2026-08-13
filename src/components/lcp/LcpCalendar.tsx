@@ -22,11 +22,11 @@ function EventTooltip({ s }: { s: TooltipState }) {
 // system uses (see LABEL_COLORS in LabelPill.tsx) — kept consistent across
 // both calendars rather than the bolder -500 shades this used to have.
 const KIND_COLOR: Record<string, string> = {
-  curriculum: 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green',
-  one_on_one:  'bg-amber-100 text-amber-700',
-  dinner:      'bg-violet-100 text-violet-700',
-  volunteer:   'bg-sky-100 text-sky-700',
-  other:       'bg-slate-100 text-slate-700',
+  curriculum: 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green',
+  one_on_one:  'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  dinner:      'bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300',
+  volunteer:   'bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  other:       'bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-300',
 };
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -154,7 +154,7 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
             const overflow = dayEvents.length - 2;
 
             return (
-              <div key={i} className={`min-h-[84px] p-1.5 ${!inMonth ? 'bg-sparrow-mist/30' : ''}`}>
+              <div key={i} className={`min-h-[84px] p-1.5 ${!inMonth ? 'bg-sparrow-mist/30 dark:bg-black/20' : ''}`}>
                 <div
                   className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
                     isToday

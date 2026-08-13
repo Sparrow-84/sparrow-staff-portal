@@ -507,7 +507,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
                 {attendeeIds.map((id) => {
                   const p = profiles.find((x) => x.id === id);
                   return (
-                    <span key={id} className="flex items-center gap-1 rounded-full bg-sparrow-sage px-2.5 py-0.5 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
+                    <span key={id} className="flex items-center gap-1 rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 px-2.5 py-0.5 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                       {p?.full_name ?? id}
                       <button
                         type="button"

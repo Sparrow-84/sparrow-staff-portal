@@ -413,7 +413,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
         </div>
 
         {readOnly && (
-          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-cream px-5 py-3">
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-5 py-3">
             <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               You assigned this task — you can comment below but can't edit it.
             </p>
@@ -421,7 +421,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
         )}
 
         {!readOnly && task && task.created_by === currentUser.id && task.assignee_id !== currentUser.id && (
-          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-cream px-5 py-3">
+          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-5 py-3">
             <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               You assigned this to {task.assignee?.full_name ?? 'someone else'} — they'll be notified if you edit it.
             </p>
@@ -429,8 +429,8 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
         )}
 
         {error && (
-          <div className="border-b border-red-200 bg-red-50 px-5 py-3">
-            <p className="text-sm font-medium text-red-700">{error}</p>
+          <div className="border-b border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-5 py-3">
+            <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
           </div>
         )}
 
@@ -612,7 +612,7 @@ export function TaskPanel({ open, task, profiles, currentUser, comments, today, 
 
           {/* Recurring badge for existing tasks already in a series */}
           {task?.recurrence_id && (
-            <div className="mt-3 rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
+            <div className="mt-3 rounded-lg bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
               Part of a recurring series — Save will ask whether to apply your changes to just this task or to it and every later one too.
             </div>
           )}

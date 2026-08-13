@@ -105,7 +105,7 @@ export function StaffMemberPanel({
 
   return (
     <Drawer open={open} onClose={onClose} title={staff.full_name} subtitle={`${staff.role} · ${staff.department}`}>
-      <p className="mb-3 rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
+      <p className="mb-3 rounded-lg bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
         🔒 Operations only ({staff.full_name} can’t see anything here, except their own onboarding checklist).
       </p>
       <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1 text-xs">

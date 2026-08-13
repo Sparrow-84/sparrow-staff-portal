@@ -26,8 +26,8 @@ const STATUS_LABEL: Record<CommStatus, string> = {
 };
 
 const STATUS_CHIP: Record<CommStatus, string> = {
-  not_started: 'bg-slate-100 text-slate-600',
-  in_progress: 'bg-amber-100 text-amber-700',
+  not_started: 'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300',
+  in_progress: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300',
   sent: 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green',
 };
 
@@ -134,10 +134,10 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
 
   const asksSent = comms.filter((c) => c.is_financial_ask && c.status === 'sent').length;
   const asksCounterColor =
-    asksSent === 0 ? 'text-slate-500 bg-slate-100'
+    asksSent === 0 ? 'text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-500/15'
     : asksSent === 1 ? 'text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-green/10'
-    : asksSent === 2 ? 'text-amber-600 bg-amber-100'
-    : 'text-red-600 bg-red-100';
+    : asksSent === 2 ? 'text-amber-600 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/15'
+    : 'text-red-600 dark:text-red-300 bg-red-100 dark:bg-red-500/15';
 
   const todayISO = localDate();
   const leadTimeDays = setting?.lead_time_days ?? 14;
@@ -237,7 +237,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
 
                 {/* Accordion */}
                 {expanded && (
-                  <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-4 space-y-4">
+                  <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 dark:bg-sparrow-dark-surface2 px-4 py-4 space-y-4">
                     {/* Status selector */}
                     <div>
                       <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">

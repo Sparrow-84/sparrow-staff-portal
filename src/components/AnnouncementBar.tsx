@@ -50,7 +50,7 @@ export function AnnouncementBar() {
   if (items.length === 0 && !isAdmin) return null;
 
   return (
-    <div className="mb-6 rounded-xl border border-sparrow-cream bg-sparrow-cream/60 px-4 py-2 text-sm">
+    <div className="mb-6 rounded-xl border border-sparrow-cream dark:border-sparrow-dark-border bg-sparrow-cream/60 dark:bg-sparrow-dark-surface2 px-4 py-2 text-sm">
       <div className="flex flex-col gap-1">
         {items.map((a) => (
           <div key={a.id} className="flex items-center gap-2">

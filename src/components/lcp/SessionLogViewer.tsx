@@ -72,7 +72,7 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
       <div className="flex items-start gap-3">
         <button
           onClick={onBack}
-          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70"
+          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70 dark:hover:bg-sparrow-green/25"
         >
           ← Back
         </button>

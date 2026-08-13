@@ -239,7 +239,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
           <div className="mt-4 flex flex-wrap gap-1">
             {story.tags.map((tag) => {
               const color = storyTags.find((t) => t.name === tag)?.color;
-              const pill = LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green';
+              const pill = LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-sparrow-sage dark:bg-sparrow-dark-surface2 text-sparrow-green dark:text-sparrow-dark-green';
               return (
                 <span key={tag} className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${pill}`}>
                   {tag}
@@ -253,7 +253,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
           <div className={BODY_DISPLAY_CLASSES} dangerouslySetInnerHTML={{ __html: story.body }} />
         </div>
 
-        <div className="mt-5 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-3 text-sm">
+        <div className="mt-5 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 dark:bg-sparrow-dark-surface2 px-4 py-3 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Photo consent</p>
           <p className="mt-2 text-sparrow-ink dark:text-sparrow-dark-ink">
             Verbal consent to use a photo with this story: <span className="font-medium">{VERBAL_CONSENT_LABEL[story.layer3_verbal_consent]}</span>
@@ -436,7 +436,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
       </div>
 
       {/* Photo consent section */}
-      <div className="mt-5 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-3">
+      <div className="mt-5 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 dark:bg-sparrow-dark-surface2 px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
           Photo consent
         </p>

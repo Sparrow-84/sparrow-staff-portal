@@ -111,7 +111,7 @@ export function StaffAdmin() {
               </thead>
               <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
                 {staff.map((s) => (
-                  <tr key={s.id} className={s.active ? '' : 'bg-sparrow-mist/60 text-sparrow-gray dark:text-sparrow-dark-gray'}>
+                  <tr key={s.id} className={s.active ? '' : 'bg-sparrow-mist/60 dark:bg-black/20 text-sparrow-gray dark:text-sparrow-dark-gray'}>
                     <td className="px-4 py-3">
                       <div className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{s.full_name}</div>
                       <div className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{s.email}</div>
@@ -121,7 +121,7 @@ export function StaffAdmin() {
                     <td className="px-4 py-3">{nameByEmail(s.manager_email)}</td>
                     <td className="px-4 py-3">
                       {s.active ? (
-                        <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+                        <span className="rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 px-2 py-0.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
                           Active
                         </span>
                       ) : (

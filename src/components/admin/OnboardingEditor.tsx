@@ -172,7 +172,7 @@ export function OnboardingEditor() {
             <li key={item.id} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
               {/* Top-level item row */}
               <div className="flex items-start gap-2 p-3">
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sparrow-sage text-xs font-semibold text-sparrow-green dark:text-sparrow-dark-green">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 text-xs font-semibold text-sparrow-green dark:text-sparrow-dark-green">
                   {idx + 1}
                 </span>
                 <div className="min-w-0 flex-1">

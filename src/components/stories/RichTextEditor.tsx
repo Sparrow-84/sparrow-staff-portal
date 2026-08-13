@@ -18,7 +18,7 @@ function Toolbar() {
     document.execCommand(cmd, false, undefined);
   }
   return (
-    <div className="flex items-center gap-0.5 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 px-2 py-1">
+    <div className="flex items-center gap-0.5 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 dark:bg-sparrow-dark-surface2 px-2 py-1">
       <button
         onMouseDown={(e) => { e.preventDefault(); apply('bold'); }}
         className="rounded px-2 py-0.5 text-sm font-bold text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"

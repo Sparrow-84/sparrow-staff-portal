@@ -253,7 +253,7 @@ export function DeptCalendar({ department }: Props) {
                       return (
                         <div
                           key={`${dStr}-${col}`}
-                          className={`group min-h-[6rem] border-b border-r border-sparrow-rule dark:border-sparrow-dark-border p-1 ${!inMonth || isPast ? 'bg-sparrow-mist/30' : ''}`}
+                          className={`group min-h-[6rem] border-b border-r border-sparrow-rule dark:border-sparrow-dark-border p-1 ${!inMonth || isPast ? 'bg-sparrow-mist/30 dark:bg-black/20' : ''}`}
                           style={barAreaPx > 0 ? { paddingTop: barAreaPx + 4 } : undefined}
                         >
                           <div className="flex items-center justify-between">

@@ -111,9 +111,9 @@ export function TaskPlannerView({ tasks, today, onOpen, onMoveDate, onToggle }: 
               onDrop={(e) => onDrop(e, iso)}
               className={`flex flex-col rounded-xl border transition ${
                 overDate === iso
-                  ? 'border-sparrow-gold bg-amber-50'
+                  ? 'border-sparrow-gold bg-amber-50 dark:bg-amber-500/15'
                   : isToday
-                    ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage/20'
+                    ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage/20 dark:bg-sparrow-green/15'
                     : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface'
               }`}
             >
@@ -167,7 +167,7 @@ export function TaskPlannerView({ tasks, today, onOpen, onMoveDate, onToggle }: 
       {/* Undated tray — always visible; drop here to clear a due date */}
       <div
         className={`mt-4 rounded-xl border-2 border-dashed p-3 transition ${
-          overUndated ? 'border-sparrow-gold bg-amber-50' : 'border-sparrow-rule dark:border-sparrow-dark-border'
+          overUndated ? 'border-sparrow-gold bg-amber-50 dark:bg-amber-500/15' : 'border-sparrow-rule dark:border-sparrow-dark-border'
         }`}
         onDragOver={(e) => {
           e.preventDefault();

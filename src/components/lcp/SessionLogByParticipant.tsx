@@ -170,7 +170,7 @@ export function SessionLogByParticipant({ families }: { families: Family[] }) {
             key={f.id}
             onClick={() => setSelectedId(f.id)}
             className={`block w-full border-t border-sparrow-rule dark:border-sparrow-dark-border px-3.5 py-3 text-left text-sm first:border-t-0 ${
-              f.id === selectedId ? 'border-l-4 border-l-sparrow-green bg-sparrow-sage/60' : 'border-l-4 border-l-transparent hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
+              f.id === selectedId ? 'border-l-4 border-l-sparrow-green bg-sparrow-sage/60 dark:bg-sparrow-green/15' : 'border-l-4 border-l-transparent hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
             }`}
           >
             <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</p>

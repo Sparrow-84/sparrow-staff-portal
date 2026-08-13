@@ -10,10 +10,10 @@ import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 const KIND_COLOR: Record<string, string> = {
   curriculum: 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green',
-  one_on_one:  'bg-amber-100 text-amber-700',
-  dinner:      'bg-violet-100 text-violet-700',
-  volunteer:   'bg-sky-100 text-sky-700',
-  other:       'bg-slate-100 text-slate-600',
+  one_on_one:  'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  dinner:      'bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300',
+  volunteer:   'bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  other:       'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300',
 };
 
 const EVENT_KINDS = Object.keys(EVENT_LABEL) as EventKind[];
@@ -358,7 +358,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
         </div>
       ) : (
         <div className="space-y-5">
-          <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${KIND_COLOR[event.kind] ?? 'bg-slate-100 text-slate-600'}`}>
+          <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${KIND_COLOR[event.kind] ?? 'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300'}`}>
             {EVENT_LABEL[event.kind]}
           </span>
 
@@ -394,7 +394,7 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
                 onClick={toggleOrgCal}
                 disabled={toggling}
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                  event.show_on_org_calendar ? 'bg-sparrow-green' : 'bg-slate-200'
+                  event.show_on_org_calendar ? 'bg-sparrow-green' : 'bg-slate-200 dark:bg-sparrow-dark-border'
                 } ${toggling ? 'opacity-50' : ''}`}
                 role="switch"
                 aria-checked={event.show_on_org_calendar}

@@ -153,7 +153,7 @@ export function OperationsRoom() {
       ) : null}
 
       {opsTab === 'staff' && (overdueReviews.length > 0 || overdueTouchpoints.length > 0) && (
-        <div className="mt-4 flex flex-wrap gap-3 rounded-xl border border-sparrow-gold/40 bg-sparrow-cream px-4 py-3 text-sm">
+        <div className="mt-4 flex flex-wrap gap-3 rounded-xl border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-4 py-3 text-sm">
           {overdueReviews.length > 0 && <span>📋 {overdueReviews.length} review{overdueReviews.length > 1 ? 's' : ''} overdue</span>}
           {overdueTouchpoints.length > 0 && (
             <span>🤝 {overdueTouchpoints.length} {overdueTouchpoints.length > 1 ? 'people' : 'person'} need a touch-base</span>

@@ -156,7 +156,7 @@ function ArchiveDetailPanel({ open, tenant, space, onClose }: PanelProps) {
               {tenant.emergency_contact_notes && (
                 <div>
                   <p className="field-label">Emergency contact</p>
-                  <p className="rounded bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
+                  <p className="rounded bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
                     {tenant.emergency_contact_notes}
                   </p>
                 </div>
@@ -165,7 +165,7 @@ function ArchiveDetailPanel({ open, tenant, space, onClose }: PanelProps) {
               {tenant.notes && (
                 <div>
                   <p className="field-label">Notes</p>
-                  <p className="rounded bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{tenant.notes}</p>
+                  <p className="rounded bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{tenant.notes}</p>
                 </div>
               )}
 
@@ -339,7 +339,7 @@ export function ArchiveTab({ spaces, tenants }: Props) {
                   key={space.id}
                   className="overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface"
                 >
-                  <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 px-4 py-2.5">
+                  <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2 px-4 py-2.5">
                     <p className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Lot {space.label}</p>
                     <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       {residents.length} past resident{residents.length !== 1 ? 's' : ''}

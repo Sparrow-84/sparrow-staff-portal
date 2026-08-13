@@ -211,7 +211,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                 <button
                   onClick={() => openConversation(c)}
                   className={`flex w-full items-center gap-3 px-4 py-3 text-left transition ${
-                    isActive ? 'bg-sparrow-sage' : 'hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
+                    isActive ? 'bg-sparrow-sage dark:bg-sparrow-green/15' : 'hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
                   }`}
                 >
                   <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sparrow-green text-sm font-semibold text-white">
@@ -319,7 +319,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
                         </button>
                         <button
                           onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
-                          className="block w-full px-3 py-2 text-left text-sm text-priority-p1 hover:bg-red-50"
+                          className="block w-full px-3 py-2 text-left text-sm text-priority-p1 hover:bg-red-50 dark:hover:bg-red-500/15"
                         >
                           Delete group
                         </button>
@@ -341,7 +341,7 @@ export function MessagesView({ embedded, onClose }: { embedded?: boolean; onClos
               )}
             </div>
             {confirmDelete && (
-              <div className="flex items-center gap-3 border-b border-red-200 bg-red-50 px-4 py-2.5 text-sm">
+              <div className="flex items-center gap-3 border-b border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-4 py-2.5 text-sm">
                 <span className="flex-1 font-medium text-priority-p1">Delete this group and all its messages? This can't be undone.</span>
                 <button
                   onClick={() => void handleDelete()}

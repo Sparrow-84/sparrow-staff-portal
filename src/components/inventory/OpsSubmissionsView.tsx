@@ -335,7 +335,7 @@ function LocationRow({
           onClick={() => setAssignOpen((v) => !v)}
           title="Manage assignees"
           className={`shrink-0 px-3 border-l border-sparrow-rule dark:border-sparrow-dark-border hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition ${
-            assignOpen ? 'text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-sage' : 'text-sparrow-gray dark:text-sparrow-dark-gray'
+            assignOpen ? 'text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-sage dark:bg-sparrow-green/15' : 'text-sparrow-gray dark:text-sparrow-dark-gray'
           }`}
         >
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -367,7 +367,7 @@ function LocationRow({
                   </button>
                   {/* Name chip */}
                   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                    u.is_owner ? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green' : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray'
+                    u.is_owner ? 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green' : 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray'
                   }`}>
                     {u.full_name.split(' ')[0]}
                     {u.is_owner && <span className="text-[10px] opacity-70">submits</span>}

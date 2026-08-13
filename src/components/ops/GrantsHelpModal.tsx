@@ -19,7 +19,7 @@ export function GrantsHelpModal({ open, onClose }: { open: boolean; onClose: () 
         </div>
 
         <div className="space-y-6 px-6 py-5">
-          <section className="rounded-xl bg-sparrow-mist/60 px-4 py-4">
+          <section className="rounded-xl bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2 px-4 py-4">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">The 4 tabs</h3>
             <ul className="space-y-2 text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">
               <li><strong className="text-sparrow-ink dark:text-sparrow-dark-ink">Active Grants</strong> — grants Sparrow currently holds, with ongoing compliance to track (certification dates, funder consent, notifications).</li>
@@ -29,7 +29,7 @@ export function GrantsHelpModal({ open, onClose }: { open: boolean; onClose: () 
             </ul>
           </section>
 
-          <section className="rounded-xl bg-sparrow-mist/60 px-4 py-4">
+          <section className="rounded-xl bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2 px-4 py-4">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tier &amp; Source labels</h3>
             <p className="text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">
               Custom, color-coded, and reusable — same idea as your task and calendar labels. Type one once,
@@ -38,7 +38,7 @@ export function GrantsHelpModal({ open, onClose }: { open: boolean; onClose: () 
             </p>
           </section>
 
-          <section className="rounded-xl bg-sparrow-mist/60 px-4 py-4">
+          <section className="rounded-xl bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2 px-4 py-4">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Applied → Awarded</h3>
             <p className="text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">
               Applied means submitted and waiting to hear back — it stays in Being Pursued. Marking a prospect
@@ -47,7 +47,7 @@ export function GrantsHelpModal({ open, onClose }: { open: boolean; onClose: () 
             </p>
           </section>
 
-          <section className="rounded-xl bg-sparrow-mist/60 px-4 py-4">
+          <section className="rounded-xl bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2 px-4 py-4">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Prior consent required (Active Grants only)</h3>
             <p className="text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">
               Check this if the funder's agreement says Sparrow must get their written OK before certain

@@ -223,7 +223,7 @@ function LocationCard({
         </div>
         <div className="flex items-center gap-2">
           {isOwner && ownerName === null && (
-            <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-sage rounded-full px-2 py-0.5 font-medium">
+            <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-sage dark:bg-sparrow-green/15 rounded-full px-2 py-0.5 font-medium">
               You submit
             </span>
           )}

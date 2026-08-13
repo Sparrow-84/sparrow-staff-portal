@@ -40,7 +40,7 @@ export function Login() {
             {error && <p className="mt-3 text-sm text-priority-p1">{error}</p>}
           </>
         ) : (
-          <div className="mt-6 rounded-lg bg-sparrow-cream p-4 text-left text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+          <div className="mt-6 rounded-lg bg-sparrow-cream dark:bg-sparrow-dark-surface2 p-4 text-left text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
             <p className="font-semibold">Supabase isn’t connected yet.</p>
             <p className="mt-1 text-sparrow-gray dark:text-sparrow-dark-gray">
               Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to{' '}

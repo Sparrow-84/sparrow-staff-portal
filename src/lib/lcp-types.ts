@@ -368,11 +368,11 @@ export const AREA_LABEL: Record<HomeworkArea, string> = {
 // different palette from the Monday bucket colors (Finance/Life Skills/
 // Mentoring) so the two categorizations never look like the same taxonomy.
 export const AREA_COLOR_CLASS: Record<HomeworkArea, string> = {
-  relational: 'bg-rose-100 text-rose-700',
-  physical_financial: 'bg-teal-100 text-teal-700',
-  spiritual: 'bg-indigo-100 text-indigo-700',
-  emotional: 'bg-orange-100 text-orange-700',
-  general: 'bg-slate-100 text-slate-700',
+  relational: 'bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300',
+  physical_financial: 'bg-teal-100 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300',
+  spiritual: 'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300',
+  emotional: 'bg-orange-100 dark:bg-orange-500/15 text-orange-700 dark:text-orange-300',
+  general: 'bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-300',
 };
 
 export const ATTENDANCE_LABEL: Record<AttendanceStatus, string> = {

@@ -131,15 +131,15 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
         <WidgetCard title={`⚠️ Needs review (${needsReview.length})`}>
           <ul className="space-y-3">
             {needsReview.map(({ donation, candidateName }) => (
-              <li key={donation.id} className="rounded-xl border border-amber-300 bg-amber-50 p-3">
-                <p className="text-sm text-amber-900">
+              <li key={donation.id} className="rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 p-3">
+                <p className="text-sm text-amber-900 dark:text-amber-200">
                   A gift came in from <span className="font-medium">{donation.given_by_name ?? donation.given_by_email ?? 'an unknown donor'}</span>
                   {donation.amount_above_10k && (
                     <span className="ml-1.5 rounded-full bg-sparrow-gold/30 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink">$10k+</span>
                   )}
                   {' '}— possibly the same person as <span className="font-medium">{candidateName ?? 'an existing partner'}</span>.
                 </p>
-                <p className="mt-1 text-xs text-amber-800">
+                <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
                   Confirm before this becomes a new record — a duplicate can be merged later, but it's cleaner to catch it now.
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -153,7 +153,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
                   <button
                     onClick={() => void confirmNewDonor({ donation, candidateName })}
                     disabled={reviewBusyId === donation.id}
-                    className="rounded-lg border border-amber-300 bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-amber-800 transition hover:bg-amber-50 disabled:opacity-50"
+                    className="rounded-lg border border-amber-300 dark:border-amber-500/30 bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 transition hover:bg-amber-50 dark:hover:bg-amber-500/15 disabled:opacity-50"
                   >
                     No — new donor
                   </button>
@@ -171,7 +171,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
               <li key={c.id}>
                 <button
                   onClick={() => onNavigateTab('contacts')}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50"
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2"
                 >
                   <span className="min-w-0 truncate text-sparrow-ink dark:text-sparrow-dark-ink">
                     <span className="font-medium">{c.name}</span>
@@ -250,7 +250,7 @@ function ItemsByOwner({
               <li key={item.key}>
                 <button
                   onClick={() => onOpen(item)}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50"
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2"
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <span aria-hidden>{KIND_ICON[item.kind]}</span>

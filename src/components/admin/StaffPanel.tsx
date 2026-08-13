@@ -228,13 +228,13 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
             />
           </div>
 
-          <p className="mt-4 rounded-lg bg-sparrow-sage/50 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
+          <p className="mt-4 rounded-lg bg-sparrow-sage/50 dark:bg-sparrow-green/15 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
             Role + department set what this person can see: <strong>Admin</strong> sees everything,
             <strong> Manager</strong> sees their reports' tasks, and <strong>Twin Oaks</strong> staff
             (or admins) can see resident records.
           </p>
 
-          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream px-3 py-3">
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-3">
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
@@ -253,7 +253,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
             </label>
           </div>
 
-          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream px-3 py-3">
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-3">
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
@@ -296,7 +296,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
             )}
           </div>
 
-          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream px-3 py-3">
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-3">
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
@@ -315,7 +315,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
             </label>
           </div>
 
-          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream px-3 py-3">
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-3">
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
@@ -334,7 +334,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
             </label>
           </div>
 
-          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream px-3 py-3">
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-3">
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"

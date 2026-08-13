@@ -76,7 +76,7 @@ function TrackDots({ track, vertical }: { track: CurriculumTrack; vertical: bool
         <Segment from={doneUnits[doneUnits.length - 1].color} to={currentUnit.color} vertical={vertical} />
       )}
       {currentUnit && (
-        <div className={`${cluster} rounded-2xl bg-sparrow-sage px-2.5 py-2`}>
+        <div className={`${cluster} rounded-2xl bg-sparrow-sage dark:bg-sparrow-green/15 px-2.5 py-2`}>
           {currentUnit.sessions.map((s, i) => (
             <span key={s.id} className={cluster}>
               {i > 0 && <Segment from={currentUnit.color} to={currentUnit.color} vertical={vertical} />}

@@ -150,7 +150,7 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
               {rows.map(({ staffHeader, contact: c }) => (
                 <Fragment key={c.id}>
                   {staffHeader && (
-                    <tr key={`hdr-${c.id}`} className="bg-sparrow-mist/60">
+                    <tr key={`hdr-${c.id}`} className="bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2">
                       <td colSpan={8} className="px-3 py-1.5 text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{staffHeader}</td>
                     </tr>
                   )}

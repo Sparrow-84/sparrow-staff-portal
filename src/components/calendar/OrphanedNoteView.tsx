@@ -65,7 +65,7 @@ export function OrphanedNoteView({ noteId, scope, title, startsAt, onClose }: Pr
           {scope === 'private' ? (
             <div className="mx-auto max-w-3xl divide-y divide-sparrow-rule dark:divide-sparrow-dark-border px-6 py-6">
               <div className="pb-6">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">Prep Notes</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Prep Notes</p>
                 {content.prep ? (
                   <div className={CONTENT_CLASSES} dangerouslySetInnerHTML={{ __html: content.prep }} />
                 ) : (
@@ -83,7 +83,7 @@ export function OrphanedNoteView({ noteId, scope, title, startsAt, onClose }: Pr
             </div>
           ) : (
             <div className="mx-auto max-w-3xl px-6 py-6">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-700">Shared Notes</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Shared Notes</p>
               {content.shared ? (
                 <div className={CONTENT_CLASSES} dangerouslySetInnerHTML={{ __html: content.shared }} />
               ) : (

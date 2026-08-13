@@ -680,8 +680,8 @@ function LeaveBehindScreen({
             placeholder="Description (required)"
             className={
               fieldClass('lb-desc', '').includes('field-input-error')
-                ? 'w-full rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
-                : 'w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
+                ? 'w-full rounded-lg border border-priority-p1 bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
+                : 'w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
             }
           />
           {fieldError('lb-desc') && <p className="mt-1 text-xs text-priority-p1">{fieldError('lb-desc')}</p>}
@@ -690,7 +690,7 @@ function LeaveBehindScreen({
             <select
               name="condition"
               defaultValue="used"
-              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="new">New</option>
               <option value="used">Used</option>
@@ -701,14 +701,14 @@ function LeaveBehindScreen({
               min="0"
               step="0.01"
               placeholder="Est. value ($)"
-              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             />
           </div>
 
           {subLocs.length > 0 && (
             <select
               name="sub_location_id"
-              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="">No specific room</option>
               {subLocs.map((s) => (
@@ -732,7 +732,7 @@ function LeaveBehindScreen({
             name="notes"
             rows={2}
             placeholder="Notes (optional)"
-            className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green resize-none"
+            className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green resize-none"
           />
 
           <div className="flex gap-2">
@@ -890,7 +890,7 @@ function ShellyReviewScreen({
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder="Notes / shopping list (optional — jot anything you want to remember before purchasing)"
-            className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green resize-none"
+            className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green resize-none"
           />
           <button
             onClick={() => onApprove(notes)}
@@ -1098,7 +1098,7 @@ function NewItemsScreen({
           {isBatch ? (
             <select
               name="batch_category"
-              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               {BATCH_CATEGORIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -1112,8 +1112,8 @@ function NewItemsScreen({
               placeholder="Description (required)"
               className={
                 fieldClass('ni-desc', '').includes('field-input-error')
-                  ? 'w-full rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
-                  : 'w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
+                  ? 'w-full rounded-lg border border-priority-p1 bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
+                  : 'w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
               }
             />
           )}
@@ -1126,8 +1126,8 @@ function NewItemsScreen({
               placeholder="Description (e.g. 'assorted kitchen supplies')"
               className={
                 fieldClass('ni-desc', '').includes('field-input-error')
-                  ? 'w-full rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
-                  : 'w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
+                  ? 'w-full rounded-lg border border-priority-p1 bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
+                  : 'w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
               }
             />
           )}
@@ -1137,7 +1137,7 @@ function NewItemsScreen({
             <input
               name="serial_number"
               placeholder="Serial number (electronics, tools, appliances)"
-              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             />
           )}
 
@@ -1145,7 +1145,7 @@ function NewItemsScreen({
             <select
               name="condition"
               defaultValue="new"
-              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="new">New</option>
               <option value="used">Used</option>
@@ -1153,7 +1153,7 @@ function NewItemsScreen({
             <select
               name="is_donated"
               defaultValue="false"
-              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="false">Purchased</option>
               <option value="true">Donated</option>
@@ -1167,7 +1167,7 @@ function NewItemsScreen({
               min="1"
               defaultValue="1"
               placeholder="Qty"
-              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             />
             <input
               id="ni-cost"
@@ -1179,14 +1179,14 @@ function NewItemsScreen({
               placeholder="Cost ($)"
               className={
                 fieldClass('ni-cost', '').includes('field-input-error')
-                  ? 'rounded-lg border border-priority-p1 px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
-                  : 'rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
+                  ? 'rounded-lg border border-priority-p1 bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-priority-p1'
+                  : 'rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green'
               }
             />
             <select
               name="cost_basis"
               defaultValue="per_item"
-              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="per_item">Per item</option>
               <option value="total">Total</option>
@@ -1197,7 +1197,7 @@ function NewItemsScreen({
           <select
             name="cost_source"
             defaultValue="known"
-            className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+            className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
           >
             <option value="known">Known (receipt or handoff)</option>
             <option value="estimated">Estimated (best guess)</option>
@@ -1206,7 +1206,7 @@ function NewItemsScreen({
           {subLocs.length > 0 && (
             <select
               name="sub_location_id"
-              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+              className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-sm focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
             >
               <option value="">No specific room</option>
               {subLocs.map((s) => (

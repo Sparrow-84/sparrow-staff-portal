@@ -244,24 +244,24 @@ export function designationTextClass(
 export function lotClasses(space: Space): string {
   const filled = space.status !== 'vacant';
   if (!space.ownership) {
-    return 'border-dashed border-gray-300 bg-white text-gray-400';
+    return 'border-dashed border-gray-300 dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface2 text-gray-400 dark:text-sparrow-dark-gray';
   }
   if (space.ownership === 'sparrow_owned') {
     return filled
       ? 'border-sparrow-green bg-sparrow-green text-white'
-      : 'border-sparrow-green bg-white text-sparrow-green';
+      : 'border-sparrow-green dark:border-sparrow-dark-green bg-white dark:bg-sparrow-dark-surface2 text-sparrow-green dark:text-sparrow-dark-green';
   }
   return filled
     ? 'border-blue-700 bg-blue-700 text-white'
-    : 'border-blue-700 bg-white text-blue-700';
+    : 'border-blue-700 dark:border-blue-400 bg-white dark:bg-sparrow-dark-surface2 text-blue-700 dark:text-blue-400';
 }
 
 export const LOT_LEGEND: { key: string; classes: string; label: string }[] = [
   { key: 'sp-occ',  classes: 'bg-sparrow-green border-sparrow-green', label: 'Sparrow-owned · filled' },
-  { key: 'sp-vac',  classes: 'bg-white border-sparrow-green',         label: 'Sparrow-owned · vacant' },
+  { key: 'sp-vac',  classes: 'bg-white dark:bg-sparrow-dark-surface2 border-sparrow-green dark:border-sparrow-dark-green', label: 'Sparrow-owned · vacant' },
   { key: 'res-occ', classes: 'bg-blue-700 border-blue-700',           label: 'Resident / donated · occupied' },
-  { key: 'res-vac', classes: 'bg-white border-blue-700',              label: 'Resident / donated · vacant' },
-  { key: 'unk',     classes: 'bg-white border-dashed border-gray-300', label: 'Ownership unknown' },
+  { key: 'res-vac', classes: 'bg-white dark:bg-sparrow-dark-surface2 border-blue-700 dark:border-blue-400', label: 'Resident / donated · vacant' },
+  { key: 'unk',     classes: 'bg-white dark:bg-sparrow-dark-surface2 border-dashed border-gray-300 dark:border-sparrow-dark-border', label: 'Ownership unknown' },
 ];
 
 // ── Work order helpers ────────────────────────────────────────────────

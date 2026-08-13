@@ -122,7 +122,7 @@ export function ConsumablesForm() {
               onChange={(e) => setYear(Number(e.target.value))}
               min={2020}
               max={2030}
-              className="w-20 rounded border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
+              className="w-20 rounded border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
             />
           </div>
         </div>
@@ -168,7 +168,7 @@ export function ConsumablesForm() {
                         step={50}
                         value={amounts[cat] ?? 0}
                         onChange={(e) => handleAmountChange(cat, e.target.value)}
-                        className="w-24 rounded border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-1 text-sm text-right text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
+                        className="w-24 rounded border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-sm text-right text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                       />
                     </div>
                   </td>

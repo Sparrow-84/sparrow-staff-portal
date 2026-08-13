@@ -54,7 +54,7 @@ function Slot({
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="flex h-24 w-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 hover:border-sparrow-green/50"
+        className="flex h-24 w-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 dark:bg-black/20 hover:border-sparrow-green/50"
       >
         {url ? (
           <img src={url} alt={label} className="h-full w-full object-cover" />

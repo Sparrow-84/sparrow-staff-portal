@@ -23,7 +23,7 @@ interface Props {
 type View = 'list' | 'create' | 'manage';
 
 function labelPillClass(color: string): string {
-  return LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-slate-100 text-slate-600';
+  return LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300';
 }
 
 function labelSwatchClass(color: string): string {
@@ -304,7 +304,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                       key={c.id}
                       type="button"
                       onClick={() => setCreateColor(c.id)}
-                      className={`h-5 w-5 rounded-full ${c.swatch} transition ${createColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink' : 'opacity-70 hover:opacity-100'}`}
+                      className={`h-5 w-5 rounded-full ${c.swatch} transition ${createColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink dark:ring-sparrow-dark-ink dark:ring-offset-sparrow-dark-surface' : 'opacity-70 hover:opacity-100'}`}
                       aria-label={c.id}
                     />
                   ))}
@@ -338,7 +338,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                 <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No labels to manage yet.</p>
               )}
               {manageableLabels.map((label) => (
-                <div key={label.id} className="rounded-lg bg-sparrow-mist/50 p-2">
+                <div key={label.id} className="rounded-lg bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2/50 p-2">
                   {editingId === label.id ? (
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-1.5">
@@ -347,7 +347,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                             key={c.id}
                             type="button"
                             onClick={() => setEditColor(c.id)}
-                            className={`h-4 w-4 rounded-full ${c.swatch} transition ${editColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink' : 'opacity-70 hover:opacity-100'}`}
+                            className={`h-4 w-4 rounded-full ${c.swatch} transition ${editColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink dark:ring-sparrow-dark-ink dark:ring-offset-sparrow-dark-surface' : 'opacity-70 hover:opacity-100'}`}
                             aria-label={c.id}
                           />
                         ))}

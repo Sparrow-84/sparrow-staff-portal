@@ -39,15 +39,15 @@ export function prospectStatusLabel(s: GrantProspectStatus): string {
 export function prospectStatusChip(s: GrantProspectStatus): string {
   switch (s) {
     case 'not_researched':
-      return 'bg-sparrow-rule text-sparrow-gray';
+      return 'bg-sparrow-rule dark:bg-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray';
     case 'researching':
-      return 'bg-blue-100 text-blue-700';
+      return 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300';
     case 'decided_pursue':
-      return 'bg-sparrow-sage text-sparrow-green';
+      return 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green';
     case 'decided_no':
-      return 'bg-sparrow-mist text-sparrow-gray';
+      return 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray';
     case 'applied':
-      return 'bg-amber-100 text-amber-700';
+      return 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300';
     case 'awarded':
       return 'bg-sparrow-green text-white';
   }

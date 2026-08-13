@@ -58,10 +58,10 @@ function shortTime(isoString: string): string {
 }
 
 const DEADLINE_PILL: Record<Priority, string> = {
-  p1: 'bg-red-100 text-red-700',
-  p2: 'bg-amber-100 text-amber-700',
-  p3: 'bg-slate-100 text-slate-600',
-  p4: 'bg-slate-100 text-slate-400',
+  p1: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300',
+  p2: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  p3: 'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300',
+  p4: 'bg-slate-100 dark:bg-slate-500/15 text-slate-400 dark:text-slate-500',
 };
 
 // Filter chip styles — each chip is independent, not a radio group
@@ -378,7 +378,7 @@ export function CalendarView() {
       if (meta) return meta.pill;
     }
     // Fallback for events without labels (pre-migration or unlabeled)
-    return ev.is_personal ? 'bg-slate-100 text-slate-600' : KIND_PILL[ev.kind];
+    return ev.is_personal ? 'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300' : KIND_PILL[ev.kind];
   }
 
   // Suppress unused import warning — LAYER_PILL referenced via getLayerPill
@@ -515,7 +515,7 @@ export function CalendarView() {
                         return (
                           <div
                             key={`${dStr}-${col}`}
-                            className={`group min-h-[6rem] border-b border-r border-sparrow-rule dark:border-sparrow-dark-border p-1 ${!inMonth || isPast ? 'bg-sparrow-mist/30' : ''}`}
+                            className={`group min-h-[6rem] border-b border-r border-sparrow-rule dark:border-sparrow-dark-border p-1 ${!inMonth || isPast ? 'bg-sparrow-mist/30 dark:bg-black/20' : ''}`}
                             style={barAreaPx > 0 ? { paddingTop: barAreaPx + 4 } : undefined}
                           >
                             {/* Day number */}
@@ -567,7 +567,7 @@ export function CalendarView() {
                             {dayLcpEvents.map(ev => (
                               <div
                                 key={ev.id}
-                                className="mt-0.5 w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight bg-emerald-100 text-emerald-800"
+                                className="mt-0.5 w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium leading-tight bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
                                 onMouseEnter={(e) => setCalTooltip({ title: ev.title, sub: `LCP · ${EVENT_LABEL[ev.kind]}`, x: e.clientX, y: e.clientY })}
                                 onMouseLeave={() => setCalTooltip(null)}
                               >

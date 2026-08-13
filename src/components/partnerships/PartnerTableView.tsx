@@ -138,7 +138,7 @@ export function PartnerTableView({
     <div className="overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 dark:bg-sparrow-dark-surface2">
             <th className="w-6 px-3 py-2" />
             <SortTh label="Name" k="name" minWidth="260px" />
             <SortTh label="Type" k="type" minWidth="160px" />
@@ -181,7 +181,7 @@ export function PartnerTableView({
               <tr
                 key={p.id}
                 onClick={() => onOpenPartner(p.id)}
-                className="group cursor-pointer border-b border-sparrow-rule/60 bg-white dark:bg-sparrow-dark-surface hover:bg-sparrow-mist/40"
+                className="group cursor-pointer border-b border-sparrow-rule/60 bg-white dark:bg-sparrow-dark-surface hover:bg-sparrow-mist/40 dark:hover:bg-sparrow-dark-surface2"
               >
                 {/* Status dot */}
                 <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
@@ -195,7 +195,7 @@ export function PartnerTableView({
                     {(() => {
                       const tier = derivedDonorTier(p.donor_tier, donorStatMap.get(p.id));
                       if (tier === 'major') return <span className="whitespace-nowrap rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Major</span>;
-                      if (tier === 'lapsed' && p.type === 'donor') return <span className="whitespace-nowrap rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">Lapsed giving</span>;
+                      if (tier === 'lapsed' && p.type === 'donor') return <span className="whitespace-nowrap rounded-full bg-orange-100 dark:bg-orange-500/15 px-2 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-300">Lapsed giving</span>;
                       if (tier === 'first_time') return <span className="whitespace-nowrap rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">First gift</span>;
                       return null;
                     })()}

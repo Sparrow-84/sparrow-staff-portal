@@ -87,7 +87,7 @@ function NoteList({
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             placeholder="Search by event title"
-            className="w-full text-sm outline-none placeholder:text-sparrow-gray/60"
+            className="w-full bg-white dark:bg-sparrow-dark-surface text-sm outline-none placeholder:text-sparrow-gray/60"
           />
         </div>
       </div>
@@ -235,7 +235,7 @@ function IdeasTab({ userId }: { userId: string }) {
               onClick={() => void share(idea, !idea.shared)}
               title={idea.shared ? 'Shared with the team — click to make private' : 'Share with the team'}
               className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium opacity-0 group-hover:opacity-100 ${
-                idea.shared ? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green opacity-100' : 'border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray'
+                idea.shared ? 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green opacity-100' : 'border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray'
               }`}
             >
               {idea.shared ? 'Shared ✓' : 'Share'}
@@ -266,14 +266,14 @@ function IdeasTab({ userId }: { userId: string }) {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Idea title"
-          className="w-full border-none p-1 text-sm font-semibold outline-none placeholder:font-normal placeholder:text-sparrow-gray/60"
+          className="w-full border-none bg-white dark:bg-sparrow-dark-surface p-1 text-sm font-semibold outline-none placeholder:font-normal placeholder:text-sparrow-gray/60"
         />
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Add more detail (optional)"
           rows={2}
-          className="w-full resize-none border-none p-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray outline-none placeholder:text-sparrow-gray/60"
+          className="w-full resize-none border-none bg-white dark:bg-sparrow-dark-surface p-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray outline-none placeholder:text-sparrow-gray/60"
         />
         <div className="mt-1 flex items-center justify-between gap-3 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
           {!title.trim() ? (

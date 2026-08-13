@@ -20,14 +20,14 @@ const METHOD_LABEL: Record<string, string> = {
 
 function tagPillClass(tags: StoryTag[], name: string): string {
   const color = tags.find((t) => t.name === name)?.color;
-  return LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-sparrow-sage text-sparrow-green dark:text-sparrow-dark-green';
+  return LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green';
 }
 
 export function StoriesTab({ stories, storyTags, onAdd, onEdit }: Props) {
   return (
     <div>
       {/* Rules box */}
-      <div className="rounded-xl border border-sparrow-gold/30 bg-sparrow-cream px-4 py-3 text-sm">
+      <div className="rounded-xl border border-sparrow-gold/30 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-4 py-3 text-sm">
         <p className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Consent required by gathering method</p>
         <ul className="mt-2 space-y-1 text-sparrow-gray dark:text-sparrow-dark-gray">
           <li>

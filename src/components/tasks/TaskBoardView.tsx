@@ -78,7 +78,7 @@ export function TaskBoardView({ tasks, today, userId, showAssignee, onOpen, onMo
             onDrop={(e) => onDrop(e, col.status)}
             className={`rounded-xl border p-2 transition ${
               overCol === col.status
-                ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage'
+                ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage dark:bg-sparrow-green/15'
                 : 'border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2'
             }`}
           >

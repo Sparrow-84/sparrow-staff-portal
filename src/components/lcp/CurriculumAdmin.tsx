@@ -328,7 +328,7 @@ function UnitSection({
 
       {/* Inline unit edit form */}
       {isEditing && (
-        <div className="space-y-3 border-t border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 px-4 py-3">
+        <div className="space-y-3 border-t border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/30 dark:bg-sparrow-dark-surface2 px-4 py-3">
           <div>
             <label className="field-label field-label-required" htmlFor={monthFieldId}>Month</label>
             <input
@@ -423,7 +423,7 @@ function UnitSection({
                 </span>
                 {s.curriculum_notes?.trim() && !s.curriculum_notes_reviewed_at && (
                   <span
-                    className="rounded-full bg-sparrow-cream px-1.5 py-0.5 text-[10px] font-bold text-sparrow-gold"
+                    className="rounded-full bg-sparrow-cream dark:bg-sparrow-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-sparrow-gold"
                     title="Unreviewed curriculum note"
                   >
                     🔔

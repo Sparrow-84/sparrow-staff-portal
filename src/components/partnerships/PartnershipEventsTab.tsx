@@ -253,7 +253,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
                   <tr
                     key={ev.id}
                     onClick={() => setSelectedEventId(ev.id)}
-                    className="cursor-pointer hover:bg-sparrow-mist/40"
+                    className="cursor-pointer hover:bg-sparrow-mist/40 dark:hover:bg-sparrow-dark-surface2"
                   >
                     <td className="px-4 py-2.5 whitespace-nowrap text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       {shortDate(ev.event_date)}
@@ -403,7 +403,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
                     <tr
                       key={conn.id}
                       onClick={() => setSelectedConnId(conn.id)}
-                      className={`cursor-pointer hover:bg-sparrow-mist/40 ${overdue ? 'border-l-4 border-l-priority-p1' : ''}`}
+                      className={`cursor-pointer hover:bg-sparrow-mist/40 dark:hover:bg-sparrow-dark-surface2 ${overdue ? 'border-l-4 border-l-priority-p1' : ''}`}
                     >
                       <td className="px-4 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{conn.name}</td>
                       <td className="px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{conn.organization ?? '—'}</td>

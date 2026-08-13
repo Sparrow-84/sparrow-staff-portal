@@ -401,7 +401,7 @@ export function SessionLogEntry({
       <div className="flex items-start gap-3">
         <button
           onClick={onBack}
-          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70"
+          className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-1.5 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green transition hover:bg-sparrow-sage/70 dark:hover:bg-sparrow-green/25"
         >
           ← Back
         </button>
@@ -505,7 +505,7 @@ export function SessionLogEntry({
 
       {/* Thursday: which session tonight covers */}
       {isThursday && (
-        <section className="rounded-2xl border border-sparrow-green/30 bg-sparrow-sage/20 p-4 shadow-card">
+        <section className="rounded-2xl border border-sparrow-green/30 bg-sparrow-sage/20 dark:bg-sparrow-green/15 p-4 shadow-card">
           {sessionToTeach ? (
             <>
               <p className="field-label">Tonight</p>

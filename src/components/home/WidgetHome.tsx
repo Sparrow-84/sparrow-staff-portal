@@ -290,7 +290,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
             return (
               <div
                 key="__placeholder__"
-                className={`min-h-[8rem] rounded-2xl border-2 border-dashed border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage/40 flex items-center justify-center${dragIsWide ? ' sm:col-span-2' : ''}`}
+                className={`min-h-[8rem] rounded-2xl border-2 border-dashed border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage/40 dark:bg-sparrow-green/10 flex items-center justify-center${dragIsWide ? ' sm:col-span-2' : ''}`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
                   if (dragKey !== null && dropIndex !== null) {

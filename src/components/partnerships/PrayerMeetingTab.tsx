@@ -117,7 +117,7 @@ function LogMeetingPanel({
             <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No active volunteers yet — add some below.</p>
           )}
           {volunteers.map((v) => (
-            <label key={v.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 hover:bg-sparrow-mist/40">
+            <label key={v.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 hover:bg-sparrow-mist/40 dark:hover:bg-sparrow-dark-surface2">
               <input
                 type="checkbox"
                 checked={attended[v.id] ?? false}
@@ -213,7 +213,7 @@ export function PrayerMeetingTab() {
 
   if (notReady) {
     return (
-      <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 px-6 py-8 text-center">
+      <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 dark:bg-black/20 px-6 py-8 text-center">
         <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Prayer meeting log not set up yet</p>
         <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Migration 0043 needs to run first. Byron will handle this.</p>
       </div>
@@ -223,7 +223,7 @@ export function PrayerMeetingTab() {
   return (
     <div className="space-y-4">
       {/* Section toggle */}
-      <div className="flex gap-1 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 p-0.5 w-fit">
+      <div className="flex gap-1 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 dark:bg-sparrow-dark-surface2 p-0.5 w-fit">
         {(['meetings', 'volunteers'] as Section[]).map((s) => (
           <button
             key={s}
@@ -280,7 +280,7 @@ export function PrayerMeetingTab() {
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         total > 0 && present === total
                           ? 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
-                          : 'bg-amber-50 text-amber-700'
+                          : 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300'
                       }`}>
                         {total > 0 ? `${present}/${total} attended` : 'No volunteers tracked'}
                       </span>
@@ -291,7 +291,7 @@ export function PrayerMeetingTab() {
                   {isExpanded && (
                     <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border px-4 pb-4 pt-3 space-y-3">
                       {m.notes && (
-                        <div className="rounded-lg bg-sparrow-mist/60 px-3 py-2">
+                        <div className="rounded-lg bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2 px-3 py-2">
                           <p className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray uppercase tracking-wide mb-1">Notes</p>
                           <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{m.notes}</p>
                         </div>
@@ -388,7 +388,7 @@ export function PrayerMeetingTab() {
               </summary>
               <div className="mt-2 space-y-2">
                 {inactiveVolunteers.map((v) => (
-                  <div key={v.id} className="flex items-center justify-between rounded-xl border border-sparrow-rule/60 bg-sparrow-mist/40 px-4 py-2.5">
+                  <div key={v.id} className="flex items-center justify-between rounded-xl border border-sparrow-rule/60 bg-sparrow-mist/40 dark:bg-black/20 px-4 py-2.5">
                     <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{v.full_name}</span>
                     <span className="text-xs text-sparrow-gray/70">No longer tagged in Directory</span>
                   </div>

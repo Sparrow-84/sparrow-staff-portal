@@ -193,10 +193,10 @@ export function ResidentsTab({ spaces, tenants, onSelectSpace }: Props) {
                     )}
                     {space.designation_type && (
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                        space.designation_type === 'lcp' ? 'bg-purple-100 text-purple-700'
-                        : space.designation_type === 'sv' ? 'bg-amber-100 text-amber-700'
-                        : space.designation_type === 'pm' ? 'bg-teal-100 text-teal-700'
-                        : 'bg-slate-100 text-slate-600'
+                        space.designation_type === 'lcp' ? 'bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300'
+                        : space.designation_type === 'sv' ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                        : space.designation_type === 'pm' ? 'bg-teal-100 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300'
+                        : 'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300'
                       }`}>
                         {space.designation_type === 'lcp' ? (space.designation_label || 'LCP')
                           : space.designation_type === 'sv' ? 'SV'

@@ -420,7 +420,7 @@ function ProgressTab({
       <div>
         <span className="field-label">Curriculum entry</span>
         {family.joined_unit_id == null ? (
-          <div className="mt-1.5 flex items-center justify-between rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-cream px-4 py-3">
+          <div className="mt-1.5 flex items-center justify-between rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-4 py-3">
             <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
               {family.display_name} hasn&apos;t joined the curriculum yet.
             </p>
@@ -626,7 +626,7 @@ function HousingSavingsCard({
   const towardNext = completeCount % 4;
 
   return (
-    <div className="rounded-xl bg-sparrow-cream p-4">
+    <div className="rounded-xl bg-sparrow-cream dark:bg-sparrow-dark-surface2 p-4">
       <span className="font-serif text-base font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">🏡 Housing Savings</span>
       <p className="mt-1 font-serif text-lg font-semibold text-sparrow-green dark:text-sparrow-dark-green">{money(family.housing_savings_cents)}</p>
 
@@ -1175,11 +1175,11 @@ function ComplianceTab({
             <div className="flex items-center gap-2">
               {n.label_name && <LabelPill label={n.label_name} color={n.label_color ?? 'blue'} />}
               {n.follow_up_needed ? (
-                <span className="rounded-full bg-sparrow-cream px-2 py-0.5 text-[11px] font-bold text-sparrow-gold">
+                <span className="rounded-full bg-sparrow-cream dark:bg-sparrow-gold/15 px-2 py-0.5 text-[11px] font-bold text-sparrow-gold">
                   ⚑ Needs follow-up
                 </span>
               ) : n.follow_up_resolved_at ? (
-                <span className="rounded-full bg-sparrow-sage px-2 py-0.5 text-[11px] font-bold text-sparrow-green dark:text-sparrow-dark-green">
+                <span className="rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 px-2 py-0.5 text-[11px] font-bold text-sparrow-green dark:text-sparrow-dark-green">
                   ✓ Resolved {dayLabel(n.follow_up_resolved_at)}
                   {n.follow_up_resolved_by_name ? ` by ${n.follow_up_resolved_by_name}` : ''}
                 </span>
@@ -1942,7 +1942,7 @@ function NotesTab({
 
   return (
     <div className="space-y-4">
-      <p className="rounded-lg bg-sparrow-cream px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
+      <p className="rounded-lg bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
         🔒 Internal — never visible to the family or to non-LCP staff.
       </p>
       <div>
@@ -2074,7 +2074,7 @@ function RewardsTab({
           <span className="field-label">Redemption requests</span>
           <ul className="mt-1 space-y-2">
             {pending.map((r) => (
-              <li key={r.id} className="flex items-center justify-between rounded-xl border border-sparrow-gold/40 bg-sparrow-cream p-3">
+              <li key={r.id} className="flex items-center justify-between rounded-xl border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 p-3">
                 <span className="text-sm">
                   {money(r.gift_card_value_cents)} gift card · {r.vouchers_spent} vouchers
                 </span>

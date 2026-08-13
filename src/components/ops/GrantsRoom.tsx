@@ -377,7 +377,7 @@ function ActiveGrantsTable({
 
   return (
     <div className="mt-4 overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full min-w-max border-collapse text-sm">
         <thead>
           <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
             <th className="w-6 px-3 py-2" />
@@ -430,7 +430,7 @@ function PastGrantsTable({
   }
   return (
     <div className="overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full min-w-max border-collapse text-sm">
         <thead>
           <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Funder</th>
@@ -490,7 +490,7 @@ function ProspectsTable({
 
   return (
     <div className="mt-4 overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full min-w-max border-collapse text-sm">
         <thead>
           <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
             <th className="w-6 px-3 py-2" />
@@ -518,7 +518,7 @@ function ProspectsTable({
                   {p.status === 'applied' ? (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">Applied</span>
                   ) : p.application_deadline ? (
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${overdue ? 'bg-priority-p1/15 text-priority-p1' : 'bg-blue-100 text-blue-700'}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${overdue ? 'bg-priority-p1/15 text-priority-p1' : 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300'}`}>
                       {formatDate(p.application_deadline)}
                     </span>
                   ) : (
@@ -553,7 +553,7 @@ function NotMovingTable({
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full min-w-max border-collapse text-sm">
         <thead>
           <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Name</th>

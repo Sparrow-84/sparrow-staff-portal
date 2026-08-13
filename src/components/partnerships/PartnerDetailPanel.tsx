@@ -214,9 +214,9 @@ export function PartnerDetailPanel({
 
         {/* ── 2. 60-day inactive prompt ── */}
         {showInactivePrompt(partner) && (
-          <section className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
-            <p className="text-sm font-medium text-amber-900">No response in 60+ days</p>
-            <p className="mt-1 text-xs leading-relaxed text-amber-800">
+          <section className="rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 px-4 py-3">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-200">No response in 60+ days</p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-800 dark:text-amber-300">
               You reached out to {partner.name} but haven't heard back. The default next step is to
               archive them — they stay in the database, keep receiving TSM, and you can always find
               them in the Archived tab if they re-engage later.
@@ -241,7 +241,7 @@ export function PartnerDetailPanel({
                   onChanged();
                 }}
                 disabled={busy}
-                className="rounded-lg border border-amber-300 bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-amber-800 transition hover:bg-amber-50 disabled:opacity-50"
+                className="rounded-lg border border-amber-300 dark:border-amber-500/30 bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 transition hover:bg-amber-50 dark:hover:bg-amber-500/15 disabled:opacity-50"
               >
                 Not yet — revisit in 30 days
               </button>
@@ -251,7 +251,7 @@ export function PartnerDetailPanel({
 
         {/* ── 3. Last touchpoint snippet ── */}
         {lastTouchpoint ? (
-          <div className="rounded-xl border border-sparrow-rule/70 bg-sparrow-mist/40 px-3 py-2.5">
+          <div className="rounded-xl border border-sparrow-rule/70 bg-sparrow-mist/40 dark:bg-sparrow-dark-surface2 px-3 py-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Last touchpoint</span>
               <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
@@ -723,7 +723,7 @@ export function PartnerDetailPanel({
                 ))}
               </select>
               {partner.mou_status === 'needed' && (
-                <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <div className="mt-2 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
                   No MOU on file — needed for this relationship. Coordinate with Susanna to create one.
                 </div>
               )}
@@ -840,7 +840,7 @@ export function PartnerDetailPanel({
               </div>
 
               {mergeTarget && (
-                <div className="space-y-2 rounded-xl bg-sparrow-mist/50 p-3">
+                <div className="space-y-2 rounded-xl bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2 p-3">
                   <p className="text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
                     This will move {touchpoints.length} touchpoint{touchpoints.length === 1 ? '' : 's'}
                     {isDonor && `, ${donations.length} gift${donations.length === 1 ? '' : 's'}`} from{' '}
@@ -859,7 +859,7 @@ export function PartnerDetailPanel({
                       </div>
                     </div>
                   )}
-                  <p className="text-[11px] text-amber-800">
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300">
                     Copy anything worth keeping from {partner.name}'s notes into {mergeTarget.name}'s notes before
                     confirming — the merge does not combine them for you.
                   </p>
