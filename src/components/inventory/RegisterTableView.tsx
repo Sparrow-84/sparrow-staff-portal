@@ -1,8 +1,17 @@
 import { Fragment, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { RegisterItem, ItemEditPatch } from '@/lib/inventory';
 import {
-  formatCost, BENTON_SCHEDULE_SHORT, FILING_STATUS_META,
+  formatCost, FILING_STATUS_META, type InvBentonSchedule,
 } from '@/lib/inventory-types';
+
+// Bare schedule number/letter for the table's Schedule column — the table is
+// already labeled "Schedule", so repeating "Sched" on every row is noise.
+const SCHEDULE_BARE: Record<InvBentonSchedule, string> = {
+  schedule_2: '2',
+  schedule_4: '4',
+  schedule_5a: '5A',
+  schedule_5b: '5B',
+};
 import { ItemEditPanel } from './AssetRegisterView';
 
 type SortKey =
@@ -159,8 +168,8 @@ export function RegisterTableView({
     });
   }, [items, sortKey, sortDir]);
 
-  const thBase = 'relative px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray cursor-pointer select-none hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition overflow-hidden';
-  const tdBase = 'px-3 py-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink whitespace-nowrap overflow-hidden text-ellipsis';
+  const thBase = 'relative border-r border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray cursor-pointer select-none hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition overflow-hidden';
+  const tdBase = 'border-r border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink whitespace-nowrap overflow-hidden text-ellipsis';
 
   return (
     <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
@@ -206,7 +215,7 @@ export function RegisterTableView({
                       item.status === 'removed' ? 'opacity-50' : ''
                     } ${isExpanded ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2' : 'hover:bg-sparrow-mist/30 dark:hover:bg-sparrow-dark-surface2/60'}`}
                   >
-                    <td className={tdBase} title={BENTON_SCHEDULE_SHORT[item.benton_schedule]}>{BENTON_SCHEDULE_SHORT[item.benton_schedule]}</td>
+                    <td className={tdBase}>{SCHEDULE_BARE[item.benton_schedule]}</td>
                     <td className={tdBase} title={item.description}>{item.description}</td>
                     <td className={tdBase} title={locationLabel(item)}>{locationLabel(item)}</td>
                     <td className={tdBase} title={item.serial_number ?? ''}>{item.serial_number ?? '—'}</td>
