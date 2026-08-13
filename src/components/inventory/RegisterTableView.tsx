@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { RegisterItem, ItemEditPatch } from '@/lib/inventory';
 import { formatCost, FILING_STATUS_META, type InvBentonSchedule } from '@/lib/inventory-types';
 import { ItemEditPanel } from './AssetRegisterView';
@@ -139,11 +139,6 @@ export function RegisterTableView({
     localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(colWidths));
   }, [colWidths]);
 
-  // Drag-to-resize: mousedown on a column's right edge starts tracking;
-  // window-level listeners (rather than per-handle) so the drag keeps
-  // working even if the cursor slips off the thin handle mid-drag.
-  const [resizing, setResizing] = useState<{ key: SortKey; startX: number; startWidth: number } | null>(null);
-
   // A resize drag ends with a mouseup, which the browser follows with a
   // click on whatever element the cursor lands on — often the header label,
   // not the handle — so relying on stopPropagation from the handle alone
@@ -151,32 +146,34 @@ export function RegisterTableView({
   // resize interaction, whether or not the mouse actually moved.
   const suppressSortRef = useRef(false);
 
-  useEffect(() => {
-    if (!resizing) return;
-    function handleMove(e: MouseEvent) {
-      if (!resizing) return;
-      const next = Math.max(MIN_COL_WIDTH, resizing.startWidth + (e.clientX - resizing.startX));
-      setColWidths((w) => ({ ...w, [resizing.key]: next }));
-    }
-    function handleUp() {
-      setResizing(null);
-      // Safety net in case a click never follows this mouseup (e.g. it
-      // ended outside the window) — don't let the flag get stuck forever.
-      setTimeout(() => { suppressSortRef.current = false; }, 300);
-    }
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
-    };
-  }, [resizing]);
-
-  function startResize(key: SortKey, e: ReactMouseEvent) {
+  // Drag-to-resize via the Pointer Events API with explicit pointer capture:
+  // once captured, every subsequent pointermove/pointerup for this drag is
+  // delivered to the handle itself no matter where the cursor physically
+  // ends up — a plain onMouseMove/window listener can silently stop
+  // tracking once the cursor drifts off a thin handle mid-drag.
+  function startResize(key: SortKey, e: ReactPointerEvent<HTMLSpanElement>) {
     e.preventDefault();
     e.stopPropagation();
     suppressSortRef.current = true;
-    setResizing({ key, startX: e.clientX, startWidth: colWidths[key] });
+    const handle = e.currentTarget;
+    const startX = e.clientX;
+    const startWidth = colWidths[key];
+    handle.setPointerCapture(e.pointerId);
+
+    function handleMove(ev: PointerEvent) {
+      const next = Math.max(MIN_COL_WIDTH, startWidth + (ev.clientX - startX));
+      setColWidths((w) => ({ ...w, [key]: next }));
+    }
+    function handleUp(ev: PointerEvent) {
+      handle.releasePointerCapture(ev.pointerId);
+      handle.removeEventListener('pointermove', handleMove);
+      handle.removeEventListener('pointerup', handleUp);
+      // Safety net in case a click never follows this (e.g. released
+      // outside the window) — don't let the flag get stuck forever.
+      setTimeout(() => { suppressSortRef.current = false; }, 300);
+    }
+    handle.addEventListener('pointermove', handleMove);
+    handle.addEventListener('pointerup', handleUp);
   }
 
   function handleHeaderClick(key: SortKey) {
@@ -231,8 +228,9 @@ export function RegisterTableView({
                   </span>
                   {/* Drag handle — resizes this column without triggering sort */}
                   <span
-                    onMouseDown={(e) => startResize(col.key, e)}
-                    className="absolute top-0 right-0 h-full w-2 cursor-col-resize hover:bg-sparrow-green/30 active:bg-sparrow-green/50"
+                    onPointerDown={(e) => startResize(col.key, e)}
+                    style={{ touchAction: 'none' }}
+                    className="absolute top-0 right-0 h-full w-3 cursor-col-resize hover:bg-sparrow-green/30 active:bg-sparrow-green/50"
                   />
                 </th>
               ))}
