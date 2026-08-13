@@ -1,12 +1,39 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  fetchBatchTallies, upsertBatchTally, fetchBatchActivity, fetchBatchRegisterValues,
+  fetchBatchTallies, upsertBatchTally, fetchBatchActivity, fetchBatchRegisterValues, fetchAllLocations,
 } from '@/lib/inventory';
 import {
-  BENTON_SCHEDULE_SHORT, formatCost,
-  type InvBatchTally,
+  BENTON_SCHEDULE_SHORT, formatCost, getBatchSchedule,
+  type InvBatchTally, type InvLocation,
 } from '@/lib/inventory-types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+
+// A category can have real batch items in the register (or approved-submission
+// activity) with no inv_batch_tallies row yet — nothing ever created one
+// automatically. Rather than hide those categories until someone happens to
+// edit them (nothing to click = never happens), synthesize a placeholder row
+// so they show up immediately; the first real edit (upsertBatchTally already
+// upserts) turns it into a genuine row without losing anything already saved
+// elsewhere.
+function makePlaceholderTally(
+  year: number,
+  location: { id: string; name: string; sort_order: number },
+  category: string,
+): InvBatchTally {
+  return {
+    id: `placeholder:${location.id}:${category}`,
+    location_id: location.id,
+    location,
+    category,
+    year,
+    schedule: getBatchSchedule(category),
+    filed_value: null,
+    decision: null,
+    notes: null,
+    updated_at: new Date().toISOString(),
+    updated_by: null,
+  };
+}
 
 // ── Info button ───────────────────────────────────────────────────────────
 
@@ -271,6 +298,7 @@ export function BatchTalliesSection({ year }: { year: number }) {
   const [tallies, setTallies] = useState<InvBatchTally[]>([]);
   const [activity, setActivity] = useState<Record<string, Record<string, number>>>({});
   const [register, setRegister] = useState<Record<string, Record<string, number>>>({});
+  const [allLocations, setAllLocations] = useState<InvLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
 
@@ -278,14 +306,16 @@ export function BatchTalliesSection({ year }: { year: number }) {
     setLoading(true);
     setErr('');
     try {
-      const [t, a, r] = await Promise.all([
+      const [t, a, r, l] = await Promise.all([
         fetchBatchTallies(year),
         fetchBatchActivity(year),
         fetchBatchRegisterValues(),
+        fetchAllLocations(),
       ]);
       setTallies(t);
       setActivity(a);
       setRegister(r);
+      setAllLocations(l);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not load batch tallies.');
     } finally {
@@ -295,14 +325,24 @@ export function BatchTalliesSection({ year }: { year: number }) {
 
   useEffect(() => { void load(); }, [load]);
 
+  const locationById = useMemo(() => new Map(allLocations.map((l) => [l.id, l])), [allLocations]);
+
   async function handleSave(
     locationId: string,
     category: string,
     patch: { filed_value?: number | null; decision?: 'keep' | 'update' | 'assess' | null },
   ) {
-    setTallies((prev) =>
-      prev.map((t) => t.location_id === locationId && t.category === category ? { ...t, ...patch } : t),
-    );
+    setTallies((prev) => {
+      const idx = prev.findIndex((t) => t.location_id === locationId && t.category === category);
+      if (idx === -1) {
+        const loc = locationById.get(locationId);
+        const placeholder = makePlaceholderTally(year, { id: locationId, name: loc?.name ?? '', sort_order: loc?.sort_order ?? 999 }, category);
+        return [...prev, { ...placeholder, ...patch }];
+      }
+      const next = [...prev];
+      next[idx] = { ...next[idx], ...patch };
+      return next;
+    });
     try {
       await upsertBatchTally(year, locationId, category, patch);
     } catch {
@@ -310,20 +350,38 @@ export function BatchTalliesSection({ year }: { year: number }) {
     }
   }
 
-  // Group by location, sorted by sort_order
-  const byLocation = new Map<string, { name: string; sort_order: number; tallies: InvBatchTally[] }>();
+  // Group by location, sorted by sort_order — seeded from real tally rows,
+  // then filled in with a placeholder for any (location, category) that has
+  // real register value or this-year activity but no tally row yet.
+  const byLocation = new Map<string, { name: string; sort_order: number; byCategory: Map<string, InvBatchTally> }>();
   for (const t of tallies) {
     if (!byLocation.has(t.location_id)) {
-      byLocation.set(t.location_id, { name: t.location.name, sort_order: t.location.sort_order, tallies: [] });
+      byLocation.set(t.location_id, { name: t.location.name, sort_order: t.location.sort_order, byCategory: new Map() });
     }
-    byLocation.get(t.location_id)!.tallies.push(t);
+    byLocation.get(t.location_id)!.byCategory.set(t.category, t);
+  }
+  const allLocationIds = new Set([...Object.keys(register), ...Object.keys(activity), ...byLocation.keys()]);
+  for (const locId of allLocationIds) {
+    if (!byLocation.has(locId)) {
+      const loc = locationById.get(locId);
+      byLocation.set(locId, { name: loc?.name ?? 'Unknown location', sort_order: loc?.sort_order ?? 999, byCategory: new Map() });
+    }
+    const entry = byLocation.get(locId)!;
+    const categories = new Set([...Object.keys(register[locId] ?? {}), ...Object.keys(activity[locId] ?? {})]);
+    for (const category of categories) {
+      if (!entry.byCategory.has(category)) {
+        entry.byCategory.set(category, makePlaceholderTally(year, { id: locId, name: entry.name, sort_order: entry.sort_order }, category));
+      }
+    }
   }
   const locations = [...byLocation.entries()]
-    .sort(([, a], [, b]) => a.sort_order - b.sort_order);
+    .map(([id, v]) => ({ id, name: v.name, sort_order: v.sort_order, tallies: [...v.byCategory.values()] }))
+    .sort((a, b) => a.sort_order - b.sort_order);
 
-  const assessCount  = tallies.filter((t) => t.decision === 'assess').length;
-  const updateCount  = tallies.filter((t) => t.decision === 'update').length;
-  const missingCount = tallies.filter((t) => t.filed_value == null).length;
+  const allRows = locations.flatMap((v) => v.tallies);
+  const assessCount  = allRows.filter((t) => t.decision === 'assess').length;
+  const updateCount  = allRows.filter((t) => t.decision === 'update').length;
+  const missingCount = allRows.filter((t) => t.filed_value == null).length;
 
   return (
     <div>
@@ -377,11 +435,11 @@ export function BatchTalliesSection({ year }: { year: number }) {
       ) : locations.length === 0 ? (
         <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-8 text-center">
           <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-            No batch items recorded yet. Batch categories appear here after monthly submissions are approved.
+            No batch items in the register yet, and nothing filed last year. A category will appear here as soon as it has either.
           </p>
         </div>
       ) : (
-        locations.map(([locationId, { name, tallies: locTallies }]) => (
+        locations.map(({ id: locationId, name, tallies: locTallies }) => (
           <LocationGroup
             key={locationId}
             locationName={name}
