@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import type { RegisterItem, ItemEditPatch } from '@/lib/inventory';
+import { clearAllReconciled, type RegisterItem, type ItemEditPatch } from '@/lib/inventory';
 import { formatCost, FILING_STATUS_META, type InvBentonSchedule } from '@/lib/inventory-types';
 import { ItemEditPanel } from './AssetRegisterView';
 
@@ -14,7 +14,8 @@ const SCHEDULE_BARE: Record<InvBentonSchedule, string> = {
 
 type ColKey =
   | 'schedule' | 'description' | 'building' | 'room' | 'serial' | 'condition'
-  | 'donated' | 'year' | 'qty' | 'cost_each' | 'total' | 'filing_status' | 'status' | 'flag';
+  | 'donated' | 'year' | 'qty' | 'cost_each' | 'total' | 'filing_status' | 'status' | 'flag'
+  | 'reconciled';
 type SortDir = 'asc' | 'desc';
 
 const FILING_ORDER: Record<string, number> = { not_filed: 0, added: 1, updated: 2, carried_over: 3 };
@@ -77,6 +78,8 @@ function compare(a: RegisterItem, b: RegisterItem, key: ColKey): number {
       return a.status.localeCompare(b.status);
     case 'flag':
       return Number(!!a.review_flag) - Number(!!b.review_flag);
+    case 'reconciled':
+      return Number(a.reconciled) - Number(b.reconciled);
     default:
       return 0;
   }
@@ -158,6 +161,7 @@ const COLUMNS: { key: ColKey; label: string; align?: 'right'; defaultWidth: numb
   { key: 'filing_status', label: 'Filing status', defaultWidth: 110 },
   { key: 'status', label: 'Status', defaultWidth: 90 },
   { key: 'flag', label: 'Flag', defaultWidth: 50 },
+  { key: 'reconciled', label: 'Reconciled', defaultWidth: 100 },
 ];
 
 const MIN_COL_WIDTH = 44;
@@ -260,13 +264,21 @@ function ColumnsMenu({
 export function RegisterTableView({
   items,
   onSave,
+  onRefresh,
 }: {
   items: RegisterItem[];
   onSave: (id: string, patch: ItemEditPatch) => Promise<void>;
+  onRefresh: () => void;
 }) {
   const [sortKey, setSortKey] = useState<ColKey>('building');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Sticky "which row am I looking at" highlight — separate from expandedId
+  // so the highlight stays put after closing the detail panel, letting you
+  // scroll sideways through the rest of the row's columns without losing
+  // your place.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [clearingAll, setClearingAll] = useState(false);
 
   const [colWidths, setColWidths] = useState<Record<ColKey, number>>(() => {
     const stored = loadStoredWidths();
@@ -381,6 +393,21 @@ export function RegisterTableView({
     }
   }
 
+  async function handleClearAll() {
+    const reconciledCount = items.filter((i) => i.reconciled).length;
+    if (reconciledCount === 0) return;
+    if (!window.confirm(`Uncheck "Reconciled" on all ${reconciledCount} item(s) marked reconciled? This can't be undone item-by-item.`)) {
+      return;
+    }
+    setClearingAll(true);
+    try {
+      await clearAllReconciled();
+      onRefresh();
+    } finally {
+      setClearingAll(false);
+    }
+  }
+
   const sorted = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
     const chain = tieBreakChain(sortKey);
@@ -397,7 +424,14 @@ export function RegisterTableView({
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => void handleClearAll()}
+          disabled={clearingAll}
+          className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition disabled:opacity-50"
+        >
+          {clearingAll ? 'Clearing…' : 'Clear All Reconciled'}
+        </button>
         <ColumnsMenu columns={orderedColumns} hidden={hiddenCols} onToggle={toggleColumn} />
       </div>
 
@@ -448,17 +482,31 @@ export function RegisterTableView({
             {/* Body rows */}
             {sorted.map((item) => {
               const isExpanded = expandedId === item.id;
+              const isSelected = selectedId === item.id;
               return (
                 <div key={item.id} role="rowgroup">
                   <div
                     role="row"
-                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                    onClick={() => { setSelectedId(item.id); setExpandedId(isExpanded ? null : item.id); }}
                     className={`grid border-t border-sparrow-rule dark:border-sparrow-dark-border cursor-pointer transition ${
                       item.status === 'removed' ? 'opacity-50' : ''
-                    } ${isExpanded ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2' : 'hover:bg-sparrow-mist/30 dark:hover:bg-sparrow-dark-surface2/60'}`}
+                    } ${isExpanded || isSelected ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2' : 'hover:bg-sparrow-mist/30 dark:hover:bg-sparrow-dark-surface2/60'}`}
                     style={{ gridTemplateColumns: gridTemplate }}
                   >
                     {visibleColumns.map((col) => {
+                      if (col.key === 'reconciled') {
+                        return (
+                          <div key={col.key} role="cell" className={`${cellBase} flex items-center`}>
+                            <input
+                              type="checkbox"
+                              checked={item.reconciled}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => void onSave(item.id, { reconciled: e.target.checked })}
+                              className="h-4 w-4 accent-sparrow-green cursor-pointer"
+                            />
+                          </div>
+                        );
+                      }
                       const { node, layoutClass, colorClass, title } = cellContent(item, col.key);
                       return (
                         <div key={col.key} role="cell" className={`${cellBase} text-sm ${colorClass ?? DEFAULT_CELL_COLOR} ${layoutClass ?? ''}`} title={title}>

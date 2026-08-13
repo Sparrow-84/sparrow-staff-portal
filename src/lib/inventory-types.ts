@@ -21,7 +21,7 @@ export const FILING_STATUS_META: Record<InvFilingStatus, { label: string; chip: 
   added:        { label: 'New',       chip: 'bg-sparrow-green/10 text-sparrow-green' },
   updated:      { label: 'Updated',   chip: 'bg-sparrow-gold/20 text-sparrow-gold' },
   carried_over: { label: 'On File',   chip: 'bg-sparrow-mist text-sparrow-gray' },
-  not_filed:    { label: 'Not Filed', chip: 'bg-sparrow-rule text-sparrow-gray' },
+  not_filed:    { label: 'Not Filed', chip: 'bg-priority-p1/10 text-priority-p1' },
 };
 
 export const CONSUMABLES_CATEGORIES = [
@@ -158,6 +158,11 @@ export interface InvItem {
   filed_as: string | null;
   who_has_it: string | null;
   review_flag: string | null;
+  // Working field for the 2026 line-by-line spreadsheet reconciliation pass —
+  // "have I personally checked this line against the original spreadsheet,"
+  // not a statement about the item itself. Separate from review_flag (an
+  // ongoing "look at me in January" flag) on purpose.
+  reconciled: boolean;
   created_at: string;
   updated_at: string;
   sub_location?: InvSubLocation;

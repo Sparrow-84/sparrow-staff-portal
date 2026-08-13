@@ -189,10 +189,18 @@ export type ItemEditPatch = Partial<{
   status: import('./inventory-types').InvItemStatus;
   benton_schedule: InvBentonSchedule;
   removed_date: string | null;
+  reconciled: boolean;
 }>;
 
 export async function patchItem(id: string, patch: ItemEditPatch): Promise<void> {
   const { error } = await supabase.from('inv_items').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/** Bulk-unchecks every item's "Reconciled" mark — for starting a fresh
+ * pass through the register (e.g. next year's spot-check cycle). */
+export async function clearAllReconciled(): Promise<void> {
+  const { error } = await supabase.rpc('inv_clear_all_reconciled');
   if (error) throw new Error(error.message);
 }
 

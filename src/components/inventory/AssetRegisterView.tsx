@@ -404,7 +404,7 @@ export function AssetRegisterView() {
 
       {/* Table view — spreadsheet-style, sortable by any column, everything flattened into one list */}
       {displayMode === 'table' && (
-        <RegisterTableView items={filtered} onSave={handleSave} />
+        <RegisterTableView items={filtered} onSave={handleSave} onRefresh={load} />
       )}
 
       {/* Card view — grouped by location, matches the original spreadsheet's section-by-section layout */}

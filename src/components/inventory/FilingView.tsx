@@ -122,6 +122,9 @@ function FilingItemRow({ item }: { item: FilingItem }) {
             {item.review_flag && (
               <p className="text-xs text-sparrow-gold mt-0.5">⚠ {item.review_flag}</p>
             )}
+            {item.notes && (
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">{item.notes}</p>
+            )}
           </div>
         </div>
       </td>
