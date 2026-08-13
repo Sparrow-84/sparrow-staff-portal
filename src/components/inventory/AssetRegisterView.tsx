@@ -276,7 +276,12 @@ export function AssetRegisterView() {
   async function handleSave(id: string, patch: ItemEditPatch) {
     await patchItem(id, patch);
     setExpandedId(null);
-    void load();
+    // Merge the patch locally instead of a full reload — a full load() sets
+    // loading=true, which swaps the whole register out for a "Loading…"
+    // placeholder and back, losing scroll position on every single edit
+    // (very noticeable when quickly checking off Reconciled boxes one after
+    // another down the list).
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   }
 
   // Every location, even ones with zero items logged yet — so nothing (e.g. a

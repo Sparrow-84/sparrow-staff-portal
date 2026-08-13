@@ -447,10 +447,12 @@ export function RegisterTableView({
             scrolled past it instead. */}
         <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
           <div role="table" style={{ minWidth: 'max-content' }}>
-            {/* Header row */}
+            {/* Header row — opaque (not translucent) since it's pinned on top
+                of scrolling rows; a see-through header made the row text
+                underneath bleed through and hard to read. */}
             <div
               role="row"
-              className="grid bg-sparrow-green/10 sticky top-0 z-10"
+              className="grid bg-sparrow-green dark:bg-sparrow-dark-green sticky top-0 z-10"
               style={{ gridTemplateColumns: gridTemplate }}
             >
               {visibleColumns.map((col) => (
@@ -465,9 +467,9 @@ export function RegisterTableView({
                   onDrop={(e) => { e.preventDefault(); handleColumnDrop(col.key); }}
                   onClick={() => handleHeaderClick(col.key)}
                   title={col.label}
-                  className={`relative ${cellBase} py-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray cursor-grab active:cursor-grabbing select-none hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition ${col.align === 'right' ? 'text-right' : 'text-left'} ${
+                  className={`relative border-r border-white/20 px-3 py-2 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-white/90 cursor-grab active:cursor-grabbing select-none hover:text-white transition ${col.align === 'right' ? 'text-right' : 'text-left'} ${
                     draggingKey === col.key ? 'opacity-40' : ''
-                  } ${dragOverKey === col.key ? 'bg-sparrow-green/30' : ''}`}
+                  } ${dragOverKey === col.key ? 'bg-white/15' : ''}`}
                 >
                   <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
                     {col.label}{' '}
@@ -479,7 +481,7 @@ export function RegisterTableView({
                     draggable={false}
                     onPointerDown={(e) => startResize(col.key, e)}
                     style={{ touchAction: 'none' }}
-                    className="absolute top-0 right-0 h-full w-3 cursor-col-resize hover:bg-sparrow-green/30 active:bg-sparrow-green/50"
+                    className="absolute top-0 right-0 h-full w-3 cursor-col-resize hover:bg-white/20 active:bg-white/30"
                   />
                 </div>
               ))}
