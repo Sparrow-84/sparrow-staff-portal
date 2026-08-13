@@ -1,8 +1,7 @@
-import { Fragment, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { RegisterItem, ItemEditPatch } from '@/lib/inventory';
-import {
-  formatCost, FILING_STATUS_META, type InvBentonSchedule,
-} from '@/lib/inventory-types';
+import { formatCost, FILING_STATUS_META, type InvBentonSchedule } from '@/lib/inventory-types';
+import { ItemEditPanel } from './AssetRegisterView';
 
 // Bare schedule number/letter for the table's Schedule column — the table is
 // already labeled "Schedule", so repeating "Sched" on every row is noise.
@@ -12,17 +11,25 @@ const SCHEDULE_BARE: Record<InvBentonSchedule, string> = {
   schedule_5a: '5A',
   schedule_5b: '5B',
 };
-import { ItemEditPanel } from './AssetRegisterView';
 
 type SortKey =
-  | 'schedule' | 'description' | 'location' | 'serial' | 'condition'
+  | 'schedule' | 'description' | 'building' | 'room' | 'serial' | 'condition'
   | 'donated' | 'year' | 'qty' | 'cost_each' | 'total' | 'filing_status' | 'status' | 'flag';
 type SortDir = 'asc' | 'desc';
 
 const FILING_ORDER: Record<string, number> = { not_filed: 0, added: 1, updated: 2, carried_over: 3 };
 
-function locationLabel(item: RegisterItem): string {
-  return item.sub_location ? `${item.location.name} — ${item.sub_location.name}` : item.location.name;
+// Remote locations are named "Andrew — Remote", "Susanna — Remote", etc.
+// Treat "Remote Staff" as the building and the person's own name as the room
+// within it, so remote items slot into the same Building/Room grouping as
+// everyone else instead of needing their own separate concept.
+function buildingOf(item: RegisterItem): string {
+  return item.location.is_remote ? 'Remote Staff' : item.location.name;
+}
+
+function roomOf(item: RegisterItem): string {
+  if (item.location.is_remote) return item.location.name.replace(/\s*—\s*Remote$/, '');
+  return item.sub_location?.name ?? '—';
 }
 
 function yearOf(item: RegisterItem): number | null {
@@ -35,11 +42,13 @@ function compare(a: RegisterItem, b: RegisterItem, key: SortKey): number {
       return a.benton_schedule.localeCompare(b.benton_schedule);
     case 'description':
       return a.description.localeCompare(b.description);
-    case 'location': {
-      const locDiff = a.location.sort_order - b.location.sort_order;
-      if (locDiff !== 0) return locDiff;
-      return (a.sub_location?.name ?? '').localeCompare(b.sub_location?.name ?? '');
-    }
+    case 'building':
+      // Numeric sort_order (not alphabetical) so physical locations keep
+      // their defined order and Remote Staff (sort_order 100+) lands after
+      // all of them as one block, same as the Cards view.
+      return a.location.sort_order - b.location.sort_order;
+    case 'room':
+      return roomOf(a).localeCompare(roomOf(b));
     case 'serial':
       return (a.serial_number ?? '').localeCompare(b.serial_number ?? '');
     case 'condition':
@@ -70,10 +79,20 @@ function compare(a: RegisterItem, b: RegisterItem, key: SortKey): number {
   }
 }
 
+// Tie-break chain per primary sort key. Sorting by Building falls through to
+// Room then Description, so clicking "Building" alone gives the full
+// building → room → item grouping in one click, matching the spreadsheet.
+function tieBreakChain(primaryKey: SortKey): SortKey[] {
+  if (primaryKey === 'building') return ['building', 'room', 'description'];
+  if (primaryKey === 'description') return ['description'];
+  return [primaryKey, 'description'];
+}
+
 const COLUMNS: { key: SortKey; label: string; align?: 'right'; defaultWidth: number }[] = [
   { key: 'schedule', label: 'Schedule', defaultWidth: 90 },
   { key: 'description', label: 'Description', defaultWidth: 280 },
-  { key: 'location', label: 'Location', defaultWidth: 220 },
+  { key: 'building', label: 'Building', defaultWidth: 170 },
+  { key: 'room', label: 'Room', defaultWidth: 150 },
   { key: 'serial', label: 'Serial / model #', defaultWidth: 160 },
   { key: 'condition', label: 'Condition', defaultWidth: 90 },
   { key: 'donated', label: 'Donated', defaultWidth: 80 },
@@ -87,7 +106,7 @@ const COLUMNS: { key: SortKey; label: string; align?: 'right'; defaultWidth: num
 ];
 
 const MIN_COL_WIDTH = 44;
-const WIDTHS_STORAGE_KEY = 'sparrow-inv-register-table-col-widths';
+const WIDTHS_STORAGE_KEY = 'sparrow-inv-register-table-col-widths-v2';
 
 function loadStoredWidths(): Record<string, number> {
   try {
@@ -105,7 +124,7 @@ export function RegisterTableView({
   items: RegisterItem[];
   onSave: (id: string, patch: ItemEditPatch) => Promise<void>;
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>('location');
+  const [sortKey, setSortKey] = useState<SortKey>('building');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -125,6 +144,13 @@ export function RegisterTableView({
   // working even if the cursor slips off the thin handle mid-drag.
   const [resizing, setResizing] = useState<{ key: SortKey; startX: number; startWidth: number } | null>(null);
 
+  // A resize drag ends with a mouseup, which the browser follows with a
+  // click on whatever element the cursor lands on — often the header label,
+  // not the handle — so relying on stopPropagation from the handle alone
+  // isn't enough. This ref suppresses exactly the one click that follows a
+  // resize interaction, whether or not the mouse actually moved.
+  const suppressSortRef = useRef(false);
+
   useEffect(() => {
     if (!resizing) return;
     function handleMove(e: MouseEvent) {
@@ -134,6 +160,9 @@ export function RegisterTableView({
     }
     function handleUp() {
       setResizing(null);
+      // Safety net in case a click never follows this mouseup (e.g. it
+      // ended outside the window) — don't let the flag get stuck forever.
+      setTimeout(() => { suppressSortRef.current = false; }, 300);
     }
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
@@ -146,10 +175,15 @@ export function RegisterTableView({
   function startResize(key: SortKey, e: ReactMouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    suppressSortRef.current = true;
     setResizing({ key, startX: e.clientX, startWidth: colWidths[key] });
   }
 
   function handleHeaderClick(key: SortKey) {
+    if (suppressSortRef.current) {
+      suppressSortRef.current = false;
+      return;
+    }
     if (key === sortKey) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
@@ -160,11 +194,13 @@ export function RegisterTableView({
 
   const sorted = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
+    const chain = tieBreakChain(sortKey);
     return [...items].sort((a, b) => {
-      const primary = compare(a, b, sortKey) * dir;
-      if (primary !== 0) return primary;
-      // Always tie-break alphabetically so equal-value rows don't jitter.
-      return a.description.localeCompare(b.description);
+      for (const key of chain) {
+        const cmp = compare(a, b, key) * (key === sortKey ? dir : 1);
+        if (cmp !== 0) return cmp;
+      }
+      return 0;
     });
   }, [items, sortKey, sortDir]);
 
@@ -196,7 +232,6 @@ export function RegisterTableView({
                   {/* Drag handle — resizes this column without triggering sort */}
                   <span
                     onMouseDown={(e) => startResize(col.key, e)}
-                    onClick={(e) => e.stopPropagation()}
                     className="absolute top-0 right-0 h-full w-2 cursor-col-resize hover:bg-sparrow-green/30 active:bg-sparrow-green/50"
                   />
                 </th>
@@ -217,7 +252,8 @@ export function RegisterTableView({
                   >
                     <td className={tdBase}>{SCHEDULE_BARE[item.benton_schedule]}</td>
                     <td className={tdBase} title={item.description}>{item.description}</td>
-                    <td className={tdBase} title={locationLabel(item)}>{locationLabel(item)}</td>
+                    <td className={tdBase} title={buildingOf(item)}>{buildingOf(item)}</td>
+                    <td className={tdBase} title={roomOf(item)}>{roomOf(item)}</td>
                     <td className={tdBase} title={item.serial_number ?? ''}>{item.serial_number ?? '—'}</td>
                     <td className={`${tdBase} capitalize`}>{item.condition}</td>
                     <td className={tdBase}>{item.is_donated ? 'Yes' : 'No'}</td>
