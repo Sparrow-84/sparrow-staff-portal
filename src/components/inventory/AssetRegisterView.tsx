@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  fetchRegisterItems, patchItem, fetchSubLocations,
+  fetchRegisterItems, fetchAllLocations, patchItem, fetchSubLocations,
   type RegisterItem, type ItemEditPatch,
 } from '@/lib/inventory';
 import {
   formatCost, FILING_STATUS_META, BENTON_SCHEDULE_LABELS,
   type InvSubLocation, type InvItemCondition, type InvFilingStatus, type InvBentonSchedule, type InvItemStatus,
+  type InvLocation,
 } from '@/lib/inventory-types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+import { RegisterTableView } from './RegisterTableView';
 
 // ── Inline edit panel ────────────────────────────────────────────────────
 
-function ItemEditPanel({
+export function ItemEditPanel({
   item,
   onSave,
   onCancel,
@@ -71,7 +73,7 @@ function ItemEditPanel({
     }
   }
 
-  const inputCls = 'w-full rounded border border-sparrow-rule dark:border-sparrow-dark-border px-2 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green';
+  const inputCls = 'w-full rounded border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green';
   const labelCls = 'block text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray mb-1';
 
   return (
@@ -238,6 +240,7 @@ function RegisterItemRow({
 
 export function AssetRegisterView() {
   const [items, setItems] = useState<RegisterItem[]>([]);
+  const [allLocations, setAllLocations] = useState<InvLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [search, setSearch] = useState('');
@@ -246,12 +249,15 @@ export function AssetRegisterView() {
   const [showRemoved, setShowRemoved] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'all' | 'individual' | 'batch'>('all');
+  const [displayMode, setDisplayMode] = useState<'table' | 'cards'>('table');
 
   const load = useCallback(async () => {
     setLoading(true);
     setErr('');
     try {
-      setItems(await fetchRegisterItems());
+      const [regItems, locs] = await Promise.all([fetchRegisterItems(), fetchAllLocations()]);
+      setItems(regItems);
+      setAllLocations(locs);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not load the register.');
     } finally {
@@ -267,11 +273,14 @@ export function AssetRegisterView() {
     void load();
   }
 
-  const locations = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; sort_order: number }>();
-    for (const i of items) map.set(i.location.id, i.location);
-    return [...map.values()].sort((a, b) => a.sort_order - b.sort_order);
-  }, [items]);
+  // Every location, even ones with zero items logged yet — so nothing (e.g. a
+  // remote staffer with no items) silently disappears from the checklist view.
+  const locations = useMemo(
+    () => [...allLocations].sort((a, b) => a.sort_order - b.sort_order),
+    [allLocations],
+  );
+  const physicalLocations = useMemo(() => locations.filter((l) => !l.is_remote), [locations]);
+  const remoteLocations = useMemo(() => locations.filter((l) => l.is_remote), [locations]);
 
   const flaggedCount = items.filter((i) => i.review_flag && i.status === 'active').length;
 
@@ -284,6 +293,11 @@ export function AssetRegisterView() {
     if (viewMode === 'batch' && !i.is_batch) return false;
     return true;
   });
+
+  // Whether the user is actively narrowing things down — if so, hide empty
+  // groups as noise. Otherwise (the default view) show every location,
+  // matching every section of the original spreadsheet so nothing is hidden.
+  const isNarrowing = Boolean(search.trim() || reviewOnly || locationFilter || viewMode !== 'all');
 
   const grouped = new Map<string, RegisterItem[]>();
   for (const i of filtered) {
@@ -329,12 +343,12 @@ export function AssetRegisterView() {
           placeholder="Search description…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green flex-1 min-w-[180px]"
+          className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green flex-1 min-w-[180px]"
         />
         <select
           value={locationFilter}
           onChange={(e) => setLocationFilter(e.target.value)}
-          className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-2.5 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
+          className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2.5 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:ring-1 focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
         >
           <option value="">All locations</option>
           {locations.map((l) => (
@@ -363,36 +377,131 @@ export function AssetRegisterView() {
           <input type="checkbox" checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} />
           Show removed
         </label>
+
+        {/* Display mode toggle */}
+        <div className="flex rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border overflow-hidden text-xs font-medium">
+          {(['table', 'cards'] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setDisplayMode(mode)}
+              className={`px-3 py-1.5 transition ${
+                displayMode === mode
+                  ? 'bg-sparrow-green text-white'
+                  : 'bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
+              }`}
+            >
+              {mode === 'table' ? 'Table' : 'Cards'}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Grouped items */}
-      {locations
-        .filter((l) => grouped.has(l.id))
-        .map((loc) => {
-          const locItems = grouped.get(loc.id)!.sort((a, b) => a.description.localeCompare(b.description));
-          return (
-            <div key={loc.id} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
-              <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 bg-sparrow-green/10">
-                <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">{loc.name}</span>
-                <span className="text-xs text-sparrow-green/70">({locItems.length})</span>
-              </div>
-              {locItems.map((item) => (
-                <RegisterItemRow
-                  key={item.id}
-                  item={item}
-                  expanded={expandedId === item.id}
-                  onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
-                  onSave={(patch) => handleSave(item.id, patch)}
-                />
-              ))}
-            </div>
-          );
-        })}
+      {/* Table view — spreadsheet-style, sortable by any column, everything flattened into one list */}
+      {displayMode === 'table' && (
+        <RegisterTableView items={filtered} onSave={handleSave} />
+      )}
 
-      {filtered.length === 0 && (
+      {/* Card view — grouped by location, matches the original spreadsheet's section-by-section layout */}
+      {displayMode === 'cards' && (locationFilter ? (
+        // A single location is selected — show just that one, physical or remote.
+        (() => {
+          const loc = locations.find((l) => l.id === locationFilter);
+          if (!loc) return null;
+          const locItems = (grouped.get(loc.id) ?? []).sort((a, b) => a.description.localeCompare(b.description));
+          if (locItems.length === 0 && isNarrowing) return null;
+          return <LocationCard key={loc.id} name={loc.name} items={locItems} expandedId={expandedId} setExpandedId={setExpandedId} onSave={handleSave} />;
+        })()
+      ) : (
+        <>
+          {physicalLocations.map((loc) => {
+            const locItems = (grouped.get(loc.id) ?? []).sort((a, b) => a.description.localeCompare(b.description));
+            if (locItems.length === 0 && isNarrowing) return null;
+            return <LocationCard key={loc.id} name={loc.name} items={locItems} expandedId={expandedId} setExpandedId={setExpandedId} onSave={handleSave} />;
+          })}
+
+          {/* Remote staff, grouped together like the original spreadsheet's "Remote Staff" section — one card, one row per person, so nobody (even a person with nothing logged yet) drops off the list. */}
+          {remoteLocations.length > 0 && (() => {
+            const remoteTotal = remoteLocations.reduce((n, l) => n + (grouped.get(l.id)?.length ?? 0), 0);
+            if (isNarrowing && remoteTotal === 0) return null;
+            return (
+              <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
+                <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 bg-sparrow-green/10">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">Remote Staff</span>
+                  <span className="text-xs text-sparrow-green/70">({remoteTotal})</span>
+                </div>
+                {remoteLocations.map((loc) => {
+                  const locItems = (grouped.get(loc.id) ?? []).sort((a, b) => a.description.localeCompare(b.description));
+                  if (locItems.length === 0 && isNarrowing) return null;
+                  return (
+                    <div key={loc.id} className="border-b border-sparrow-rule dark:border-sparrow-dark-border last:border-0">
+                      <div className="flex items-center justify-between px-4 py-1.5 bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2">
+                        <span className="text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{loc.name}</span>
+                        <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">({locItems.length})</span>
+                      </div>
+                      {locItems.length === 0 ? (
+                        <p className="px-4 py-3 text-xs italic text-sparrow-gray dark:text-sparrow-dark-gray">No items logged yet.</p>
+                      ) : (
+                        locItems.map((item) => (
+                          <RegisterItemRow
+                            key={item.id}
+                            item={item}
+                            expanded={expandedId === item.id}
+                            onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                            onSave={(patch) => handleSave(item.id, patch)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </>
+      ))}
+
+      {displayMode === 'cards' && isNarrowing && filtered.length === 0 && (
         <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-8 text-center">
           <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No items match this filter.</p>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Location card (physical locations, and the single-location filtered view) ──
+
+function LocationCard({
+  name,
+  items,
+  expandedId,
+  setExpandedId,
+  onSave,
+}: {
+  name: string;
+  items: RegisterItem[];
+  expandedId: string | null;
+  setExpandedId: (id: string | null) => void;
+  onSave: (id: string, patch: ItemEditPatch) => Promise<void>;
+}) {
+  return (
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden">
+      <div className="flex items-center justify-between border-b border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2.5 bg-sparrow-green/10">
+        <span className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">{name}</span>
+        <span className="text-xs text-sparrow-green/70">({items.length})</span>
+      </div>
+      {items.length === 0 ? (
+        <p className="px-4 py-3 text-xs italic text-sparrow-gray dark:text-sparrow-dark-gray">No items logged yet.</p>
+      ) : (
+        items.map((item) => (
+          <RegisterItemRow
+            key={item.id}
+            item={item}
+            expanded={expandedId === item.id}
+            onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
+            onSave={(patch) => onSave(item.id, patch)}
+          />
+        ))
       )}
     </div>
   );
