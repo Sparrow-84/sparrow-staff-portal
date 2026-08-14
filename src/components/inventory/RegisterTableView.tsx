@@ -333,14 +333,23 @@ function ExpandableText({
     function onClickOutside(e: MouseEvent) {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) save();
     }
-    function onScrollOrResize() { setOpen(false); }
+    // Capture-phase 'scroll' also fires for scroll happening *inside* the
+    // textarea (e.g. a note long enough to overflow its 5 visible rows) —
+    // that's not the cell scrolling away underneath us, so ignore it rather
+    // than slamming the popover shut mid-scroll. Only a scroll whose target
+    // is outside the popover means the anchor cell may have moved.
+    function onScroll(e: Event) {
+      if (popoverRef.current && e.target instanceof Node && popoverRef.current.contains(e.target)) return;
+      save();
+    }
+    function onResize() { save(); }
     document.addEventListener('mousedown', onClickOutside);
-    window.addEventListener('scroll', onScrollOrResize, true);
-    window.addEventListener('resize', onScrollOrResize);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
     return () => {
       document.removeEventListener('mousedown', onClickOutside);
-      window.removeEventListener('scroll', onScrollOrResize, true);
-      window.removeEventListener('resize', onScrollOrResize);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, draft]);
