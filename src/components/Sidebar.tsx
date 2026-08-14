@@ -47,6 +47,7 @@ function NavContent({
   storiesAccess,
   hasOnboarding,
   onNavigate,
+  beforeSettings,
 }: {
   view: View;
   isAdmin: boolean;
@@ -57,6 +58,7 @@ function NavContent({
   storiesAccess: boolean;
   hasOnboarding: boolean;
   onNavigate: (v: View) => void;
+  beforeSettings?: React.ReactNode;
 }) {
   const { unreadTotal } = useChat();
   const itemBase = 'flex items-center gap-2 rounded-lg px-3 py-2 text-left transition';
@@ -192,6 +194,8 @@ function NavContent({
         )}
       </nav>
 
+      {beforeSettings}
+
       <button onClick={() => onNavigate('settings')} className={`${itemBase} ${view === 'settings' ? active : idle}`}>
         Settings
       </button>
@@ -210,48 +214,62 @@ export function Sidebar({ view, isAdmin, tocAccess, lcpAccess, partnershipsAcces
     });
   }
 
+  const bird = (flipped: boolean) => (
+    <span
+      className="inline-block transition-transform duration-500"
+      style={{ transform: flipped ? 'scaleX(-1)' : 'scaleX(1)', transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+    >
+      🐦
+    </span>
+  );
+
   return (
     <>
-      {/* Desktop: static sidebar — collapses to a slim rail to give width back
-          to whatever's open (handy split-screen with another window). The
-          little bird flips direction as a small nod to "flying off"/"flying
-          back" rather than a plain chevron. */}
-      <aside
-        className={`hidden shrink-0 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface py-5 transition-[width] duration-300 ease-out md:flex ${
-          collapsed ? 'w-14 px-2' : 'w-56 px-3'
-        }`}
-      >
+      {/* Desktop: collapses down to just a small floating green bubble at the
+          bottom-left of the screen — not a thin rail still taking up a full
+          column — so it reads as "tucked away" rather than "still sort of
+          there." Expanded, the toggle sits right above Settings so it
+          doesn't push the nav list down. The bird flips direction as a
+          small nod to "flying off"/"flying back" rather than a plain
+          chevron. */}
+      {collapsed ? (
         <button
           type="button"
           onClick={toggleCollapsed}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={`mb-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg transition-transform duration-200 hover:scale-110 hover:bg-sparrow-mist active:scale-90 dark:hover:bg-sparrow-dark-surface2 ${
-            collapsed ? 'mx-auto' : 'ml-auto'
-          }`}
+          title="Expand sidebar"
+          aria-label="Expand sidebar"
+          className="fixed bottom-4 left-4 z-30 hidden h-12 w-12 items-center justify-center rounded-full bg-sparrow-green text-xl text-white shadow-lg transition-transform duration-200 hover:scale-110 active:scale-90 md:flex"
         >
-          <span
-            className="inline-block transition-transform duration-500"
-            style={{ transform: collapsed ? 'scaleX(-1)' : 'scaleX(1)', transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
-          >
-            🐦
-          </span>
+          {bird(true)}
         </button>
-
-        <div className={`flex flex-1 flex-col gap-3 overflow-hidden transition-opacity duration-150 ${collapsed ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
-          <NavContent
-            view={view}
-            isAdmin={isAdmin}
-            tocAccess={tocAccess}
-            lcpAccess={lcpAccess}
-            partnershipsAccess={partnershipsAccess}
-            opsAccess={opsAccess}
-            storiesAccess={storiesAccess}
-            hasOnboarding={hasOnboarding}
-            onNavigate={onNavigate}
-          />
-        </div>
-      </aside>
+      ) : (
+        <aside className="hidden w-56 shrink-0 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-5 md:flex">
+          <div className="flex flex-1 flex-col gap-3 overflow-hidden">
+            <NavContent
+              view={view}
+              isAdmin={isAdmin}
+              tocAccess={tocAccess}
+              lcpAccess={lcpAccess}
+              partnershipsAccess={partnershipsAccess}
+              opsAccess={opsAccess}
+              storiesAccess={storiesAccess}
+              hasOnboarding={hasOnboarding}
+              onNavigate={onNavigate}
+              beforeSettings={
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  title="Collapse sidebar"
+                  aria-label="Collapse sidebar"
+                  className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-full text-lg transition-transform duration-200 hover:scale-110 hover:bg-sparrow-mist active:scale-90 dark:hover:bg-sparrow-dark-surface2"
+                >
+                  {bird(false)}
+                </button>
+              }
+            />
+          </div>
+        </aside>
+      )}
 
       {/* Mobile: slide-in drawer */}
       <div
