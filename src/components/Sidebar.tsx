@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { useChat } from '@/chat/ChatContext';
+
+const COLLAPSED_STORAGE_KEY = 'sparrow-sidebar-collapsed';
 
 export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'stories' | 'tasks' | 'calendar' | 'notes' | 'contacts' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents' | 'team' | 'inventory';
 
@@ -197,21 +200,57 @@ function NavContent({
 }
 
 export function Sidebar({ view, isAdmin, tocAccess, lcpAccess, partnershipsAccess, opsAccess, storiesAccess, hasOnboarding, onNavigate, open, onClose }: Props) {
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true');
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(COLLAPSED_STORAGE_KEY, String(next));
+      return next;
+    });
+  }
+
   return (
     <>
-      {/* Desktop: static sidebar */}
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-5 md:flex">
-        <NavContent
-          view={view}
-          isAdmin={isAdmin}
-          tocAccess={tocAccess}
-          lcpAccess={lcpAccess}
-          partnershipsAccess={partnershipsAccess}
-          opsAccess={opsAccess}
-          storiesAccess={storiesAccess}
-          hasOnboarding={hasOnboarding}
-          onNavigate={onNavigate}
-        />
+      {/* Desktop: static sidebar — collapses to a slim rail to give width back
+          to whatever's open (handy split-screen with another window). The
+          little bird flips direction as a small nod to "flying off"/"flying
+          back" rather than a plain chevron. */}
+      <aside
+        className={`hidden shrink-0 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface py-5 transition-[width] duration-300 ease-out md:flex ${
+          collapsed ? 'w-14 px-2' : 'w-56 px-3'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={`mb-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg transition-transform duration-200 hover:scale-110 hover:bg-sparrow-mist active:scale-90 dark:hover:bg-sparrow-dark-surface2 ${
+            collapsed ? 'mx-auto' : 'ml-auto'
+          }`}
+        >
+          <span
+            className="inline-block transition-transform duration-500"
+            style={{ transform: collapsed ? 'scaleX(-1)' : 'scaleX(1)', transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+          >
+            🐦
+          </span>
+        </button>
+
+        <div className={`flex flex-1 flex-col gap-3 overflow-hidden transition-opacity duration-150 ${collapsed ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
+          <NavContent
+            view={view}
+            isAdmin={isAdmin}
+            tocAccess={tocAccess}
+            lcpAccess={lcpAccess}
+            partnershipsAccess={partnershipsAccess}
+            opsAccess={opsAccess}
+            storiesAccess={storiesAccess}
+            hasOnboarding={hasOnboarding}
+            onNavigate={onNavigate}
+          />
+        </div>
       </aside>
 
       {/* Mobile: slide-in drawer */}
