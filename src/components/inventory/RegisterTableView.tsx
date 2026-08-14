@@ -285,7 +285,7 @@ function InlineBadgeSelect<T extends string>({
       value={value}
       onChange={(e) => onSave(e.target.value as T)}
       onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center border border-transparent outline-none appearance-none cursor-pointer text-xs font-medium transition hover:opacity-80 focus:border-sparrow-green dark:focus:border-sparrow-dark-green ${current?.badgeClass ?? ''}`}
+      className={`inline-flex items-center justify-center text-center border border-transparent outline-none appearance-none cursor-pointer text-xs font-medium transition hover:opacity-80 focus:border-sparrow-green dark:focus:border-sparrow-dark-green ${current?.badgeClass ?? ''}`}
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
