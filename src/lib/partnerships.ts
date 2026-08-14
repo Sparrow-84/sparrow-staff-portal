@@ -400,5 +400,17 @@ export async function mergePartners(duplicateId: string, targetId: string): Prom
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Permanently removes a partner record that was never a real relationship
+ * (added by mistake, duplicate never worth merging, etc.) — not for a
+ * relationship that genuinely ended, which is what Archive is for. Touchpoints
+ * are cascade-deleted with the row; any donations stay in the giving records
+ * but lose their link to this partner (see FKs on `donations`).
+ */
+export async function deletePartner(id: string): Promise<void> {
+  const { error } = await supabase.from('partners').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // Re-export types for convenience
 export type { GivingMethod, MouStatus };

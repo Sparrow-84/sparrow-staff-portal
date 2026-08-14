@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
-import { emitFirstTimeDonorTask, emitRevisitTask, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner } from '@/lib/partnerships';
+import { deletePartner, emitFirstTimeDonorTask, emitRevisitTask, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner } from '@/lib/partnerships';
 import {
   DONOR_TIER,
   DONOR_TIER_DESC,
@@ -82,6 +82,7 @@ export function PartnerDetailPanel({
   const [mergeOpen, setMergeOpen] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState('');
   const [confirmMerge, setConfirmMerge] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Log-touchpoint form
   const [method, setMethod] = useState<TouchpointMethod>('email');
@@ -120,6 +121,7 @@ export function PartnerDetailPanel({
       setMergeOpen(false);
       setMergeTargetId('');
       setConfirmMerge(false);
+      setConfirmDelete(false);
       void reload();
     }
   }, [open, partnerId, reload]);
@@ -193,6 +195,16 @@ export function PartnerDetailPanel({
     setBusy(false);
     setConfirmMerge(false);
     setMergeOpen(false);
+    onChanged();
+    onClose();
+  }
+
+  async function remove() {
+    if (!partner) return;
+    setBusy(true);
+    await deletePartner(partner.id);
+    setBusy(false);
+    setConfirmDelete(false);
     onChanged();
     onClose();
   }
@@ -926,6 +938,44 @@ export function PartnerDetailPanel({
                 Restore to active
               </button>
             </div>
+          )}
+        </section>
+
+        {/* ── 13. Delete — for a record that never should have been added (typo'd
+            duplicate, wrong org, test entry), not a relationship that genuinely
+            ended. That case is Archive, above, which is reversible. */}
+        <section className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
+          {confirmDelete ? (
+            <div className="space-y-2">
+              {(touchpoints.length > 0 || donations.length > 0) && (
+                <p className="text-xs leading-snug text-amber-800 dark:text-amber-300">
+                  {partner.name} has {touchpoints.length} touchpoint{touchpoints.length === 1 ? '' : 's'}
+                  {isDonor && donations.length > 0 && ` and ${donations.length} logged gift${donations.length === 1 ? '' : 's'}`} on
+                  record. Deleting removes the touchpoint history for good{isDonor && donations.length > 0 ? ' (gifts stay in the giving records, just unlinked from this partner)' : ''}.
+                  If this was a real relationship, use Archive instead — it's reversible.
+                </p>
+              )}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Permanently delete {partner.name}?</span>
+                <div className="flex shrink-0 gap-2">
+                  <button onClick={() => setConfirmDelete(false)} className="btn-ghost">Cancel</button>
+                  <button
+                    onClick={() => void remove()}
+                    disabled={busy}
+                    className="rounded-xl bg-priority-p1 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+                  >
+                    {busy ? 'Deleting…' : 'Delete permanently'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
+            >
+              Delete this partner — added in error
+            </button>
           )}
         </section>
 
