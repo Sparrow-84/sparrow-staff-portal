@@ -264,6 +264,36 @@ function InlineSelect<T extends string>({
   );
 }
 
+// Same editable dropdown as InlineSelect, but each option carries its own
+// badge styling so the closed control reads as a color-coded pill (or, for
+// the "this is normal/expected" value, as plain blended-in text) — a
+// glance-able signal for Filing status / Status instead of having to read
+// every row's label. Susanna's ask: on-file/active are the boring default
+// and shouldn't stand out; anything else should.
+function InlineBadgeSelect<T extends string>({
+  value,
+  options,
+  onSave,
+}: {
+  value: T;
+  options: { value: T; label: string; badgeClass: string }[];
+  onSave: (v: T) => void;
+}) {
+  const current = options.find((o) => o.value === value);
+  return (
+    <select
+      value={value}
+      onChange={(e) => onSave(e.target.value as T)}
+      onClick={(e) => e.stopPropagation()}
+      className={`inline-flex items-center border border-transparent outline-none appearance-none cursor-pointer text-xs font-medium transition hover:opacity-80 focus:border-sparrow-green dark:focus:border-sparrow-dark-green ${current?.badgeClass ?? ''}`}
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
+  );
+}
+
 // Long-text fields (Notes, Review Flag) expand into a portal-rendered popover
 // anchored to the cell — not pushed below into a detail panel elsewhere,
 // which is exactly what made the old panel feel disorienting to scroll to.
@@ -641,15 +671,24 @@ export function RegisterTableView({
         return <span className="block text-right text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{formatCost(item.unit_cost * item.quantity)}</span>;
       case 'filing_status':
         return (
-          <InlineSelect
+          <InlineBadgeSelect
             value={item.filing_status}
             onSave={(v: InvFilingStatus) => save({ filing_status: v })}
-            options={(Object.keys(FILING_STATUS_META) as InvFilingStatus[]).map((s) => ({ value: s, label: FILING_STATUS_META[s].label }))}
+            options={(Object.keys(FILING_STATUS_META) as InvFilingStatus[]).map((s) => ({
+              value: s,
+              label: FILING_STATUS_META[s].label,
+              // "On file" is the normal, expected state — no pill, just quiet
+              // grey text. Everything else gets its color-coded pill so it
+              // stands out at a glance.
+              badgeClass: s === 'carried_over'
+                ? 'text-sparrow-gray dark:text-sparrow-dark-gray'
+                : `rounded-full px-2 py-0.5 ${FILING_STATUS_META[s].chip}`,
+            }))}
           />
         );
       case 'status':
         return (
-          <InlineSelect
+          <InlineBadgeSelect
             value={item.status}
             onSave={(v: InvItemStatus) => save({
               status: v,
@@ -657,7 +696,10 @@ export function RegisterTableView({
                 ? new Date().toISOString().slice(0, 10)
                 : v === 'active' ? null : item.removed_date,
             })}
-            options={[{ value: 'active', label: 'Active' }, { value: 'removed', label: 'Removed' }]}
+            options={[
+              { value: 'active', label: 'Active', badgeClass: 'text-sparrow-gray dark:text-sparrow-dark-gray' },
+              { value: 'removed', label: 'Removed', badgeClass: 'rounded-full px-2 py-0.5 bg-priority-p1/10 text-priority-p1' },
+            ]}
           />
         );
       case 'flag':
