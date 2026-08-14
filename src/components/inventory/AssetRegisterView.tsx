@@ -281,7 +281,20 @@ export function AssetRegisterView() {
     // placeholder and back, losing scroll position on every single edit
     // (very noticeable when quickly checking off Reconciled boxes one after
     // another down the list).
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+    setItems((prev) => prev.map((it) => {
+      if (it.id !== id) return it;
+      const next: RegisterItem = { ...it, ...patch };
+      // A flat merge alone leaves the joined `location`/`sub_location`
+      // objects stale (they're separate nested fields, not scalar columns),
+      // which would keep showing the old building/room until the next full
+      // reload — re-derive them from the patch instead.
+      if (patch.location_id && patch.location_id !== it.location_id) {
+        const loc = allLocations.find((l) => l.id === patch.location_id);
+        if (loc) next.location = loc;
+      }
+      if (patch.sub_location_id === null) next.sub_location = undefined;
+      return next;
+    }));
   }
 
   // Every location, even ones with zero items logged yet — so nothing (e.g. a

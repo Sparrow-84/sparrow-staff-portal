@@ -194,7 +194,9 @@ export type ItemEditPatch = Partial<{
   unit_cost: number;
   condition: InvItemCondition;
   is_donated: boolean | null;
+  location_id: string;
   sub_location_id: string | null;
+  acquired_date: string | null;
   notes: string | null;
   who_has_it: string | null;
   review_flag: string | null;

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  clearAllReconciled, fetchAllSubLocations,
+  clearAllReconciled, fetchAllSubLocations, fetchAllLocations,
   type RegisterItem, type ItemEditPatch,
 } from '@/lib/inventory';
 import {
   formatCost, FILING_STATUS_META, BENTON_SCHEDULE_LABELS, BATCH_CATEGORIES,
-  type InvBentonSchedule, type InvSubLocation, type InvFilingStatus, type InvItemCondition, type InvItemStatus,
+  type InvBentonSchedule, type InvSubLocation, type InvLocation, type InvFilingStatus, type InvItemCondition, type InvItemStatus,
 } from '@/lib/inventory-types';
 
 // Bare schedule number/letter — the column is already labeled "Schedule", so
@@ -26,14 +26,10 @@ type SortDir = 'asc' | 'desc';
 
 const FILING_ORDER: Record<string, number> = { not_filed: 0, added: 1, updated: 2, carried_over: 3 };
 
-// Remote locations are named "Andrew — Remote", "Susanna — Remote", etc.
-// Treat "Remote Staff" as the building and the person's own name as the room
-// within it, so remote items slot into the same Building/Room grouping as
-// everyone else instead of needing their own separate concept.
-function buildingOf(item: RegisterItem): string {
-  return item.location.is_remote ? 'Remote Staff' : item.location.name;
-}
-
+// Remote locations are named "Andrew — Remote", "Susanna — Remote", etc. —
+// the person's own name (Remote suffix stripped) reads as the room, so
+// remote items slot into the same Building/Room grouping as everyone else
+// instead of needing their own separate concept.
 function roomOf(item: RegisterItem): string {
   if (item.location.is_remote) return item.location.name.replace(/\s*—\s*Remote$/, '');
   return item.sub_location?.name ?? '—';
@@ -232,6 +228,53 @@ function InlineNumber({
       onKeyDown={(e) => {
         if (e.key === 'Enter') e.currentTarget.blur();
         if (e.key === 'Escape') { setDraft(String(value)); e.currentTarget.blur(); }
+      }}
+      className={`${editableBase} text-right text-sm text-sparrow-ink dark:text-sparrow-dark-ink`}
+    />
+  );
+}
+
+// Year is stored as acquired_date (always the 1st of the year — see the
+// historical import migration), so this edits just the year and never
+// touches month/day. Blank clears it back to unknown (null) rather than
+// coercing to a real year like InlineNumber would.
+function InlineYear({
+  value,
+  onSave,
+}: {
+  value: number | null;
+  onSave: (v: number | null) => void;
+}) {
+  const [draft, setDraft] = useState(value === null ? '' : String(value));
+  useEffect(() => setDraft(value === null ? '' : String(value)), [value]);
+
+  function commit() {
+    const trimmed = draft.trim();
+    if (trimmed === '') {
+      if (value !== null) onSave(null);
+      return;
+    }
+    const n = Math.round(Number(trimmed));
+    const thisYear = new Date().getFullYear();
+    if (!Number.isFinite(n) || n < 1900 || n > thisYear + 1) {
+      setDraft(value === null ? '' : String(value));
+      return;
+    }
+    if (n !== value) onSave(n);
+    setDraft(String(n));
+  }
+
+  return (
+    <input
+      type="number"
+      value={draft}
+      placeholder="—"
+      onChange={(e) => setDraft(e.target.value)}
+      onWheel={(e) => e.currentTarget.blur()}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') { setDraft(value === null ? '' : String(value)); e.currentTarget.blur(); }
       }}
       className={`${editableBase} text-right text-sm text-sparrow-ink dark:text-sparrow-dark-ink`}
     />
@@ -464,10 +507,16 @@ export function RegisterTableView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [clearingAll, setClearingAll] = useState(false);
   const [subLocations, setSubLocations] = useState<InvSubLocation[]>([]);
+  const [locations, setLocations] = useState<InvLocation[]>([]);
 
   useEffect(() => {
     fetchAllSubLocations().then(setSubLocations).catch(() => setSubLocations([]));
+    fetchAllLocations().then(setLocations).catch(() => setLocations([]));
   }, []);
+
+  // Same order the Building column sorts by, so the dropdown lists buildings
+  // in the familiar physical order with Remote Staff locations trailing.
+  const sortedLocations = useMemo(() => [...locations].sort((a, b) => a.sort_order - b.sort_order), [locations]);
 
   const subLocationsByLocation = useMemo(() => {
     const map = new Map<string, InvSubLocation[]>();
@@ -633,10 +682,19 @@ export function RegisterTableView({
         );
       case 'description':
         return <InlineText value={item.description} onSave={(v) => save({ description: v })} />;
-      case 'building': {
-        const v = buildingOf(item);
-        return <span className="block truncate text-sm text-sparrow-ink dark:text-sparrow-dark-ink" title={v}>{v}</span>;
-      }
+      case 'building':
+        // Shows/edits the item's real location (e.g. "Andrew — Remote"),
+        // not a collapsed "Remote Staff" grouping label — a native <select>
+        // can't display a label other than its actually-selected option's
+        // own text. Changing buildings clears sub_location_id since the old
+        // room won't exist in the new one.
+        return (
+          <InlineSelect
+            value={item.location_id}
+            onSave={(v) => save({ location_id: v, sub_location_id: null })}
+            options={sortedLocations.map((l) => ({ value: l.id, label: l.name }))}
+          />
+        );
       case 'room': {
         if (item.location.is_remote) {
           const v = roomOf(item);
@@ -670,7 +728,12 @@ export function RegisterTableView({
           />
         );
       case 'year':
-        return <span className="block text-right text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{yearOf(item) ?? '—'}</span>;
+        return (
+          <InlineYear
+            value={yearOf(item)}
+            onSave={(y) => save({ acquired_date: y === null ? null : `${y}-01-01` })}
+          />
+        );
       case 'qty':
         return <InlineNumber value={item.quantity} min={1} onSave={(v) => save({ quantity: v })} />;
       case 'cost_each':
