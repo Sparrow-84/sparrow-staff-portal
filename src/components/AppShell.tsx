@@ -61,7 +61,7 @@ export function AppShell() {
     <ChatProvider>
       <div className="flex min-h-screen flex-col">
         <Header profile={profile} onMenu={() => setNavOpen(true)} onNavigate={handleNavigate} />
-        <div className="flex flex-1">
+        <div className="flex flex-1 overflow-x-hidden">
           <Sidebar
             view={view}
             isAdmin={isAdmin}
@@ -75,7 +75,14 @@ export function AppShell() {
             open={navOpen}
             onClose={() => setNavOpen(false)}
           />
-          <main className="flex-1">
+          {/* min-w-0 is the actual fix here — a flex item's default min-width
+              is "auto", meaning it refuses to shrink below its content's
+              natural width. Without this, wide content anywhere inside (like
+              the Inventory table) forces <main> — and with it the whole page,
+              sidebar included — wider than the viewport, so the browser
+              scrolls the entire app sideways instead of just the content
+              that's actually wide. */}
+          <main className="flex-1 min-w-0">
             {view === 'onboarding' && <OnboardingView onDone={handleOnboardingDone} />}
             {view === 'home' && <WidgetHome onNavigate={handleNavigate} />}
             {view === 'tasks' && <TasksView />}

@@ -455,7 +455,7 @@ export function RegisterTableView({
               className="grid bg-sparrow-green dark:bg-sparrow-dark-green sticky top-0 z-10"
               style={{ gridTemplateColumns: gridTemplate }}
             >
-              {visibleColumns.map((col) => (
+              {visibleColumns.map((col, colIdx) => (
                 <div
                   key={col.key}
                   role="columnheader"
@@ -469,7 +469,9 @@ export function RegisterTableView({
                   title={col.label}
                   className={`relative border-r border-white/20 px-3 py-2 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-white/90 cursor-grab active:cursor-grabbing select-none hover:text-white transition ${col.align === 'right' ? 'text-right' : 'text-left'} ${
                     draggingKey === col.key ? 'opacity-40' : ''
-                  } ${dragOverKey === col.key ? 'bg-white/15' : ''}`}
+                  } ${dragOverKey === col.key ? 'bg-white/15' : ''} ${
+                    colIdx === 0 ? 'sticky left-0 z-30 bg-sparrow-green dark:bg-sparrow-dark-green shadow-[2px_0_4px_-2px_rgba(0,0,0,0.25)]' : ''
+                  }`}
                 >
                   <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
                     {col.label}{' '}
@@ -491,20 +493,31 @@ export function RegisterTableView({
             {sorted.map((item) => {
               const isExpanded = expandedId === item.id;
               const isSelected = selectedId === item.id;
+              // Whichever column currently sits first (Susanna's put Description
+              // there, but this follows drag-reorder, not a hardcoded column) is
+              // frozen to the left edge — same idea as the frozen header row, so
+              // you can always tell which item you're looking at while scrolling
+              // sideways. Needs its own opaque background, same as the sticky
+              // header did: as the rest of the row scrolls underneath it, this
+              // cell no longer shares the row's single continuous background.
+              const firstColBg = isExpanded || isSelected
+                ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2'
+                : 'bg-sparrow-sage dark:bg-sparrow-dark-surface2 group-hover:bg-sparrow-mist/30 dark:group-hover:bg-sparrow-dark-surface2';
               return (
                 <div key={item.id} role="rowgroup">
                   <div
                     role="row"
                     onClick={() => { setSelectedId(item.id); setExpandedId(isExpanded ? null : item.id); }}
-                    className={`grid border-t border-sparrow-rule dark:border-sparrow-dark-border cursor-pointer transition ${
+                    className={`group grid border-t border-sparrow-rule dark:border-sparrow-dark-border cursor-pointer transition ${
                       item.status === 'removed' ? 'opacity-50' : ''
                     } ${isExpanded || isSelected ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2' : 'hover:bg-sparrow-mist/30 dark:hover:bg-sparrow-dark-surface2/60'}`}
                     style={{ gridTemplateColumns: gridTemplate }}
                   >
-                    {visibleColumns.map((col) => {
+                    {visibleColumns.map((col, colIdx) => {
+                      const stickyClass = colIdx === 0 ? `sticky left-0 z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)] ${firstColBg}` : '';
                       if (col.key === 'reconciled') {
                         return (
-                          <div key={col.key} role="cell" className={`${cellBase} flex items-center`}>
+                          <div key={col.key} role="cell" className={`${cellBase} flex items-center ${stickyClass}`}>
                             <input
                               type="checkbox"
                               checked={item.reconciled}
@@ -517,7 +530,7 @@ export function RegisterTableView({
                       }
                       const { node, layoutClass, colorClass, title } = cellContent(item, col.key);
                       return (
-                        <div key={col.key} role="cell" className={`${cellBase} text-sm ${colorClass ?? DEFAULT_CELL_COLOR} ${layoutClass ?? ''}`} title={title}>
+                        <div key={col.key} role="cell" className={`${cellBase} text-sm ${colorClass ?? DEFAULT_CELL_COLOR} ${layoutClass ?? ''} ${stickyClass}`} title={title}>
                           {node}
                         </div>
                       );
