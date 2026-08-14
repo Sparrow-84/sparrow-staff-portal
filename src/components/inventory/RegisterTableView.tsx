@@ -452,7 +452,7 @@ export function RegisterTableView({
                 underneath bleed through and hard to read. */}
             <div
               role="row"
-              className="grid bg-sparrow-green dark:bg-sparrow-dark-green sticky top-0 z-10"
+              className="grid bg-sparrow-green dark:bg-sparrow-dark-green sticky top-0 z-20"
               style={{ gridTemplateColumns: gridTemplate }}
             >
               {visibleColumns.map((col, colIdx) => (
@@ -470,7 +470,7 @@ export function RegisterTableView({
                   className={`relative border-r border-white/20 px-3 py-2 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-white/90 cursor-grab active:cursor-grabbing select-none hover:text-white transition ${col.align === 'right' ? 'text-right' : 'text-left'} ${
                     draggingKey === col.key ? 'opacity-40' : ''
                   } ${dragOverKey === col.key ? 'bg-white/15' : ''} ${
-                    colIdx === 0 ? 'sticky left-0 z-30 bg-sparrow-green dark:bg-sparrow-dark-green shadow-[2px_0_4px_-2px_rgba(0,0,0,0.25)]' : ''
+                    colIdx === 0 ? 'sticky left-0 z-10 bg-sparrow-green dark:bg-sparrow-dark-green shadow-[2px_0_4px_-2px_rgba(0,0,0,0.25)]' : ''
                   }`}
                 >
                   <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
@@ -497,12 +497,13 @@ export function RegisterTableView({
               // there, but this follows drag-reorder, not a hardcoded column) is
               // frozen to the left edge — same idea as the frozen header row, so
               // you can always tell which item you're looking at while scrolling
-              // sideways. Needs its own opaque background, same as the sticky
-              // header did: as the rest of the row scrolls underneath it, this
-              // cell no longer shares the row's single continuous background.
+              // sideways. Needs its own FULLY OPAQUE background (no /NN opacity
+              // suffixes) — unlike the rest of the row, this cell visually sits
+              // on top of whatever other column has scrolled beneath it, so any
+              // translucency lets that other cell's text/borders bleed through.
               const firstColBg = isExpanded || isSelected
-                ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2'
-                : 'bg-sparrow-sage dark:bg-sparrow-dark-surface2 group-hover:bg-sparrow-mist/30 dark:group-hover:bg-sparrow-dark-surface2';
+                ? 'bg-sparrow-mist dark:bg-sparrow-dark-surface2'
+                : 'bg-sparrow-sage dark:bg-sparrow-dark-surface2 group-hover:bg-sparrow-mist dark:group-hover:bg-sparrow-dark-border';
               return (
                 <div key={item.id} role="rowgroup">
                   <div
