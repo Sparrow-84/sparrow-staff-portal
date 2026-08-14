@@ -1,10 +1,16 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { clearAllReconciled, type RegisterItem, type ItemEditPatch } from '@/lib/inventory';
-import { formatCost, FILING_STATUS_META, type InvBentonSchedule } from '@/lib/inventory-types';
-import { ItemEditPanel } from './AssetRegisterView';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  clearAllReconciled, fetchAllSubLocations,
+  type RegisterItem, type ItemEditPatch,
+} from '@/lib/inventory';
+import {
+  formatCost, FILING_STATUS_META, BENTON_SCHEDULE_LABELS, BATCH_CATEGORIES,
+  type InvBentonSchedule, type InvSubLocation, type InvFilingStatus, type InvItemCondition, type InvItemStatus,
+} from '@/lib/inventory-types';
 
-// Bare schedule number/letter for the table's Schedule column — the table is
-// already labeled "Schedule", so repeating "Sched" on every row is noise.
+// Bare schedule number/letter — the column is already labeled "Schedule", so
+// repeating "Sched"/the full name in every row is noise.
 const SCHEDULE_BARE: Record<InvBentonSchedule, string> = {
   schedule_2: '2',
   schedule_4: '4',
@@ -14,8 +20,8 @@ const SCHEDULE_BARE: Record<InvBentonSchedule, string> = {
 
 type ColKey =
   | 'schedule' | 'description' | 'building' | 'room' | 'serial' | 'condition'
-  | 'donated' | 'year' | 'qty' | 'cost_each' | 'total' | 'filing_status' | 'status' | 'flag'
-  | 'reconciled';
+  | 'donated' | 'year' | 'qty' | 'cost_each' | 'total' | 'filing_status' | 'status'
+  | 'flag' | 'notes' | 'who_has_it' | 'batch' | 'batch_category' | 'reconciled';
 type SortDir = 'asc' | 'desc';
 
 const FILING_ORDER: Record<string, number> = { not_filed: 0, added: 1, updated: 2, carried_over: 3 };
@@ -78,6 +84,14 @@ function compare(a: RegisterItem, b: RegisterItem, key: ColKey): number {
       return a.status.localeCompare(b.status);
     case 'flag':
       return Number(!!a.review_flag) - Number(!!b.review_flag);
+    case 'notes':
+      return Number(!!a.notes) - Number(!!b.notes);
+    case 'who_has_it':
+      return (a.who_has_it ?? '').localeCompare(b.who_has_it ?? '');
+    case 'batch':
+      return Number(a.is_batch) - Number(b.is_batch);
+    case 'batch_category':
+      return (a.batch_category ?? '').localeCompare(b.batch_category ?? '');
     case 'reconciled':
       return Number(a.reconciled) - Number(b.reconciled);
     default:
@@ -94,58 +108,6 @@ function tieBreakChain(primaryKey: ColKey): ColKey[] {
   return [primaryKey, 'description'];
 }
 
-const DEFAULT_CELL_COLOR = 'text-sparrow-ink dark:text-sparrow-dark-ink';
-
-// `colorClass` replaces the default text color entirely (for cases like
-// "Unknown" that need a different one); `layoutClass` is always appended on
-// top (alignment, weight, etc.) so the two never fight over the same cell.
-function cellContent(item: RegisterItem, key: ColKey): { node: ReactNode; layoutClass?: string; colorClass?: string; title?: string } {
-  switch (key) {
-    case 'schedule':
-      return { node: SCHEDULE_BARE[item.benton_schedule] };
-    case 'description':
-      return { node: item.description, title: item.description };
-    case 'building': {
-      const v = buildingOf(item);
-      return { node: v, title: v };
-    }
-    case 'room': {
-      const v = roomOf(item);
-      return { node: v, title: v };
-    }
-    case 'serial':
-      return { node: item.serial_number ?? '—', title: item.serial_number ?? '' };
-    case 'condition':
-      return { node: item.condition, layoutClass: 'capitalize' };
-    case 'donated':
-      return item.is_donated === null
-        ? { node: 'Unknown', colorClass: 'italic text-sparrow-gray dark:text-sparrow-dark-gray' }
-        : { node: item.is_donated ? 'Yes' : 'No' };
-    case 'year':
-      return { node: yearOf(item) ?? '—', layoutClass: 'text-right' };
-    case 'qty':
-      return { node: item.quantity, layoutClass: 'text-right' };
-    case 'cost_each':
-      return { node: formatCost(item.unit_cost), layoutClass: 'text-right' };
-    case 'total':
-      return { node: formatCost(item.unit_cost * item.quantity), layoutClass: 'text-right font-medium' };
-    case 'filing_status': {
-      const meta = FILING_STATUS_META[item.filing_status];
-      return { node: <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium ${meta.chip}`}>{meta.label}</span> };
-    }
-    case 'status':
-      return {
-        node: item.status === 'removed'
-          ? <span className="rounded-full bg-priority-p1/10 px-1.5 py-0.5 text-[10px] font-medium text-priority-p1">Removed</span>
-          : 'Active',
-      };
-    case 'flag':
-      return { node: item.review_flag ? <span title={item.review_flag}>⚠</span> : null };
-    default:
-      return { node: null };
-  }
-}
-
 const COLUMNS: { key: ColKey; label: string; align?: 'right'; defaultWidth: number }[] = [
   { key: 'schedule', label: 'Schedule', defaultWidth: 90 },
   { key: 'description', label: 'Description', defaultWidth: 280 },
@@ -153,21 +115,25 @@ const COLUMNS: { key: ColKey; label: string; align?: 'right'; defaultWidth: numb
   { key: 'room', label: 'Room', defaultWidth: 150 },
   { key: 'serial', label: 'Serial / model #', defaultWidth: 160 },
   { key: 'condition', label: 'Condition', defaultWidth: 90 },
-  { key: 'donated', label: 'Donated', defaultWidth: 80 },
+  { key: 'donated', label: 'Donated', defaultWidth: 100 },
   { key: 'year', label: 'Year acq.', align: 'right', defaultWidth: 90 },
-  { key: 'qty', label: 'Qty', align: 'right', defaultWidth: 60 },
-  { key: 'cost_each', label: 'Cost ea.', align: 'right', defaultWidth: 90 },
-  { key: 'total', label: 'Total', align: 'right', defaultWidth: 90 },
-  { key: 'filing_status', label: 'Filing status', defaultWidth: 110 },
-  { key: 'status', label: 'Status', defaultWidth: 90 },
-  { key: 'flag', label: 'Flag', defaultWidth: 50 },
+  { key: 'qty', label: 'Qty', align: 'right', defaultWidth: 70 },
+  { key: 'cost_each', label: 'Cost ea.', align: 'right', defaultWidth: 100 },
+  { key: 'total', label: 'Total', align: 'right', defaultWidth: 100 },
+  { key: 'filing_status', label: 'Filing status', defaultWidth: 130 },
+  { key: 'status', label: 'Status', defaultWidth: 110 },
+  { key: 'flag', label: 'Review Flag', defaultWidth: 220 },
+  { key: 'notes', label: 'Notes', defaultWidth: 220 },
+  { key: 'who_has_it', label: 'Who Has It', defaultWidth: 140 },
+  { key: 'batch', label: 'Batch', defaultWidth: 70 },
+  { key: 'batch_category', label: 'Batch Category', defaultWidth: 210 },
   { key: 'reconciled', label: 'Reconciled', defaultWidth: 100 },
 ];
 
 const MIN_COL_WIDTH = 44;
-const WIDTHS_STORAGE_KEY = 'sparrow-inv-register-table-col-widths-v3';
+const WIDTHS_STORAGE_KEY = 'sparrow-inv-register-table-col-widths-v4';
 const HIDDEN_STORAGE_KEY = 'sparrow-inv-register-table-hidden-cols-v1';
-const ORDER_STORAGE_KEY = 'sparrow-inv-register-table-col-order-v1';
+const ORDER_STORAGE_KEY = 'sparrow-inv-register-table-col-order-v2';
 
 const DEFAULT_ORDER: ColKey[] = COLUMNS.map((c) => c.key);
 
@@ -202,6 +168,190 @@ function loadColumnOrder(): ColKey[] {
   } catch {
     return DEFAULT_ORDER;
   }
+}
+
+// ── Shared cell styling — plain text at rest, only reveals as an editable
+// control on hover/focus, per Susanna's explicit ask: "look how it looks now
+// until I hover over something." ──────────────────────────────────────────
+const editableBase =
+  'w-full bg-transparent border border-transparent rounded px-1 -mx-1 py-0.5 outline-none transition-colors ' +
+  'hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2/60 ' +
+  'focus:bg-white dark:focus:bg-sparrow-dark-surface focus:border-sparrow-green dark:focus:border-sparrow-dark-green';
+
+function InlineText({
+  value,
+  onSave,
+  align,
+  placeholder,
+}: {
+  value: string;
+  onSave: (v: string) => void;
+  align?: 'right';
+  placeholder?: string;
+}) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  return (
+    <input
+      value={draft}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => { if (draft !== value) onSave(draft); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') { setDraft(value); e.currentTarget.blur(); }
+      }}
+      className={`${editableBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink ${align === 'right' ? 'text-right' : ''}`}
+    />
+  );
+}
+
+function InlineNumber({
+  value,
+  onSave,
+  min = 0,
+}: {
+  value: number;
+  onSave: (v: number) => void;
+  min?: number;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
+  return (
+    <input
+      type="number"
+      min={min}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onWheel={(e) => e.currentTarget.blur()}
+      onBlur={() => {
+        const n = Math.max(min, Number(draft) || 0);
+        if (n !== value) onSave(n);
+        setDraft(String(n));
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') { setDraft(String(value)); e.currentTarget.blur(); }
+      }}
+      className={`${editableBase} text-right text-sm text-sparrow-ink dark:text-sparrow-dark-ink`}
+    />
+  );
+}
+
+function InlineSelect<T extends string>({
+  value,
+  options,
+  onSave,
+  disabled,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onSave: (v: T) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <select
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onSave(e.target.value as T)}
+      onClick={(e) => e.stopPropagation()}
+      className={`${editableBase} cursor-pointer text-sm text-sparrow-ink dark:text-sparrow-dark-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent appearance-none`}
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
+  );
+}
+
+// Long-text fields (Notes, Review Flag) expand into a portal-rendered popover
+// anchored to the cell — not pushed below into a detail panel elsewhere,
+// which is exactly what made the old panel feel disorienting to scroll to.
+// Rendered via portal (not just position:absolute) so it never gets clipped
+// by the table's own scroll container, and closes on scroll rather than
+// trying to follow the cell around.
+function ExpandableText({
+  value,
+  onSave,
+  placeholder,
+}: {
+  value: string | null;
+  onSave: (v: string | null) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value ?? '');
+  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  function openPopover() {
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) setRect({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 260) });
+    setDraft(value ?? '');
+    setOpen(true);
+  }
+
+  function save() {
+    setOpen(false);
+    const trimmed = draft.trim();
+    if (trimmed !== (value ?? '')) onSave(trimmed || null);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) save();
+    }
+    function onScrollOrResize() { setOpen(false); }
+    document.addEventListener('mousedown', onClickOutside);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draft]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={(e) => { e.stopPropagation(); openPopover(); }}
+        className={`${editableBase} block truncate text-left text-sm ${value ? 'text-sparrow-ink dark:text-sparrow-dark-ink' : 'italic text-sparrow-gray dark:text-sparrow-dark-gray'}`}
+      >
+        {value || placeholder}
+      </button>
+      {open && rect && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width }}
+          className="z-50 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 shadow-lg"
+        >
+          <textarea
+            autoFocus
+            rows={5}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape') { setDraft(value ?? ''); setOpen(false); } }}
+            className="w-full resize-none rounded border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
+          />
+          <div className="mt-2 flex justify-end gap-3">
+            <button type="button" onClick={() => { setDraft(value ?? ''); setOpen(false); }} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
+              Cancel
+            </button>
+            <button type="button" onClick={save} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+              Save
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
 }
 
 // ── Columns visibility dropdown ─────────────────────────────────────────────
@@ -272,13 +422,22 @@ export function RegisterTableView({
 }) {
   const [sortKey, setSortKey] = useState<ColKey>('building');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  // Sticky "which row am I looking at" highlight — separate from expandedId
-  // so the highlight stays put after closing the detail panel, letting you
-  // scroll sideways through the rest of the row's columns without losing
-  // your place.
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [clearingAll, setClearingAll] = useState(false);
+  const [subLocations, setSubLocations] = useState<InvSubLocation[]>([]);
+
+  useEffect(() => {
+    fetchAllSubLocations().then(setSubLocations).catch(() => setSubLocations([]));
+  }, []);
+
+  const subLocationsByLocation = useMemo(() => {
+    const map = new Map<string, InvSubLocation[]>();
+    for (const sl of subLocations) {
+      if (!map.has(sl.location_id)) map.set(sl.location_id, []);
+      map.get(sl.location_id)!.push(sl);
+    }
+    return map;
+  }, [subLocations]);
 
   const [colWidths, setColWidths] = useState<Record<ColKey, number>>(() => {
     const stored = loadStoredWidths();
@@ -420,7 +579,124 @@ export function RegisterTableView({
     });
   }, [items, sortKey, sortDir]);
 
-  const cellBase = 'border-r border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 overflow-hidden text-ellipsis whitespace-nowrap';
+  const cellBase = 'border-r border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 overflow-hidden';
+
+  function renderCell(item: RegisterItem, key: ColKey) {
+    const save = (patch: ItemEditPatch) => void onSave(item.id, patch);
+    switch (key) {
+      case 'schedule':
+        return (
+          <InlineSelect
+            value={item.benton_schedule}
+            onSave={(v) => save({ benton_schedule: v })}
+            options={(Object.keys(BENTON_SCHEDULE_LABELS) as InvBentonSchedule[]).map((s) => ({ value: s, label: SCHEDULE_BARE[s] }))}
+          />
+        );
+      case 'description':
+        return <InlineText value={item.description} onSave={(v) => save({ description: v })} />;
+      case 'building': {
+        const v = buildingOf(item);
+        return <span className="block truncate text-sm text-sparrow-ink dark:text-sparrow-dark-ink" title={v}>{v}</span>;
+      }
+      case 'room': {
+        if (item.location.is_remote) {
+          const v = roomOf(item);
+          return <span className="block truncate text-sm text-sparrow-ink dark:text-sparrow-dark-ink" title={v}>{v}</span>;
+        }
+        const options = subLocationsByLocation.get(item.location.id) ?? [];
+        return (
+          <InlineSelect
+            value={item.sub_location_id ?? ''}
+            onSave={(v) => save({ sub_location_id: v || null })}
+            options={[{ value: '', label: '—' }, ...options.map((sl) => ({ value: sl.id, label: sl.name }))]}
+          />
+        );
+      }
+      case 'serial':
+        return <InlineText value={item.serial_number ?? ''} placeholder="—" onSave={(v) => save({ serial_number: v.trim() || null })} />;
+      case 'condition':
+        return (
+          <InlineSelect
+            value={item.condition}
+            onSave={(v: InvItemCondition) => save({ condition: v })}
+            options={[{ value: 'new', label: 'New' }, { value: 'used', label: 'Used' }]}
+          />
+        );
+      case 'donated':
+        return (
+          <InlineSelect
+            value={item.is_donated === null ? 'unknown' : item.is_donated ? 'yes' : 'no'}
+            onSave={(v) => save({ is_donated: v === 'unknown' ? null : v === 'yes' })}
+            options={[{ value: 'unknown', label: 'Unknown' }, { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]}
+          />
+        );
+      case 'year':
+        return <span className="block text-right text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{yearOf(item) ?? '—'}</span>;
+      case 'qty':
+        return <InlineNumber value={item.quantity} min={1} onSave={(v) => save({ quantity: v })} />;
+      case 'cost_each':
+        return <InlineNumber value={item.unit_cost} min={0} onSave={(v) => save({ unit_cost: v })} />;
+      case 'total':
+        // Locked — computed from Qty × Cost, never directly editable.
+        return <span className="block text-right text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{formatCost(item.unit_cost * item.quantity)}</span>;
+      case 'filing_status':
+        return (
+          <InlineSelect
+            value={item.filing_status}
+            onSave={(v: InvFilingStatus) => save({ filing_status: v })}
+            options={(Object.keys(FILING_STATUS_META) as InvFilingStatus[]).map((s) => ({ value: s, label: FILING_STATUS_META[s].label }))}
+          />
+        );
+      case 'status':
+        return (
+          <InlineSelect
+            value={item.status}
+            onSave={(v: InvItemStatus) => save({
+              status: v,
+              removed_date: v === 'removed' && item.status !== 'removed'
+                ? new Date().toISOString().slice(0, 10)
+                : v === 'active' ? null : item.removed_date,
+            })}
+            options={[{ value: 'active', label: 'Active' }, { value: 'removed', label: 'Removed' }]}
+          />
+        );
+      case 'flag':
+        return <ExpandableText value={item.review_flag} placeholder="No open questions" onSave={(v) => save({ review_flag: v })} />;
+      case 'notes':
+        return <ExpandableText value={item.notes} placeholder="No notes" onSave={(v) => save({ notes: v })} />;
+      case 'who_has_it':
+        return <InlineText value={item.who_has_it ?? ''} placeholder="—" onSave={(v) => save({ who_has_it: v.trim() || null })} />;
+      case 'batch':
+        return (
+          <input
+            type="checkbox"
+            checked={item.is_batch}
+            onChange={(e) => save({ is_batch: e.target.checked, batch_category: e.target.checked ? item.batch_category : null })}
+            className="h-4 w-4 accent-sparrow-green cursor-pointer"
+          />
+        );
+      case 'batch_category':
+        return (
+          <InlineSelect
+            value={item.batch_category ?? ''}
+            disabled={!item.is_batch}
+            onSave={(v) => save({ batch_category: v || null })}
+            options={[{ value: '', label: item.is_batch ? 'Select…' : '—' }, ...BATCH_CATEGORIES.map((c) => ({ value: c, label: c }))]}
+          />
+        );
+      case 'reconciled':
+        return (
+          <input
+            type="checkbox"
+            checked={item.reconciled}
+            onChange={(e) => save({ reconciled: e.target.checked })}
+            className="h-4 w-4 accent-sparrow-green cursor-pointer"
+          />
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <div className="space-y-2">
@@ -491,7 +767,6 @@ export function RegisterTableView({
 
             {/* Body rows */}
             {sorted.map((item) => {
-              const isExpanded = expandedId === item.id;
               const isSelected = selectedId === item.id;
               // Whichever column currently sits first (Susanna's put Description
               // there, but this follows drag-reorder, not a hardcoded column) is
@@ -501,49 +776,28 @@ export function RegisterTableView({
               // suffixes) — unlike the rest of the row, this cell visually sits
               // on top of whatever other column has scrolled beneath it, so any
               // translucency lets that other cell's text/borders bleed through.
-              const firstColBg = isExpanded || isSelected
+              const firstColBg = isSelected
                 ? 'bg-sparrow-mist dark:bg-sparrow-dark-surface2'
                 : 'bg-sparrow-sage dark:bg-sparrow-dark-surface2 group-hover:bg-sparrow-mist dark:group-hover:bg-sparrow-dark-border';
               return (
-                <div key={item.id} role="rowgroup">
-                  <div
-                    role="row"
-                    onClick={() => { setSelectedId(item.id); setExpandedId(isExpanded ? null : item.id); }}
-                    className={`group grid border-t border-sparrow-rule dark:border-sparrow-dark-border cursor-pointer transition ${
-                      item.status === 'removed' ? 'opacity-50' : ''
-                    } ${isExpanded || isSelected ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2' : 'hover:bg-sparrow-mist/30 dark:hover:bg-sparrow-dark-surface2/60'}`}
-                    style={{ gridTemplateColumns: gridTemplate }}
-                  >
-                    {visibleColumns.map((col, colIdx) => {
-                      const stickyClass = colIdx === 0 ? `sticky left-0 z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)] ${firstColBg}` : '';
-                      if (col.key === 'reconciled') {
-                        return (
-                          <div key={col.key} role="cell" className={`${cellBase} flex items-center ${stickyClass}`}>
-                            <input
-                              type="checkbox"
-                              checked={item.reconciled}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => void onSave(item.id, { reconciled: e.target.checked })}
-                              className="h-4 w-4 accent-sparrow-green cursor-pointer"
-                            />
-                          </div>
-                        );
-                      }
-                      const { node, layoutClass, colorClass, title } = cellContent(item, col.key);
-                      return (
-                        <div key={col.key} role="cell" className={`${cellBase} text-sm ${colorClass ?? DEFAULT_CELL_COLOR} ${layoutClass ?? ''} ${stickyClass}`} title={title}>
-                          {node}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {isExpanded && (
-                    <ItemEditPanel
-                      item={item}
-                      onSave={(patch) => onSave(item.id, patch)}
-                      onCancel={() => setExpandedId(null)}
-                    />
-                  )}
+                <div
+                  key={item.id}
+                  role="row"
+                  onClick={() => setSelectedId(item.id)}
+                  className={`group grid border-t border-sparrow-rule dark:border-sparrow-dark-border transition ${
+                    item.status === 'removed' ? 'opacity-50' : ''
+                  } ${isSelected ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2' : 'hover:bg-sparrow-mist/30 dark:hover:bg-sparrow-dark-surface2/60'}`}
+                  style={{ gridTemplateColumns: gridTemplate }}
+                >
+                  {visibleColumns.map((col, colIdx) => {
+                    const stickyClass = colIdx === 0 ? `sticky left-0 z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)] ${firstColBg}` : '';
+                    const alignClass = col.align === 'right' ? 'text-right' : '';
+                    return (
+                      <div key={col.key} role="cell" className={`${cellBase} ${alignClass} ${stickyClass} flex items-center`}>
+                        {renderCell(item, col.key)}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}

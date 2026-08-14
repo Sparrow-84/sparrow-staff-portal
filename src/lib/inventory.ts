@@ -136,6 +136,19 @@ export async function fetchSubLocations(locationId: string): Promise<InvSubLocat
   return data ?? [];
 }
 
+/** Every sub-location across every location, in one call — for views (like the
+ * register table) that need to render a sub-location picker per row without
+ * fetching per-row on demand. */
+export async function fetchAllSubLocations(): Promise<InvSubLocation[]> {
+  const { data, error } = await supabase
+    .from('inv_sub_locations')
+    .select('*')
+    .order('location_id')
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 // ── Asset register ────────────────────────────────────────────────────────
 
 export async function fetchActiveItems(locationId: string): Promise<InvItem[]> {
@@ -190,6 +203,8 @@ export type ItemEditPatch = Partial<{
   benton_schedule: InvBentonSchedule;
   removed_date: string | null;
   reconciled: boolean;
+  is_batch: boolean;
+  batch_category: string | null;
 }>;
 
 export async function patchItem(id: string, patch: ItemEditPatch): Promise<void> {
