@@ -10,6 +10,7 @@ import {
 } from '@/lib/inventory-types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { RegisterTableView } from './RegisterTableView';
+import { AddItemPanel } from './AddItemPanel';
 
 // ── Inline edit panel ────────────────────────────────────────────────────
 
@@ -256,6 +257,7 @@ export function AssetRegisterView() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'all' | 'individual' | 'batch'>('all');
   const [displayMode, setDisplayMode] = useState<'table' | 'cards'>('table');
+  const [showAddItem, setShowAddItem] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -402,6 +404,10 @@ export function AssetRegisterView() {
           Show removed
         </label>
 
+        <button onClick={() => setShowAddItem(true)} className="btn-primary text-xs px-3 py-1.5">
+          + Add item
+        </button>
+
         {/* Display mode toggle */}
         <div className="flex rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border overflow-hidden text-xs font-medium">
           {(['table', 'cards'] as const).map((mode) => (
@@ -489,6 +495,13 @@ export function AssetRegisterView() {
           <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No items match this filter.</p>
         </div>
       )}
+
+      <AddItemPanel
+        open={showAddItem}
+        defaultLocationId={locationFilter || null}
+        onClose={() => setShowAddItem(false)}
+        onCreated={() => void load()}
+      />
     </div>
   );
 }

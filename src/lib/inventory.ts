@@ -187,6 +187,37 @@ export async function fetchRegisterItems(): Promise<RegisterItem[]> {
   return (data ?? []) as RegisterItem[];
 }
 
+export interface NewRegisterItem {
+  location_id: string;
+  sub_location_id: string | null;
+  description: string;
+  serial_number: string | null;
+  condition: InvItemCondition;
+  is_donated: boolean | null;
+  quantity: number;
+  unit_cost: number;
+  cost_source: InvCostSource;
+  acquired_date: string | null;
+  benton_schedule: InvBentonSchedule;
+  filing_status: import('./inventory-types').InvFilingStatus;
+  who_has_it: string | null;
+  notes: string | null;
+  review_flag: string | null;
+}
+
+/**
+ * Adds a record directly to the register — for something that was simply
+ * never logged through a monthly submission (found during a reconciliation
+ * pass, a shared item being split into its own line, etc.), not for this
+ * month's actual new purchases/donations, which still belong in the
+ * location's monthly submission so that reporting stays accurate.
+ */
+export async function createRegisterItem(input: NewRegisterItem): Promise<string> {
+  const { data, error } = await supabase.from('inv_items').insert(input).select('id').single();
+  if (error) throw new Error(error.message);
+  return data.id as string;
+}
+
 export type ItemEditPatch = Partial<{
   description: string;
   serial_number: string | null;
