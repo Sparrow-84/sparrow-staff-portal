@@ -15,10 +15,11 @@ interface Props {
   onMoveDate: (taskId: string, dateIso: string | null) => void;
 }
 
-// A group's key is a real ISO date (droppable to reschedule) unless it's one
-// of these two overflow buckets, which aren't days you can drag a task onto.
-function isDateKey(key: string): boolean {
-  return key !== 'overdue' && key !== 'no_date';
+// A group's key is a real ISO date (droppable to reschedule), or the special
+// 'no_date' bucket (droppable to clear the due date). 'overdue' isn't a real
+// date to drop onto, so it stays excluded.
+function isDroppableKey(key: string): boolean {
+  return key !== 'overdue';
 }
 
 export function TaskListView({ tasks, today, currentUserId, showAssignee, onToggle, onOpen, onMoveDate }: Props) {
@@ -30,9 +31,9 @@ export function TaskListView({ tasks, today, currentUserId, showAssignee, onTogg
   function onDrop(e: DragEvent, key: string) {
     e.preventDefault();
     setOverKey(null);
-    if (!isDateKey(key)) return;
+    if (!isDroppableKey(key)) return;
     const id = e.dataTransfer.getData('text/plain');
-    if (id) onMoveDate(id, key);
+    if (id) onMoveDate(id, key === 'no_date' ? null : key);
   }
 
   return (
@@ -40,9 +41,9 @@ export function TaskListView({ tasks, today, currentUserId, showAssignee, onTogg
       {groups.map(({ key, label, items }) => (
         <section
           key={key}
-          onDragOver={isDateKey(key) ? (e) => { e.preventDefault(); setOverKey(key); } : undefined}
-          onDragLeave={isDateKey(key) ? () => setOverKey((k) => (k === key ? null : k)) : undefined}
-          onDrop={isDateKey(key) ? (e) => onDrop(e, key) : undefined}
+          onDragOver={isDroppableKey(key) ? (e) => { e.preventDefault(); setOverKey(key); } : undefined}
+          onDragLeave={isDroppableKey(key) ? () => setOverKey((k) => (k === key ? null : k)) : undefined}
+          onDrop={isDroppableKey(key) ? (e) => onDrop(e, key) : undefined}
         >
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
             {label} <span className="text-sparrow-gray/70">· {items.length}</span>
