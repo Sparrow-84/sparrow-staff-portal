@@ -430,7 +430,6 @@ export function PartnershipsRoom() {
                 onOpenPartner={openPartner}
                 onChanged={load}
                 nextCommLabel={nextCommLabel}
-                isDonorView={filter === 'donor'}
                 donorStatMap={donorStatMap}
                 interestMap={interestMap}
               />
