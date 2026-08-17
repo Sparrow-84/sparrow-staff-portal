@@ -423,6 +423,34 @@ export function PartnerDetailPanel({
         <section className="space-y-3">
           <span className="field-label block">Stewardship</span>
           <div>
+            <span className="field-label">Type</span>
+            <select
+              value={partner.type}
+              onChange={(e) => {
+                const nextType = e.target.value as PartnerType;
+                if (nextType === partner.type) return;
+                // Changing the primary type shouldn't lose the old one — fold it into
+                // secondary tags (and drop the new type from there if it was already tagged).
+                const nextSecondary = Array.from(
+                  new Set([...(partner.secondary_types ?? []).filter((t) => t !== nextType), partner.type]),
+                );
+                void patch({ type: nextType, secondary_types: nextSecondary });
+              }}
+              disabled={busy}
+              className="field-input mt-0"
+            >
+              {PARTNER_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {PARTNER_TYPE[t].icon} {PARTNER_TYPE[t].label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
+              Drives cadence defaults and which fields show below. Changing it moves the old
+              type down to "Also involved as" so it isn't lost.
+            </p>
+          </div>
+          <div>
             <span className="field-label">Also involved as</span>
             <MultiSelectDropdown
               options={PARTNER_TYPES.filter((t) => t !== partner.type).map((t) => ({
@@ -905,27 +933,43 @@ export function PartnerDetailPanel({
           )}
         </section>
 
-        {/* ── 12. Archive / Restore ── */}
+        {/* ── 12. Archive / Restore — the normal way to end a relationship that
+            was real: history stays, reversible anytime from the Archived tab.
+            Styled to stand out (pill, brand green) since this — not Delete
+            below — is the button staff should reach for. ── */}
         <section className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           {partner.active ? (
             confirmArchive ? (
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Archive {partner.name}?</span>
-                <div className="flex shrink-0 gap-2">
-                  <button onClick={() => setConfirmArchive(false)} className="btn-ghost">Cancel</button>
-                  <button
-                    onClick={archive}
-                    disabled={busy}
-                    className="rounded-xl bg-priority-p1 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
-                  >
-                    Archive
-                  </button>
+              <div className="space-y-2">
+                <p className="text-xs leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
+                  {partner.name} moves to the Archived tab — off your active list, but their full history stays and you can restore them anytime.
+                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Archive {partner.name}?</span>
+                  <div className="flex shrink-0 gap-2">
+                    <button onClick={() => setConfirmArchive(false)} className="btn-ghost">Cancel</button>
+                    <button
+                      onClick={archive}
+                      disabled={busy}
+                      className="rounded-full bg-sparrow-green dark:bg-sparrow-dark-green px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+                    >
+                      {busy ? 'Archiving…' : 'Archive'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
-              <button onClick={() => setConfirmArchive(true)} className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
-                Archive this partner
-              </button>
+              <div className="space-y-1.5">
+                <button
+                  onClick={() => setConfirmArchive(true)}
+                  className="rounded-full bg-sparrow-green dark:bg-sparrow-dark-green px-4 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+                >
+                  Archive this partner
+                </button>
+                <p className="text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
+                  Use this when the relationship has genuinely ended. Their record and history stay — this is reversible from the Archived tab, unlike permanent delete below.
+                </p>
+              </div>
             )
           ) : (
             <div className="flex items-center justify-between">
@@ -943,7 +987,9 @@ export function PartnerDetailPanel({
 
         {/* ── 13. Delete — for a record that never should have been added (typo'd
             duplicate, wrong org, test entry), not a relationship that genuinely
-            ended. That case is Archive, above, which is reversible. */}
+            ended. That case is Archive, above, which is reversible. Deliberately
+            kept as plain muted text, not a pill, so it doesn't compete with
+            Archive as the button people reach for. ── */}
         <section className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           {confirmDelete ? (
             <div className="space-y-2">
@@ -974,7 +1020,7 @@ export function PartnerDetailPanel({
               onClick={() => setConfirmDelete(true)}
               className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
             >
-              Delete this partner — added in error
+              Permanently delete this partner
             </button>
           )}
         </section>

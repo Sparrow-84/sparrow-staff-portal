@@ -68,26 +68,40 @@ export function MultiSelectDropdown({
 
   return (
     <div ref={wrapRef} className="relative">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
-        className="field-input mt-0 flex min-h-[38px] w-full flex-wrap items-center gap-1 text-left"
+      {/* A plain div, not a button, so each pill below can carry its own remove
+          button without illegally nesting <button> inside <button>. */}
+      <div
+        className={`field-input mt-0 flex min-h-[38px] w-full flex-wrap items-center gap-1 text-left ${
+          disabled ? 'opacity-50' : 'cursor-pointer'
+        }`}
+        onClick={() => { if (!disabled) setOpen((v) => !v); }}
       >
         {selectedOptions.length === 0 ? (
           <span className="text-sparrow-gray dark:text-sparrow-dark-gray">{placeholder}</span>
         ) : (
-          selectedOptions.map((o) =>
-            o.color ? (
-              <LabelPill key={o.value} label={o.label} color={o.color} />
-            ) : (
-              <span key={o.value} className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
-                {o.icon} {o.label}
-              </span>
-            ),
-          )
+          selectedOptions.map((o) => (
+            <span key={o.value} className="inline-flex items-center gap-1">
+              {o.color ? (
+                <LabelPill label={o.label} color={o.color} />
+              ) : (
+                <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+                  {o.icon} {o.label}
+                </span>
+              )}
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); toggle(o.value); }}
+                  className="leading-none text-sparrow-gray/70 hover:text-priority-p1"
+                  aria-label={`Remove ${o.label}`}
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          ))
         )}
-      </button>
+      </div>
 
       {open && (
         <div className="absolute z-20 mt-1 w-full rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 shadow-lg">
