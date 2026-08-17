@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useMemo, useState } from 'react';
 import {
   clearAllReconciled, fetchAllSubLocations, fetchAllLocations,
   type RegisterItem, type ItemEditPatch,
@@ -8,6 +7,11 @@ import {
   formatCost, FILING_STATUS_META, BENTON_SCHEDULE_LABELS, BATCH_CATEGORIES,
   type InvBentonSchedule, type InvSubLocation, type InvLocation, type InvFilingStatus, type InvItemCondition, type InvItemStatus,
 } from '@/lib/inventory-types';
+import {
+  useColumnLayout, useHeaderInteractions, GridTableShell,
+  InlineText, InlineNumber, InlineSelect, InlineBadgeSelect, ExpandableText, InlineCheckbox,
+  type GridColumn,
+} from '@/components/gridtable/GridTable';
 
 // Bare schedule number/letter — the column is already labeled "Schedule", so
 // repeating "Sched"/the full name in every row is noise.
@@ -104,7 +108,7 @@ function tieBreakChain(primaryKey: ColKey): ColKey[] {
   return [primaryKey, 'description'];
 }
 
-const COLUMNS: { key: ColKey; label: string; align?: 'right'; defaultWidth: number }[] = [
+const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'schedule', label: 'Schedule', defaultWidth: 90 },
   { key: 'description', label: 'Description', defaultWidth: 280 },
   { key: 'building', label: 'Building', defaultWidth: 170 },
@@ -126,113 +130,7 @@ const COLUMNS: { key: ColKey; label: string; align?: 'right'; defaultWidth: numb
   { key: 'reconciled', label: 'Reconciled', defaultWidth: 100 },
 ];
 
-const MIN_COL_WIDTH = 44;
-const WIDTHS_STORAGE_KEY = 'sparrow-inv-register-table-col-widths-v4';
-const HIDDEN_STORAGE_KEY = 'sparrow-inv-register-table-hidden-cols-v1';
-const ORDER_STORAGE_KEY = 'sparrow-inv-register-table-col-order-v2';
-
-const DEFAULT_ORDER: ColKey[] = COLUMNS.map((c) => c.key);
-
-function loadStoredWidths(): Record<string, number> {
-  try {
-    const raw = localStorage.getItem(WIDTHS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function loadHiddenCols(): ColKey[] {
-  try {
-    const raw = localStorage.getItem(HIDDEN_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function loadColumnOrder(): ColKey[] {
-  try {
-    const raw = localStorage.getItem(ORDER_STORAGE_KEY);
-    const stored = raw ? (JSON.parse(raw) as ColKey[]) : null;
-    if (!stored) return DEFAULT_ORDER;
-    // Guard against a stored order from before a column was added/removed —
-    // keep only known keys, then append any new ones that aren't in it yet.
-    const known = stored.filter((k) => DEFAULT_ORDER.includes(k));
-    const missing = DEFAULT_ORDER.filter((k) => !known.includes(k));
-    return [...known, ...missing];
-  } catch {
-    return DEFAULT_ORDER;
-  }
-}
-
-// ── Shared cell styling — plain text at rest, only reveals as an editable
-// control on hover/focus, per Susanna's explicit ask: "look how it looks now
-// until I hover over something." ──────────────────────────────────────────
-const editableBase =
-  'w-full bg-transparent border border-transparent rounded px-1 -mx-1 py-0.5 outline-none transition-colors ' +
-  'hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2/60 ' +
-  'focus:bg-white dark:focus:bg-sparrow-dark-surface focus:border-sparrow-green dark:focus:border-sparrow-dark-green';
-
-function InlineText({
-  value,
-  onSave,
-  align,
-  placeholder,
-}: {
-  value: string;
-  onSave: (v: string) => void;
-  align?: 'right';
-  placeholder?: string;
-}) {
-  const [draft, setDraft] = useState(value);
-  useEffect(() => setDraft(value), [value]);
-  return (
-    <input
-      value={draft}
-      placeholder={placeholder}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => { if (draft !== value) onSave(draft); }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur();
-        if (e.key === 'Escape') { setDraft(value); e.currentTarget.blur(); }
-      }}
-      className={`${editableBase} text-sm text-sparrow-ink dark:text-sparrow-dark-ink ${align === 'right' ? 'text-right' : ''}`}
-    />
-  );
-}
-
-function InlineNumber({
-  value,
-  onSave,
-  min = 0,
-}: {
-  value: number;
-  onSave: (v: number) => void;
-  min?: number;
-}) {
-  const [draft, setDraft] = useState(String(value));
-  useEffect(() => setDraft(String(value)), [value]);
-  return (
-    <input
-      type="number"
-      min={min}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onWheel={(e) => e.currentTarget.blur()}
-      onBlur={() => {
-        const n = Math.max(min, Number(draft) || 0);
-        if (n !== value) onSave(n);
-        setDraft(String(n));
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur();
-        if (e.key === 'Escape') { setDraft(String(value)); e.currentTarget.blur(); }
-      }}
-      className={`${editableBase} text-right text-sm text-sparrow-ink dark:text-sparrow-dark-ink`}
-    />
-  );
-}
+const STORAGE_PREFIX = 'sparrow-inv-register-table';
 
 // Year is stored as acquired_date (always the 1st of the year — see the
 // historical import migration), so this edits just the year and never
@@ -276,220 +174,8 @@ function InlineYear({
         if (e.key === 'Enter') e.currentTarget.blur();
         if (e.key === 'Escape') { setDraft(value === null ? '' : String(value)); e.currentTarget.blur(); }
       }}
-      className={`${editableBase} text-right text-sm text-sparrow-ink dark:text-sparrow-dark-ink`}
+      className="w-full bg-transparent border border-transparent rounded px-1 -mx-1 py-0.5 outline-none transition-colors hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2/60 focus:bg-white dark:focus:bg-sparrow-dark-surface focus:border-sparrow-green dark:focus:border-sparrow-dark-green text-right text-sm text-sparrow-ink dark:text-sparrow-dark-ink"
     />
-  );
-}
-
-function InlineSelect<T extends string>({
-  value,
-  options,
-  onSave,
-  disabled,
-}: {
-  value: T;
-  options: { value: T; label: string }[];
-  onSave: (v: T) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <select
-      value={value}
-      disabled={disabled}
-      onChange={(e) => onSave(e.target.value as T)}
-      onClick={(e) => e.stopPropagation()}
-      className={`${editableBase} cursor-pointer text-sm text-sparrow-ink dark:text-sparrow-dark-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent appearance-none`}
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
-  );
-}
-
-// Same editable dropdown as InlineSelect, but each option carries its own
-// badge styling so the closed control reads as a color-coded pill (or, for
-// the "this is normal/expected" value, as plain blended-in text) — a
-// glance-able signal for Filing status / Status instead of having to read
-// every row's label. Susanna's ask: on-file/active are the boring default
-// and shouldn't stand out; anything else should.
-function InlineBadgeSelect<T extends string>({
-  value,
-  options,
-  onSave,
-}: {
-  value: T;
-  options: { value: T; label: string; badgeClass: string }[];
-  onSave: (v: T) => void;
-}) {
-  const current = options.find((o) => o.value === value);
-  return (
-    <select
-      value={value}
-      onChange={(e) => onSave(e.target.value as T)}
-      onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center justify-center text-center border border-transparent outline-none appearance-none cursor-pointer text-xs font-medium transition hover:opacity-80 focus:border-sparrow-green dark:focus:border-sparrow-dark-green ${current?.badgeClass ?? ''}`}
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
-  );
-}
-
-// Long-text fields (Notes, Review Flag) expand into a portal-rendered popover
-// anchored to the cell — not pushed below into a detail panel elsewhere,
-// which is exactly what made the old panel feel disorienting to scroll to.
-// Rendered via portal (not just position:absolute) so it never gets clipped
-// by the table's own scroll container, and closes on scroll rather than
-// trying to follow the cell around.
-function ExpandableText({
-  value,
-  onSave,
-  placeholder,
-}: {
-  value: string | null;
-  onSave: (v: string | null) => void;
-  placeholder: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(value ?? '');
-  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  function openPopover() {
-    const r = triggerRef.current?.getBoundingClientRect();
-    if (r) setRect({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 260) });
-    setDraft(value ?? '');
-    setOpen(true);
-  }
-
-  function save() {
-    setOpen(false);
-    const trimmed = draft.trim();
-    if (trimmed !== (value ?? '')) onSave(trimmed || null);
-  }
-
-  useEffect(() => {
-    if (!open) return;
-    function onClickOutside(e: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) save();
-    }
-    // Capture-phase 'scroll' also fires for scroll happening *inside* the
-    // textarea (e.g. a note long enough to overflow its 5 visible rows) —
-    // that's not the cell scrolling away underneath us, so ignore it rather
-    // than slamming the popover shut mid-scroll. Only a scroll whose target
-    // is outside the popover means the anchor cell may have moved.
-    function onScroll(e: Event) {
-      if (popoverRef.current && e.target instanceof Node && popoverRef.current.contains(e.target)) return;
-      save();
-    }
-    function onResize() { save(); }
-    document.addEventListener('mousedown', onClickOutside);
-    window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onResize);
-    return () => {
-      document.removeEventListener('mousedown', onClickOutside);
-      window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onResize);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, draft]);
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={(e) => { e.stopPropagation(); openPopover(); }}
-        className={`${editableBase} block truncate text-left text-sm ${value ? 'text-sparrow-ink dark:text-sparrow-dark-ink' : 'italic text-sparrow-gray dark:text-sparrow-dark-gray'}`}
-      >
-        {value || placeholder}
-      </button>
-      {open && rect && createPortal(
-        <div
-          ref={popoverRef}
-          style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width }}
-          className="z-50 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 shadow-lg"
-        >
-          <textarea
-            autoFocus
-            rows={5}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Escape') { setDraft(value ?? ''); setOpen(false); } }}
-            className="w-full resize-none rounded border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none focus:border-sparrow-green dark:focus:border-sparrow-dark-green"
-          />
-          <div className="mt-2 flex justify-end gap-3">
-            <button type="button" onClick={() => { setDraft(value ?? ''); setOpen(false); }} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
-              Cancel
-            </button>
-            <button type="button" onClick={save} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
-              Save
-            </button>
-          </div>
-        </div>,
-        document.body,
-      )}
-    </>
-  );
-}
-
-// ── Columns visibility dropdown ─────────────────────────────────────────────
-
-function ColumnsMenu({
-  columns,
-  hidden,
-  onToggle,
-}: {
-  columns: { key: ColKey; label: string }[];
-  hidden: Set<ColKey>;
-  onToggle: (key: ColKey) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [open]);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-          hidden.size > 0
-            ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
-            : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
-        }`}
-      >
-        Columns{hidden.size > 0 ? ` (${hidden.size} hidden)` : ''} ▾
-      </button>
-      {open && (
-        <div className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-card py-1 max-h-80 overflow-y-auto">
-          {columns.map((col) => (
-            <label
-              key={col.key}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={!hidden.has(col.key)}
-                onChange={() => onToggle(col.key)}
-                className="h-4 w-4 accent-sparrow-green"
-              />
-              {col.label}
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -527,118 +213,10 @@ export function RegisterTableView({
     return map;
   }, [subLocations]);
 
-  const [colWidths, setColWidths] = useState<Record<ColKey, number>>(() => {
-    const stored = loadStoredWidths();
-    const widths = {} as Record<ColKey, number>;
-    for (const col of COLUMNS) widths[col.key] = stored[col.key] ?? col.defaultWidth;
-    return widths;
-  });
-
-  const [hiddenCols, setHiddenCols] = useState<Set<ColKey>>(() => new Set(loadHiddenCols()));
-  const [columnOrder, setColumnOrder] = useState<ColKey[]>(loadColumnOrder);
-  const [draggingKey, setDraggingKey] = useState<ColKey | null>(null);
-  const [dragOverKey, setDragOverKey] = useState<ColKey | null>(null);
-
-  useEffect(() => {
-    localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(colWidths));
-  }, [colWidths]);
-
-  useEffect(() => {
-    localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify([...hiddenCols]));
-  }, [hiddenCols]);
-
-  useEffect(() => {
-    localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(columnOrder));
-  }, [columnOrder]);
-
-  function toggleColumn(key: ColKey) {
-    setHiddenCols((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
-  // Pick up a column header and drop it on another to move it there — native
-  // HTML5 drag-and-drop, not the same mechanism as the resize handle, so the
-  // two never compete for the same gesture. The resize handle sets
-  // draggable={false} explicitly to guarantee it's never picked up as the
-  // drag source no matter how a browser resolves overlapping gestures.
-  function handleColumnDrop(targetKey: ColKey) {
-    const draggedKey = draggingKey;
-    setDraggingKey(null);
-    setDragOverKey(null);
-    if (!draggedKey || draggedKey === targetKey) return;
-    setColumnOrder((prev) => {
-      const next = prev.filter((k) => k !== draggedKey);
-      const targetIdx = next.indexOf(targetKey);
-      next.splice(targetIdx, 0, draggedKey);
-      return next;
-    });
-  }
-
-  const orderedColumns = useMemo(
-    () => columnOrder.map((key) => COLUMNS.find((c) => c.key === key)!).filter(Boolean),
-    [columnOrder],
+  const layout = useColumnLayout(COLUMNS, STORAGE_PREFIX);
+  const { startResize, handleHeaderClick } = useHeaderInteractions(
+    layout.colWidths, layout.setColWidths, sortKey, setSortKey, sortDir, setSortDir,
   );
-  const visibleColumns = useMemo(() => orderedColumns.filter((c) => !hiddenCols.has(c.key)), [orderedColumns, hiddenCols]);
-
-  // Grid template applied to every row (header + body) so all columns line
-  // up. Using CSS Grid rather than a native <table>/<colgroup> — table
-  // column widths driven by <col> are notoriously inconsistent about
-  // reflecting live JS updates across browsers, whereas grid-template-columns
-  // is a plain inline style the browser re-applies exactly on every render.
-  const gridTemplate = visibleColumns.map((c) => `${colWidths[c.key]}px`).join(' ');
-
-  // A resize drag ends with a pointerup, which the browser follows with a
-  // click on whatever element the cursor lands on — often the header label,
-  // not the handle — so relying on stopPropagation from the handle alone
-  // isn't enough. This ref suppresses exactly the one click that follows a
-  // resize interaction, whether or not the pointer actually moved.
-  const suppressSortRef = useRef(false);
-
-  // Drag-to-resize via the Pointer Events API with explicit pointer capture:
-  // once captured, every subsequent pointermove/pointerup for this drag is
-  // delivered to the handle itself no matter where the cursor physically
-  // ends up.
-  function startResize(key: ColKey, e: ReactPointerEvent<HTMLSpanElement>) {
-    e.preventDefault();
-    e.stopPropagation();
-    suppressSortRef.current = true;
-    const handle = e.currentTarget;
-    const startX = e.clientX;
-    const startWidth = colWidths[key];
-    handle.setPointerCapture(e.pointerId);
-
-    function handleMove(ev: PointerEvent) {
-      const next = Math.max(MIN_COL_WIDTH, startWidth + (ev.clientX - startX));
-      setColWidths((w) => ({ ...w, [key]: next }));
-    }
-    function handleUp(ev: PointerEvent) {
-      handle.releasePointerCapture(ev.pointerId);
-      handle.removeEventListener('pointermove', handleMove);
-      handle.removeEventListener('pointerup', handleUp);
-      // Safety net in case a click never follows this (e.g. released
-      // outside the window) — don't let the flag get stuck forever.
-      setTimeout(() => { suppressSortRef.current = false; }, 300);
-    }
-    handle.addEventListener('pointermove', handleMove);
-    handle.addEventListener('pointerup', handleUp);
-  }
-
-  function handleHeaderClick(key: ColKey) {
-    if (suppressSortRef.current) {
-      suppressSortRef.current = false;
-      return;
-    }
-    if (key === sortKey) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-  }
 
   async function handleClearAll() {
     const reconciledCount = items.filter((i) => i.reconciled).length;
@@ -666,8 +244,6 @@ export function RegisterTableView({
       return 0;
     });
   }, [items, sortKey, sortDir]);
-
-  const cellBase = 'border-r border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 overflow-hidden';
 
   function renderCell(item: RegisterItem, key: ColKey) {
     const save = (patch: ItemEditPatch) => void onSave(item.id, patch);
@@ -782,11 +358,9 @@ export function RegisterTableView({
         return <InlineText value={item.who_has_it ?? ''} placeholder="—" onSave={(v) => save({ who_has_it: v.trim() || null })} />;
       case 'batch':
         return (
-          <input
-            type="checkbox"
+          <InlineCheckbox
             checked={item.is_batch}
-            onChange={(e) => save({ is_batch: e.target.checked, batch_category: e.target.checked ? item.batch_category : null })}
-            className="h-4 w-4 accent-sparrow-green cursor-pointer"
+            onSave={(v) => save({ is_batch: v, batch_category: v ? item.batch_category : null })}
           />
         );
       case 'batch_category':
@@ -799,22 +373,33 @@ export function RegisterTableView({
           />
         );
       case 'reconciled':
-        return (
-          <input
-            type="checkbox"
-            checked={item.reconciled}
-            onChange={(e) => save({ reconciled: e.target.checked })}
-            className="h-4 w-4 accent-sparrow-green cursor-pointer"
-          />
-        );
+        return <InlineCheckbox checked={item.reconciled} onSave={(v) => save({ reconciled: v })} />;
       default:
         return null;
     }
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex justify-end gap-2">
+    <GridTableShell
+      layout={layout}
+      sortKey={sortKey}
+      sortDir={sortDir}
+      onHeaderClick={handleHeaderClick}
+      startResize={startResize}
+      items={sorted}
+      rowKey={(item) => item.id}
+      renderCell={renderCell}
+      onRowClick={(item) => setSelectedId(item.id)}
+      rowClassName={(item) => `${item.status === 'removed' ? 'opacity-50' : ''} ${selectedId === item.id ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2' : 'hover:bg-sparrow-mist/30 dark:hover:bg-sparrow-dark-surface2/60'}`}
+      // Needs a FULLY OPAQUE background (no /NN opacity suffixes) — unlike the
+      // rest of the row, this cell visually sits on top of whatever other
+      // column has scrolled beneath it, so any translucency lets that other
+      // cell's text/borders bleed through.
+      firstColClassName={(item) => selectedId === item.id
+        ? 'bg-sparrow-mist dark:bg-sparrow-dark-surface2'
+        : 'bg-sparrow-sage dark:bg-sparrow-dark-surface2 group-hover:bg-sparrow-mist dark:group-hover:bg-sparrow-dark-border'}
+      emptyMessage="No items match this filter."
+      toolbar={
         <button
           onClick={() => void handleClearAll()}
           disabled={clearingAll}
@@ -822,105 +407,7 @@ export function RegisterTableView({
         >
           {clearingAll ? 'Clearing…' : 'Clear All Reconciled'}
         </button>
-        <ColumnsMenu columns={orderedColumns} hidden={hiddenCols} onToggle={toggleColumn} />
-      </div>
-
-      {/* Sized to fit exactly the visible columns — not stretched to fill the
-          surrounding page — so there's no leftover blank strip that reads as
-          a phantom extra column when there's more room than the table needs. */}
-      <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden" style={{ width: 'fit-content', maxWidth: '100%' }}>
-        {/* Bounded height with its own scrollbar (not just horizontal) — a
-            sticky header only pins to the top of whichever ancestor is
-            actually doing the scrolling. Without a height limit here, this
-            div never scrolls itself (it just grows to fit every row), so
-            the sticky header would have nothing to stick to as the page
-            scrolled past it instead. */}
-        <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
-          <div role="table" style={{ minWidth: 'max-content' }}>
-            {/* Header row — opaque (not translucent) since it's pinned on top
-                of scrolling rows; a see-through header made the row text
-                underneath bleed through and hard to read. */}
-            <div
-              role="row"
-              className="grid bg-sparrow-green dark:bg-sparrow-dark-green sticky top-0 z-20"
-              style={{ gridTemplateColumns: gridTemplate }}
-            >
-              {visibleColumns.map((col, colIdx) => (
-                <div
-                  key={col.key}
-                  role="columnheader"
-                  draggable
-                  onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDraggingKey(col.key); }}
-                  onDragEnd={() => { setDraggingKey(null); setDragOverKey(null); }}
-                  onDragOver={(e) => { e.preventDefault(); if (draggingKey && draggingKey !== col.key) setDragOverKey(col.key); }}
-                  onDragLeave={() => setDragOverKey((k) => (k === col.key ? null : k))}
-                  onDrop={(e) => { e.preventDefault(); handleColumnDrop(col.key); }}
-                  onClick={() => handleHeaderClick(col.key)}
-                  title={col.label}
-                  className={`relative border-r border-white/20 px-3 py-2 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-white/90 cursor-grab active:cursor-grabbing select-none hover:text-white transition ${col.align === 'right' ? 'text-right' : 'text-left'} ${
-                    draggingKey === col.key ? 'opacity-40' : ''
-                  } ${dragOverKey === col.key ? 'bg-white/15' : ''} ${
-                    colIdx === 0 ? 'sticky left-0 z-10 bg-sparrow-green dark:bg-sparrow-dark-green shadow-[2px_0_4px_-2px_rgba(0,0,0,0.25)]' : ''
-                  }`}
-                >
-                  <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
-                    {col.label}{' '}
-                    {sortKey === col.key && <span>{sortDir === 'asc' ? '▲' : '▼'}</span>}
-                  </span>
-                  {/* Resize handle — explicitly non-draggable so it's never picked up
-                      as the column-move drag source, only ever the resize gesture. */}
-                  <span
-                    draggable={false}
-                    onPointerDown={(e) => startResize(col.key, e)}
-                    style={{ touchAction: 'none' }}
-                    className="absolute top-0 right-0 h-full w-3 cursor-col-resize hover:bg-white/20 active:bg-white/30"
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Body rows */}
-            {sorted.map((item) => {
-              const isSelected = selectedId === item.id;
-              // Whichever column currently sits first (Susanna's put Description
-              // there, but this follows drag-reorder, not a hardcoded column) is
-              // frozen to the left edge — same idea as the frozen header row, so
-              // you can always tell which item you're looking at while scrolling
-              // sideways. Needs its own FULLY OPAQUE background (no /NN opacity
-              // suffixes) — unlike the rest of the row, this cell visually sits
-              // on top of whatever other column has scrolled beneath it, so any
-              // translucency lets that other cell's text/borders bleed through.
-              const firstColBg = isSelected
-                ? 'bg-sparrow-mist dark:bg-sparrow-dark-surface2'
-                : 'bg-sparrow-sage dark:bg-sparrow-dark-surface2 group-hover:bg-sparrow-mist dark:group-hover:bg-sparrow-dark-border';
-              return (
-                <div
-                  key={item.id}
-                  role="row"
-                  onClick={() => setSelectedId(item.id)}
-                  className={`group grid border-t border-sparrow-rule dark:border-sparrow-dark-border transition ${
-                    item.status === 'removed' ? 'opacity-50' : ''
-                  } ${isSelected ? 'bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2' : 'hover:bg-sparrow-mist/30 dark:hover:bg-sparrow-dark-surface2/60'}`}
-                  style={{ gridTemplateColumns: gridTemplate }}
-                >
-                  {visibleColumns.map((col, colIdx) => {
-                    const stickyClass = colIdx === 0 ? `sticky left-0 z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)] ${firstColBg}` : '';
-                    const alignClass = col.align === 'right' ? 'text-right' : '';
-                    return (
-                      <div key={col.key} role="cell" className={`${cellBase} ${alignClass} ${stickyClass} flex items-center`}>
-                        {renderCell(item, col.key)}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        {sorted.length === 0 && (
-          <p className="p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No items match this filter.</p>
-        )}
-      </div>
-    </div>
+      }
+    />
   );
 }
