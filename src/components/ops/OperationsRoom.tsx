@@ -125,7 +125,7 @@ export function OperationsRoom() {
 
       {/* Tabs */}
       <div className="mt-6 inline-flex rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-1 text-sm">
-        {(['staff', 'inventory', 'calendar', 'grants'] as const).map((t) => (
+        {(['calendar', 'grants', 'inventory', 'staff'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setOpsTab(t)}
