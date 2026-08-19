@@ -17,7 +17,6 @@ import {
 } from '@/lib/lcp-types';
 import { dueLabel, isOverdue } from '@/lib/lcp-format';
 import {
-  addStaffNote,
   advanceAllFamiliesToSession,
   advanceProgramPosition,
   assignHomework,
@@ -30,11 +29,24 @@ import {
   finalizeThursdaySessionLog,
   markGoalMet,
   setHomeworkStatus,
+  updateSessionLog,
+  upsertFamilySessionNote,
   upsertSessionAttendance,
 } from '@/lib/lcp';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
 import { computeCurriculumTrack } from '@/lib/curriculum-track';
 import { CurriculumTrackHorizontal } from './CurriculumTrack';
+import { RichTextField } from './RichText';
+
+// Ad-hoc sessions don't get a real session-log row until "File session" is
+// clicked, so there's no safe DB row to autosave family notes against yet --
+// a local draft is the fallback so typed notes survive a navigate-away in
+// the meantime. Thursday/Monday always have a row from the moment the
+// screen opens, so they get real autosave instead (see below).
+function adHocDraftKey(sessionDate: string): string {
+  return `lcp-adhoc-note-draft:${sessionDate}`;
+}
 
 const STATUSES: AttendanceStatus[] = ['on_time', 'late', 'no_show'];
 
@@ -149,8 +161,41 @@ export function SessionLogEntry({
   const [vouchers, setVouchers] = useState<Set<string>>(new Set());
 
   // ── notes ─────────────────────────────────────────────────────────
-  const [familyNotes, setFamilyNotes] = useState<Record<string, string>>({});
+  const [familyNotes, setFamilyNotes] = useState<Record<string, string>>(() => {
+    if (sessionType !== 'ad_hoc') return {};
+    try {
+      const raw = localStorage.getItem(adHocDraftKey(sessionDate));
+      return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    } catch {
+      return {};
+    }
+  });
   const [groupNote, setGroupNote] = useState('');
+
+  // Thursday/Monday: real DB row exists from the moment this screen opened,
+  // so autosave writes there directly. Ad-hoc: no row yet until filed, so
+  // fall back to a local draft (cleared once the session is actually filed).
+  useDebouncedEffect(() => {
+    if (!(sessionType === 'thursday_group' && sessionLogId)) return;
+    void updateSessionLog(sessionLogId, groupNote.trim() || null);
+  }, [groupNote], 1500);
+
+  useDebouncedEffect(() => {
+    if (sessionType === 'thursday_group' && sessionLogId) {
+      for (const family of activeFamilies) {
+        const note = familyNotes[family.id];
+        if (note != null) void upsertFamilySessionNote(sessionLogId, family.id, note.trim(), currentUserId);
+      }
+      return;
+    }
+    if (sessionType === 'ad_hoc') {
+      try {
+        localStorage.setItem(adHocDraftKey(sessionDate), JSON.stringify(familyNotes));
+      } catch {
+        // best-effort draft only
+      }
+    }
+  }, [familyNotes], 1500);
 
   // ── homework ──────────────────────────────────────────────────────
   const [liveHomework, setLiveHomework] = useState<Record<string, Homework[]>>(() => {
@@ -232,7 +277,10 @@ export function SessionLogEntry({
 
         const note = familyNotes[family.id];
         if (note?.trim()) {
-          await addStaffNote(family.id, note.trim(), currentUserId, null, logId);
+          // Upsert, not insert -- Thursday may already have autosaved this
+          // family's note against the same logId, so this just finalizes it
+          // rather than creating a duplicate row.
+          await upsertFamilySessionNote(logId, family.id, note.trim(), currentUserId);
         }
 
         // mark completed homework
@@ -276,6 +324,14 @@ export function SessionLogEntry({
             },
             currentUserId,
           );
+        }
+      }
+
+      if (sessionType === 'ad_hoc') {
+        try {
+          localStorage.removeItem(adHocDraftKey(sessionDate));
+        } catch {
+          // best-effort cleanup only
         }
       }
 
@@ -554,12 +610,12 @@ export function SessionLogEntry({
         <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
           <label className="field-label">Group session note</label>
           <p className="mb-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Shared recap of the session — visible to all LCP staff.</p>
-          <textarea
-            value={groupNote}
-            onChange={(e) => setGroupNote(e.target.value)}
-            rows={4}
+          <RichTextField
+            initialValue={groupNote}
+            onChange={setGroupNote}
+            toolbar
+            minHeightRem={5}
             placeholder="What happened tonight — curriculum covered, group energy, themes that came up…"
-            className="field-input"
           />
         </section>
       )}
@@ -673,16 +729,16 @@ function FamilySection({
         <label className="field-label">
           {isThursday ? 'Private note (not shared with group)' : 'Session note'}
         </label>
-        <textarea
-          value={note}
-          onChange={(e) => onNoteChange(e.target.value)}
-          rows={isThursday ? 2 : 3}
+        <RichTextField
+          initialValue={note}
+          onChange={onNoteChange}
+          toolbar
+          minHeightRem={isThursday ? 3 : 4}
           placeholder={
             isThursday
               ? `Quick private note about ${family.display_name}…`
               : `Your notes from tonight's session with ${family.display_name}…`
           }
-          className="field-input"
         />
       </div>
 

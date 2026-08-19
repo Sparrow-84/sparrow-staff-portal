@@ -784,6 +784,39 @@ export async function upsertBucketNote(
   }
 }
 
+// Same idea as upsertBucketNote, for Thursday/ad-hoc's per-family note (no
+// bucket) -- lets that field autosave on a debounce instead of only writing
+// once at "File session," without ever inserting a duplicate row for the
+// same family within one session log.
+export async function upsertFamilySessionNote(
+  sessionLogId: string,
+  familyId: string,
+  body: string,
+  authorId: string,
+): Promise<void> {
+  const { data: existing, error: findErr } = await supabase
+    .from('lcp_staff_notes')
+    .select('id')
+    .eq('session_log_id', sessionLogId)
+    .eq('family_id', familyId)
+    .is('bucket', null)
+    .maybeSingle();
+  if (findErr) throw new Error(findErr.message);
+
+  if (existing) {
+    const { error } = await supabase
+      .from('lcp_staff_notes')
+      .update({ body, author_id: authorId, updated_at: new Date().toISOString() })
+      .eq('id', (existing as { id: string }).id);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from('lcp_staff_notes')
+      .insert({ session_log_id: sessionLogId, family_id: familyId, bucket: null, body, author_id: authorId });
+    if (error) throw new Error(error.message);
+  }
+}
+
 // A visibility signal only -- "is Finance/Life Skills/Mentoring wrapped up
 // for tonight" -- never a lock. The bucket stays fully editable either way.
 export async function fetchBucketStatus(

@@ -50,9 +50,13 @@ export function isOverdue(iso: string | null): boolean {
 }
 
 /**
- * Overdue = no program fee payment logged for last calendar month, for a family
- * that had already moved in by then. Pure recency check, no amount/balance math
- * — Audrey deliberately doesn't want a running-balance calculation.
+ * Overdue = no program fee payment logged since the start of last calendar
+ * month, for a family that had already moved in by then. Pure recency check,
+ * no amount/balance math — Audrey deliberately doesn't want a running-balance
+ * calculation. The window runs through *today*, not just last month's end —
+ * a payment already logged for the current month counts as current; without
+ * that, everyone reads "overdue" for the first few weeks of every month,
+ * until they also happen to have a payment on file for the prior month too.
  */
 export function isFeeOverdue(
   moveInDate: string | null,
@@ -66,7 +70,7 @@ export function isFeeOverdue(
   if (parseLocalDate(moveInDate) > lastMonthEnd) return false;
   return !paidDates.some((iso) => {
     const d = parseLocalDate(iso);
-    return d >= lastMonthStart && d <= lastMonthEnd;
+    return d >= lastMonthStart && d <= today;
   });
 }
 

@@ -39,6 +39,8 @@ import {
   upsertBucketNote,
   upsertSessionAttendance,
 } from '@/lib/lcp';
+import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
+import { RichTextField, RichOrPlainView } from './RichText';
 
 const STATUSES: AttendanceStatus[] = ['on_time', 'late', 'no_show'];
 
@@ -309,6 +311,17 @@ export function MondaySessionPanel({
     }
   }
 
+  // Autosave the open bucket a beat after typing pauses -- the "Save ___
+  // notes" button below stays as a peace-of-mind action for anyone who wants
+  // to confirm it landed, same idiom as the Thursday prep/curriculum notes.
+  useDebouncedEffect(() => {
+    if (!selectedBucket) return;
+    const drafts = notesByBucket[selectedBucket];
+    const saved = savedNotesByBucket[selectedBucket];
+    const changed = families.some((f) => (drafts[f.id] ?? '').trim() !== (saved[f.id] ?? '').trim());
+    if (changed) void saveBucketNotes(selectedBucket);
+  }, [selectedBucket ? notesByBucket[selectedBucket] : null], 1500);
+
   // Visibility signal, not a lock -- the bucket stays fully editable either
   // way. Whoever's currently viewing it can flip it back off just as easily.
   async function toggleBucketDone(bucket: MondayBucket) {
@@ -539,7 +552,12 @@ export function MondaySessionPanel({
             <div className="space-y-3">
               {families.map((f) => (
                 <MondayFamilyCard
-                  key={f.id}
+                  // Bucket included in the key -- otherwise switching from
+                  // Finance to Life Skills for the same family wouldn't
+                  // remount the note field, and its uncontrolled contentEditable
+                  // would keep showing the old bucket's text (see
+                  // feedback-stale-state-on-switch).
+                  key={`${f.id}:${selectedBucket}`}
                   family={f}
                   bucket={selectedBucket}
                   note={notesByBucket[selectedBucket][f.id] ?? ''}
@@ -668,7 +686,7 @@ function MondayFamilyCard({
               {historyData.map((n) => (
                 <li key={n.id} className="border-t border-sparrow-rule/70 pt-2 first:border-t-0 first:pt-0">
                   <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{dayLabel(n.created_at)}</p>
-                  <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{n.body}</p>
+                  <RichOrPlainView text={n.body} />
                 </li>
               ))}
             </ul>
@@ -679,12 +697,12 @@ function MondayFamilyCard({
         </div>
       )}
 
-      <textarea
-        value={note}
-        onChange={(e) => onNoteChange(e.target.value)}
-        rows={2}
+      <RichTextField
+        initialValue={note}
+        onChange={onNoteChange}
+        toolbar
+        minHeightRem={3}
         placeholder={`${family.display_name}'s ${bucket === 'finance' ? 'finance' : bucket === 'life_skills' ? 'life skills' : 'mentoring'} note…`}
-        className="field-input bg-white dark:bg-sparrow-dark-surface"
       />
 
       {/* Goals — shared across all 3 buckets, not duplicated */}

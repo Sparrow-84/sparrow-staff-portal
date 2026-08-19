@@ -12,6 +12,7 @@ import {
 } from '@/lib/lcp-types';
 import { fetchGoalsForFamily, fetchHomeworkForFamily, fetchStaffNotesWithSession } from '@/lib/lcp';
 import { dayLabel } from '@/lib/lcp-format';
+import { RichOrPlainView, stripHtml } from './RichText';
 
 // Distinct colors per note category, consistent with the Monday filing panel's
 // bucket colors — lets staff spot which type a note is at a glance.
@@ -39,7 +40,7 @@ function categoryLabel(note: StaffNoteWithSession): string {
 function NoteCard({ note }: { note: StaffNoteWithSession }) {
   const [expanded, setExpanded] = useState(false);
   const cat = categoryFor(note);
-  const isLong = note.body.length > 180;
+  const isLong = stripHtml(note.body).length > 180;
   return (
     <div className="border-t border-sparrow-rule/70 py-3 first:border-t-0 first:pt-0">
       <div className="mb-1 flex items-center gap-2">
@@ -48,7 +49,7 @@ function NoteCard({ note }: { note: StaffNoteWithSession }) {
         </span>
         <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{dayLabel(note.created_at)}</span>
       </div>
-      <p className={`text-sm text-sparrow-ink dark:text-sparrow-dark-ink ${!expanded ? 'line-clamp-3' : ''}`}>{note.body}</p>
+      <RichOrPlainView text={note.body} className={!expanded ? 'line-clamp-3' : ''} />
       {isLong && (
         <button onClick={() => setExpanded((v) => !v)} className="mt-1 text-xs font-semibold text-sparrow-green dark:text-sparrow-dark-green">
           {expanded ? 'See less' : 'See more'}
@@ -247,14 +248,14 @@ export function SessionLogByParticipant({ families }: { families: Family[] }) {
 export function BucketNoteCard({ note, families }: { note: StaffNoteWithSession; families: Family[] }) {
   const [expanded, setExpanded] = useState(false);
   const family = families.find((f) => f.id === note.family_id);
-  const isLong = note.body.length > 180;
+  const isLong = stripHtml(note.body).length > 180;
   return (
     <div className="border-t border-sparrow-rule/70 py-3 first:border-t-0 first:pt-0">
       <div className="mb-1 flex items-center gap-2">
         <span className="text-xs font-bold text-sparrow-gray dark:text-sparrow-dark-gray">{family?.display_name ?? 'Unknown family'}</span>
         <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{dayLabel(note.created_at)}</span>
       </div>
-      <p className={`text-sm text-sparrow-ink dark:text-sparrow-dark-ink ${!expanded ? 'line-clamp-3' : ''}`}>{note.body}</p>
+      <RichOrPlainView text={note.body} className={!expanded ? 'line-clamp-3' : ''} />
       {isLong && (
         <button onClick={() => setExpanded((v) => !v)} className="mt-1 text-xs font-semibold text-sparrow-green dark:text-sparrow-dark-green">
           {expanded ? 'See less' : 'See more'}

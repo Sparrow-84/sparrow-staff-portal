@@ -10,6 +10,8 @@ import {
 } from '@/lib/lcp-types';
 import { fetchNotesForSessionLog, updateSessionLog, updateStaffNote } from '@/lib/lcp';
 import { dayLabel } from '@/lib/lcp-format';
+import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
+import { RichTextField, RichOrPlainView } from './RichText';
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-').map(Number);
@@ -65,6 +67,10 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
 
   const familyMap = new Map(families.map((f) => [f.id, f]));
   const groupNoteChanged = groupNote.trim() !== (log.group_note ?? '');
+
+  useDebouncedEffect(() => {
+    if (groupNoteChanged) void saveGroupNote();
+  }, [groupNote], 1500);
 
   return (
     <div className="space-y-6">
@@ -134,12 +140,9 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
             <label className="field-label">Group session note</label>
             {groupNoteSaved && <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green">Saved</span>}
           </div>
-          <textarea
-            value={groupNote}
-            onChange={(e) => setGroupNote(e.target.value)}
-            rows={4}
-            className="field-input mt-2"
-          />
+          <div className="mt-2">
+            <RichTextField initialValue={groupNote} onChange={setGroupNote} toolbar minHeightRem={5} />
+          </div>
           <button
             onClick={saveGroupNote}
             disabled={savingGroup || !groupNoteChanged}
@@ -254,12 +257,7 @@ function NoteList({
             )}
             {editingNoteId === n.id ? (
               <div className="space-y-2">
-                <textarea
-                  value={editNoteBody}
-                  onChange={(e) => onEditBodyChange(e.target.value)}
-                  rows={3}
-                  className="field-input"
-                />
+                <RichTextField initialValue={editNoteBody} onChange={onEditBodyChange} toolbar minHeightRem={4} />
                 <div className="flex gap-2">
                   <button
                     onClick={() => onSave(n.id)}
@@ -275,7 +273,7 @@ function NoteList({
               </div>
             ) : (
               <>
-                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{n.body}</p>
+                <RichOrPlainView text={n.body} />
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {n.author_name && `${n.author_name} · `}

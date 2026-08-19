@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { ChatProvider } from '@/chat/ChatContext';
+import { NotificationsProvider } from '@/chat/NotificationsContext';
+import { TabBadge } from './TabBadge';
 import { fetchMyOnboardingChecklist } from '@/lib/ops';
 import { Header } from './Header';
 import { Sidebar, type View } from './Sidebar';
@@ -59,6 +61,8 @@ export function AppShell() {
 
   return (
     <ChatProvider>
+      <NotificationsProvider>
+      <TabBadge />
       <div className="flex min-h-screen flex-col">
         <Header profile={profile} onMenu={() => setNavOpen(true)} onNavigate={handleNavigate} />
         <div className="flex flex-1 overflow-x-hidden">
@@ -104,6 +108,7 @@ export function AppShell() {
         <ValuesFooter />
         <ChatPanel open={chatPanelOpen} onClose={() => setChatPanelOpen(false)} />
       </div>
+      </NotificationsProvider>
     </ChatProvider>
   );
 }

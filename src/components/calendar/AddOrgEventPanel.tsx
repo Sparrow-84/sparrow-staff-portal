@@ -133,6 +133,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
   const attendeeRef = useRef<HTMLDivElement>(null);
 
   const [recurring, setRecurring] = useState(false);
+  const [recursAnnually, setRecursAnnually] = useState(false);
   const [frequency, setFrequency] = useState<Frequency>('weekly');
   const [monthlyMode, setMonthlyMode] = useState<'date' | 'dow'>('date');
   const [daysOfWeek, setDaysOfWeek] = useState<Set<number>>(() => new Set([new Date().getDay()]));
@@ -233,6 +234,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
         is_private_meeting: selectedRoom?.blocks_whole_office ? isPrivateMeeting : false,
         label_id: labelId,
         lcp_family_visible: !isPersonal && department === 'lcp' ? familyVisible : false,
+        recurs_annually: recursAnnually,
       }));
 
       const createdIds = await createCalendarEvents(inputs);
@@ -278,6 +280,7 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
     setLocation('');
     setAllDay(false);
     setRecurring(false);
+    setRecursAnnually(false);
     setFrequency('weekly');
     setMonthlyMode('date');
     setDaysOfWeek(new Set([new Date().getDay()]));
@@ -576,14 +579,31 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
 
         {/* Recurrence */}
         <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
+          <label className={`flex items-center gap-2.5 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink ${recursAnnually ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
             <input
               type="checkbox"
               checked={recurring}
+              disabled={recursAnnually}
               onChange={(e) => setRecurring(e.target.checked)}
               className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
             />
             Repeat this event
+          </label>
+
+          {/* Open-ended annual repeat (e.g. a birthday) -- a different mechanism
+              from the weekly/biweekly/monthly series above, which creates a
+              bounded set of rows up front. This instead marks a single row as
+              an anchor that a background job keeps materializing one year
+              ahead, forever -- so it can't be combined with the bounded series. */}
+          <label className={`mt-3 flex items-center gap-2.5 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink ${recurring ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+            <input
+              type="checkbox"
+              checked={recursAnnually}
+              disabled={recurring}
+              onChange={(e) => setRecursAnnually(e.target.checked)}
+              className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
+            />
+            Repeats every year on this date <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(like a birthday)</span>
           </label>
 
           {recurring && (

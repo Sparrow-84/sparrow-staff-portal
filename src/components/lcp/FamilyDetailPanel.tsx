@@ -83,6 +83,7 @@ import { StaffThread } from './StaffThread';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { ComplianceLabelPicker } from './ComplianceLabelPicker';
 import { LabelPill } from '@/components/LabelPill';
+import { RichTextField, RichOrPlainView } from './RichText';
 
 export type FamilyDetailTab = 'general' | 'children' | 'progress' | 'finance' | 'compliance' | 'goals' | 'homework' | 'messages' | 'notes';
 type Tab = FamilyDetailTab;
@@ -1917,6 +1918,7 @@ function NotesTab({
   onChanged: () => void;
 }) {
   const [body, setBody] = useState('');
+  const [composerKey, setComposerKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState('');
@@ -1927,6 +1929,7 @@ function NotesTab({
     setBusy(true);
     await addStaffNote(family.id, body.trim(), currentUserId);
     setBody('');
+    setComposerKey((k) => k + 1); // RichTextField is uncontrolled -- force a remount to actually clear it
     setBusy(false);
     onChanged();
   }
@@ -1946,12 +1949,13 @@ function NotesTab({
         🔒 Internal — never visible to the family or to non-LCP staff.
       </p>
       <div>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={3}
+        <RichTextField
+          key={composerKey}
+          initialValue={body}
+          onChange={setBody}
+          toolbar
+          minHeightRem={4}
           placeholder="Add a note for the LCP team…"
-          className="field-input"
         />
         <button onClick={add} disabled={busy || !body.trim()} className="btn-primary mt-2">
           Add note
@@ -1963,11 +1967,11 @@ function NotesTab({
           <li key={n.id} className="rounded-xl border border-sparrow-rule/70 p-3">
             {editingId === n.id ? (
               <div className="space-y-2">
-                <textarea
-                  value={editBody}
-                  onChange={(e) => setEditBody(e.target.value)}
-                  rows={3}
-                  className="field-input"
+                <RichTextField
+                  initialValue={editBody}
+                  onChange={setEditBody}
+                  toolbar
+                  minHeightRem={4}
                 />
                 <div className="flex gap-2">
                   <button
@@ -1988,7 +1992,7 @@ function NotesTab({
               </div>
             ) : (
               <>
-                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{n.body}</p>
+                <RichOrPlainView text={n.body} />
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                     {n.updated_at && n.updated_at !== n.created_at

@@ -31,6 +31,7 @@ import { SessionLogByParticipant } from './SessionLogByParticipant';
 import { SessionLogEntry } from './SessionLogEntry';
 import { SessionLogViewer } from './SessionLogViewer';
 import { SessionSplitLayout, type MondayMentorContent, type ThursdayGuideContent, type ThursdayNotes } from './SessionSplitLayout';
+import { stripHtml } from './RichText';
 
 type PastView = 'recent' | 'group' | 'participant' | 'bucket';
 
@@ -503,10 +504,11 @@ function SessionLogList({
             <span className="text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">{formatDate(date)}</span>
           </div>
           {dateLogs.map((log) => {
-            const preview =
+            const rawPreview =
               log.session_type === 'thursday_group' ? log.group_note
               : log.session_type === 'ad_hoc' ? adHocPreviews[log.id]
               : null;
+            const preview = rawPreview ? stripHtml(rawPreview) : rawPreview;
             const draft = !log.filed_at;
             return (
               <button

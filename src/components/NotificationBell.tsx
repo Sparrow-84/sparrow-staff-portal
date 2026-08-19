@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { fetchNotifications, markAllRead, markRead, type AppNotification } from '@/lib/social';
+import { useState } from 'react';
+import { markAllRead, markRead, type AppNotification } from '@/lib/social';
 import { setMyAttendance } from '@/lib/calendar';
+import { useNotifications } from '@/chat/NotificationsContext';
 import type { View } from './Sidebar';
 
 function timeAgo(iso: string): string {
@@ -45,25 +46,11 @@ function viewForNotification(n: AppNotification): View {
 }
 
 export function NotificationBell({ onNavigate, currentUserId }: { onNavigate: (v: View) => void; currentUserId: string }) {
-  const [items, setItems] = useState<AppNotification[]>([]);
+  const { items, unread, refresh: load } = useNotifications();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<'unread' | 'all'>('unread');
   const [responded, setResponded] = useState<Map<string, 'attending' | 'opted_out'>>(new Map());
 
-  async function load() {
-    try {
-      setItems(await fetchNotifications());
-    } catch {
-      /* non-critical */
-    }
-  }
-  useEffect(() => {
-    void load();
-    const timer = setInterval(() => void load(), 30_000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const unread = items.filter((n) => !n.read).length;
   const displayItems = filter === 'unread' ? items.filter((n) => !n.read) : items;
 
   async function openMenu() {

@@ -46,9 +46,15 @@ export function useRequiredFields(checks: FieldCheck[]) {
     });
   }
 
+  // Only report fields that failed a real save attempt (i.e. are in
+  // invalidKeys), not every field that's merely blank right now -- otherwise
+  // "Missing: Amount" shows the instant the form renders, before anyone's
+  // touched it, which reads as an error about a value that's already there.
+  const flaggedMissing = missing.filter((m) => invalidKeys.has(m.key));
+
   return {
     isValid: missing.length === 0,
-    missingMessage: missing.length > 0 ? `Missing: ${missing.map((m) => m.label).join(', ')}` : null,
+    missingMessage: flaggedMissing.length > 0 ? `Missing: ${flaggedMissing.map((m) => m.label).join(', ')}` : null,
     validate,
     fieldClass,
     fieldError,
