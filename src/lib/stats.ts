@@ -55,7 +55,11 @@ export async function getStats(): Promise<Stat[]> {
     .from('stats')
     .select(STAT_SELECT)
     .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
+  // Table may not exist until 0159 is applied -- degrade to empty rather than
+  // throw, same as getStoryTags()/story_tags below. Without this, the whole
+  // Stories & Media room (not just the Stats tab) fails to load, since this
+  // call sits in the same Promise.all as Stories and Media.
+  if (error) return [];
   return ((data ?? []) as unknown[]).map(normalizeStat);
 }
 
