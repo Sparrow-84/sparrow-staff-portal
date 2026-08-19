@@ -280,7 +280,8 @@ export function SettingsView() {
               </p>
               <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 On iPhone, this only works reliably if you open Sparrow from the icon you added to your home
-                screen — not from a Safari tab or bookmark.
+                screen — not from a browser tab or bookmark, even in Chrome (every browser on iPhone runs
+                the same underlying engine).
               </p>
             </div>
             <button
