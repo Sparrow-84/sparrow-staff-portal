@@ -44,6 +44,19 @@ export async function fetchAllLocations(): Promise<InvLocation[]> {
   return data ?? [];
 }
 
+/** Count of this user's still-open monthly-inventory nudge tasks (source_system
+ * = 'inv', see migration 0162) — drives the "My Inventory" sidebar badge. */
+export async function fetchMyOpenInvTaskCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('source_system', 'inv')
+    .eq('assignee_id', userId)
+    .neq('status', 'done');
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
 export type MyLocationAssignment = { location: InvLocation; is_owner: boolean };
 
 export async function fetchMyLocations(): Promise<MyLocationAssignment[]> {
@@ -102,12 +115,21 @@ export async function setLocationOwner(locationId: string, userId: string): Prom
     .update({ is_owner: false })
     .eq('location_id', locationId);
   if (e1) throw new Error(e1.message);
-  const { error: e2 } = await supabase
+  // .select() so a row-level-security policy silently matching zero rows
+  // (no error — Postgres just updates nothing) surfaces as a real failure
+  // instead of a click that "worked" client-side but never persisted. This
+  // exact class of bug happened when inv_location_assignments had RLS
+  // enabled with no write policy at all (fixed in migration 0161).
+  const { data, error: e2 } = await supabase
     .from('inv_location_assignments')
     .update({ is_owner: true })
     .eq('location_id', locationId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .select('user_id');
   if (e2) throw new Error(e2.message);
+  if (!data || data.length === 0) {
+    throw new Error('That change didn\'t save — the assignment row may be missing, or you may not have permission.');
+  }
 }
 
 export async function addLocationAssignment(locationId: string, userId: string): Promise<void> {
@@ -118,12 +140,16 @@ export async function addLocationAssignment(locationId: string, userId: string):
 }
 
 export async function removeLocationAssignment(locationId: string, userId: string): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('inv_location_assignments')
     .delete()
     .eq('location_id', locationId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .select('user_id');
   if (error) throw new Error(error.message);
+  if (!data || data.length === 0) {
+    throw new Error('That removal didn\'t save — you may not have permission.');
+  }
 }
 
 export async function fetchSubLocations(locationId: string): Promise<InvSubLocation[]> {

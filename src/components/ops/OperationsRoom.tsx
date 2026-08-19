@@ -54,7 +54,7 @@ export function OperationsRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [opsTab, setOpsTab] = useState<'staff' | 'inventory' | 'calendar' | 'grants'>('staff');
+  const [opsTab, setOpsTab] = useState<'staff' | 'inventory' | 'calendar' | 'grants'>('calendar');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 

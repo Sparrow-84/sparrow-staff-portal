@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useChat } from '@/chat/ChatContext';
+import { useAuth } from '@/auth/AuthContext';
+import { fetchMyOpenInvTaskCount } from '@/lib/inventory';
 
 const COLLAPSED_STORAGE_KEY = 'sparrow-sidebar-collapsed';
 
@@ -61,6 +63,20 @@ function NavContent({
   beforeSettings?: React.ReactNode;
 }) {
   const { unreadTotal } = useChat();
+  const { profile } = useAuth();
+  const [invDue, setInvDue] = useState(0);
+
+  // Refetches on every navigation (not just once on mount) so submitting
+  // an inventory form and clicking elsewhere clears the badge without
+  // needing a full page reload. Task counts don't need chat-style realtime
+  // polling — nothing changes this except a submission being filed.
+  useEffect(() => {
+    if (!profile?.id) return;
+    let active = true;
+    fetchMyOpenInvTaskCount(profile.id).then((n) => { if (active) setInvDue(n); }).catch(() => {});
+    return () => { active = false; };
+  }, [profile?.id, view]);
+
   const itemBase = 'flex items-center gap-2 rounded-lg px-3 py-2 text-left transition';
   const active = 'bg-sparrow-sage dark:bg-sparrow-green/15 font-medium text-sparrow-green dark:text-sparrow-dark-green';
   const idle = 'text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink';
@@ -112,6 +128,11 @@ function NavContent({
           </button>
           <button onClick={() => onNavigate('inventory')} className={`${itemBase} ${view === 'inventory' ? active : idle}`}>
             My Inventory
+            {invDue > 0 && (
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-priority-p1 px-1.5 text-[11px] font-semibold text-white">
+                {invDue}
+              </span>
+            )}
           </button>
           <button onClick={() => onNavigate('team')} className={`${itemBase} ${view === 'team' ? active : idle}`}>
             Team

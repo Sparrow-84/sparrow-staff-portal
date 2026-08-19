@@ -30,6 +30,13 @@ export function OpsSubmissionsView({ month, year }: { month: number; year: numbe
   const [err,          setErr]          = useState('');
   const [panelId,      setPanelId]      = useState<string | null>(null);
   const [activeForm,   setActiveForm]   = useState<ActiveForm | null>(null);
+  // Separate from the page-level `err` above — a failed assignment edit
+  // shouldn't blank out the whole screen (that's what `err` does when set).
+  // This was silently swallowed before, which is exactly how a broken RLS
+  // policy on inv_location_assignments went unnoticed: the click "worked"
+  // (optimistic local state updated) with nothing telling you the actual
+  // database write had failed.
+  const [assignErr,    setAssignErr]    = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,31 +64,46 @@ export function OpsSubmissionsView({ month, year }: { month: number; year: numbe
   useEffect(() => { void load(); }, [load]);
 
   async function handleAdd(locationId: string, userId: string) {
-    await addLocationAssignment(locationId, userId);
-    setAssignees((prev) => {
-      const person = allProfiles.find((p) => p.id === userId);
-      if (!person) return prev;
-      return {
-        ...prev,
-        [locationId]: [...(prev[locationId] ?? []), { id: person.id, full_name: person.full_name, is_owner: false }],
-      };
-    });
+    setAssignErr('');
+    try {
+      await addLocationAssignment(locationId, userId);
+      setAssignees((prev) => {
+        const person = allProfiles.find((p) => p.id === userId);
+        if (!person) return prev;
+        return {
+          ...prev,
+          [locationId]: [...(prev[locationId] ?? []), { id: person.id, full_name: person.full_name, is_owner: false }],
+        };
+      });
+    } catch (e) {
+      setAssignErr(e instanceof Error ? e.message : 'Could not add that person.');
+    }
   }
 
   async function handleRemove(locationId: string, userId: string) {
-    await removeLocationAssignment(locationId, userId);
-    setAssignees((prev) => ({
-      ...prev,
-      [locationId]: (prev[locationId] ?? []).filter((u) => u.id !== userId),
-    }));
+    setAssignErr('');
+    try {
+      await removeLocationAssignment(locationId, userId);
+      setAssignees((prev) => ({
+        ...prev,
+        [locationId]: (prev[locationId] ?? []).filter((u) => u.id !== userId),
+      }));
+    } catch (e) {
+      setAssignErr(e instanceof Error ? e.message : 'Could not remove that person.');
+    }
   }
 
   async function handleSetOwner(locationId: string, userId: string) {
-    await setLocationOwner(locationId, userId);
-    setAssignees((prev) => ({
-      ...prev,
-      [locationId]: (prev[locationId] ?? []).map((u) => ({ ...u, is_owner: u.id === userId })),
-    }));
+    setAssignErr('');
+    try {
+      await setLocationOwner(locationId, userId);
+      setAssignees((prev) => ({
+        ...prev,
+        [locationId]: (prev[locationId] ?? []).map((u) => ({ ...u, is_owner: u.id === userId })),
+      }));
+    } catch (e) {
+      setAssignErr(e instanceof Error ? e.message : 'Could not set the designated submitter.');
+    }
   }
 
   function getSubmission(locationId: string): InvMonthlySubmission | undefined {
@@ -131,6 +153,13 @@ export function OpsSubmissionsView({ month, year }: { month: number; year: numbe
 
   return (
     <>
+      {assignErr && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-priority-p1/30 bg-priority-p1/5 px-3 py-2 text-sm text-priority-p1">
+          <span>{assignErr}</span>
+          <button onClick={() => setAssignErr('')} className="shrink-0 hover:opacity-70" aria-label="Dismiss">✕</button>
+        </div>
+      )}
+
       {/* Summary bar */}
       <div className="flex flex-wrap gap-4 mb-5">
         {pending > 0 && (
