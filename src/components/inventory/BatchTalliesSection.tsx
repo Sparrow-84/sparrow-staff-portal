@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   fetchBatchTallies, upsertBatchTally, fetchBatchActivity, fetchBatchRegisterValues, fetchAllLocations,
 } from '@/lib/inventory';
@@ -37,22 +38,56 @@ function makePlaceholderTally(
 
 // ── Info button ───────────────────────────────────────────────────────────
 
+// Rendered via portal, not just position:absolute — several call sites (e.g.
+// the Batch Category Tallies heading) sit inside a rounded-corner card with
+// overflow-hidden, which was silently clipping the popover to invisible
+// (button worked, popover opened, you just could never see it). Portaling to
+// document.body and positioning from the trigger's own bounding rect — same
+// fix as ExpandableText in RegisterTableView.tsx — escapes any ancestor's
+// overflow/scroll clipping entirely.
 function InfoButton({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  function toggle(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!open) {
+      const r = triggerRef.current?.getBoundingClientRect();
+      if (r) setRect({ top: r.bottom + 4, left: r.left });
+    }
+    setOpen((o) => !o);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function onScrollOrResize() { setOpen(false); }
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+  }, [open]);
+
   return (
     <span className="relative inline-flex items-center">
       <button
+        ref={triggerRef}
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        onClick={toggle}
         className="ml-1.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition text-sm leading-none"
         aria-label="More information"
       >
         ⓘ
       </button>
-      {open && (
+      {open && rect && createPortal(
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-6 z-20 w-72 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg">
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            style={{ position: 'fixed', top: rect.top, left: rect.left }}
+            className="z-50 w-72 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg"
+          >
             <div className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray leading-relaxed space-y-1.5">
               {children}
             </div>
@@ -64,7 +99,8 @@ function InfoButton({ children }: { children: React.ReactNode }) {
               Got it
             </button>
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </span>
   );
@@ -394,23 +430,35 @@ export function BatchTalliesSection({ year }: { year: number }) {
             </span>
             <InfoButton>
               <p>
-                These are groups of similar small items (each under $50) that get reported
-                to Benton County as a single dollar total per category, not item by item.
+                These are groups of similar small items (each under $50 — office supplies, kitchen
+                supplies, kids' toys, etc.) that Benton County wants as one dollar total per category,
+                not listed item by item like the schedules above.
               </p>
               <p>
-                <strong>Filed</strong> is what you reported to the county last year. Click to edit.
+                <strong>Filed Last Year</strong> is the actual number that was on the county filing last
+                year — a historical fact, not what you currently believe is correct. Click to edit it
+                directly if it's wrong or missing (many categories were never filed as their own line).
               </p>
               <p>
-                <strong>Added</strong> is the value of batch items approved this year via monthly submissions.
+                <strong>Added</strong> is the value of batch items approved this year via monthly
+                submissions — just a breakdown, it doesn't drive Net.
               </p>
               <p>
-                <strong>Register</strong> is the current total of active batch items in the inventory register.
+                <strong>Register</strong> is the current total of active batch items for that category
+                in the Asset Register, right now. You don't edit this number here — go change the
+                item's Cost on that batch line in the Asset Register itself, and it updates
+                automatically here the next time you load this page.
               </p>
               <p>
-                <strong>Net</strong> is the difference between the register and what was filed. Positive = you have more than you reported.
+                <strong>Net</strong> = Register minus Filed, calculated for you. Positive means the
+                register currently shows more than what's on file with the county.
               </p>
               <p>
-                <strong>In January:</strong> compare. If the gap is small, click Keep. If significant, click Update. If you're unsure, click Assess.
+                <strong>In January:</strong> review each category's Net. Small or explainable gap
+                (a few things came and went, roughly balances out) → <strong>Keep</strong>. Big enough
+                gap that the county filing should actually change → <strong>Update</strong>, then edit
+                Filed Last Year to the new number before you file. Not sure → <strong>Assess</strong>
+                and come back to it.
               </p>
             </InfoButton>
           </div>
