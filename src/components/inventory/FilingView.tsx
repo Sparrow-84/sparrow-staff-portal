@@ -331,6 +331,19 @@ export function FilingView() {
   return (
     <div className="space-y-5">
 
+      {/* Link out to the actual county e-filing portal — separate from the
+          "Questions? Benton County Assessor" contact card below, which is
+          the assessor's general site, not where the return actually gets
+          filed. */}
+      <a
+        href="https://personal.efiling.orcats.com/schedule5a/2/702617"
+        target="_blank"
+        rel="noreferrer"
+        className="btn-primary text-sm inline-flex w-fit"
+      >
+        Open ORCATS Filing Portal ↗
+      </a>
+
       {/* March 15 deadline banner */}
       {showDeadlineBanner && (
         <div className={`rounded-xl border px-4 py-3 flex items-center justify-between gap-4 ${
