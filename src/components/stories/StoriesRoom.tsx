@@ -11,16 +11,20 @@ import {
   type StoryMediaEvent,
   type StoryTag,
 } from '@/lib/stories';
+import { getStats, getStatLabels, type Stat, type StatLabel } from '@/lib/stats';
 import type { Profile } from '@/lib/types';
 import { StoriesTab } from './StoriesTab';
 import { MediaReleaseTab } from './MediaReleaseTab';
 import { StoryPanel } from './StoryPanel';
+import { StatsTab } from './StatsTab';
+import { StatPanel } from './StatPanel';
 
-type Tab = 'stories' | 'media';
+type Tab = 'stories' | 'media' | 'stats';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'stories', label: 'Stories' },
   { key: 'media', label: 'Photo & Media Release' },
+  { key: 'stats', label: 'Stats' },
 ];
 
 export function StoriesRoom() {
@@ -34,24 +38,32 @@ export function StoriesRoom() {
   const [consents, setConsents] = useState<StoryLayer2Consent[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [storyTags, setStoryTags] = useState<StoryTag[]>([]);
+  const [stats, setStats] = useState<Stat[]>([]);
+  const [statLabels, setStatLabels] = useState<StatLabel[]>([]);
 
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [statPanelOpen, setStatPanelOpen] = useState(false);
+  const [selectedStat, setSelectedStat] = useState<Stat | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [ss, ev, co, pp, tg] = await Promise.all([
+      const [ss, ev, co, pp, tg, st, sl] = await Promise.all([
         getStories(),
         getMediaEvents(),
         getLayer2Consents(),
         fetchProfiles(),
         getStoryTags(),
+        getStats(),
+        getStatLabels(),
       ]);
       setStories(ss);
       setEvents(ev);
       setConsents(co);
       setProfiles(pp);
       setStoryTags(tg);
+      setStats(st);
+      setStatLabels(sl);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load Stories & Media room.');
     } finally {
@@ -77,6 +89,20 @@ export function StoriesRoom() {
     setPanelOpen(false);
   }
 
+  function openAddStat() {
+    setSelectedStat(null);
+    setStatPanelOpen(true);
+  }
+
+  function openEditStat(stat: Stat) {
+    setSelectedStat(stat);
+    setStatPanelOpen(true);
+  }
+
+  function closeStatPanel() {
+    setStatPanelOpen(false);
+  }
+
   if (loading) return <p className="p-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading Stories &amp; Media…</p>;
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
@@ -89,7 +115,8 @@ export function StoriesRoom() {
           <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
             {stories.length} {stories.length === 1 ? 'story' : 'stories'} ·{' '}
             {events.length} {events.length === 1 ? 'event' : 'events'} logged ·{' '}
-            {consents.length} photo {consents.length === 1 ? 'form' : 'forms'} on file
+            {consents.length} photo {consents.length === 1 ? 'form' : 'forms'} on file ·{' '}
+            {stats.length} {stats.length === 1 ? 'stat' : 'stats'}
           </p>
         </div>
       </div>
@@ -131,6 +158,14 @@ export function StoriesRoom() {
             onChanged={load}
           />
         )}
+        {activeTab === 'stats' && (
+          <StatsTab
+            stats={stats}
+            statLabels={statLabels}
+            onAdd={openAddStat}
+            onEdit={openEditStat}
+          />
+        )}
       </div>
 
       {/* Story slide-over panel */}
@@ -143,6 +178,18 @@ export function StoriesRoom() {
         onClose={closePanel}
         onChanged={load}
         onTagsChanged={load}
+      />
+
+      {/* Stat slide-over panel */}
+      <StatPanel
+        open={statPanelOpen}
+        stat={selectedStat}
+        profiles={profiles}
+        statLabels={statLabels}
+        currentUserId={profile?.id ?? ''}
+        onClose={closeStatPanel}
+        onChanged={load}
+        onLabelsChanged={load}
       />
     </div>
   );

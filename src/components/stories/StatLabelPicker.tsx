@@ -1,0 +1,330 @@
+import { useEffect, useRef, useState } from 'react';
+import {
+  createStatLabel,
+  deleteStatLabel,
+  updateStatLabel,
+  type StatLabel,
+} from '@/lib/stats';
+import { LABEL_COLORS } from '@/components/LabelPill';
+
+interface Props {
+  value: string[]; // selected label names
+  allLabels: StatLabel[];
+  currentUserId: string;
+  onChange: (names: string[]) => void;
+  onLabelsChanged: () => void; // parent refetches allLabels after create/edit/delete
+}
+
+type View = 'list' | 'create' | 'manage';
+
+function pillClass(color: string): string {
+  return LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300';
+}
+
+function swatchClass(color: string): string {
+  return LABEL_COLORS.find((c) => c.id === color)?.swatch ?? 'bg-slate-300';
+}
+
+export function StatLabelPicker({ value, allLabels, currentUserId, onChange, onLabelsChanged }: Props) {
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState<View>('list');
+
+  const [createName, setCreateName] = useState('');
+  const [createColor, setCreateColor] = useState('blue');
+  const [creating, setCreating] = useState(false);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('blue');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setView('list');
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const labelByName = new Map(allLabels.map((l) => [l.name, l]));
+  const selectedLabels = value.map((name) => labelByName.get(name) ?? { id: name, name, color: '', created_by: null, created_at: '' });
+
+  function toggle(name: string) {
+    if (value.includes(name)) onChange(value.filter((n) => n !== name));
+    else onChange([...value, name]);
+  }
+
+  function remove(name: string) {
+    onChange(value.filter((n) => n !== name));
+  }
+
+  async function handleCreate() {
+    if (!createName.trim() || creating) return;
+    setCreating(true);
+    try {
+      const label = await createStatLabel({ name: createName.trim(), color: createColor, created_by: currentUserId });
+      onLabelsChanged();
+      onChange([...value, label.name]);
+      setCreateName('');
+      setCreateColor('blue');
+      setView('list');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  function startEdit(label: StatLabel) {
+    setEditingId(label.id);
+    setEditName(label.name);
+    setEditColor(label.color);
+  }
+
+  async function handleSaveEdit(label: StatLabel) {
+    if (!editName.trim() || savingEdit) return;
+    setSavingEdit(true);
+    try {
+      await updateStatLabel(label.id, { name: editName.trim(), color: editColor });
+      // If the name changed, the selected-value array (which stores names) needs updating.
+      if (editName.trim() !== label.name && value.includes(label.name)) {
+        onChange(value.map((n) => (n === label.name ? editName.trim() : n)));
+      }
+      onLabelsChanged();
+      setEditingId(null);
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function handleDelete(label: StatLabel) {
+    if (deletingId) return;
+    setDeletingId(label.id);
+    try {
+      await deleteStatLabel(label.id);
+      if (value.includes(label.name)) onChange(value.filter((n) => n !== label.name));
+      onLabelsChanged();
+      setEditingId(null);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <label className="field-label">Labels</label>
+
+      {selectedLabels.length > 0 && (
+        <div className="mb-1.5 flex flex-wrap gap-1.5">
+          {selectedLabels.map((label) => (
+            <span
+              key={label.name}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${pillClass(label.color)}`}
+            >
+              {label.name}
+              <button
+                type="button"
+                onClick={() => remove(label.name)}
+                className="opacity-60 hover:opacity-100"
+                aria-label={`Remove ${label.name}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => { setOpen(true); setView('list'); }}
+        className="field-input text-left text-sparrow-gray dark:text-sparrow-dark-gray"
+      >
+        + Add label
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-xl">
+
+          {view === 'list' && (
+            <>
+              <ul className="py-1">
+                {allLabels.map((label) => (
+                  <li key={label.id}>
+                    <button
+                      type="button"
+                      onClick={() => toggle(label.name)}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
+                    >
+                      <span className={`h-3 w-3 shrink-0 rounded-full ${swatchClass(label.color)}`} />
+                      <span className="flex-1 truncate text-sparrow-ink dark:text-sparrow-dark-ink">{label.name}</span>
+                      {value.includes(label.name) && <span className="text-sparrow-green dark:text-sparrow-dark-green">✓</span>}
+                    </button>
+                  </li>
+                ))}
+                {allLabels.length === 0 && (
+                  <li className="px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No labels yet — create one below.</li>
+                )}
+              </ul>
+              <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border">
+                <button
+                  type="button"
+                  onClick={() => setView('create')}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
+                >
+                  <span>+</span> Create label
+                </button>
+                {allLabels.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => { setView('manage'); setEditingId(null); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
+                  >
+                    <span>✎</span> Manage labels
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); setView('list'); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
+                >
+                  Done
+                </button>
+              </div>
+            </>
+          )}
+
+          {view === 'create' && (
+            <div className="space-y-3 p-3">
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setView('list')} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
+                  ← Back
+                </button>
+                <span className="text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">New label</span>
+              </div>
+              <input
+                type="text"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate(); }}
+                placeholder="Label name…"
+                className="field-input"
+                autoFocus
+              />
+              <div>
+                <p className="mb-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Color</p>
+                <div className="flex flex-wrap gap-2">
+                  {LABEL_COLORS.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setCreateColor(c.id)}
+                      className={`h-5 w-5 rounded-full ${c.swatch} transition ${createColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink dark:ring-sparrow-dark-ink dark:ring-offset-sparrow-dark-surface' : 'opacity-70 hover:opacity-100'}`}
+                      aria-label={c.id}
+                    />
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleCreate()}
+                disabled={!createName.trim() || creating}
+                className="btn-primary w-full text-sm"
+              >
+                {creating ? 'Saving…' : 'Save label'}
+              </button>
+            </div>
+          )}
+
+          {view === 'manage' && (
+            <div className="space-y-2 p-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setView('list'); setEditingId(null); }}
+                  className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+                >
+                  ← Back
+                </button>
+                <span className="text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Manage labels</span>
+              </div>
+              {allLabels.map((label) => (
+                <div key={label.id} className="rounded-lg bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2 p-2">
+                  {editingId === label.id ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {LABEL_COLORS.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setEditColor(c.id)}
+                            className={`h-4 w-4 rounded-full ${c.swatch} transition ${editColor === c.id ? 'ring-2 ring-offset-1 ring-sparrow-ink dark:ring-sparrow-dark-ink dark:ring-offset-sparrow-dark-surface' : 'opacity-70 hover:opacity-100'}`}
+                            aria-label={c.id}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') void handleSaveEdit(label); if (e.key === 'Escape') setEditingId(null); }}
+                          className="field-input flex-1 py-1 text-xs"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void handleSaveEdit(label)}
+                          disabled={!editName.trim() || savingEdit}
+                          className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:opacity-70"
+                        >
+                          Save
+                        </button>
+                        <button type="button" onClick={() => setEditingId(null)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className={`h-3 w-3 shrink-0 rounded-full ${swatchClass(label.color)}`} />
+                      <span className="flex-1 truncate text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{label.name}</span>
+                      <button type="button" onClick={() => startEdit(label)} className="text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink" aria-label="Edit">
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(label)}
+                        disabled={deletingId === label.id}
+                        className="text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
+                        aria-label="Delete"
+                      >
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setView('create')}
+                className="flex w-full items-center gap-2 pt-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:opacity-70"
+              >
+                <span>+</span> Create new label
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
