@@ -93,6 +93,25 @@ export function getPushPermission(): NotificationPermission {
   return window.Notification?.permission ?? 'default';
 }
 
+/**
+ * Ground-truth check against OneSignal itself -- profiles.push_enabled is
+ * just a preference flag (defaults true, can go stale silently, e.g. iOS
+ * dropping a subscription after inactivity), this asks whether a real,
+ * enabled subscription actually exists right now. Returns null (not false)
+ * on any missing config/network/API error -- callers must only act on a
+ * literal `false`, never on null, so a transient hiccup here can't wrongly
+ * flip someone's real working subscription off.
+ */
+export async function checkPushSubscription(): Promise<boolean | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke<{ subscribed: boolean | null }>('check-push-subscription');
+    if (error || !data) return null;
+    return data.subscribed;
+  } catch {
+    return null;
+  }
+}
+
 export async function sendPush(params: {
   to: 'user' | 'staff';
   userId?: string;

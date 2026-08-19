@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { updateMyProfile, normalizeSchedule } from '@/lib/team';
-import { getPushPermission, requestPushPermission } from '@/lib/push';
+import { checkPushSubscription, getPushPermission, requestPushPermission } from '@/lib/push';
 import { applyTheme } from '@/lib/theme';
 import type { ScheduleBlock } from '@/lib/types';
 
@@ -39,6 +39,7 @@ export function SettingsView() {
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [pushBlocked, setPushBlocked] = useState(false);
+  const [pushJustReset, setPushJustReset] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   // Only re-sync from the loaded profile when it's actually a different user's data
@@ -56,6 +57,25 @@ export function SettingsView() {
     setBirthDay(day);
     const blocks = normalizeSchedule(profile.work_schedule);
     if (blocks.length > 0) setScheduleBlocks(blocks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]);
+
+  // Ground-truth check, once per Settings visit: profiles.push_enabled
+  // defaults true and never self-corrects, so it can keep claiming push is
+  // on long after iOS has silently dropped the real subscription. Only acts
+  // on a confident `false` from OneSignal itself -- null (missing config,
+  // network hiccup, anything ambiguous) is deliberately left alone, so a
+  // flaky check can never wrongly flip a real, working subscription off.
+  useEffect(() => {
+    if (!profile?.push_enabled || getPushPermission() !== 'granted') return;
+    let cancelled = false;
+    void checkPushSubscription().then((subscribed) => {
+      if (cancelled || subscribed !== false) return;
+      setPushEnabled(false);
+      setPushJustReset(true);
+      void updateMyProfile(profile.id, { push_enabled: false });
+    });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
@@ -249,48 +269,61 @@ export function SettingsView() {
         </section>
 
         {/* Push notifications */}
-        <section className="flex items-start justify-between gap-4 rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
-          <div>
-            <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Push notifications</p>
-            <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              {pushBlocked
-                ? 'Blocked in your browser — click the lock icon in your address bar to allow, then reload.'
-                : 'Alerts for new direct messages and announcements, even when the app isn\'t open.'}
-            </p>
-          </div>
-          <button
-            role="switch"
-            aria-checked={pushEnabled && !pushBlocked}
-            disabled={pushBlocked}
-            onClick={async () => {
-              const next = !pushEnabled;
-              if (next && getPushPermission() !== 'granted') {
-                const granted = await requestPushPermission();
-                if (!granted) {
-                  setPushBlocked(getPushPermission() === 'denied');
-                  return;
+        <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Push notifications</p>
+              <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                {pushBlocked
+                  ? 'Blocked in your browser — click the lock icon in your address bar to allow, then reload.'
+                  : 'Alerts for new direct messages and announcements, even when the app isn\'t open.'}
+              </p>
+              <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                On iPhone, this only works reliably if you open Sparrow from the icon you added to your home
+                screen — not from a Safari tab or bookmark.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={pushEnabled && !pushBlocked}
+              disabled={pushBlocked}
+              onClick={async () => {
+                const next = !pushEnabled;
+                if (next && getPushPermission() !== 'granted') {
+                  const granted = await requestPushPermission();
+                  if (!granted) {
+                    setPushBlocked(getPushPermission() === 'denied');
+                    return;
+                  }
                 }
-              }
-              setPushEnabled(next);
-              try {
-                await updateMyProfile(profile!.id, { push_enabled: next });
-              } catch {
-                // Save failed — revert instead of leaving the toggle showing a
-                // state that isn't actually saved (it would otherwise silently
-                // snap back later on the next background session refresh).
-                setPushEnabled(!next);
-              }
-            }}
-            className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
-              pushEnabled && !pushBlocked ? 'bg-sparrow-green' : 'bg-sparrow-rule dark:bg-sparrow-dark-border'
-            } ${pushBlocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-                pushEnabled && !pushBlocked ? 'left-[1.375rem]' : 'left-0.5'
-              }`}
-            />
-          </button>
+                setPushEnabled(next);
+                setPushJustReset(false);
+                try {
+                  await updateMyProfile(profile!.id, { push_enabled: next });
+                } catch {
+                  // Save failed — revert instead of leaving the toggle showing a
+                  // state that isn't actually saved (it would otherwise silently
+                  // snap back later on the next background session refresh).
+                  setPushEnabled(!next);
+                }
+              }}
+              className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
+                pushEnabled && !pushBlocked ? 'bg-sparrow-green' : 'bg-sparrow-rule dark:bg-sparrow-dark-border'
+              } ${pushBlocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                  pushEnabled && !pushBlocked ? 'left-[1.375rem]' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+          {pushJustReset && (
+            <p className="mt-3 rounded-lg bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
+              Push notifications had stopped actually working on this device, so we turned the setting back off
+              rather than leave it showing on. Flip it back on any time.
+            </p>
+          )}
         </section>
 
         {/* Dark mode */}
