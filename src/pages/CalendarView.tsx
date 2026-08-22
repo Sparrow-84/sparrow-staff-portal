@@ -7,7 +7,7 @@ const CALENDAR_HELP_SECTIONS = [
     items: [
       { label: 'All Staff', desc: 'Org-wide events added by admins — team meetings, site visits, program milestones. On by default.' },
       { label: 'My Depts', desc: 'Events from your department rooms. Enable sub-department chips to filter further. LCP sessions appear here when toggled on.' },
-      { label: 'Personal', desc: 'Events only you can see — personal reminders, appointments, personal blocks. Nobody else sees these, including admins.' },
+      { label: 'Personal', desc: 'Your agenda: personal reminders and appointments you add (only you ever see those, including admins), plus any All Staff or dept event you\'re attending or created — even from a department that isn\'t your own.' },
       { label: 'Deadlines', desc: 'Your task due dates shown as labeled pills — red for P1, gold for P2, gray for P3/P4.' },
       { label: 'Office Rooms', desc: 'Shows all events that have an office room booked. Hover any event to see which room. Use this to check availability before scheduling a meeting in the office.' },
     ],
@@ -30,7 +30,7 @@ const CALENDAR_HELP_SECTIONS = [
   },
 ];
 import { useAuth } from '@/auth/AuthContext';
-import { fetchCalendar, fetchEventIdsWithSharedNotes, KIND_LABEL, KIND_PILL, LAYER_PILL, getLayerPill, type CalendarEvent } from '@/lib/calendar';
+import { fetchCalendar, fetchEventIdsWithSharedNotes, fetchMyAttendance, KIND_LABEL, KIND_PILL, LAYER_PILL, getLayerPill, type CalendarEvent, type EventAttendee } from '@/lib/calendar';
 import { LABEL_COLORS } from '@/components/LabelPill';
 import { AddOrgEventPanel } from '@/components/calendar/AddOrgEventPanel';
 import { OrgEventDetailPanel } from '@/components/calendar/OrgEventDetailPanel';
@@ -156,16 +156,23 @@ export function CalendarView() {
   const [deadlineTasks, setDeadlineTasks] = useState<DeadlineTask[]>([]);
   const [lcpOrgEvents, setLcpOrgEvents] = useState<LcpEvent[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [myAttendance, setMyAttendance] = useState<EventAttendee[]>([]);
 
   const load = useCallback(async () => {
     try {
-      const [evs, profs, noted] = await Promise.all([fetchCalendar(), fetchProfiles(), fetchEventIdsWithSharedNotes()]);
+      const [evs, profs, noted, attendance] = await Promise.all([
+        fetchCalendar(),
+        fetchProfiles(),
+        fetchEventIdsWithSharedNotes(),
+        profile ? fetchMyAttendance(profile.id) : Promise.resolve([]),
+      ]);
       setEvents(evs);
       setProfiles(profs);
       setNotedEventIds(noted);
+      setMyAttendance(attendance);
     }
     finally { setLoading(false); }
-  }, []);
+  }, [profile]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -261,6 +268,29 @@ export function CalendarView() {
     days.push(new Date(year, month + 1, days.length - daysInMonth - firstDow + 1));
   }
 
+  // Personal tab = my agenda: personal events I made, plus anything elsewhere (All Staff
+  // or any dept, including ones outside my own) that I'm attending or created — mirrors
+  // WidgetHome's My Week filter (see visibleEvents there), just not capped to this week.
+  // This is the correct home for e.g. a cross-dept event invite: it doesn't belong under
+  // My Depts (it's not my department's event), it belongs here.
+  const attendanceMap = new Map(myAttendance.map((a) => [a.event_id, a.status]));
+  function isAttendingOrMine(ev: CalendarEvent): boolean {
+    return ev.department === null
+      ? attendanceMap.get(ev.id) !== 'opted_out'
+      : attendanceMap.get(ev.id) === 'attending' || ev.created_by === profile?.id;
+  }
+
+  // Active dept sub-chips (only meaningful while My Depts is on)
+  const activeDeptChips = showMyDepts ? myDepts.filter(d => !disabledDepts.has(d)) : [];
+
+  // Agenda mode: 2+ distinct browse sources on at once (All Staff plus each active dept
+  // chip — Personal doesn't count, it's already agenda-only) switches every browse layer
+  // down to "only what I'm attending or created." Mixing whole departments together
+  // otherwise reads as a wall of other people's events with no way to tell which are
+  // actually yours. A single source still shows everything, for dept oversight.
+  const activeSourceLayers = (showAllStaff ? 1 : 0) + activeDeptChips.length;
+  const isMultiLayer = activeSourceLayers > 1;
+
   // Partition events: single-day go into a map keyed by date; multi-day all-day events
   // go into a separate array for spanning-bar rendering across the week grid.
   const singleDayByDate = new Map<string, CalendarEvent[]>();
@@ -270,7 +300,14 @@ export function CalendarView() {
     const isAllStaff = !isPersonal && ev.department === null;
     const isDept = !isPersonal && ev.department !== null && myDepts.includes(ev.department) && !disabledDepts.has(ev.department);
     const isRoomBooked = showRooms && !!ev.room_id;
-    if (!(isAllStaff && showAllStaff) && !(isDept && showMyDepts) && !(isPersonal && showPersonal) && !isRoomBooked) continue;
+    const isMyAgenda = isPersonal || isAttendingOrMine(ev);
+    const passesAgendaSqueeze = !isMultiLayer || isPersonal || isAttendingOrMine(ev);
+    if (
+      !(isAllStaff && showAllStaff && passesAgendaSqueeze) &&
+      !(isDept && showMyDepts && passesAgendaSqueeze) &&
+      !(isMyAgenda && showPersonal) &&
+      !isRoomBooked
+    ) continue;
 
     const startD = ev.all_day ? ev.starts_at.slice(0, 10) : localISO(new Date(ev.starts_at));
     const endD = ev.all_day && ev.ends_at ? ev.ends_at.slice(0, 10) : startD;
@@ -361,15 +398,11 @@ export function CalendarView() {
 
   // Depts that are active but don't yet have a calendar built (show placeholder banner)
   const DEPTS_WITH_CALENDARS: Department[] = ['lcp', 'toc', 'partnerships', 'ops'];
-  const activeDeptLabels = myDepts
-    .filter(d => showMyDepts && !disabledDepts.has(d) && !DEPTS_WITH_CALENDARS.includes(d))
+  const activeDeptLabels = activeDeptChips
+    .filter(d => !DEPTS_WITH_CALENDARS.includes(d))
     .map(d => DEPARTMENTS.find(x => x.value === d)?.label ?? d);
 
   function openAdd(dStr: string) { setAddDate(dStr); setAddOpen(true); }
-
-  // Dynamic color mode: 1 active source layer → label colors; 2+ → layer colors
-  const activeSourceLayers = [showAllStaff, showMyDepts, showPersonal].filter(Boolean).length;
-  const isMultiLayer = activeSourceLayers > 1;
 
   function eventPillClass(ev: CalendarEvent): string {
     if (isMultiLayer) return getLayerPill(ev);
@@ -447,6 +480,13 @@ export function CalendarView() {
                 </button>
               ))}
             </div>
+          )}
+
+          {/* Agenda-mode note — only appears once 2+ browse sources are on at once */}
+          {isMultiLayer && (
+            <p className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+              Showing only events you're attending or created — turn off a layer or dept chip to browse everyone's events again.
+            </p>
           )}
 
         </div>

@@ -16,14 +16,17 @@ export interface CalendarLabel {
   created_by: string | null;
 }
 
-/** Multi-layer mode: event pill color is determined by its source layer, not its label. */
+/** Multi-layer mode: event pill color is determined by its source layer, not its label.
+ * Uses the same muted tint style as LABEL_COLORS pills (light bg + colored text) rather
+ * than solid saturated backgrounds — the old bold/white-text style read as "garish" once
+ * several layers were on at once. */
 export const LAYER_PILL: Record<string, string> = {
-  all_staff:    'bg-emerald-600 text-white',
-  personal:     'bg-violet-500 text-white',
-  toc:          'bg-teal-600 text-white',
-  lcp:          'bg-blue-600 text-white',
-  partnerships: 'bg-amber-500 text-white',
-  ops:          'bg-rose-500 text-white',
+  all_staff:    'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green',
+  personal:     'bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300',
+  toc:          'bg-teal-100 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300',
+  lcp:          'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300',
+  partnerships: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  ops:          'bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300',
 };
 
 export function getLayerPill(ev: { is_personal: boolean; department: Department | null }): string {

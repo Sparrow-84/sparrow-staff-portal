@@ -8,8 +8,41 @@ import {
   type LabelScope,
 } from '@/lib/calendar';
 import { LABEL_COLORS } from '@/components/LabelPill';
-import type { Department } from '@/lib/types';
+import { departmentLabel, type Department } from '@/lib/types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+
+function normalizeLabelName(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+// Tight on purpose — catches typos/plurals ("Birthday" vs "Birthdays"), not synonyms
+// ("Team Meeting" vs "Staff Meeting"). A looser threshold starts flagging genuinely
+// different labels (e.g. Partnerships' "External Meeting" vs "External Booth Event"),
+// which trains people to ignore the suggestion.
+function isSimilarLabelName(a: string, b: string): boolean {
+  if (a === b) return false;
+  const dist = levenshtein(a, b);
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return false;
+  return dist <= 2 && dist / maxLen <= 0.3;
+}
 
 interface Props {
   value: string | null;              // selected label_id
@@ -88,8 +121,8 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Labels available for the current posting context
-  const labels = useMemo(() => {
+  // "Your" labels for this posting context — same rules as before.
+  const myLabels = useMemo(() => {
     return allLabels.filter((l) => {
       if (l.scope === 'preset') return true;
       if (isPersonal) return l.scope === 'personal' && l.created_by === currentUserId;
@@ -98,14 +131,52 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
     });
   }, [allLabels, isPersonal, department, currentUserId]);
 
-  // Labels the current user can manage (edit/delete) in this context
+  // Other departments' labels — visible (and pickable) so reusing an existing label is
+  // the obvious move instead of recreating a near-duplicate under a different color.
+  // Only applies to dept-posting context; personal/all-staff labels stay scoped as before.
+  const otherLabels = useMemo(() => {
+    if (isPersonal || department === null) return [];
+    return allLabels.filter((l) => l.scope === 'dept' && l.department !== department);
+  }, [allLabels, isPersonal, department]);
+
+  const otherLabelsByDept = useMemo(() => {
+    const map = new Map<Department, CalendarLabel[]>();
+    for (const l of otherLabels) {
+      if (!l.department) continue;
+      if (!map.has(l.department)) map.set(l.department, []);
+      map.get(l.department)!.push(l);
+    }
+    return map;
+  }, [otherLabels]);
+
+  // Flat pool for matching (create/rename suggestions) and lookups — everything pickable
+  // in this context, own-dept first.
+  const labels = useMemo(() => [...myLabels, ...otherLabels], [myLabels, otherLabels]);
+
+  // Labels the current user can manage (edit/delete) in this context — unchanged:
+  // reuse/visibility widened above, but editing rights stay with the owning dept/admins.
   const manageableLabels = useMemo(() => {
-    return labels.filter((l) => {
+    return myLabels.filter((l) => {
       if (l.is_preset) return false;
       if (l.scope === 'all_staff') return isAdmin;
       return l.created_by === currentUserId || l.scope === 'dept';
     });
-  }, [labels, isAdmin, currentUserId]);
+  }, [myLabels, isAdmin, currentUserId]);
+
+  // Passive safety net for "Manage labels" — flags a label whose name collides with a
+  // differently-colored one elsewhere org-wide. Purely informational; nothing pops up
+  // unless someone happens to open Manage for that label. Personal-scope labels are
+  // excluded since they're private per person and never need to agree with anyone else's.
+  const nameConflicts = useMemo(() => {
+    const map = new Map<string, CalendarLabel>();
+    const shared = allLabels.filter((l) => l.scope !== 'personal');
+    for (const l of shared) {
+      const norm = normalizeLabelName(l.name);
+      const other = shared.find((o) => o.id !== l.id && normalizeLabelName(o.name) === norm && o.color !== l.color);
+      if (other) map.set(l.id, other);
+    }
+    return map;
+  }, [allLabels]);
 
   const selectedLabel = allLabels.find((l) => l.id === value) ?? null;
 
@@ -115,6 +186,35 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
     if (department === null) return 'all_staff';
     return 'dept';
   };
+
+  // Exact/near-duplicate detection while creating a new label — nudges toward reuse
+  // instead of silently blocking a color choice. Excludes nothing by scope: `labels`
+  // is already the right pool (own dept + other depts + presets, or personal-only).
+  const createNameNorm = normalizeLabelName(createName);
+  const createExactMatch = createNameNorm ? labels.find((l) => normalizeLabelName(l.name) === createNameNorm) ?? null : null;
+  const createSimilarMatches = createNameNorm && !createExactMatch
+    ? labels.filter((l) => isSimilarLabelName(normalizeLabelName(l.name), createNameNorm))
+    : [];
+
+  // Default the color swatch to the exact match's color (still overridable) so the path
+  // of least resistance is "stay consistent," not "pick blind."
+  useEffect(() => {
+    if (createExactMatch) setCreateColor(createExactMatch.color);
+  }, [createExactMatch?.id]);
+
+  // Same check for renaming an existing label — otherwise a rename could sidestep the
+  // create-time guardrail entirely.
+  const editNameNorm = normalizeLabelName(editName);
+  const editExactMatch = editingId && editNameNorm
+    ? labels.find((l) => l.id !== editingId && normalizeLabelName(l.name) === editNameNorm) ?? null
+    : null;
+  const editSimilarMatches = editingId && editNameNorm && !editExactMatch
+    ? labels.filter((l) => l.id !== editingId && isSimilarLabelName(normalizeLabelName(l.name), editNameNorm))
+    : [];
+
+  useEffect(() => {
+    if (editExactMatch) setEditColor(editExactMatch.color);
+  }, [editExactMatch?.id]);
 
   function open_dropdown() {
     setOpen(true);
@@ -222,7 +322,7 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
           {view === 'list' && (
             <>
               <ul className="py-1">
-                {labels.map((label) => (
+                {myLabels.map((label) => (
                   <li key={label.id}>
                     <button
                       type="button"
@@ -237,10 +337,41 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                     </button>
                   </li>
                 ))}
-                {labels.length === 0 && (
+                {myLabels.length === 0 && otherLabels.length === 0 && (
                   <li className="px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No labels yet — create one below.</li>
                 )}
               </ul>
+
+              {/* Other departments' labels — visible so reusing one is the easy move */}
+              {otherLabelsByDept.size > 0 && (
+                <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border py-1">
+                  <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
+                    Other departments
+                  </p>
+                  {[...otherLabelsByDept.entries()].map(([dept, deptLabels]) => (
+                    <div key={dept}>
+                      <p className="px-3 pt-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">{departmentLabel(dept)}</p>
+                      <ul>
+                        {deptLabels.map((label) => (
+                          <li key={label.id}>
+                            <button
+                              type="button"
+                              onClick={() => select(label)}
+                              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
+                            >
+                              <span className={`h-3 w-3 shrink-0 rounded-full ${labelSwatchClass(label.color)}`} />
+                              <span className="flex-1 truncate text-sparrow-ink dark:text-sparrow-dark-ink">{label.name}</span>
+                              {label.id === value && (
+                                <span className="text-sparrow-green dark:text-sparrow-dark-green">✓</span>
+                              )}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border">
                 {value && (
@@ -296,8 +427,38 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                 autoFocus
               />
               {createFieldError('label-create-name') && <p className="mt-1 text-xs text-priority-p1">{createFieldError('label-create-name')}</p>}
+
+              {createExactMatch && (
+                <button
+                  type="button"
+                  onClick={() => select(createExactMatch)}
+                  className="flex w-full items-center gap-2 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2.5 py-1.5 text-left text-xs text-sparrow-ink dark:text-sparrow-dark-ink hover:opacity-80"
+                >
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${labelSwatchClass(createExactMatch.color)}`} />
+                  <span className="flex-1">"{createExactMatch.name}" already exists — use it?</span>
+                </button>
+              )}
+              {!createExactMatch && createSimilarMatches.length > 0 && (
+                <div className="space-y-1">
+                  {createSimilarMatches.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => select(m)}
+                      className="flex w-full items-center gap-2 rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2.5 py-1.5 text-left text-xs text-sparrow-ink dark:text-sparrow-dark-ink hover:opacity-80"
+                    >
+                      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${labelSwatchClass(m.color)}`} />
+                      <span className="flex-1">Similar to "{m.name}" — use it?</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div>
-                <p className="mb-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Color</p>
+                <p className="mb-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                  Color
+                  {createExactMatch && <span className="ml-1 font-normal">— matched to "{createExactMatch.name}" to keep it consistent</span>}
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {LABEL_COLORS.map((c) => (
                     <button
@@ -379,11 +540,36 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
                         </button>
                       </div>
                       {editFieldError('label-edit-name') && <p className="mt-1 text-xs text-priority-p1">{editFieldError('label-edit-name')}</p>}
+                      {editExactMatch && (
+                        <p className="flex items-center gap-2 rounded-lg bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${labelSwatchClass(editExactMatch.color)}`} />
+                          <span className="flex-1">"{editExactMatch.name}" already exists — color updated to match.</span>
+                        </p>
+                      )}
+                      {!editExactMatch && editSimilarMatches.map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => { setEditName(m.name); setEditColor(m.color); }}
+                          className="flex w-full items-center gap-2 rounded-lg bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-left text-[11px] text-sparrow-ink dark:text-sparrow-dark-ink hover:opacity-80"
+                        >
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${labelSwatchClass(m.color)}`} />
+                          <span className="flex-1">Similar to "{m.name}" — match it?</span>
+                        </button>
+                      ))}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className={`h-3 w-3 shrink-0 rounded-full ${labelSwatchClass(label.color)}`} />
-                      <span className="flex-1 truncate text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{label.name}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{label.name}</span>
+                        {nameConflicts.has(label.id) && (
+                          <span className="flex items-center gap-1 text-[10px] text-sparrow-gray dark:text-sparrow-dark-gray">
+                            Also used elsewhere in
+                            <span className={`inline-block h-2 w-2 rounded-full ${labelSwatchClass(nameConflicts.get(label.id)!.color)}`} />
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => startEdit(label)}
