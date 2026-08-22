@@ -16,7 +16,7 @@ export function InfoTip({ text }: { text: string }) {
         ?
       </button>
       {open && (
-        <span className="absolute left-0 top-5 z-10 w-64 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2.5 text-xs font-normal leading-snug text-sparrow-ink dark:text-sparrow-dark-ink shadow-card">
+        <span className="absolute right-0 top-5 z-10 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2.5 text-xs font-normal leading-snug text-sparrow-ink dark:text-sparrow-dark-ink shadow-card">
           {text}
         </span>
       )}
