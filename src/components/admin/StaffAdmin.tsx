@@ -60,7 +60,7 @@ export function StaffAdmin() {
   }
 
   return (
-    <div className={`mx-auto px-4 py-8 sm:px-6 ${tab === 'roster' ? 'max-w-[1800px]' : 'max-w-4xl'}`}>
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold">Staff</h1>
