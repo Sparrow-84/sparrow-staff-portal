@@ -251,7 +251,7 @@ export function PartnershipsRoom() {
     : null;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <div className={`mx-auto px-4 py-8 sm:px-6 ${['directory', 'contacts', 'events', 'collateral'].includes(activeTab) ? 'max-w-[1800px]' : 'max-w-4xl'}`}>
       <RoomTour steps={PARTNERSHIPS_TOUR_STEPS} open={tourOpen} onDismiss={dismissTour} />
       {/* Room header */}
       <div className="flex items-start justify-between gap-4">

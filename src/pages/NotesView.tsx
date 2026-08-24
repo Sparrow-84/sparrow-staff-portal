@@ -3,7 +3,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { MeetingNotesView } from '@/components/calendar/MeetingNotesView';
 import { OrphanedNoteView } from '@/components/calendar/OrphanedNoteView';
 import { fetchMyNotesIndex, fetchSharedNotesIndex, type MyNoteEntry, type SharedNoteEntry } from '@/lib/notesHub';
-import { fetchMyIdeas, fetchTeamIdeas, createIdea, setIdeaCompleted, setIdeaShared, deleteIdea, type Idea } from '@/lib/ideas';
+import { fetchMyIdeas, fetchTeamIdeas, createIdea, updateIdea, setIdeaCompleted, setIdeaShared, deleteIdea, type Idea } from '@/lib/ideas';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
 import type { CalendarEvent } from '@/lib/calendar';
@@ -151,6 +151,10 @@ function IdeasTab({ userId }: { userId: string }) {
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     void Promise.all([fetchMyIdeas(userId), fetchTeamIdeas(), fetchProfiles()])
@@ -201,12 +205,69 @@ function IdeasTab({ userId }: { userId: string }) {
     await setIdeaShared(idea.id, shared);
   }
 
+  function startEdit(idea: Idea) {
+    setEditingId(idea.id);
+    setEditTitle(idea.title);
+    setEditDescription(idea.description);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function saveEdit(idea: Idea) {
+    const trimmedTitle = editTitle.trim();
+    if (!trimmedTitle || editSaving) return;
+    setEditSaving(true);
+    try {
+      await updateIdea(idea.id, trimmedTitle, editDescription.trim());
+      const patch = { title: trimmedTitle, description: editDescription.trim() };
+      setIdeas((prev) => prev.map((i) => (i.id === idea.id ? { ...i, ...patch } : i)));
+      setTeamIdeas((prev) => prev.map((i) => (i.id === idea.id ? { ...i, ...patch } : i)));
+      setEditingId(null);
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
   const active = ideas.filter((i) => !i.completed_at);
   const done = ideas.filter((i) => i.completed_at);
   const teamActive = teamIdeas.filter((i) => !i.completed_at);
   const teamDone = teamIdeas.filter((i) => i.completed_at);
 
   function Row({ idea, mine }: { idea: Idea; mine: boolean }) {
+    if (mine && editingId === idea.id) {
+      return (
+        <div className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2.5">
+          <input
+            type="text"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            className="w-full border-none bg-transparent p-1 text-sm font-semibold outline-none"
+            autoFocus
+          />
+          <textarea
+            value={editDescription}
+            onChange={(e) => setEditDescription(e.target.value)}
+            rows={4}
+            className="w-full resize-none border-none bg-transparent p-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray outline-none"
+          />
+          <div className="mt-1 flex items-center justify-end gap-2 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
+            <button onClick={cancelEdit} className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
+              Cancel
+            </button>
+            <button
+              onClick={() => void saveEdit(idea)}
+              disabled={!editTitle.trim() || editSaving}
+              className="rounded-lg bg-sparrow-green px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              {editSaving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="group flex items-start gap-3 rounded-lg px-2 py-2.5 hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2">
         <input
@@ -221,7 +282,7 @@ function IdeasTab({ userId }: { userId: string }) {
             {idea.title}
           </p>
           {idea.description && (
-            <p className={`mt-0.5 text-xs ${idea.completed_at ? 'text-sparrow-gray/70 line-through' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
+            <p className={`mt-0.5 whitespace-pre-wrap text-xs ${idea.completed_at ? 'text-sparrow-gray/70 line-through' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
               {idea.description}
             </p>
           )}
@@ -239,6 +300,16 @@ function IdeasTab({ userId }: { userId: string }) {
               }`}
             >
               {idea.shared ? 'Shared ✓' : 'Share'}
+            </button>
+            <button
+              onClick={() => startEdit(idea)}
+              title="Edit"
+              aria-label="Edit idea"
+              className="shrink-0 rounded p-1 text-sparrow-gray/50 opacity-0 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink group-hover:opacity-100"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
             </button>
             <button
               onClick={() => void remove(idea)}
@@ -272,7 +343,7 @@ function IdeasTab({ userId }: { userId: string }) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Add more detail (optional)"
-          rows={2}
+          rows={4}
           className="w-full resize-none border-none bg-white dark:bg-sparrow-dark-surface p-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray outline-none placeholder:text-sparrow-gray/60"
         />
         <div className="mt-1 flex items-center justify-between gap-3 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">

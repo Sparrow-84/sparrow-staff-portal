@@ -192,11 +192,11 @@ function ScheduleSection({ schedule, items }: { schedule: InvBentonSchedule; ite
 
       <table className="w-full">
         <thead>
-          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border">
-            <th className="py-2 pl-4 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Item</th>
-            <th className="py-2 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Location</th>
-            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Value</th>
-            <th className="py-2 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Year</th>
+          <tr className="bg-sparrow-green dark:bg-sparrow-dark-green">
+            <th className="py-2 pl-4 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">Item</th>
+            <th className="py-2 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">Location</th>
+            <th className="py-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide text-white/90">Value</th>
+            <th className="py-2 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">Year</th>
           </tr>
         </thead>
         <tbody>

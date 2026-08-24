@@ -32,7 +32,8 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
 
   const [statText, setStatText] = useState('');
   const [context, setContext] = useState('');
-  const [source, setSource] = useState('');
+  const [sourcePublisher, setSourcePublisher] = useState('');
+  const [sourceReportName, setSourceReportName] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [sourceDate, setSourceDate] = useState('');
   const [verified, setVerified] = useState(false);
@@ -56,7 +57,8 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
     if (stat) {
       setStatText(stat.stat_text);
       setContext(stat.context ?? '');
-      setSource(stat.source);
+      setSourcePublisher(stat.source_publisher);
+      setSourceReportName(stat.source_report_name);
       setSourceUrl(stat.source_url ?? '');
       setSourceDate(stat.source_date ?? '');
       setVerified(stat.verified);
@@ -68,7 +70,8 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
     } else {
       setStatText('');
       setContext('');
-      setSource('');
+      setSourcePublisher('');
+      setSourceReportName('');
       setSourceUrl('');
       setSourceDate('');
       setVerified(false);
@@ -83,7 +86,8 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
 
   const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'stp-text', label: 'Stat', valid: statText.trim().length > 0 },
-    { key: 'stp-source', label: 'Source', valid: source.trim().length > 0 },
+    { key: 'stp-source-publisher', label: 'Source publisher', valid: sourcePublisher.trim().length > 0 },
+    { key: 'stp-source-report-name', label: 'Source report name', valid: sourceReportName.trim().length > 0 },
   ]);
 
   function toggleVerified(checked: boolean) {
@@ -101,7 +105,8 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
     return {
       stat_text: statText.trim(),
       context: context.trim() || null,
-      source: source.trim(),
+      source_publisher: sourcePublisher.trim(),
+      source_report_name: sourceReportName.trim(),
       source_url: sourceUrl.trim() || null,
       source_date: sourceDate || null,
       verified,
@@ -162,7 +167,7 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
         open={open}
         onClose={onClose}
         title={stat.stat_text}
-        subtitle={stat.source}
+        subtitle={`${stat.source_publisher} · ${stat.source_report_name}`}
         wide
         footer={
           <div className="flex items-center justify-between gap-2">
@@ -204,8 +209,12 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
 
         <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="field-label">Source</span>
-            <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{stat.source}</p>
+            <span className="field-label">Source publisher</span>
+            <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{stat.source_publisher}</p>
+          </div>
+          <div>
+            <span className="field-label">Source report name</span>
+            <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{stat.source_report_name}</p>
           </div>
           <div>
             <span className="field-label">Source date</span>
@@ -255,7 +264,7 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
       open={open}
       onClose={onClose}
       title={stat ? 'Edit stat' : 'Add stat'}
-      subtitle={stat ? stat.source : undefined}
+      subtitle={stat ? `${stat.source_publisher} · ${stat.source_report_name}` : undefined}
       wide
       footer={
         <div className="flex items-center justify-between gap-2">
@@ -312,19 +321,34 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
         />
       </div>
 
-      {/* Source */}
-      <div className="mt-4">
-        <label className="field-label field-label-required" htmlFor="stp-source">
-          Source
-        </label>
-        <input
-          id="stp-source"
-          className={fieldClass('stp-source')}
-          value={source}
-          onChange={(e) => { setSource(e.target.value); clear('stp-source'); }}
-          placeholder="e.g. 2024 Benton County Point-in-Time Count"
-        />
-        {fieldError('stp-source') && <p className="mt-1 text-xs text-priority-p1">{fieldError('stp-source')}</p>}
+      {/* Source publisher + report name */}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label field-label-required" htmlFor="stp-source-publisher">
+            Source publisher
+          </label>
+          <input
+            id="stp-source-publisher"
+            className={fieldClass('stp-source-publisher')}
+            value={sourcePublisher}
+            onChange={(e) => { setSourcePublisher(e.target.value); clear('stp-source-publisher'); }}
+            placeholder="e.g. Benton County"
+          />
+          {fieldError('stp-source-publisher') && <p className="mt-1 text-xs text-priority-p1">{fieldError('stp-source-publisher')}</p>}
+        </div>
+        <div>
+          <label className="field-label field-label-required" htmlFor="stp-source-report-name">
+            Source report name
+          </label>
+          <input
+            id="stp-source-report-name"
+            className={fieldClass('stp-source-report-name')}
+            value={sourceReportName}
+            onChange={(e) => { setSourceReportName(e.target.value); clear('stp-source-report-name'); }}
+            placeholder="e.g. 2024 Point-in-Time Count"
+          />
+          {fieldError('stp-source-report-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('stp-source-report-name')}</p>}
+        </div>
       </div>
 
       {/* Source URL + date */}

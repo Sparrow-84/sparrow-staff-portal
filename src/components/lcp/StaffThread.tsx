@@ -13,16 +13,37 @@ const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🎉
 const MAX_TEXTAREA_HEIGHT = 128; // max-h-32
 const draftKey = (familyId: string) => `lcp-staff-draft:${familyId}`;
 
-function renderBody(body: string): ReactNode {
-  const re = /\*\*((?:[^*]|\*(?!\*))+)\*\*|\*([^*\n]+)\*/g;
+function renderBody(body: string, mine: boolean): ReactNode {
+  const re = /\*\*((?:[^*]|\*(?!\*))+)\*\*|\*([^*\n]+)\*|(https?:\/\/[^\s<]+)/g;
   const nodes: ReactNode[] = [];
   let last = 0;
   let key = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(body)) !== null) {
     if (m.index > last) nodes.push(body.slice(last, m.index));
-    if (m[1] !== undefined) nodes.push(<strong key={key++}>{m[1]}</strong>);
-    else if (m[2] !== undefined) nodes.push(<em key={key++}>{m[2]}</em>);
+    if (m[1] !== undefined) {
+      nodes.push(<strong key={key++}>{m[1]}</strong>);
+    } else if (m[2] !== undefined) {
+      nodes.push(<em key={key++}>{m[2]}</em>);
+    } else if (m[3] !== undefined) {
+      const raw = m[3];
+      const trimMatch = raw.match(/^(.*[^.,;:!?)'"\]])([.,;:!?)'"\]]+)?$/);
+      const href = trimMatch ? trimMatch[1] : raw;
+      const trailing = trimMatch?.[2] ?? '';
+      nodes.push(
+        <a
+          key={key++}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={mine ? 'underline decoration-white/50 hover:decoration-white' : 'text-sparrow-green underline dark:text-sparrow-dark-green hover:decoration-sparrow-green'}
+        >
+          {href}
+        </a>,
+      );
+      if (trailing) nodes.push(trailing);
+    }
     last = m.index + m[0].length;
   }
   if (last < body.length) nodes.push(body.slice(last));
@@ -251,7 +272,7 @@ export function StaffThread({
                         ) : m.voice_url ? (
                           <VoiceMessagePlayer url={m.voice_url} duration={m.voice_duration ?? 0} mine={fromStaff} />
                         ) : (
-                          <p className="whitespace-pre-wrap break-words">{renderBody(m.body)}</p>
+                          <p className="whitespace-pre-wrap break-words">{renderBody(m.body, fromStaff)}</p>
                         )}
 
                         <p className={`mt-1 text-[10px] ${fromStaff ? 'text-white/70' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>

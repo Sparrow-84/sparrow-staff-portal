@@ -33,6 +33,7 @@ function renderBody(body: string, staff: ChatPerson[], mine: boolean): ReactNode
   if (hasMentions) pats.push(`@(${escaped.join('|')})`);
   pats.push('\\*\\*((?:[^*]|\\*(?!\\*))+)\\*\\*');
   pats.push('\\*([^*\\n]+)\\*');
+  pats.push('(https?://[^\\s<]+)');
 
   const re = new RegExp(pats.join('|'), 'g');
   const nodes: ReactNode[] = [];
@@ -42,6 +43,7 @@ function renderBody(body: string, staff: ChatPerson[], mine: boolean): ReactNode
 
   const boldGroup   = hasMentions ? 2 : 1;
   const italicGroup = hasMentions ? 3 : 2;
+  const urlGroup     = hasMentions ? 4 : 3;
 
   while ((m = re.exec(body)) !== null) {
     if (m.index > last) nodes.push(body.slice(last, m.index));
@@ -55,6 +57,26 @@ function renderBody(body: string, staff: ChatPerson[], mine: boolean): ReactNode
       nodes.push(<strong key={key++}>{m[boldGroup]}</strong>);
     } else if (m[italicGroup] !== undefined) {
       nodes.push(<em key={key++}>{m[italicGroup]}</em>);
+    } else if (m[urlGroup] !== undefined) {
+      // Trim common trailing punctuation that's more likely to be sentence
+      // punctuation than part of the URL (e.g. "check this out: url.com.")
+      const raw = m[urlGroup];
+      const trimMatch = raw.match(/^(.*[^.,;:!?)'"\]])([.,;:!?)'"\]]+)?$/);
+      const href = trimMatch ? trimMatch[1] : raw;
+      const trailing = trimMatch?.[2] ?? '';
+      nodes.push(
+        <a
+          key={key++}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={mine ? 'underline decoration-white/50 hover:decoration-white' : 'text-sparrow-green underline dark:text-sparrow-dark-green hover:decoration-sparrow-green'}
+        >
+          {href}
+        </a>,
+      );
+      if (trailing) nodes.push(trailing);
     }
     last = m.index + m[0].length;
   }

@@ -66,7 +66,7 @@ export function StatsTab({ stats, statLabels, onAdd, onEdit }: Props) {
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{s.stat_text}</p>
                 <p className="mt-0.5 truncate text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-                  {s.source}
+                  {s.source_publisher} · {s.source_report_name}
                   {s.source_date ? ` (${s.source_date})` : ''}
                   {s.logged_by_name ? ` · logged by ${s.logged_by_name}` : ''}
                 </p>

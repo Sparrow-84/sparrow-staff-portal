@@ -260,11 +260,11 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
           <div className="mt-3 overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Event</th>
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Date</th>
-                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Board posted</th>
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Notes</th>
+                <tr className="bg-sparrow-green dark:bg-sparrow-dark-green">
+                  <th className="px-4 py-2 text-left font-semibold text-white/90">Event</th>
+                  <th className="px-4 py-2 text-left font-semibold text-white/90">Date</th>
+                  <th className="px-4 py-2 text-center font-semibold text-white/90">Board posted</th>
+                  <th className="px-4 py-2 text-left font-semibold text-white/90">Notes</th>
                   <th className="px-4 py-2"></th>
                 </tr>
               </thead>
@@ -410,12 +410,12 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
           <div className="mt-3 overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Participant</th>
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Date signed</th>
-                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Photos — participant</th>
-                  <th className="px-4 py-2 text-center font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Photos — children</th>
-                  <th className="px-4 py-2 text-left font-semibold text-sparrow-gray dark:text-sparrow-dark-gray">Notes</th>
+                <tr className="bg-sparrow-green dark:bg-sparrow-dark-green">
+                  <th className="px-4 py-2 text-left font-semibold text-white/90">Participant</th>
+                  <th className="px-4 py-2 text-left font-semibold text-white/90">Date signed</th>
+                  <th className="px-4 py-2 text-center font-semibold text-white/90">Photos — participant</th>
+                  <th className="px-4 py-2 text-center font-semibold text-white/90">Photos — children</th>
+                  <th className="px-4 py-2 text-left font-semibold text-white/90">Notes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">

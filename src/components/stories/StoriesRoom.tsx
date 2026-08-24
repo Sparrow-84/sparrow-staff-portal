@@ -107,7 +107,7 @@ export function StoriesRoom() {
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <div className={`mx-auto px-4 py-8 sm:px-6 ${activeTab === 'media' ? 'max-w-[1800px]' : 'max-w-4xl'}`}>
       {/* Room header */}
       <div className="flex items-start justify-between gap-4">
         <div>

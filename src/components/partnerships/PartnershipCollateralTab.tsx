@@ -271,7 +271,7 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
     return (
       <th
         onClick={() => toggleSort(k)}
-        className="cursor-pointer select-none whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+        className="cursor-pointer select-none whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90 hover:text-white"
       >
         {label}
         {active && <span className="ml-1 opacity-60">{sortDir === 'asc' ? '↑' : '↓'}</span>}
@@ -405,18 +405,18 @@ export function PartnershipCollateralTab({ profiles }: { profiles: Profile[] }) 
         <div className="overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border text-left">
+              <tr className="bg-sparrow-green dark:bg-sparrow-dark-green text-left">
                 <th className="w-6 px-3 py-2.5" />
                 <SortTh label="Item" k="item" />
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Qty</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Qty</th>
                 <SortTh label="Owner" k="owner" />
                 <SortTh label="Cadence" k="cadence" />
                 <SortTh label="Lead time" k="lead_time" />
                 <SortTh label="Due" k="due" />
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Review cycle</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Attention</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Notes</th>
-                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray"></th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Review cycle</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Attention</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Notes</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">

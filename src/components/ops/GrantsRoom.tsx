@@ -322,7 +322,7 @@ function Th<K extends string>({
   return (
     <th
       onClick={() => onSort(k)}
-      className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+      className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-white/90 hover:text-white"
     >
       {label}
       {active && <span className="ml-1 opacity-60">{sortDir === 'asc' ? '↑' : '↓'}</span>}
@@ -379,7 +379,7 @@ function ActiveGrantsTable({
     <div className="mt-4 overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
       <table className="w-full min-w-max border-collapse text-sm">
         <thead>
-          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-green dark:bg-sparrow-dark-green">
             <th className="w-6 px-3 py-2" />
             <Th label="Funder" k="funder" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <Th label="Amount" k="amount" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
@@ -432,7 +432,7 @@ function PastGrantsTable({
     <div className="overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
       <table className="w-full min-w-max border-collapse text-sm">
         <thead>
-          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-green dark:bg-sparrow-dark-green">
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Funder</th>
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Amount</th>
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Owner</th>
@@ -492,7 +492,7 @@ function ProspectsTable({
     <div className="mt-4 overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
       <table className="w-full min-w-max border-collapse text-sm">
         <thead>
-          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-green dark:bg-sparrow-dark-green">
             <th className="w-6 px-3 py-2" />
             <Th label="Name" k="name" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tier</th>
@@ -555,7 +555,7 @@ function NotMovingTable({
     <div className="overflow-x-auto rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border">
       <table className="w-full min-w-max border-collapse text-sm">
         <thead>
-          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40">
+          <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-green dark:bg-sparrow-dark-green">
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Name</th>
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tier</th>
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Owner</th>

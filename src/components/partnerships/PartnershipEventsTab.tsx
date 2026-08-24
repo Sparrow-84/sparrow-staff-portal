@@ -239,13 +239,13 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
           <div className="overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border text-left">
-                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Date</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Event</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Location</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Attendees</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Notes</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray"></th>
+                <tr className="bg-sparrow-green dark:bg-sparrow-dark-green text-left">
+                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Date</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Event</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Location</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Attendees</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Notes</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
@@ -384,16 +384,16 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
           <div className="overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border text-left">
-                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Name</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Org</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Discussed</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Next action</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Follow-up due</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Done</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Owner</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Event</th>
-                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray"></th>
+                <tr className="bg-sparrow-green dark:bg-sparrow-dark-green text-left">
+                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Name</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Org</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Discussed</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Next action</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Follow-up due</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Done</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Owner</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Event</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">

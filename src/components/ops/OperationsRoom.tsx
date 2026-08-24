@@ -116,7 +116,7 @@ export function OperationsRoom() {
   if (error) return <p className="p-8 text-sm text-priority-p1">{error}</p>;
 
   return (
-    <div className={`mx-auto px-4 py-8 sm:px-6 ${opsTab === 'inventory' ? 'max-w-[1800px]' : 'max-w-4xl'}`}>
+    <div className={`mx-auto px-4 py-8 sm:px-6 ${opsTab === 'inventory' || opsTab === 'grants' ? 'max-w-[1800px]' : 'max-w-4xl'}`}>
       <RoomTour steps={OPS_TOUR_STEPS} open={tourOpen} onDismiss={dismissTour} />
       <div>
         <h1 className="font-serif text-2xl font-semibold">Operations</h1>

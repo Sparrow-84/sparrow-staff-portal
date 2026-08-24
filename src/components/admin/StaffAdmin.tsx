@@ -60,7 +60,7 @@ export function StaffAdmin() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <div className={`mx-auto px-4 py-8 sm:px-6 ${tab === 'roster' ? 'max-w-[1800px]' : 'max-w-4xl'}`}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-semibold">Staff</h1>
@@ -99,7 +99,7 @@ export function StaffAdmin() {
         <div className="mt-6 space-y-3">
           <div className="overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-sparrow-rule dark:border-sparrow-dark-border text-xs uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
+              <thead className="bg-sparrow-green dark:bg-sparrow-dark-green text-xs uppercase tracking-wide text-white/90">
                 <tr>
                   <th className="px-4 py-2 font-semibold">Name</th>
                   <th className="px-4 py-2 font-semibold">Role</th>

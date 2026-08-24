@@ -48,6 +48,11 @@ export async function createIdea(userId: string, title: string, description: str
   return data as Idea;
 }
 
+export async function updateIdea(id: string, title: string, description: string): Promise<void> {
+  const { error } = await supabase.from('ideas').update({ title, description }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export async function setIdeaCompleted(id: string, completed: boolean): Promise<void> {
   const { error } = await supabase
     .from('ideas')

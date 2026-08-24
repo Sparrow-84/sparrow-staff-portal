@@ -78,6 +78,7 @@ export function AddPartnerPanel({
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [source, setSource] = useState('');
+  const [notes, setNotes] = useState('');
   const [cadence, setCadence] = useState<number | null>(DEFAULT_CADENCE.donor);
   const [leadTime, setLeadTime] = useState<number | null>(DEFAULT_LEAD_TIME);
   const [busy, setBusy] = useState(false);
@@ -98,6 +99,7 @@ export function AddPartnerPanel({
       setPhone(initialValues?.phone ?? '');
       setAddress('');
       setSource(initialValues?.source ?? '');
+      setNotes(initialValues?.notes ?? '');
       setCadence(DEFAULT_CADENCE.donor);
       setLeadTime(DEFAULT_LEAD_TIME);
       setError(null);
@@ -161,7 +163,7 @@ export function AddPartnerPanel({
         cadence_days: cadence,
         lead_time_days: leadTime,
         source: source.trim() || null,
-        notes: initialValues?.notes || null,
+        notes: notes.trim() || null,
       });
       if (type === 'donor' && ownerId) {
         void emitFirstTimeDonorTask(newPartnerId, trimmedName, ownerId).catch(() => undefined);
@@ -345,6 +347,18 @@ export function AddPartnerPanel({
         <div>
           <label className="field-label" htmlFor="pa-source">Source (how the connection was made)</label>
           <input id="pa-source" className="field-input" value={source} onChange={(e) => setSource(e.target.value)} placeholder="optional" />
+        </div>
+
+        <div>
+          <label className="field-label" htmlFor="pa-notes">Notes</label>
+          <textarea
+            id="pa-notes"
+            className="field-input"
+            rows={3}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Context, commitments, history…"
+          />
         </div>
 
         {error && <p className="text-sm text-priority-p1">{error}</p>}

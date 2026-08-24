@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
-import { deletePartner, emitFirstTimeDonorTask, emitRevisitTask, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner } from '@/lib/partnerships';
+import { deletePartner, deleteTouchpoint, emitFirstTimeDonorTask, emitRevisitTask, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner, updateTouchpoint } from '@/lib/partnerships';
 import {
   DONOR_TIER,
   DONOR_TIER_DESC,
@@ -83,6 +83,14 @@ export function PartnerDetailPanel({
   const [mergeTargetId, setMergeTargetId] = useState('');
   const [confirmMerge, setConfirmMerge] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Edit/delete an existing touchpoint
+  const [editingTouchpointId, setEditingTouchpointId] = useState<string | null>(null);
+  const [editMethod, setEditMethod] = useState<TouchpointMethod>('email');
+  const [editOccurredOn, setEditOccurredOn] = useState('');
+  const [editSummary, setEditSummary] = useState('');
+  const [touchpointSaving, setTouchpointSaving] = useState(false);
+  const [deletingTouchpointId, setDeletingTouchpointId] = useState<string | null>(null);
 
   // Log-touchpoint form
   const [method, setMethod] = useState<TouchpointMethod>('email');
@@ -171,6 +179,45 @@ export function PartnerDetailPanel({
     await reload();
     setBusy(false);
     onChanged();
+  }
+
+  function startEditTouchpoint(t: Touchpoint) {
+    setEditingTouchpointId(t.id);
+    setEditMethod(t.method);
+    setEditOccurredOn(t.occurred_on);
+    setEditSummary(t.summary ?? '');
+  }
+
+  function cancelEditTouchpoint() {
+    setEditingTouchpointId(null);
+  }
+
+  async function saveEditTouchpoint() {
+    if (!editingTouchpointId || !editOccurredOn || touchpointSaving) return;
+    setTouchpointSaving(true);
+    try {
+      await updateTouchpoint(editingTouchpointId, {
+        method: editMethod,
+        occurred_on: editOccurredOn,
+        summary: editSummary.trim() || null,
+      });
+      setEditingTouchpointId(null);
+      await reload();
+      onChanged();
+    } finally {
+      setTouchpointSaving(false);
+    }
+  }
+
+  async function removeTouchpoint(id: string) {
+    setDeletingTouchpointId(id);
+    try {
+      await deleteTouchpoint(id);
+      await reload();
+      onChanged();
+    } finally {
+      setDeletingTouchpointId(null);
+    }
   }
 
   async function archive() {
@@ -783,12 +830,74 @@ export function PartnerDetailPanel({
           <ul className="mt-1 space-y-2">
             {touchpoints.length === 0 && <li className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No touchpoints logged yet.</li>}
             {touchpoints.map((t) => (
-              <li key={t.id} className="rounded-xl border border-sparrow-rule/70 p-3">
-                <div className="flex items-center justify-between text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-                  <span>{TOUCHPOINT_METHOD[t.method]} · {shortDate(t.occurred_on)}</span>
-                  <span>{loggerName(t.logged_by)}</span>
-                </div>
-                {t.summary && <RichTextView html={t.summary} />}
+              <li key={t.id} className="group rounded-xl border border-sparrow-rule/70 p-3">
+                {editingTouchpointId === t.id ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={editMethod}
+                        onChange={(e) => setEditMethod(e.target.value as TouchpointMethod)}
+                        className="field-input mt-0"
+                      >
+                        {TOUCHPOINT_METHODS.map((m) => (
+                          <option key={m} value={m}>{TOUCHPOINT_METHOD[m]}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="date"
+                        value={editOccurredOn}
+                        onChange={(e) => setEditOccurredOn(e.target.value)}
+                        className="field-input mt-0"
+                      />
+                    </div>
+                    <RichTextEditor value={editSummary} onChange={setEditSummary} className="min-h-[5rem]" />
+                    <div className="flex justify-end gap-2">
+                      <button onClick={cancelEditTouchpoint} className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => void saveEditTouchpoint()}
+                        disabled={!editOccurredOn || touchpointSaving}
+                        className="rounded-lg bg-sparrow-green px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                      >
+                        {touchpointSaving ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                      <span>{TOUCHPOINT_METHOD[t.method]} · {shortDate(t.occurred_on)}</span>
+                      <div className="flex items-center gap-2">
+                        <span>{loggerName(t.logged_by)}</span>
+                        <button
+                          onClick={() => startEditTouchpoint(t)}
+                          title="Edit"
+                          aria-label="Edit touchpoint"
+                          className="opacity-0 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink group-hover:opacity-100"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => void removeTouchpoint(t.id)}
+                          disabled={deletingTouchpointId === t.id}
+                          title="Delete"
+                          aria-label="Delete touchpoint"
+                          className="opacity-0 hover:text-priority-p1 group-hover:opacity-100 disabled:opacity-50"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    {t.summary && <RichTextView html={t.summary} />}
+                  </>
+                )}
               </li>
             ))}
           </ul>

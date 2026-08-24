@@ -6,7 +6,8 @@ export interface Stat {
   id: string;
   stat_text: string;
   context: string | null;
-  source: string;
+  source_publisher: string;
+  source_report_name: string;
   source_url: string | null;
   source_date: string | null;
   verified: boolean;
@@ -25,7 +26,8 @@ export interface Stat {
 export interface StatInput {
   stat_text: string;
   context: string | null;
-  source: string;
+  source_publisher: string;
+  source_report_name: string;
   source_url: string | null;
   source_date: string | null;
   verified: boolean;
@@ -118,7 +120,8 @@ function normalizeStat(raw: unknown): Stat {
     id: r['id'] as string,
     stat_text: r['stat_text'] as string,
     context: (r['context'] as string | null) ?? null,
-    source: r['source'] as string,
+    source_publisher: r['source_publisher'] as string,
+    source_report_name: r['source_report_name'] as string,
     source_url: (r['source_url'] as string | null) ?? null,
     source_date: (r['source_date'] as string | null) ?? null,
     verified: (r['verified'] as boolean) ?? false,

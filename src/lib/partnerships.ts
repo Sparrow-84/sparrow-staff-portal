@@ -176,6 +176,19 @@ export async function logTouchpointBatch(
   if (error) throw new Error(error.message);
 }
 
+export async function updateTouchpoint(
+  id: string,
+  patch: { method?: TouchpointMethod; occurred_on?: string; summary?: string | null },
+): Promise<void> {
+  const { error } = await supabase.from('partner_touchpoints').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteTouchpoint(id: string): Promise<void> {
+  const { error } = await supabase.from('partner_touchpoints').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // ── Spine integration ────────────────────────────────────────────────
 /**
  * Push every overdue touchpoint onto its owner's Incoming Tasks (dedup-safe; re-running just

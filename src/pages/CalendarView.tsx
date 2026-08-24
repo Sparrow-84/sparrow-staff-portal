@@ -587,7 +587,7 @@ export function CalendarView() {
                                       {ev.is_personal ? '· ' : ''}{ev.all_day ? '' : `${shortTime(ev.starts_at)} · `}{ev.title}
                                     </span>
                                     {notedEventIds.has(ev.id) && (
-                                      <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-black/40 bg-white dark:bg-sparrow-dark-surface" aria-hidden />
+                                      <span className="h-2 w-2 shrink-0 rounded-full bg-sparrow-gold ring-1 ring-black/30 dark:ring-white/40" aria-hidden />
                                     )}
                                   </button>
                                 );
