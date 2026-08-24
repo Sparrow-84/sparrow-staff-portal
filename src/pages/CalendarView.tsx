@@ -128,7 +128,7 @@ export function CalendarView() {
     () => localStorage.getItem('calendar_show_deadlines') === 'true',
   );
   const [showPersonal, setShowPersonal] = useState(
-    () => localStorage.getItem('calendar_show_personal') === 'true',
+    () => localStorage.getItem('calendar_show_personal') !== 'false', // default on
   );
   const [showRooms, setShowRooms] = useState(
     () => localStorage.getItem('calendar_show_rooms') === 'true',

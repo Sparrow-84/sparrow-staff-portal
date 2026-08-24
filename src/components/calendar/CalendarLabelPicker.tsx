@@ -153,13 +153,16 @@ export function CalendarLabelPicker({ value, isPersonal, department, currentUser
   // in this context, own-dept first.
   const labels = useMemo(() => [...myLabels, ...otherLabels], [myLabels, otherLabels]);
 
-  // Labels the current user can manage (edit/delete) in this context — unchanged:
-  // reuse/visibility widened above, but editing rights stay with the owning dept/admins.
+  // Labels the current user can manage (edit/delete) in this context. Shared labels
+  // (dept or all-staff) are admin-only regardless of creator — anyone editing a label
+  // that's now visible org-wide is exactly how colors drift apart again. Personal labels
+  // stay creator-only, since those are private and never shown to anyone else. Matches
+  // the DB policy in 0164 — this is a mirror, not the enforcement boundary.
   const manageableLabels = useMemo(() => {
     return myLabels.filter((l) => {
       if (l.is_preset) return false;
-      if (l.scope === 'all_staff') return isAdmin;
-      return l.created_by === currentUserId || l.scope === 'dept';
+      if (l.scope === 'personal') return l.created_by === currentUserId;
+      return isAdmin;
     });
   }, [myLabels, isAdmin, currentUserId]);
 
