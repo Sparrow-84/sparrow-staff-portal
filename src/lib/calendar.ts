@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { syncGoogleCalendarImport } from './googleCalendarSync';
 import type { Department, OfficeRoom } from './types';
 
 // ── Calendar labels ───────────────────────────────────────────────────
@@ -592,6 +593,7 @@ export async function fetchCalendar(): Promise<CalendarEvent[]> {
   await syncStatHolidayEvents();
   await syncGrantCalendarEvents();
   await syncAnnualCalendarEvents();
+  void syncGoogleCalendarImport(); // best-effort, fire-and-forget — see googleCalendarSync.ts
   try {
     const { data, error } = await supabase
       .from('calendar_events')

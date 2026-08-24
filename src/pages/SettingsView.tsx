@@ -4,6 +4,9 @@ import { updateMyProfile, normalizeSchedule } from '@/lib/team';
 import { checkPushSubscription, getPushPermission, requestPushPermission } from '@/lib/push';
 import { applyTheme } from '@/lib/theme';
 import type { ScheduleBlock } from '@/lib/types';
+import {
+  fetchGoogleCalendarSyncStatus, regenerateExportToken, setGoogleImportUrl, exportFeedUrl,
+} from '@/lib/googleCalendarSync';
 
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const BLANK_BLOCK: ScheduleBlock = { days: [], start: '09:00', end: '17:00' };
@@ -42,6 +45,15 @@ export function SettingsView() {
   const [pushJustReset, setPushJustReset] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
+  // Google Calendar sync (Design Session E)
+  const [gcalExportToken, setGcalExportToken] = useState<string | null>(null);
+  const [gcalImportUrl, setGcalImportUrl] = useState('');
+  const [gcalLastSynced, setGcalLastSynced] = useState<string | null>(null);
+  const [gcalCopied, setGcalCopied] = useState(false);
+  const [gcalResetting, setGcalResetting] = useState(false);
+  const [gcalSaving, setGcalSaving] = useState(false);
+  const [gcalStatus, setGcalStatus] = useState<string | null>(null);
+
   // Only re-sync from the loaded profile when it's actually a different user's data
   // (profile.id changes) — not on every incidental refetch of the same profile
   // (e.g. Supabase's background session/token refresh), which would otherwise
@@ -59,6 +71,48 @@ export function SettingsView() {
     if (blocks.length > 0) setScheduleBlocks(blocks);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile) return;
+    void fetchGoogleCalendarSyncStatus(profile.id).then((s) => {
+      setGcalExportToken(s.exportToken);
+      setGcalImportUrl(s.importUrl ?? '');
+      setGcalLastSynced(s.lastSyncedAt);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]);
+
+  async function handleGetExportLink() {
+    if (!profile) return;
+    setGcalResetting(true);
+    try {
+      const token = await regenerateExportToken(profile.id);
+      setGcalExportToken(token);
+    } finally {
+      setGcalResetting(false);
+    }
+  }
+
+  async function handleCopyExportLink() {
+    if (!gcalExportToken) return;
+    await navigator.clipboard.writeText(exportFeedUrl(gcalExportToken));
+    setGcalCopied(true);
+    setTimeout(() => setGcalCopied(false), 2000);
+  }
+
+  async function handleSaveImportUrl() {
+    if (!profile) return;
+    setGcalSaving(true);
+    setGcalStatus(null);
+    try {
+      await setGoogleImportUrl(profile.id, gcalImportUrl.trim() || null);
+      setGcalStatus('Saved.');
+    } catch {
+      setGcalStatus('Could not save — try again.');
+    } finally {
+      setGcalSaving(false);
+    }
+  }
 
   // Ground-truth check, once per Settings visit: profiles.push_enabled
   // defaults true and never self-corrects, so it can keep claiming push is
@@ -325,6 +379,86 @@ export function SettingsView() {
               rather than leave it showing on. Flip it back on any time.
             </p>
           )}
+        </section>
+
+        {/* Google Calendar sync */}
+        <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
+          <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Google Calendar</p>
+          <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            Two independent, one-way links — not a live two-way sync. Each refreshes on its own schedule,
+            not instantly.
+          </p>
+
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
+              See your Sparrow calendar in Google
+            </p>
+            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              Get a link, then in Google Calendar go to "Other calendars" → "From URL" and paste it in.
+            </p>
+            {gcalExportToken ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <input
+                  readOnly
+                  value={exportFeedUrl(gcalExportToken)}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="field-input mt-0 flex-1 text-xs"
+                />
+                <button onClick={() => void handleCopyExportLink()} className="btn-ghost text-xs">
+                  {gcalCopied ? 'Copied ✓' : 'Copy link'}
+                </button>
+                <button
+                  onClick={() => void handleGetExportLink()}
+                  disabled={gcalResetting}
+                  className="text-xs font-medium text-priority-p1 hover:underline disabled:opacity-50"
+                >
+                  Reset link
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => void handleGetExportLink()}
+                disabled={gcalResetting}
+                className="btn-primary mt-2 text-sm disabled:opacity-50"
+              >
+                {gcalResetting ? 'Generating…' : 'Get my calendar link'}
+              </button>
+            )}
+            {gcalExportToken && (
+              <p className="mt-1.5 text-[11px] text-sparrow-gray/70">
+                Anyone with this link can see your calendar's event titles/times — reset it if it's ever shared
+                or exposed by mistake.
+              </p>
+            )}
+          </div>
+
+          <div className="mt-5 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
+              See your Google Calendar in Sparrow
+            </p>
+            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              In Google Calendar, go to your calendar's settings → "Integrate calendar" → copy the "Secret
+              address in iCal format," and paste it here. Read-only — edit things in Google Calendar itself.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input
+                type="url"
+                value={gcalImportUrl}
+                onChange={(e) => setGcalImportUrl(e.target.value)}
+                placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
+                className="field-input mt-0 flex-1 text-xs"
+              />
+              <button onClick={() => void handleSaveImportUrl()} disabled={gcalSaving} className="btn-primary text-sm disabled:opacity-50">
+                {gcalSaving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+            {gcalStatus && <p className="mt-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{gcalStatus}</p>}
+            <p className="mt-1.5 text-[11px] text-sparrow-gray/70">
+              {gcalLastSynced
+                ? `Last synced ${new Date(gcalLastSynced).toLocaleString()} — refreshes each time you open Calendar or Home.`
+                : 'Refreshes each time you open Calendar or Home, once a link is saved.'}
+            </p>
+          </div>
         </section>
 
         {/* Dark mode */}

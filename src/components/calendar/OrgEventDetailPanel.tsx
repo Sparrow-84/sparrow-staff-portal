@@ -29,6 +29,7 @@ import { CalendarLabelPicker } from '@/components/calendar/CalendarLabelPicker';
 import { LABEL_COLORS } from '@/components/LabelPill';
 import type { OfficeRoom, Profile } from '@/lib/types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+import { fetchExternalInvites, inviteExternalToEvent, type ExternalInvite } from '@/lib/externalInvites';
 
 interface Props {
   event: CalendarEvent | null;
@@ -56,6 +57,15 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
   const [eventComments, setEventComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [commentPending, setCommentPending] = useState(false);
+
+  // Invite someone outside Sparrow
+  const [externalInvites, setExternalInvites] = useState<ExternalInvite[]>([]);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteNote, setInviteNote] = useState('');
+  const [invitePending, setInvitePending] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSent, setInviteSent] = useState<string | null>(null);
 
   // Edit form state
   const [editTitle, setEditTitle] = useState('');
@@ -102,6 +112,35 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
     }
     void fetchNotesPreview();
   }, [event?.id, currentUserId]);
+
+  // Load who's already been invited from outside, whenever the event changes
+  useEffect(() => {
+    setInviteOpen(false);
+    setInviteEmail('');
+    setInviteNote('');
+    setInviteError(null);
+    setInviteSent(null);
+    if (!event) { setExternalInvites([]); return; }
+    void fetchExternalInvites(event.id).then(setExternalInvites);
+  }, [event?.id]);
+
+  async function sendExternalInvite() {
+    if (!event || !inviteEmail.trim() || invitePending) return;
+    setInvitePending(true);
+    setInviteError(null);
+    try {
+      await inviteExternalToEvent(event.id, inviteEmail.trim(), inviteNote.trim() || null);
+      setExternalInvites(await fetchExternalInvites(event.id));
+      setInviteSent(inviteEmail.trim());
+      setInviteEmail('');
+      setInviteNote('');
+      setInviteOpen(false);
+    } catch (e) {
+      setInviteError(e instanceof Error ? e.message : 'Could not send the invite.');
+    } finally {
+      setInvitePending(false);
+    }
+  }
 
   // Load attendees whenever the event changes (skip personal events — they have no attendees)
   useEffect(() => {
@@ -708,6 +747,81 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                   </p>
                 ) : null;
               })()}
+            </div>
+          )}
+
+          {/* Invite someone outside Sparrow — available on any event, personal included */}
+          {canEdit && (
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
+                  Outside guests
+                </p>
+                {externalInvites.length > 0 && (
+                  <span className="rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                    External guest invited
+                  </span>
+                )}
+              </div>
+
+              {externalInvites.length > 0 && (
+                <ul className="mt-1.5 space-y-1">
+                  {externalInvites.map((inv) => (
+                    <li key={inv.id} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                      Invited {inv.invited_email} &middot; {new Date(inv.created_at).toLocaleDateString()}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {inviteSent && (
+                <p className="mt-1.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+                  Invite sent to {inviteSent} ✓
+                </p>
+              )}
+
+              {inviteOpen ? (
+                <div className="mt-2 space-y-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border p-2.5">
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="their.email@example.com"
+                    className="field-input mt-0 text-sm"
+                    autoFocus
+                  />
+                  <textarea
+                    value={inviteNote}
+                    onChange={(e) => setInviteNote(e.target.value)}
+                    placeholder="Personal note (optional)"
+                    rows={2}
+                    className="field-input mt-0 resize-none text-sm"
+                  />
+                  {inviteError && <p className="text-xs text-priority-p1">{inviteError}</p>}
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => { setInviteOpen(false); setInviteError(null); }}
+                      className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => void sendExternalInvite()}
+                      disabled={!inviteEmail.trim() || invitePending}
+                      className="rounded-lg bg-sparrow-green px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      {invitePending ? 'Sending…' : 'Send invite'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setInviteOpen(true)}
+                  className="mt-1.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
+                >
+                  + Invite someone outside Sparrow
+                </button>
+              )}
             </div>
           )}
 
