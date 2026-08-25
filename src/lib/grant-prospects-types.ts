@@ -99,3 +99,18 @@ export interface GrantProspectDocument {
   created_by: string | null;
   created_at: string;
 }
+
+/** A named contact for this prospect — kept independent of status so info isn't lost
+ * if a prospect moves to Not Moving Forward and is later revisited. Carried forward
+ * automatically to the resulting Grant if this prospect is awarded — see
+ * grant_prospect_contacts_carry_forward in 0171_grant_contacts.sql. */
+export interface GrantProspectContact {
+  id: string;
+  prospect_id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+}

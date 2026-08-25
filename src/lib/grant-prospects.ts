@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import type {
   GrantProspect,
+  GrantProspectContact,
   GrantProspectDocument,
   GrantProspectLabel,
   GrantProspectLabelKind,
@@ -123,6 +124,43 @@ export async function addProspectLink(
 
 export async function deleteProspectLink(id: string): Promise<void> {
   const { error } = await supabase.from('grant_prospect_links').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Contacts (independent of status — kept even for Not Moving Forward prospects in
+// case they're revisited; carried forward automatically to the resulting Grant if this
+// prospect is later awarded, see copy_prospect_contacts_to_grant() in 0171) ─────────
+export async function fetchProspectContacts(prospectId: string): Promise<GrantProspectContact[]> {
+  const { data, error } = await supabase
+    .from('grant_prospect_contacts')
+    .select('*')
+    .eq('prospect_id', prospectId)
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as GrantProspectContact[];
+}
+
+export async function addProspectContact(
+  prospectId: string,
+  input: { name: string; email: string | null; phone: string | null; note: string | null },
+  createdBy: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('grant_prospect_contacts')
+    .insert({ prospect_id: prospectId, ...input, created_by: createdBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function updateProspectContact(
+  id: string,
+  patch: Partial<{ name: string; email: string | null; phone: string | null; note: string | null }>,
+): Promise<void> {
+  const { error } = await supabase.from('grant_prospect_contacts').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteProspectContact(id: string): Promise<void> {
+  const { error } = await supabase.from('grant_prospect_contacts').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 

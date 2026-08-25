@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { localDate } from '@/lib/date';
 import {
+  addGrantContact,
   addGrantLink,
   addGrantNotification,
   deleteGrant,
+  deleteGrantContact,
   deleteGrantDocument,
   deleteGrantLink,
+  fetchGrantContacts,
   fetchGrantDocuments,
   fetchGrantLinks,
   fetchGrantNotifications,
@@ -23,6 +26,7 @@ import {
   formatDate,
   notificationCategoryLabel,
   type Grant,
+  type GrantContact,
   type GrantDocument,
   type GrantLink,
   type GrantNotification,
@@ -59,15 +63,22 @@ export function GrantPanel({
   const [notifications, setNotifications] = useState<GrantNotification[]>([]);
   const [documents, setDocuments] = useState<GrantDocument[]>([]);
   const [links, setLinks] = useState<GrantLink[]>([]);
+  const [contacts, setContacts] = useState<GrantContact[]>([]);
 
   const grantId = grant?.id;
 
   const reload = useCallback(async () => {
     if (!grantId) return;
-    const [n, d, l] = await Promise.all([fetchGrantNotifications(grantId), fetchGrantDocuments(grantId), fetchGrantLinks(grantId)]);
+    const [n, d, l, c] = await Promise.all([
+      fetchGrantNotifications(grantId),
+      fetchGrantDocuments(grantId),
+      fetchGrantLinks(grantId),
+      fetchGrantContacts(grantId),
+    ]);
     setNotifications(n);
     setDocuments(d);
     setLinks(l);
+    setContacts(c);
   }, [grantId]);
 
   useEffect(() => {
@@ -108,6 +119,7 @@ export function GrantPanel({
 
       {tab === 'details' && (
         <DetailsTab grant={grant} profiles={profiles} onChanged={changed} onDeleted={() => { onChanged(); onClose(); }}>
+          <ContactsTab grantId={grant.id} contacts={contacts} currentUserId={currentUserId} onChanged={changed} />
           <LinksTab grantId={grant.id} links={links} currentUserId={currentUserId} onChanged={changed} />
           <DocumentsTab grantId={grant.id} docs={documents} currentUserId={currentUserId} onChanged={changed} />
         </DetailsTab>
@@ -347,33 +359,6 @@ function DetailsTab({
         </label>
       </div>
 
-      <div className="rounded-xl border border-sparrow-rule/70 p-3">
-        <p className="mb-2 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
-          Funder contact
-          <InfoTip text="Who to reach at the funder with questions or required notices. Not every funder assigns a specific person — some route everything through a general compliance address instead." />
-        </p>
-        <div className="space-y-2">
-          <input
-            value={form.funder_contact_name ?? ''}
-            onChange={(e) => set('funder_contact_name', e.target.value || null)}
-            placeholder="Name"
-            className="field-input mt-0"
-          />
-          <input
-            value={form.funder_contact_email ?? ''}
-            onChange={(e) => set('funder_contact_email', e.target.value || null)}
-            placeholder="Email"
-            className="field-input mt-0"
-          />
-          <input
-            value={form.funder_contact_phone ?? ''}
-            onChange={(e) => set('funder_contact_phone', e.target.value || null)}
-            placeholder="Phone"
-            className="field-input mt-0"
-          />
-        </div>
-      </div>
-
       <label className="flex items-center gap-2 rounded-xl border border-sparrow-green/30 bg-sparrow-sage/50 dark:bg-sparrow-green/15 p-3">
         <input
           type="checkbox"
@@ -427,9 +412,6 @@ function toInput(grant: Grant): GrantInput {
     amount: grant.amount,
     placed_in_service_date: grant.placed_in_service_date,
     affordability_period_end: grant.affordability_period_end,
-    funder_contact_name: grant.funder_contact_name,
-    funder_contact_email: grant.funder_contact_email,
-    funder_contact_phone: grant.funder_contact_phone,
     certification_due_date: grant.certification_due_date,
     prior_consent_required: grant.prior_consent_required,
     notes: grant.notes,
@@ -440,6 +422,88 @@ function toInput(grant: Grant): GrantInput {
 
 // ── Links (mirrors GrantProspectPanel's LinksSection — copied over automatically
 // when a prospect is awarded, so they land here instead of vanishing) ────────────
+function ContactsTab({
+  grantId,
+  contacts,
+  currentUserId,
+  onChanged,
+}: {
+  grantId: string;
+  contacts: GrantContact[];
+  currentUserId: string;
+  onChanged: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function add() {
+    if (!name.trim() || busy) return;
+    setBusy(true);
+    try {
+      await addGrantContact(
+        grantId,
+        { name: name.trim(), email: email.trim() || null, phone: phone.trim() || null, note: note.trim() || null },
+        currentUserId,
+      );
+      setName('');
+      setEmail('');
+      setPhone('');
+      setNote('');
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
+        Contacts
+        <InfoTip text="Anyone worth remembering for this grant — funder staff, a warm intro, a board connection. Kept here regardless of the grant's status so it's never buried in the notes." />
+      </p>
+      <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
+        {contacts.map((c) => (
+          <div key={c.id} className="flex items-start justify-between gap-2 rounded-lg bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2/50 p-2 text-sm">
+            <div className="min-w-0">
+              <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{c.name}</p>
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                {c.email && <a href={`mailto:${c.email}`} className="underline">{c.email}</a>}
+                {c.email && c.phone && ' · '}
+                {c.phone && <a href={`tel:${c.phone}`} className="underline">{c.phone}</a>}
+              </p>
+              {c.note && <p className="mt-0.5 text-xs italic text-sparrow-gray dark:text-sparrow-dark-gray">{c.note}</p>}
+            </div>
+            <button
+              onClick={() => deleteGrantContact(c.id).then(onChanged)}
+              className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+        {contacts.length === 0 && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No contacts yet.</p>}
+        <div className="grid grid-cols-2 gap-2 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="field-input mt-0 text-xs" />
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="field-input mt-0 text-xs" />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="field-input mt-0 text-xs" />
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Note (title, how connected, etc.)"
+            className="field-input mt-0 text-xs"
+          />
+          <button onClick={add} disabled={busy || !name.trim()} className="btn-primary col-span-2 text-xs">
+            + Add contact
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LinksTab({
   grantId,
   links,

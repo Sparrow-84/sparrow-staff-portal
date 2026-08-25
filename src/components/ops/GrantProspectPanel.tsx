@@ -3,9 +3,12 @@ import { Drawer } from '@/components/lcp/Drawer';
 import { InfoTip } from '@/components/InfoTip';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import {
+  addProspectContact,
   addProspectLink,
+  deleteProspectContact,
   deleteProspectDocument,
   deleteProspectLink,
+  fetchProspectContacts,
   fetchProspectDocuments,
   fetchProspectLinks,
   getProspectDocumentUrl,
@@ -19,6 +22,7 @@ import {
   PROSPECT_STATUSES,
   prospectStatusChip,
   type GrantProspect,
+  type GrantProspectContact,
   type GrantProspectDocument,
   type GrantProspectLink,
   type GrantProspectStatus,
@@ -54,6 +58,7 @@ export function GrantProspectPanel({
   const [autoSaveLabel, setAutoSaveLabel] = useState<string | null>(null);
   const [links, setLinks] = useState<GrantProspectLink[]>([]);
   const [docs, setDocs] = useState<GrantProspectDocument[]>([]);
+  const [contacts, setContacts] = useState<GrantProspectContact[]>([]);
   const skipNextAutosave = useRef(true);
 
   const { validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
@@ -62,9 +67,14 @@ export function GrantProspectPanel({
 
   const reload = useCallback(async () => {
     if (!prospect) return;
-    const [l, d] = await Promise.all([fetchProspectLinks(prospect.id), fetchProspectDocuments(prospect.id)]);
+    const [l, d, c] = await Promise.all([
+      fetchProspectLinks(prospect.id),
+      fetchProspectDocuments(prospect.id),
+      fetchProspectContacts(prospect.id),
+    ]);
     setLinks(l);
     setDocs(d);
+    setContacts(c);
   }, [prospect]);
 
   useEffect(() => {
@@ -260,6 +270,8 @@ export function GrantProspectPanel({
           />
         </label>
 
+        <ContactsSection prospectId={prospect.id} contacts={contacts} currentUserId={currentUserId} onChanged={reload} />
+
         <LinksSection prospectId={prospect.id} links={links} currentUserId={currentUserId} onChanged={reload} />
 
         <DocumentsSection prospectId={prospect.id} docs={docs} currentUserId={currentUserId} onChanged={reload} />
@@ -334,6 +346,90 @@ function toInput(prospect: GrantProspect | null): ProspectInput {
     owner_id: prospect.owner_id,
     lead_time_days: prospect.lead_time_days,
   };
+}
+
+// ── Contacts — always visible regardless of status; a "Not Moving Forward" prospect
+// can still be revisited later, and the point of this section is that info about a
+// person doesn't get lost or buried in the Findings text just because the status did ──
+function ContactsSection({
+  prospectId,
+  contacts,
+  currentUserId,
+  onChanged,
+}: {
+  prospectId: string;
+  contacts: GrantProspectContact[];
+  currentUserId: string;
+  onChanged: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function add() {
+    if (!name.trim() || busy) return;
+    setBusy(true);
+    try {
+      await addProspectContact(
+        prospectId,
+        { name: name.trim(), email: email.trim() || null, phone: phone.trim() || null, note: note.trim() || null },
+        currentUserId,
+      );
+      setName('');
+      setEmail('');
+      setPhone('');
+      setNote('');
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <p className="mb-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
+        Contacts — add as many as you need
+      </p>
+      <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
+        {contacts.map((c) => (
+          <div key={c.id} className="flex items-start justify-between gap-2 rounded-lg bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2/50 p-2 text-sm">
+            <div className="min-w-0">
+              <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{c.name}</p>
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                {c.email && <a href={`mailto:${c.email}`} className="underline">{c.email}</a>}
+                {c.email && c.phone && ' · '}
+                {c.phone && <a href={`tel:${c.phone}`} className="underline">{c.phone}</a>}
+              </p>
+              {c.note && <p className="mt-0.5 text-xs italic text-sparrow-gray dark:text-sparrow-dark-gray">{c.note}</p>}
+            </div>
+            <button
+              onClick={() => deleteProspectContact(c.id).then(onChanged)}
+              className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+        {contacts.length === 0 && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No contacts yet.</p>}
+        <div className="grid grid-cols-2 gap-2 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="field-input mt-0 text-xs" />
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="field-input mt-0 text-xs" />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="field-input mt-0 text-xs" />
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Note (title, how connected, etc.)"
+            className="field-input mt-0 text-xs"
+          />
+          <button onClick={add} disabled={busy || !name.trim()} className="btn-primary col-span-2 text-xs">
+            + Add contact
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Links — always visible, not gated by status ─────────────────────────────────────

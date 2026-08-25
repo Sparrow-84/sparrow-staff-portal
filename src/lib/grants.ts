@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Grant, GrantDocument, GrantLink, GrantNotification, GrantNotificationCategory } from './grants-types';
+import type { Grant, GrantContact, GrantDocument, GrantLink, GrantNotification, GrantNotificationCategory } from './grants-types';
 
 // All reads/writes are gated by RLS to the ops tier (has_ops_access(): Andrew, Susanna,
 // Shelly). Notifications are append-only (insert + select only — see 0078_grants.sql).
@@ -28,9 +28,6 @@ export interface GrantInput {
   amount: number | null;
   placed_in_service_date: string | null;
   affordability_period_end: string | null;
-  funder_contact_name: string | null;
-  funder_contact_email: string | null;
-  funder_contact_phone: string | null;
   certification_due_date: string | null;
   prior_consent_required: boolean;
   notes: string | null;
@@ -106,6 +103,40 @@ export async function addGrantLink(grantId: string, label: string, url: string, 
 
 export async function deleteGrantLink(id: string): Promise<void> {
   const { error } = await supabase.from('grant_links').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Contacts (same shape as grant_prospect_contacts — carried over automatically when
+// a prospect is awarded, see copy_prospect_contacts_to_grant() in 0171) ─────────────
+export async function fetchGrantContacts(grantId: string): Promise<GrantContact[]> {
+  const { data, error } = await supabase
+    .from('grant_contacts')
+    .select('*')
+    .eq('grant_id', grantId)
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as GrantContact[];
+}
+
+export async function addGrantContact(
+  grantId: string,
+  input: { name: string; email: string | null; phone: string | null; note: string | null },
+  createdBy: string,
+): Promise<void> {
+  const { error } = await supabase.from('grant_contacts').insert({ grant_id: grantId, ...input, created_by: createdBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function updateGrantContact(
+  id: string,
+  patch: Partial<{ name: string; email: string | null; phone: string | null; note: string | null }>,
+): Promise<void> {
+  const { error } = await supabase.from('grant_contacts').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteGrantContact(id: string): Promise<void> {
+  const { error } = await supabase.from('grant_contacts').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 

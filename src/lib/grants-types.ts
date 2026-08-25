@@ -33,9 +33,6 @@ export interface Grant {
   amount: number | null;
   placed_in_service_date: string | null;
   affordability_period_end: string | null;
-  funder_contact_name: string | null;
-  funder_contact_email: string | null;
-  funder_contact_phone: string | null;
   certification_due_date: string | null;
   last_certified_on: string | null;
   prior_consent_required: boolean;
@@ -73,6 +70,21 @@ export interface GrantDocument {
   label: string;
   storage_path: string;
   summary: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+/** A named contact for this grant — funder staff, a warm intro, a board connection,
+ * etc. Kept independent of grant status so info isn't lost if a grant moves between
+ * stages (and, for prospects, carried forward automatically if one is later awarded —
+ * see grant_prospect_contacts_carry_forward in 0171_grant_contacts.sql). */
+export interface GrantContact {
+  id: string;
+  grant_id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  note: string | null;
   created_by: string | null;
   created_at: string;
 }
