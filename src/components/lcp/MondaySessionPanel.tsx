@@ -124,7 +124,7 @@ export function MondaySessionPanel({
     life_skills: {},
     mentoring: {},
   });
-  const [bucketSaveState, setBucketSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [bucketSaveState, setBucketSaveState] = useState<'idle' | 'saving' | 'saved' | 'error' | 'confirm_clear'>('idle');
   const [bucketSaveError, setBucketSaveError] = useState<string | null>(null);
 
   // Visibility only -- "is this bucket wrapped up for tonight" -- never a
@@ -166,10 +166,15 @@ export function MondaySessionPanel({
       ]);
       if (cancelled) return;
 
+      // Left unset (not defaulted to 'on_time') for anyone without a real
+      // attendance row yet -- per Susanna, defaulting everyone to on-time
+      // let two staff each assume the other had already checked attendance,
+      // so a real late arrival went unmarked. Leaving it blank makes "nobody
+      // has recorded this yet" visibly obvious instead of silently correct-
+      // looking. See the "Not marked yet" badge below.
       const attMap: Record<string, AttendanceStatus> = {};
       const reasonMap: Record<string, string> = {};
       const voucherMap: Record<string, VoucherState> = {};
-      for (const f of families) attMap[f.id] = 'on_time';
       for (const row of attRows as SessionAttendance[]) {
         attMap[row.family_id] = row.status;
         if (row.reason) reasonMap[row.family_id] = row.reason;
@@ -292,19 +297,45 @@ export function MondaySessionPanel({
   // Explicit save, not tied to a field losing focus -- doesn't depend on
   // attendance being filled in, doesn't depend on which family/bucket was
   // touched last, and surfaces a real error instead of failing silently.
-  async function saveBucketNotes(bucket: MondayBucket) {
+  //
+  // requireConfirm controls whether edits to a note that ALREADY has saved
+  // content are allowed to autosave. Autosave (the debounced effect below)
+  // always passes true -- per Susanna, once a note has real saved text,
+  // every further edit to it (typo fix or full rewrite, not just clearing
+  // it) needs an explicit Save click, since that's what best protects
+  // session notes from an accidental change going out unnoticed. A brand
+  // new note (nothing saved yet for that family) still autosaves normally --
+  // there's nothing to lose by autosaving a first draft. The "Save ___
+  // notes" button passes requireConfirm: false, since a deliberate click IS
+  // the confirmation.
+  async function saveBucketNotes(bucket: MondayBucket, opts: { requireConfirm?: boolean } = {}) {
     if (!sessionLogId) return;
+    const requireConfirm = opts.requireConfirm ?? true;
     setBucketSaveState('saving');
     setBucketSaveError(null);
     try {
       const drafts = notesByBucket[bucket];
       const saved = savedNotesByBucket[bucket];
       const changed = families.filter((f) => (drafts[f.id] ?? '').trim() !== (saved[f.id] ?? '').trim());
+      const blockedEdits = changed.filter((f) => requireConfirm && (saved[f.id] ?? '').trim() !== '');
+      const toWrite = changed.filter((f) => !blockedEdits.includes(f));
+
       await Promise.all(
-        changed.map((f) => upsertBucketNote(sessionLogId, f.id, bucket, (drafts[f.id] ?? '').trim(), currentUserId)),
+        toWrite.map((f) => upsertBucketNote(sessionLogId, f.id, bucket, (drafts[f.id] ?? '').trim(), currentUserId)),
       );
-      setSavedNotesByBucket((prev) => ({ ...prev, [bucket]: { ...drafts } }));
-      setBucketSaveState('saved');
+      setSavedNotesByBucket((prev) => ({
+        ...prev,
+        [bucket]: { ...prev[bucket], ...Object.fromEntries(toWrite.map((f) => [f.id, drafts[f.id] ?? ''])) },
+      }));
+
+      if (blockedEdits.length > 0) {
+        setBucketSaveState('confirm_clear');
+        setBucketSaveError(
+          `${blockedEdits.map((f) => f.display_name).join(', ')} — you edited an already-saved note. Click "Save ${MONDAY_BUCKET_LABEL[bucket]} notes" to confirm, or the previous text stays saved.`,
+        );
+      } else {
+        setBucketSaveState('saved');
+      }
     } catch (e) {
       setBucketSaveState('error');
       setBucketSaveError(e instanceof Error ? e.message : 'Could not save notes — try again.');
@@ -431,7 +462,14 @@ export function MondaySessionPanel({
         </div>
         <ul className="space-y-2">
           {families.map((f) => (
-            <li key={f.id} className="rounded-xl border border-sparrow-rule/70 p-2">
+            <li
+              key={f.id}
+              className={`rounded-xl border p-2 ${
+                attendance[f.id] == null
+                  ? 'border-[#B8790A]/40 bg-[#B8790A]/5'
+                  : 'border-sparrow-rule/70'
+              }`}
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
                 <div className="flex gap-1">
@@ -453,6 +491,9 @@ export function MondaySessionPanel({
                     </button>
                   ))}
                 </div>
+                {attendance[f.id] == null && (
+                  <span className="text-[11px] font-semibold text-[#B8790A]">Not marked yet</span>
+                )}
                 <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   <input
                     type="checkbox"
@@ -463,7 +504,7 @@ export function MondaySessionPanel({
                   Voucher
                 </label>
               </div>
-              {attendance[f.id] !== 'on_time' && (
+              {(attendance[f.id] === 'late' || attendance[f.id] === 'no_show') && (
                 <input
                   value={attendanceReason[f.id] ?? ''}
                   onChange={(e) => setAttendanceReason((prev) => ({ ...prev, [f.id]: e.target.value }))}
@@ -586,13 +627,16 @@ export function MondaySessionPanel({
 
             <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
               <button
-                onClick={() => void saveBucketNotes(selectedBucket)}
+                onClick={() => void saveBucketNotes(selectedBucket, { requireConfirm: false })}
                 disabled={bucketSaveState === 'saving'}
                 className="btn-primary"
               >
                 {bucketSaveState === 'saving' ? 'Saving…' : `Save ${MONDAY_BUCKET_LABEL[selectedBucket]} notes`}
               </button>
               {bucketSaveState === 'saved' && <span className="text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green">Saved ✓</span>}
+              {bucketSaveState === 'confirm_clear' && (
+                <span className="text-sm font-medium text-[#B8790A]">{bucketSaveError}</span>
+              )}
               {bucketSaveState === 'error' && (
                 <span className="text-sm font-medium text-priority-p1">{bucketSaveError}</span>
               )}

@@ -100,11 +100,23 @@ export function RichTextView({ html, empty, className }: { html: string | null; 
 
 const LOOKS_LIKE_HTML = /<[a-z][\s\S]*>/i;
 
+// A textarea's HTML parsing treats its content as raw text (RCDATA) -- any
+// "<...>" stays literal instead of becoming real elements -- while still
+// decoding character references like &nbsp;/&amp;. That makes it a safe way
+// to undo stray entities (e.g. a pasted non-breaking space that got
+// re-serialized as literal "&nbsp;" text -- see feedback-rich-text-staff-vs-participant)
+// without risking real markup injection.
+function decodeEntities(text: string): string {
+  const el = document.createElement('textarea');
+  el.innerHTML = text;
+  return el.value;
+}
+
 /** Plain one-line text for previews (list rows, truncated summaries) --
  *  strips tags rather than rendering them, since a preview line has no room
  *  for real formatting anyway. */
 export function stripHtml(text: string): string {
-  if (!LOOKS_LIKE_HTML.test(text)) return text;
+  if (!LOOKS_LIKE_HTML.test(text)) return decodeEntities(text);
   const div = document.createElement('div');
   div.innerHTML = text;
   return (div.textContent ?? '').replace(/\s+/g, ' ').trim();
@@ -114,11 +126,14 @@ export function stripHtml(text: string): string {
  *  HTML from a rich text editor (e.g. after adding formatting to an existing plain
  *  textarea) -- older rows have literal newlines, which dangerouslySetInnerHTML
  *  would silently collapse. Falls back to whitespace-pre-wrap for anything that
- *  doesn't already look like it contains real tags. */
+ *  doesn't already look like it contains real tags. Runs that plain-text fallback
+ *  through decodeEntities first -- otherwise a stray "&nbsp;" (no real tag around
+ *  it, so it never reaches the HTML branch) prints as literal garbled characters
+ *  instead of the space it was meant to be. */
 export function RichOrPlainView({ text, empty, className }: { text: string | null; empty?: string; className?: string }) {
   if (!text) {
     return empty ? <p className="text-sm italic text-sparrow-gray dark:text-sparrow-dark-gray">{empty}</p> : null;
   }
   if (LOOKS_LIKE_HTML.test(text)) return <RichTextView html={text} className={className} />;
-  return <p className={`whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink ${className ?? ''}`}>{text}</p>;
+  return <p className={`whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink ${className ?? ''}`}>{decodeEntities(text)}</p>;
 }

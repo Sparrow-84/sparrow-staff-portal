@@ -152,9 +152,12 @@ export function SessionLogEntry({
       : families;
 
   // ── attendance ────────────────────────────────────────────────────
-  const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>(() =>
-    Object.fromEntries(families.map((f) => [f.id, 'on_time'])),
-  );
+  // Starts empty rather than defaulting everyone to on-time -- per Susanna,
+  // that default let two staff each assume the other had already checked
+  // attendance, so a real late arrival went unmarked. Leaving it blank makes
+  // "nobody's recorded this yet" visibly obvious. See the required-field
+  // check in fileSession() below and the "Not marked yet" badge in the render.
+  const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
   const [attendanceReason, setAttendanceReason] = useState<Record<string, string>>({});
 
   // ── vouchers (Monday + Thursday only) ────────────────────────────
@@ -242,6 +245,13 @@ export function SessionLogEntry({
 
   const { missingMessage, validate, fieldClass, fieldError, clear } = useRequiredFields([
     { key: 'sle-family-picker', label: 'At least one family present', valid: sessionType !== 'ad_hoc' || selectedIds.size > 0 },
+    {
+      key: 'sle-attendance',
+      // Ad-hoc sessions don't show the attendance section at all (no fixed
+      // roster to mark against), so only require this for Monday/Thursday.
+      label: 'Attendance for everyone present',
+      valid: sessionType === 'ad_hoc' || activeFamilies.every((f) => attendance[f.id] != null),
+    },
   ]);
 
   async function fileSession() {
@@ -502,7 +512,10 @@ export function SessionLogEntry({
 
       {/* Attendance + vouchers (Monday + Thursday) */}
       {!isAdHoc && (
-        <section className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card">
+        <section
+          id="sle-attendance"
+          className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 shadow-card"
+        >
           <div className="mb-3 flex items-center justify-between">
             <span className="field-label">Attendance</span>
             <button onClick={markAllPresent} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
@@ -511,7 +524,12 @@ export function SessionLogEntry({
           </div>
           <ul className="space-y-2">
             {families.map((f) => (
-              <li key={f.id} className="rounded-xl border border-sparrow-rule/70 p-2">
+              <li
+                key={f.id}
+                className={`rounded-xl border p-2 ${
+                  attendance[f.id] == null ? 'border-[#B8790A]/40 bg-[#B8790A]/5' : 'border-sparrow-rule/70'
+                }`}
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
                   <div className="flex gap-1">
@@ -533,6 +551,9 @@ export function SessionLogEntry({
                       </button>
                     ))}
                   </div>
+                  {attendance[f.id] == null && (
+                    <span className="text-[11px] font-semibold text-[#B8790A]">Not marked yet</span>
+                  )}
                   {showVouchers && (
                     <label className="ml-auto flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                       <input
@@ -545,7 +566,7 @@ export function SessionLogEntry({
                     </label>
                   )}
                 </div>
-                {attendance[f.id] !== 'on_time' && (
+                {(attendance[f.id] === 'late' || attendance[f.id] === 'no_show') && (
                   <input
                     value={attendanceReason[f.id] ?? ''}
                     onChange={(e) => setAttendanceReason((prev) => ({ ...prev, [f.id]: e.target.value }))}
@@ -556,6 +577,7 @@ export function SessionLogEntry({
               </li>
             ))}
           </ul>
+          {fieldError('sle-attendance') && <p className="mt-2 text-xs text-priority-p1">{fieldError('sle-attendance')}</p>}
         </section>
       )}
 
