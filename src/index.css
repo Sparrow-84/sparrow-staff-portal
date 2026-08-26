@@ -130,4 +130,16 @@
   .rich-text-scale-lg .rich-text h2 { @apply text-2xl; }
   .rich-text-scale-lg .rich-text h3 { @apply text-xl; }
   .rich-text-scale-lg .rich-text h4 { @apply text-lg; }
+
+  /* Live-collaboration cursors (Shared Notes — see SharedNotesEditor.tsx).
+     Rendered by @tiptap/extension-collaboration-caret as raw DOM nodes, so this
+     is real CSS rather than Tailwind classes on JSX. */
+  .collaboration-carets__caret {
+    @apply relative mx-px border-l-2 border-solid;
+    word-break: normal;
+    pointer-events: none;
+  }
+  .collaboration-carets__label {
+    @apply absolute -top-4 left-0 select-none whitespace-nowrap rounded rounded-bl-none px-1.5 py-0.5 text-[10px] font-semibold text-white;
+  }
 }

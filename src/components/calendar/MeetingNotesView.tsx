@@ -1,17 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { KIND_LABEL, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
+import type { SaveStatus, SharedNotesHandle } from './SharedNotesEditor';
+
+// Lazy-loaded: Yjs + TipTap only need to be fetched once someone actually opens a
+// meeting notes panel, not as part of every page's initial bundle.
+const SharedNotesEditor = lazy(() =>
+  import('./SharedNotesEditor').then((m) => ({ default: m.SharedNotesEditor })),
+);
 
 interface Props {
   event: CalendarEvent;
   userId: string;
   onClose: () => void;
-}
-
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
-
-function sanitize(html: string): string {
-  return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
 }
 
 function Toolbar() {
@@ -63,7 +64,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   // Fetched content held in state so a second effect can write it to the
   // contentEditable refs after the DOM has rendered (refs are null during loading).
-  const [initialContent, setInitialContent] = useState<{ prep: string; live: string; shared: string } | null>(null);
+  const [initialContent, setInitialContent] = useState<{ prep: string; live: string } | null>(null);
   const [privateStatus, setPrivateStatus] = useState<SaveStatus>('idle');
   const [sharedStatus, setSharedStatus] = useState<SaveStatus>('idle');
   const [closing, setClosing] = useState(false);
@@ -71,37 +72,26 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
 
   const prepRef = useRef<HTMLDivElement>(null);
   const liveRef = useRef<HTMLDivElement>(null);
-  const sharedRef = useRef<HTMLDivElement>(null);
+  const sharedEditorRef = useRef<SharedNotesHandle>(null);
 
   const latestPrep = useRef('');
   const latestLive = useRef('');
-  const latestShared = useRef('');
 
   // Guard: only allow unmount flush and saves if initial load succeeded.
   // Without this, a failed load would autosave empty strings over existing notes.
   const loadSucceeded = useRef(false);
 
   const privateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sharedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [{ data: priv, error: privErr }, { data: shared }] = await Promise.all([
-          supabase
-            .from('meeting_notes')
-            .select('prep_notes, live_notes')
-            .eq('event_id', event.id)
-            .eq('user_id', userId)
-            .maybeSingle(),
-          supabase
-            .from('event_shared_notes')
-            .select('notes')
-            .eq('event_id', event.id)
-            .maybeSingle(),
-        ]);
-        // Private notes are the critical path — fail if those error.
-        // Shared notes degrade gracefully (schema cache may be stale after migrations).
+        const { data: priv, error: privErr } = await supabase
+          .from('meeting_notes')
+          .select('prep_notes, live_notes')
+          .eq('event_id', event.id)
+          .eq('user_id', userId)
+          .maybeSingle();
         if (privErr) {
           setLoadError(privErr.message);
           setLoading(false);
@@ -109,12 +99,10 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         }
         const prep = priv?.prep_notes ?? '';
         const live = priv?.live_notes ?? '';
-        const sharedNotes = shared?.notes ?? '';
         latestPrep.current = prep;
         latestLive.current = live;
-        latestShared.current = sharedNotes;
         loadSucceeded.current = true;
-        setInitialContent({ prep, live, shared: sharedNotes });
+        setInitialContent({ prep, live });
         setLoading(false);
       } catch (e) {
         setLoadError(e instanceof Error ? e.message : String(e));
@@ -130,15 +118,14 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
     if (!initialContent) return;
     if (prepRef.current) prepRef.current.innerHTML = initialContent.prep;
     if (liveRef.current) liveRef.current.innerHTML = initialContent.live;
-    if (sharedRef.current) sharedRef.current.innerHTML = initialContent.shared;
   }, [initialContent]);
 
   // Flush any unsaved content on unmount — best-effort, no await.
   // Skipped entirely if initial load failed to prevent overwriting existing notes with empty state.
+  // Shared notes flush themselves (SharedNotesEditor owns its own Yjs-backed save).
   useEffect(() => {
     return () => {
       if (privateTimer.current) clearTimeout(privateTimer.current);
-      if (sharedTimer.current) clearTimeout(sharedTimer.current);
       if (!loadSucceeded.current) return; // eslint-disable-line @typescript-eslint/no-unnecessary-condition
       void supabase.from('meeting_notes').upsert(
         {
@@ -150,17 +137,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         },
         { onConflict: 'event_id,user_id' },
       );
-      if (latestShared.current) {
-        void supabase.from('event_shared_notes').upsert(
-          {
-            event_id: event.id,
-            notes: sanitize(latestShared.current),
-            updated_at: new Date().toISOString(),
-            updated_by: userId,
-          },
-          { onConflict: 'event_id' },
-        );
-      }
+      void sharedEditorRef.current?.flush();
     };
   }, [event.id, userId]);
 
@@ -184,25 +161,6 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
     }, 1000);
   }, [event.id, userId]);
 
-  const scheduleSharedSave = useCallback(() => {
-    if (!loadSucceeded.current) return;
-    if (sharedTimer.current) clearTimeout(sharedTimer.current);
-    setSharedStatus('idle');
-    sharedTimer.current = setTimeout(async () => {
-      setSharedStatus('saving');
-      const { error } = await supabase.from('event_shared_notes').upsert(
-        {
-          event_id: event.id,
-          notes: sanitize(latestShared.current),
-          updated_at: new Date().toISOString(),
-          updated_by: userId,
-        },
-        { onConflict: 'event_id' },
-      );
-      setSharedStatus(error ? 'error' : 'saved');
-    }, 1000);
-  }, [event.id, userId]);
-
   // Close is the one path that must never silently drop content: cancel any
   // pending debounce timers and save directly, awaited, so a failure is
   // actually shown instead of discarded when the panel unmounts.
@@ -214,7 +172,6 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
     setClosing(true);
     setCloseError(null);
     if (privateTimer.current) clearTimeout(privateTimer.current);
-    if (sharedTimer.current) clearTimeout(sharedTimer.current);
 
     const [{ error: privError }, { error: sharedError }] = await Promise.all([
       supabase.from('meeting_notes').upsert(
@@ -227,17 +184,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         },
         { onConflict: 'event_id,user_id' },
       ),
-      latestShared.current
-        ? supabase.from('event_shared_notes').upsert(
-            {
-              event_id: event.id,
-              notes: sanitize(latestShared.current),
-              updated_at: new Date().toISOString(),
-              updated_by: userId,
-            },
-            { onConflict: 'event_id' },
-          )
-        : Promise.resolve({ error: null }),
+      sharedEditorRef.current?.flush() ?? Promise.resolve({ error: null }),
     ]);
 
     setClosing(false);
@@ -276,10 +223,6 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   function handleLiveInput() {
     latestLive.current = liveRef.current?.innerHTML ?? '';
     schedulePrivateSave();
-  }
-  function handleSharedInput() {
-    latestShared.current = sharedRef.current?.innerHTML ?? '';
-    scheduleSharedSave();
   }
 
   const startsAt = new Date(event.starts_at);
@@ -408,21 +351,10 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
           />
         </div>
 
-        {/* Shared Notes */}
-        <div className="flex flex-1 flex-col">
-          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-blue-50 dark:bg-blue-500/15 px-6 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Shared Notes</p>
-            <p className="text-xs text-blue-600/70 dark:text-blue-400/70">Visible to everyone with calendar access</p>
-          </div>
-          <div
-            ref={sharedRef}
-            contentEditable
-            suppressContentEditableWarning
-            onInput={handleSharedInput}
-            onPaste={handlePaste}
-            className={`${CONTENT_CLASSES} bg-blue-50/20 dark:bg-blue-500/10`}
-          />
-        </div>
+        {/* Shared Notes — live collaborative, unlike Prep/Live above */}
+        <Suspense fallback={<div className="flex flex-1 items-center justify-center"><p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p></div>}>
+          <SharedNotesEditor ref={sharedEditorRef} eventId={event.id} userId={userId} onStatusChange={setSharedStatus} />
+        </Suspense>
       </div>
     </div>
   );
