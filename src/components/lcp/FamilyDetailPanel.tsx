@@ -78,7 +78,7 @@ import {
   updateHomework,
   updateHouseholdChild,
 } from '@/lib/lcp';
-import { money, dayLabel, dueLabel, isFeeOverdue, isOverdue, ageFromDob } from '@/lib/lcp-format';
+import { money, dayLabel, dobLabel, dueLabel, isFeeOverdue, isOverdue, ageFromDob } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
 import { StaffThread } from './StaffThread';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
@@ -1335,12 +1335,16 @@ function GeneralInfoView({
       </div>
 
       <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-4">
-        <span className="field-label">Mother&apos;s full name</span>
+        <span className="field-label">Mother</span>
         {adult ? (
-          <p className="mt-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
-            {adult.full_name} · {adult.phone}
-            {adult.date_of_birth && ` · 🎂 ${dayLabel(adult.date_of_birth)} · Age ${ageFromDob(adult.date_of_birth)}`}
-          </p>
+          <div className="mt-1">
+            <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
+              {adult.full_name}
+              {adult.date_of_birth && ` (${ageFromDob(adult.date_of_birth)})`}
+              {adult.date_of_birth && ` · DOB: ${dobLabel(adult.date_of_birth)}`}
+            </p>
+            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{adult.phone}</p>
+          </div>
         ) : (
           <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No adult on file.</p>
         )}
@@ -1348,10 +1352,6 @@ function GeneralInfoView({
 
         <div className="mt-3">
           <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Emergency contact</span>
-          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            Write as much as this family needs — one contact for everyone, a separate contact per
-            person, several contacts, whatever fits.
-          </p>
           <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink whitespace-pre-wrap">{family.emergency_contact_notes || '—'}</p>
         </div>
       </div>
@@ -1442,19 +1442,46 @@ function GeneralInfoEdit({
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-4">
-        <span className="field-label">Mother&apos;s full name</span>
+        <span className="field-label">Mother</span>
 
-        <div className="mt-1">
-          <input value={adultName} onChange={(e) => setAdultName(e.target.value)} placeholder="Full name" className="field-input" />
-          <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-2" />
-          <input
-            type="date"
-            value={adultDob}
-            onChange={(e) => setAdultDob(e.target.value)}
-            aria-label="Birthday"
-            className="field-input mt-2"
-          />
-          <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Children's names, birthdays, and childcare info now live on the Children tab.</p>
+        <div className="mt-2 space-y-2">
+          <div className="grid grid-cols-[5rem_1fr] items-center gap-2">
+            <label htmlFor="mother-name" className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              Name
+            </label>
+            <input
+              id="mother-name"
+              value={adultName}
+              onChange={(e) => setAdultName(e.target.value)}
+              placeholder="Full name"
+              className="field-input mt-0 max-w-xs"
+            />
+          </div>
+          <div className="grid grid-cols-[5rem_1fr] items-center gap-2">
+            <label htmlFor="mother-phone" className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              Phone
+            </label>
+            <input
+              id="mother-phone"
+              value={adultPhone}
+              onChange={(e) => setAdultPhone(e.target.value)}
+              placeholder="(555) 555-5555"
+              className="field-input mt-0 max-w-[10rem]"
+            />
+          </div>
+          <div className="grid grid-cols-[5rem_1fr] items-center gap-2">
+            <label htmlFor="mother-dob" className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              Birthday
+            </label>
+            <input
+              id="mother-dob"
+              type="date"
+              value={adultDob}
+              onChange={(e) => setAdultDob(e.target.value)}
+              className="field-input mt-0 max-w-[10rem]"
+            />
+          </div>
+          <p className="pt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Children's names, birthdays, and childcare info now live on the Children tab.</p>
         </div>
 
         <div className="mt-4">

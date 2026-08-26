@@ -11,6 +11,10 @@ function parseLocalDate(iso: string): Date {
   return new Date(y, m - 1, d);
 }
 
+export function dobLabel(iso: string): string {
+  return parseLocalDate(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
 export function ageFromDob(iso: string | null): number | null {
   if (!iso) return null;
   const dob = parseLocalDate(iso);
