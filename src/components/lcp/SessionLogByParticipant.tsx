@@ -10,7 +10,7 @@ import {
   type SessionLogType,
   type StaffNoteWithSession,
 } from '@/lib/lcp-types';
-import { fetchGoalsForFamily, fetchHomeworkForFamily, fetchStaffNotesWithSession } from '@/lib/lcp';
+import { familyDisplayName, fetchGoalsForFamily, fetchHomeworkForFamily, fetchStaffNotesWithSession } from '@/lib/lcp';
 import { dayLabel } from '@/lib/lcp-format';
 import { RichOrPlainView, stripHtml } from './RichText';
 
@@ -174,13 +174,13 @@ export function SessionLogByParticipant({ families }: { families: Family[] }) {
               f.id === selectedId ? 'border-l-4 border-l-sparrow-green bg-sparrow-sage/60 dark:bg-sparrow-green/15' : 'border-l-4 border-l-transparent hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2'
             }`}
           >
-            <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</p>
+            <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{familyDisplayName(f)}</p>
           </button>
         ))}
       </div>
 
       <div className="min-h-[20rem] rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4">
-        {selected && <h3 className="mb-2 font-serif text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{selected.display_name}</h3>}
+        {selected && <h3 className="mb-2 font-serif text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{familyDisplayName(selected)}</h3>}
 
         <div className="mb-3 inline-flex gap-0.5 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1">
           {(['notes', 'goals', 'homework'] as Subtab[]).map((t) => (
@@ -252,7 +252,7 @@ export function BucketNoteCard({ note, families }: { note: StaffNoteWithSession;
   return (
     <div className="border-t border-sparrow-rule/70 py-3 first:border-t-0 first:pt-0">
       <div className="mb-1 flex items-center gap-2">
-        <span className="text-xs font-bold text-sparrow-gray dark:text-sparrow-dark-gray">{family?.display_name ?? 'Unknown family'}</span>
+        <span className="text-xs font-bold text-sparrow-gray dark:text-sparrow-dark-gray">{family ? familyDisplayName(family) : 'Unknown family'}</span>
         <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{dayLabel(note.created_at)}</span>
       </div>
       <RichOrPlainView text={note.body} className={!expanded ? 'line-clamp-3' : ''} />

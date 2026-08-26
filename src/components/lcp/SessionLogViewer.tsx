@@ -8,7 +8,7 @@ import {
   type SessionLog,
   type StaffNote,
 } from '@/lib/lcp-types';
-import { fetchNotesForSessionLog, updateSessionLog, updateStaffNote } from '@/lib/lcp';
+import { familyDisplayName, fetchNotesForSessionLog, updateSessionLog, updateStaffNote } from '@/lib/lcp';
 import { dayLabel } from '@/lib/lcp-format';
 import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
 import { RichTextField, RichOrPlainView } from './RichText';
@@ -107,7 +107,7 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
                       onClick={() => onOpenFamily(family.id)}
                       className="flex-1 text-left font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:text-sparrow-green dark:hover:text-sparrow-dark-green hover:underline"
                     >
-                      {family.display_name}
+                      {familyDisplayName(family)}
                     </button>
                   ) : (
                     <span className="flex-1 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Unknown family</span>
@@ -250,9 +250,9 @@ function NoteList({
               <button
                 onClick={() => onOpenFamily(family.id)}
                 className="mb-1.5 text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green hover:underline"
-                title={`See all of ${family.display_name}'s notes`}
+                title={`See all of ${familyDisplayName(family)}'s notes`}
               >
-                {family.display_name}
+                {familyDisplayName(family)}
               </button>
             )}
             {editingNoteId === n.id ? (

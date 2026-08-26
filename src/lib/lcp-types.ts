@@ -16,7 +16,13 @@ export type MondayBucket = 'finance' | 'life_skills' | 'mentoring';
 
 export interface Family {
   id: string;
+  // Household last name/label -- kept in sync with the Twin Oaks tenant record,
+  // so this must stay last-name-only. Use familyDisplayName() for anything
+  // shown to LCP staff -- it prefers the mother's full name when we have one.
   display_name: string;
+  // The household adult's full name, joined in by fetchFamilies(). Display-only;
+  // never write this back to display_name.
+  adult_full_name: string | null;
   login_email: string;
   status: FamilyStatus;
   current_session_number: number;

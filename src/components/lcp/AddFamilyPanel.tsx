@@ -149,7 +149,7 @@ export function AddFamilyPanel({
         </div>
 
         <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
-          <span className="field-label field-label-required">Mother</span>
+          <span className="field-label field-label-required">Mother&apos;s full name</span>
           <input
             id="fam-adult-name"
             className={fieldClass('fam-adult-name')}

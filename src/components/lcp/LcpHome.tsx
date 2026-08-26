@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  familyDisplayName,
   fetchMaterialsPreppedSessionIds,
   fetchUnreviewedCurriculumNotes,
   markMaterialsPrepped,
@@ -107,7 +108,10 @@ export function LcpHome({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const familyName = (id: string) => families.find((f) => f.id === id)?.display_name ?? 'Family';
+  const familyName = (id: string) => {
+    const f = families.find((f) => f.id === id);
+    return f ? familyDisplayName(f) : 'Family';
+  };
 
   const today = todayISO();
 
@@ -207,7 +211,7 @@ export function LcpHome({
           className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 p-4 text-sm"
         >
           <span>
-            🏡 <span className="font-medium">{f.display_name}</span> just crossed into {money(f.housing_savings_cents)} in Housing Savings.
+            🏡 <span className="font-medium">{familyDisplayName(f)}</span> just crossed into {money(f.housing_savings_cents)} in Housing Savings.
           </span>
           <button
             disabled={busyAckId === f.id}
@@ -280,7 +284,7 @@ export function LcpHome({
       {feeOverdueFamilies.length > 0 && (
         <SignalCard title="💰 Program fee overdue" count={feeOverdueFamilies.length} tone="urgent">
           {feeOverdueFamilies.map((f) => (
-            <SignalRow key={f.id} who={f.display_name} cta="Open →" onClick={() => onOpenFamily(f.id, 'finance')} />
+            <SignalRow key={f.id} who={familyDisplayName(f)} cta="Open →" onClick={() => onOpenFamily(f.id, 'finance')} />
           ))}
         </SignalCard>
       )}

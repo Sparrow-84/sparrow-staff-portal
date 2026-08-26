@@ -10,6 +10,7 @@ import {
 import {
   addStaffNote,
   awardVoucher,
+  familyDisplayName,
   fetchAttendanceForEvent,
   markAttendance,
 } from '@/lib/lcp';
@@ -129,7 +130,7 @@ export function SessionBriefPanel({
           <ul className="mt-2 space-y-2">
             {families.map((f) => (
               <li key={f.id} className="flex items-center gap-2 rounded-xl border border-sparrow-rule/70 p-2">
-                <span className="flex-1 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
+                <span className="flex-1 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{familyDisplayName(f)}</span>
                 {STATUSES.map((s) => (
                   <button
                     key={s}

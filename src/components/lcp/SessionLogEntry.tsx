@@ -23,6 +23,7 @@ import {
   awardVoucher,
   createGoal,
   createSessionLog,
+  familyDisplayName,
   fetchGoalsForFamily,
   fetchHomeworkForFamily,
   fetchSessionResources,
@@ -502,7 +503,7 @@ export function SessionLogEntry({
                   }}
                   className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green"
                 />
-                {f.display_name}
+                {familyDisplayName(f)}
               </label>
             ))}
           </div>
@@ -531,7 +532,7 @@ export function SessionLogEntry({
                 }`}
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
+                  <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{familyDisplayName(f)}</span>
                   <div className="flex gap-1">
                     {STATUSES.map((s) => (
                       <button
@@ -741,9 +742,9 @@ function FamilySection({
       <button
         onClick={() => onOpenFamily(family.id)}
         className="mb-3 font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:text-sparrow-green dark:hover:text-sparrow-dark-green hover:underline"
-        title={`See ${family.display_name}'s past notes and goals`}
+        title={`See ${familyDisplayName(family)}'s past notes and goals`}
       >
-        {family.display_name}
+        {familyDisplayName(family)}
       </button>
 
       {/* Note */}
@@ -758,8 +759,8 @@ function FamilySection({
           minHeightRem={isThursday ? 3 : 4}
           placeholder={
             isThursday
-              ? `Quick private note about ${family.display_name}…`
-              : `Your notes from tonight's session with ${family.display_name}…`
+              ? `Quick private note about ${familyDisplayName(family)}…`
+              : `Your notes from tonight's session with ${familyDisplayName(family)}…`
           }
         />
       </div>

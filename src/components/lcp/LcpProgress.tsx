@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { advanceAllFamiliesToSession, advanceProgramPosition, deleteProgramPosition, updateProgramPosition } from '@/lib/lcp';
+import { advanceAllFamiliesToSession, advanceProgramPosition, deleteProgramPosition, familyDisplayName, updateProgramPosition } from '@/lib/lcp';
 import type { Family, LcpPhaseWithUnits, ProgramPosition } from '@/lib/lcp-types';
 import { computeCurriculumTrack } from '@/lib/curriculum-track';
 import { CurriculumTrackHorizontal } from './CurriculumTrack';
@@ -220,7 +220,7 @@ export function LcpProgress({
               className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-3"
             >
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
+                <span className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{familyDisplayName(f)}</span>
                 {f.joined_unit_id == null && (
                   <span className="text-[11px] italic text-sparrow-gray dark:text-sparrow-dark-gray">entry point not set</span>
                 )}

@@ -48,6 +48,7 @@ import {
   deleteHomework,
   deleteHouseholdChild,
   deleteProgramFeePayment,
+  familyDisplayName,
   fetchAttendanceHistoryForFamily,
   fetchComplianceNotes,
   fetchGoalResponsesForFamily,
@@ -192,7 +193,7 @@ export function FamilyDetailPanel({
   if (!family) return null;
 
   return (
-    <Drawer open={open} onClose={onClose} title={family.display_name} subtitle={family.login_email} wide>
+    <Drawer open={open} onClose={onClose} title={familyDisplayName(family)} subtitle={family.login_email} wide>
       <div className="mb-4 inline-flex rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1 text-xs">
         {TABS.map((t) => (
           <button
@@ -423,7 +424,7 @@ function ProgressTab({
         {family.joined_unit_id == null ? (
           <div className="mt-1.5 flex items-center justify-between rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-4 py-3">
             <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-              {family.display_name} hasn&apos;t joined the curriculum yet.
+              {familyDisplayName(family)} hasn&apos;t joined the curriculum yet.
             </p>
             <button
               disabled={busy || programUnitId == null}
@@ -494,7 +495,7 @@ function ProgressTab({
       <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
         <span className="field-label">Participation</span>
         <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-          Graduating and leaving early both remove {family.display_name} from the active roster but
+          Graduating and leaving early both remove {familyDisplayName(family)} from the active roster but
           keep every record. Deleting erases everything permanently.
         </p>
 
@@ -513,7 +514,7 @@ function ProgressTab({
             </button>
           ) : (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-sparrow-ink dark:text-sparrow-dark-ink">Mark {family.display_name} as graduated?</span>
+              <span className="text-sparrow-ink dark:text-sparrow-dark-ink">Mark {familyDisplayName(family)} as graduated?</span>
               <button disabled={busy} onClick={graduate} className="btn-primary">
                 {busy ? 'Working…' : 'Yes, graduated'}
               </button>
@@ -566,7 +567,7 @@ function ProgressTab({
           ) : (
             <div className="rounded-lg border border-priority-p1/30 bg-priority-p1/5 p-3">
               <p className="text-xs text-priority-p1">
-                Permanently delete {family.display_name} and all their homework, attendance,
+                Permanently delete {familyDisplayName(family)} and all their homework, attendance,
                 messages, notes, and vouchers? This can't be undone. If they already created a
                 login, an admin must remove it in Supabase separately.
               </p>
@@ -1334,7 +1335,7 @@ function GeneralInfoView({
       </div>
 
       <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-4">
-        <span className="field-label">Household</span>
+        <span className="field-label">Mother&apos;s full name</span>
         {adult ? (
           <p className="mt-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
             {adult.full_name} · {adult.phone}
@@ -1347,7 +1348,11 @@ function GeneralInfoView({
 
         <div className="mt-3">
           <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Emergency contact</span>
-          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{family.emergency_contact_notes || '—'}</p>
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            Write as much as this family needs — one contact for everyone, a separate contact per
+            person, several contacts, whatever fits.
+          </p>
+          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink whitespace-pre-wrap">{family.emergency_contact_notes || '—'}</p>
         </div>
       </div>
 
@@ -1437,10 +1442,9 @@ function GeneralInfoEdit({
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-4">
-        <span className="field-label">Household</span>
+        <span className="field-label">Mother&apos;s full name</span>
 
         <div className="mt-1">
-          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Adult</span>
           <input value={adultName} onChange={(e) => setAdultName(e.target.value)} placeholder="Full name" className="field-input" />
           <input value={adultPhone} onChange={(e) => setAdultPhone(e.target.value)} placeholder="Phone" className="field-input mt-2" />
           <input
@@ -1450,16 +1454,19 @@ function GeneralInfoEdit({
             aria-label="Birthday"
             className="field-input mt-2"
           />
-          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Her email is the sign-in email at the top of this panel — no separate email needed here.</p>
           <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Children's names, birthdays, and childcare info now live on the Children tab.</p>
         </div>
 
         <div className="mt-4">
-          <span className="text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Emergency contact</span>
+          <span className="field-label">Emergency contact</span>
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            Write as much as this family needs — one contact for everyone, a separate contact per
+            person, several contacts, whatever fits.
+          </p>
           <textarea
             value={emergencyContact}
             onChange={(e) => setEmergencyContact(e.target.value)}
-            rows={2}
+            rows={4}
             className="field-input"
           />
         </div>

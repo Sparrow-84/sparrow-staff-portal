@@ -24,6 +24,7 @@ import {
   assignHomework,
   awardVoucher,
   createGoal,
+  familyDisplayName,
   fetchAttendanceForSessionLog,
   fetchBucketStatus,
   fetchGoalsForFamily,
@@ -331,7 +332,7 @@ export function MondaySessionPanel({
       if (blockedEdits.length > 0) {
         setBucketSaveState('confirm_clear');
         setBucketSaveError(
-          `${blockedEdits.map((f) => f.display_name).join(', ')} — you edited an already-saved note. Click "Save ${MONDAY_BUCKET_LABEL[bucket]} notes" to confirm, or the previous text stays saved.`,
+          `${blockedEdits.map((f) => familyDisplayName(f)).join(', ')} — you edited an already-saved note. Click "Save ${MONDAY_BUCKET_LABEL[bucket]} notes" to confirm, or the previous text stays saved.`,
         );
       } else {
         setBucketSaveState('saved');
@@ -471,7 +472,7 @@ export function MondaySessionPanel({
               }`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
+                <span className="w-36 shrink-0 truncate text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{familyDisplayName(f)}</span>
                 <div className="flex gap-1">
                   {STATUSES.map((s) => (
                     <button
@@ -712,7 +713,7 @@ function MondayFamilyCard({
     <div className={`rounded-2xl border border-transparent p-4 ${BUCKET_FAMILY_CARD_BG[bucket]}`}>
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <button onClick={onOpenFamily} className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:text-sparrow-green dark:hover:text-sparrow-dark-green hover:underline">
-          {family.display_name}
+          {familyDisplayName(family)}
         </button>
         <button onClick={onToggleHistory} className="text-xs font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green">
           History {historyOpen ? '▴' : '▾'}
@@ -746,7 +747,7 @@ function MondayFamilyCard({
         onChange={onNoteChange}
         toolbar
         minHeightRem={3}
-        placeholder={`${family.display_name}'s ${bucket === 'finance' ? 'finance' : bucket === 'life_skills' ? 'life skills' : 'mentoring'} note…`}
+        placeholder={`${familyDisplayName(family)}'s ${bucket === 'finance' ? 'finance' : bucket === 'life_skills' ? 'life skills' : 'mentoring'} note…`}
       />
 
       {/* Goals — shared across all 3 buckets, not duplicated */}

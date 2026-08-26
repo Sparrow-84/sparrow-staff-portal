@@ -8,6 +8,7 @@ import {
   fetchAllProgramFeePayments,
   fetchEvents,
   fetchAllHomework,
+  familyDisplayName,
   fetchFamilies,
   fetchLcpDesignatedSpaces,
   fetchOpenLcpMoveInRequests,
@@ -385,7 +386,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
+                      <span className="truncate font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{familyDisplayName(f)}</span>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${FAMILY_STATUS[f.status].chip}`}>
                         {FAMILY_STATUS[f.status].label}
                       </span>
@@ -411,7 +412,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="truncate font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</span>
+                        <span className="truncate font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{familyDisplayName(f)}</span>
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${FAMILY_STATUS[f.status].chip}`}>
                           {FAMILY_STATUS[f.status].label}
                         </span>
@@ -450,7 +451,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
                     const open = (homeworkByFamily.get(f.id) ?? []).filter((h) => h.status !== 'complete');
                     return (
                       <div key={f.id} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3">
-                        <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{f.display_name}</p>
+                        <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{familyDisplayName(f)}</p>
                         <ul className="mt-2 space-y-1.5">
                           {open.length === 0 && <li className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">All clear ✓</li>}
                           {open.map((h) => (

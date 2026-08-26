@@ -61,7 +61,7 @@ export async function fetchFamilies(active = true): Promise<Family[]> {
   const { data, error } = await supabase
     .from('families')
     .select(
-      'id, display_name, login_email, status, current_session_number, joined_unit_id, housing_savings_cents, housing_savings_legacy_cents, housing_savings_announced_cents, active, created_at, toc_space_id, toc_tenant_id, move_in_date, program_end_date, emergency_contact_notes, toc_synced_at',
+      'id, display_name, login_email, status, current_session_number, joined_unit_id, housing_savings_cents, housing_savings_legacy_cents, housing_savings_announced_cents, active, created_at, toc_space_id, toc_tenant_id, move_in_date, program_end_date, emergency_contact_notes, toc_synced_at, household_adults:lcp_household_adults(full_name)',
     )
     .eq('active', active)
     .order('display_name');
@@ -69,11 +69,11 @@ export async function fetchFamilies(active = true): Promise<Family[]> {
     // joined_unit_id column missing (migration 0034 not yet applied) — fall back
     const { data: d2, error: e2 } = await supabase
       .from('families')
-      .select('id, display_name, login_email, status, current_session_number, housing_savings_cents, active, created_at')
+      .select('id, display_name, login_email, status, current_session_number, housing_savings_cents, active, created_at, household_adults:lcp_household_adults(full_name)')
       .eq('active', active)
       .order('display_name');
     if (e2) throw new Error(e2.message);
-    return ((d2 ?? []) as Omit<
+    return ((d2 ?? []) as (Omit<
       Family,
       | 'joined_unit_id'
       | 'toc_space_id'
@@ -84,8 +84,10 @@ export async function fetchFamilies(active = true): Promise<Family[]> {
       | 'toc_synced_at'
       | 'housing_savings_legacy_cents'
       | 'housing_savings_announced_cents'
-    >[]).map((f) => ({
+      | 'adult_full_name'
+    > & { household_adults: { full_name: string }[] })[]).map((f) => ({
       ...f,
+      adult_full_name: f.household_adults[0]?.full_name ?? null,
       joined_unit_id: null,
       toc_space_id: null,
       toc_tenant_id: null,
@@ -97,7 +99,18 @@ export async function fetchFamilies(active = true): Promise<Family[]> {
       housing_savings_announced_cents: f.housing_savings_cents,
     }));
   }
-  return (data ?? []) as Family[];
+  return ((data ?? []) as unknown as (Omit<Family, 'adult_full_name'> & { household_adults: { full_name: string }[] })[]).map(
+    (f) => ({ ...f, adult_full_name: f.household_adults[0]?.full_name ?? null }),
+  );
+}
+
+/** What LCP staff should see instead of the raw household last name — the
+ *  mother's full name when we have one on file, falling back to the
+ *  last-name-only display_name for households whose adult record is still
+ *  blank. Never use this for anything that syncs to Twin Oaks (tenant.name
+ *  must stay the household label) -- read family.display_name for that. */
+export function familyDisplayName(f: Pick<Family, 'display_name' | 'adult_full_name'>): string {
+  return f.adult_full_name?.trim() || f.display_name;
 }
 
 export async function updateFamily(
