@@ -83,6 +83,23 @@ function buildEmailHtml(opts: {
     ? `<div style="font-size:14.5px;color:#1A1A1A;margin-top:10px;"><span style="color:#767676;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;display:block;">Location</span>${htmlEscape(opts.location)}</div>`
     : '';
 
+  const parkingFallbackLine = opts.signatureHtml
+    ? `Still can't find a spot? Just reply to this email, or give us a call &mdash; you'll find a number in the signature below.`
+    : `Still can't find a spot? Just reply to this email and we'll help you out.`;
+
+  const parkingBlock = `<details style="margin:0 0 26px;">
+         <summary style="cursor:pointer;font-family:Georgia,serif;font-weight:600;font-size:15.5px;color:#1E4D30;background:#E8F2EC;border-radius:10px;padding:14px 18px;">Coming to Twin Oaks Community? Here's what you need to know about parking.</summary>
+         <div style="padding:16px 6px 0;">
+           <p style="font-size:14.5px;font-weight:600;color:#1E4D30;margin:0 0 6px;">Park at the office</p>
+           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 12px;">Two street spots sit directly in front of the Sparrow office &mdash; you can't miss our sign. Pull all the way off the road onto the gravel. If you're in the front spot of the two, pull forward to the electric pole on the right, but no further &mdash; that's our neighbor's space. A second car can park behind you.</p>
+           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 18px;">When we know you're coming, we do our best to keep one of these spaces open for you. We apologize that this is not more clearly marked. When in doubt, parking in front of the office is always a safe bet.</p>
+           <p style="font-size:14.5px;font-weight:600;color:#1E4D30;margin:0 0 6px;">Guest parking</p>
+           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 12px;">Both spots taken? Use Guest Parking &mdash; signed, near the end of the main road into Twin Oaks (SW Twin Oaks Cir). Drive straight down, passing our office on the right. Guest parking is on the left, just past the resident mailboxes, in a gravel lot marked with guest parking signs.</p>
+           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 12px;">You'll get a short walk back to our office &mdash; enjoy the little tour of Twin Oaks along the way!</p>
+           <p style="font-size:13px;color:#767676;line-height:1.6;margin:0;">${parkingFallbackLine} We can't wait to see you.</p>
+         </div>
+       </details>`;
+
   return `<!doctype html><html><body style="margin:0;padding:0;background:#F5F5F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
     <div style="max-width:600px;margin:0 auto;background:#FFFFFF;">
       <div style="padding:44px 48px 40px;">
@@ -95,6 +112,7 @@ function buildEmailHtml(opts: {
           <div style="font-size:14.5px;color:#1A1A1A;"><span style="color:#767676;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;display:block;">Date &amp; time</span>${htmlEscape(opts.whenLabel)}</div>
           ${locationRow}
         </div>
+        ${parkingBlock}
         ${noteBlock}
         <p style="font-size:13.5px;color:#767676;line-height:1.6;margin:0 0 30px;">Need to reschedule? Just reply to this email, or reach ${htmlEscape(opts.organizerName)} directly${opts.signatureHtml ? ' — see below' : ` at ${opts.organizerEmail}`}.</p>
         <hr style="border:none;border-top:1px solid #D8D8D8;margin:0 0 24px;" />
