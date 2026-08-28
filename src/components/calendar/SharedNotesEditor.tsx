@@ -168,14 +168,20 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
       // of also inserting their own copy.
       const fragment = doc.getXmlFragment('default');
       if (primaryQueryOk && notesHtml.trim() && fragment.length === 0) {
-        const { data: claimed } = await supabase
+        const { data: claimed, error: claimError } = await supabase
           .from('event_shared_notes')
           .update({ legacy_seeded: true })
           .eq('event_id', eventId)
           .eq('legacy_seeded', false)
           .select('event_id');
         if (cancelled) return;
-        if (claimed && claimed.length > 0) {
+        // Fail OPEN, not closed: only skip seeding when we have positive proof
+        // someone else already claimed it (update succeeded, zero rows matched).
+        // Any error here (e.g. legacy_seeded column not migrated in yet) falls
+        // back to seeding — a rare duplicate line is far better than silently
+        // discarding real note content, which is what skipping on error caused.
+        const alreadyClaimedByOther = !claimError && claimed && claimed.length === 0;
+        if (!alreadyClaimedByOther) {
           (doc as unknown as { _pendingSeedHtml?: string })._pendingSeedHtml = notesHtml;
         }
       }
