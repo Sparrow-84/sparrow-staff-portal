@@ -126,6 +126,7 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
       const doc = new Y.Doc();
       let notesHtml = '';
       let yjsState: string | null = null;
+      let primaryQueryOk = false;
 
       const { data, error } = await supabase
         .from('event_shared_notes')
@@ -135,12 +136,18 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
       if (!error) {
         notesHtml = (data?.notes as string | null) ?? '';
         yjsState = (data?.yjs_state as string | null) ?? null;
-      } else {
-        // yjs_state column may not exist yet (migration 0172 not yet run) — fall
-        // back to the plain html column so the pane still works pre-migration.
+        primaryQueryOk = true;
+      } else if (error.code === '42703') {
+        // yjs_state column doesn't exist yet (migration 0172/0173 not yet run) —
+        // fall back to the plain html column so the pane still works pre-migration.
+        // Seeding stays disabled below since primaryQueryOk is false: we can't
+        // confirm this doc doesn't already have real collaborative content.
         const legacy = await supabase.from('event_shared_notes').select('notes').eq('event_id', eventId).maybeSingle();
         notesHtml = (legacy.data?.notes as string | null) ?? '';
       }
+      // Any other error (network blip, etc.) leaves primaryQueryOk false too —
+      // safer to skip seeding than risk misreading an already-collaborated note
+      // as empty and duplicating its content back in.
 
       if (yjsState) {
         Y.applyUpdate(doc, fromBase64(yjsState));
@@ -154,11 +161,23 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
 
       // Legacy content from before this migration, and this doc has nothing yet
       // (nobody's collaborative-edited it before) — seed it once so it isn't lost.
-      // If two people happen to open a never-yet-migrated note at the same instant,
-      // both may seed — worst case is visible duplicated text, never silent loss.
+      // legacy_seeded is claimed with an atomic UPDATE ... WHERE legacy_seeded =
+      // false, so if several people open a never-yet-migrated note at the same
+      // instant, only the one whose UPDATE actually matched a row gets to seed —
+      // everyone else picks the seeded text up over the realtime channel instead
+      // of also inserting their own copy.
       const fragment = doc.getXmlFragment('default');
-      if (notesHtml.trim() && fragment.length === 0) {
-        (doc as unknown as { _pendingSeedHtml?: string })._pendingSeedHtml = notesHtml;
+      if (primaryQueryOk && notesHtml.trim() && fragment.length === 0) {
+        const { data: claimed } = await supabase
+          .from('event_shared_notes')
+          .update({ legacy_seeded: true })
+          .eq('event_id', eventId)
+          .eq('legacy_seeded', false)
+          .select('event_id');
+        if (cancelled) return;
+        if (claimed && claimed.length > 0) {
+          (doc as unknown as { _pendingSeedHtml?: string })._pendingSeedHtml = notesHtml;
+        }
       }
 
       setReady(true);

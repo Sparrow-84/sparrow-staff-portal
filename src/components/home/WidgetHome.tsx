@@ -284,13 +284,13 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
         </p>
       )}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {displayItems.map((item, _i) => {
           if (item === '__placeholder__') {
             return (
               <div
                 key="__placeholder__"
-                className={`min-h-[8rem] rounded-2xl border-2 border-dashed border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage/40 dark:bg-sparrow-green/10 flex items-center justify-center${dragIsWide ? ' sm:col-span-2' : ''}`}
+                className={`min-w-0 min-h-[8rem] rounded-2xl border-2 border-dashed border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-sage/40 dark:bg-sparrow-green/10 flex items-center justify-center${dragIsWide ? ' sm:col-span-2' : ''}`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
                   if (dragKey !== null && dropIndex !== null) {
@@ -313,7 +313,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
               <def.Comp ctx={ctx} />
             </WidgetCard>
           );
-          if (!editing) return <div key={key} className={def.wide ? 'sm:col-span-2' : ''}>{body}</div>;
+          if (!editing) return <div key={key} className={`min-w-0${def.wide ? ' sm:col-span-2' : ''}`}>{body}</div>;
 
           const isBeingDragged = dragKey === key;
           const indexInWithout = without.indexOf(key);
@@ -353,7 +353,7 @@ export function WidgetHome({ onNavigate }: { onNavigate: (v: View) => void }) {
                 setDropIndex(null);
               }}
               className={[
-                'rounded-2xl ring-2 ring-dashed ring-sparrow-rule transition-opacity',
+                'min-w-0 rounded-2xl ring-2 ring-dashed ring-sparrow-rule transition-opacity',
                 def.wide ? 'sm:col-span-2' : '',
                 isBeingDragged && dropIndex !== null ? 'opacity-0 pointer-events-none' : '',
                 isBeingDragged && dropIndex === null ? 'opacity-30' : '',
