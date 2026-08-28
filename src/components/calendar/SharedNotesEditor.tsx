@@ -90,6 +90,15 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
   const providerRef = useRef<SupabaseYjsProvider | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadSucceeded = useRef(false);
+  // The very first onUpdate after the real (doc-backed) editor mounts is TipTap/
+  // Collaboration's own initial sync -- it fires even when nothing was typed and
+  // nothing was seeded (e.g. binding to a genuinely empty Yjs doc still produces a
+  // default empty paragraph, which counts as a transaction). Autosaving that blindly
+  // was overwriting real, already-saved content with blank HTML the instant a note
+  // was merely opened, whenever the doc happened to load/seed as empty for any
+  // reason. Skipping just this first call is enough: flush()-on-close and any real
+  // subsequent edit still persist whatever ended up in the doc, seeded or typed.
+  const skipNextUpdate = useRef(true);
 
   const editor = useEditor(
     {
@@ -114,13 +123,20 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
       // aren't wired yet, so anything typed into this throwaway instance would be
       // lost the moment it's swapped for the real, doc-backed editor.
       editable: ready,
-      onUpdate: () => scheduleSave(),
+      onUpdate: () => {
+        if (skipNextUpdate.current) {
+          skipNextUpdate.current = false;
+          return;
+        }
+        scheduleSave();
+      },
     },
     [ready],
   );
 
   useEffect(() => {
     let cancelled = false;
+    skipNextUpdate.current = true;
 
     async function init() {
       const doc = new Y.Doc();
