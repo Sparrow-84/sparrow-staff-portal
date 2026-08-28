@@ -542,6 +542,12 @@ function NotepadTab({ userId }: { userId: string }) {
   const [newLabelId, setNewLabelId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // RichTextEditor only syncs its contentEditable DOM from `value` on mount (see its
+  // own doc comment) -- clearing `body` after a save doesn't touch what's still
+  // visibly typed in the box unless the component actually remounts. This form stays
+  // mounted across every "Add note" submit (unlike the edit form below, which mounts
+  // fresh each time), so it needs an explicit key bump to force that remount.
+  const [composeKey, setComposeKey] = useState(0);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -580,6 +586,7 @@ function NotepadTab({ userId }: { userId: string }) {
       setTitle('');
       setBody('');
       setNewLabelId(null);
+      setComposeKey((k) => k + 1);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Could not save this note. Try again.');
     } finally {
@@ -653,7 +660,7 @@ function NotepadTab({ userId }: { userId: string }) {
           placeholder="Note title"
           className="w-full border-none bg-white dark:bg-sparrow-dark-surface p-1 text-sm font-semibold outline-none placeholder:font-normal placeholder:text-sparrow-gray/60"
         />
-        <RichTextEditor value={body} onChange={setBody} placeholder="Write it out…" className="min-h-[5rem]" />
+        <RichTextEditor key={composeKey} value={body} onChange={setBody} placeholder="Write it out…" className="min-h-[5rem]" />
         <div className="flex items-center justify-between gap-3 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
           <div className="w-44">
             <NotepadLabelPicker value={newLabelId} labels={labels} currentUserId={userId} onChange={setNewLabelId} onLabelsChanged={loadLabels} />
