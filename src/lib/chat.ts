@@ -73,14 +73,18 @@ export async function listConversations(): Promise<ChatConversation[]> {
 
 // ── Messages ─────────────────────────────────────────────────────────
 export async function fetchMessages(channelId: string): Promise<ChatMessageWithAuthor[]> {
+  // Fetch the most recent 200 (descending), then reverse to chronological order for
+  // display -- ascending+limit would instead return the OLDEST 200 and never surface
+  // anything newer once a conversation passes 200 messages total, no matter how many
+  // more get sent after that.
   const { data, error } = await supabase
     .from('chat_messages')
     .select('*, author:profiles!chat_messages_author_id_fkey(full_name)')
     .eq('channel_id', channelId)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
     .limit(200);
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as ChatMessageWithAuthor[];
+  return ((data ?? []) as unknown as ChatMessageWithAuthor[]).reverse();
 }
 
 export async function sendMessage(
