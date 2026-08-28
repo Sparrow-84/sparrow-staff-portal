@@ -175,13 +175,23 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
       // instant, only the one whose UPDATE actually matched a row gets to seed —
       // everyone else picks the seeded text up over the realtime channel instead
       // of also inserting their own copy.
+      //
+      // Also reclaim a row where legacy_seeded is (wrongly) already true but
+      // yjs_state is null: migration 0173's own backfill marked any row with a
+      // non-null yjs_state as already-seeded, back when yjs_state was still the
+      // pre-0174 corrupted bytea data. 0174 correctly wiped that corrupted data
+      // to null, but couldn't know to also reset legacy_seeded — so those rows
+      // got stuck believing "already seeded" and "nothing to load" at once,
+      // rendering fully empty despite the real text being intact in `notes`.
+      // yjsState is what THIS load just saw, so if it's null there's genuinely
+      // nothing in the doc regardless of what legacy_seeded currently says.
       const fragment = doc.getXmlFragment('default');
       if (primaryQueryOk && notesHtml.trim() && fragment.length === 0) {
         const { data: claimed, error: claimError } = await supabase
           .from('event_shared_notes')
           .update({ legacy_seeded: true })
           .eq('event_id', eventId)
-          .eq('legacy_seeded', false)
+          .or(yjsState ? 'legacy_seeded.eq.false' : 'legacy_seeded.eq.false,yjs_state.is.null')
           .select('event_id');
         if (cancelled) return;
         // Fail OPEN, not closed: only skip seeding when we have positive proof
