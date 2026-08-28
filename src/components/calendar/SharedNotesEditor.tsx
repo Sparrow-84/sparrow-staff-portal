@@ -150,7 +150,16 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
       // as empty and duplicating its content back in.
 
       if (yjsState) {
-        Y.applyUpdate(doc, fromBase64(yjsState));
+        try {
+          Y.applyUpdate(doc, fromBase64(yjsState));
+        } catch {
+          // A yjs_state value that won't decode/apply (e.g. the 0172-era column-type
+          // bug that silently corrupted every save -- see migration 0174) must never
+          // strand the pane on "Loading" forever. Treat it exactly like no yjs_state
+          // existed: the doc stays empty here, and the legacy-seed check below
+          // rebuilds it from `notes`, which this bug never touched.
+          yjsState = null;
+        }
       }
 
       docRef.current = doc;
