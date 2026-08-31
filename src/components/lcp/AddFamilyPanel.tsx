@@ -43,7 +43,6 @@ export function AddFamilyPanel({
     { key: 'fam-name', label: 'Household name', valid: name.trim().length > 0 },
     { key: 'fam-email', label: 'Sign-in email', valid: emailValid },
     { key: 'fam-adult-name', label: "Mother's name", valid: adultName.trim().length > 0 },
-    { key: 'fam-adult-phone', label: "Mother's phone", valid: adultPhone.trim().length > 0 },
     { key: 'fam-emergency', label: 'Emergency contact', valid: emergencyContact.trim().length > 0 },
   ]);
 
@@ -160,12 +159,11 @@ export function AddFamilyPanel({
           {fieldError('fam-adult-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('fam-adult-name')}</p>}
           <input
             id="fam-adult-phone"
-            className={fieldClass('fam-adult-phone', 'field-input mt-2')}
+            className="field-input mt-2"
             value={adultPhone}
-            onChange={(e) => { setAdultPhone(e.target.value); clear('fam-adult-phone'); }}
-            placeholder="Phone"
+            onChange={(e) => setAdultPhone(e.target.value)}
+            placeholder="Phone (optional)"
           />
-          {fieldError('fam-adult-phone') && <p className="mt-1 text-xs text-priority-p1">{fieldError('fam-adult-phone')}</p>}
         </div>
 
         <div>

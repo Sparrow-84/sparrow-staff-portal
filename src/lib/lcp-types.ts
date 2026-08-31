@@ -47,9 +47,31 @@ export interface HouseholdAdult {
   id: string;
   family_id: string;
   full_name: string;
-  phone: string;
+  phone: string | null;
   date_of_birth: string | null;
   created_at: string;
+}
+
+// One row per outcome assessment for a family that's left the program --
+// deliberately a history, not a single flag, so a later check-in (e.g. "6
+// months later she's no longer stably housed") doesn't erase what was true
+// at exit. See lcp-outcome-checkins design in wasp-nest/tiger-den.
+export interface OutcomeCheckin {
+  id: string;
+  family_id: string;
+  checkin_date: string | null;
+  label: string;
+  stably_housed: boolean;
+  notes: string | null;
+  logged_by: string | null;
+  created_at: string;
+}
+
+export interface CheckinMilestone {
+  id: string;
+  label: string;
+  months_after_exit: number;
+  sort_order: number;
 }
 
 export interface HouseholdChild {

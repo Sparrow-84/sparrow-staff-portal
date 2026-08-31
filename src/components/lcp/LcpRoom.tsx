@@ -5,7 +5,9 @@ import {
   fetchAllAttendanceWithSessionDate,
   fetchAllComplianceFollowUps,
   fetchAllGoals,
+  fetchAllOutcomeCheckins,
   fetchAllProgramFeePayments,
+  fetchCheckinMilestones,
   fetchEvents,
   fetchAllHomework,
   familyDisplayName,
@@ -22,10 +24,11 @@ import {
 } from '@/lib/lcp';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
-import { computeFamilyStatus, dayLabel, isFeeOverdue, isOverdue } from '@/lib/lcp-format';
+import { computeFamilyStatus, dayLabel, isFeeOverdue, isOverdue, nextCheckinDue } from '@/lib/lcp-format';
 import {
   FAMILY_STATUS,
   type AttendanceStatus,
+  type CheckinMilestone,
   type ComplianceNote,
   type CurriculumSession,
   type Family,
@@ -34,6 +37,7 @@ import {
   type LcpEvent,
   type LcpMoveInRequest,
   type LcpPhaseWithUnits,
+  type OutcomeCheckin,
   type ProgramFeePayment,
   type ProgramPosition,
   type Redemption,
@@ -160,6 +164,8 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
   const [familiesView, setFamiliesView] = useState<'active' | 'past'>('active');
   const [pastFamilies, setPastFamilies] = useState<Family[]>([]);
   const [pastLoaded, setPastLoaded] = useState(false);
+  const [outcomeCheckins, setOutcomeCheckins] = useState<OutcomeCheckin[]>([]);
+  const [checkinMilestones, setCheckinMilestones] = useState<CheckinMilestone[]>([]);
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [familyOpenTab, setFamilyOpenTab] = useState<FamilyDetailTab | undefined>(undefined);
@@ -178,7 +184,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
       // shouldn't block the rest of the room from loading.
       await recomputeLcpPerfectWeeks().catch(() => undefined);
 
-      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs, cf, goals, attendance, mir] = await Promise.all([
+      const [fam, hw, ev, logs, se, red, ph, pos, spaces, fees, profs, cf, goals, attendance, mir, pastFam, checkins, milestones] = await Promise.all([
         fetchFamilies(),
         fetchAllHomework(),
         fetchEvents(),
@@ -190,13 +196,16 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
         fetchLcpDesignatedSpaces(),
         fetchAllProgramFeePayments(),
         fetchProfiles(),
-        // These three back LCP Home's live signal cards -- resilient to a
-        // pending migration or one bad row so they never block the rest of
-        // the room's own data (families, homework, etc.) from loading.
+        // These back LCP Home's live signal cards -- resilient to a pending
+        // migration or one bad row so they never block the rest of the
+        // room's own data (families, homework, etc.) from loading.
         fetchAllComplianceFollowUps().catch(() => []),
         fetchAllGoals(),
         fetchAllAttendanceWithSessionDate(),
         fetchOpenLcpMoveInRequests().catch(() => []),
+        fetchFamilies(false).catch(() => []),
+        fetchAllOutcomeCheckins().catch(() => []),
+        fetchCheckinMilestones().catch(() => []),
       ]);
       const correctedFam = await recomputeFamilyStatuses(fam, hw, goals, attendance);
       setFamilies(correctedFam);
@@ -213,6 +222,10 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
       setTocSpaces(spaces);
       setFeePayments(fees);
       setProfiles(profs);
+      setPastFamilies(pastFam);
+      setPastLoaded(true);
+      setOutcomeCheckins(checkins);
+      setCheckinMilestones(milestones);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load LifeChange data.');
     } finally {
@@ -224,13 +237,22 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    if (familiesView !== 'past' || pastLoaded) return;
-    fetchFamilies(false).then((f) => {
-      setPastFamilies(f);
-      setPastLoaded(true);
-    });
-  }, [familiesView, pastLoaded]);
+  const checkinReminders = useMemo(() => {
+    if (checkinMilestones.length === 0) return [];
+    const checkinsByFamily = new Map<string, OutcomeCheckin[]>();
+    for (const c of outcomeCheckins) {
+      const list = checkinsByFamily.get(c.family_id) ?? [];
+      list.push(c);
+      checkinsByFamily.set(c.family_id, list);
+    }
+    return pastFamilies
+      .map((f) => {
+        const dates = (checkinsByFamily.get(f.id) ?? []).map((c) => c.checkin_date);
+        const due = nextCheckinDue(f.program_end_date, dates, checkinMilestones);
+        return due ? { family: f, label: due.label, dueDateIso: due.dueDateIso } : null;
+      })
+      .filter((r): r is { family: Family; label: string; dueDateIso: string } => r !== null);
+  }, [pastFamilies, outcomeCheckins, checkinMilestones]);
 
   const homeworkByFamily = useMemo(() => {
     const map = new Map<string, Homework[]>();
@@ -331,6 +353,7 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
           complianceFollowUps={complianceFollowUpNotes}
           goals={allGoals}
           tocRequests={tocRequests}
+          checkinReminders={checkinReminders}
           currentUserId={profile?.id ?? ''}
           onOpenFamily={openFamily}
           onGoToSessionLog={() => setTab('session-log')}

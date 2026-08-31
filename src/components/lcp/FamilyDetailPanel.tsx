@@ -25,6 +25,7 @@ import {
   type LcpPerfectWeek,
   type LcpPhaseWithUnits,
   type Message,
+  type OutcomeCheckin,
   type ProgramFeeMethod,
   type ProgramFeePayment,
   PROGRAM_FEE_METHOD_LABEL,
@@ -37,6 +38,7 @@ import { PhaseProgressBar } from './PhaseProgressBar';
 import {
   addComplianceNote,
   addHouseholdChild,
+  addOutcomeCheckin,
   addProgramFeePayment,
   addStaffNote,
   updateStaffNote,
@@ -71,6 +73,7 @@ import {
   resolveComplianceFollowUp,
   saveHouseholdAdult,
   fetchMoveInRequestForFamily,
+  fetchOutcomeCheckins,
   requestOrSyncLcpToc,
   setFamilyActive,
   setHomeworkStatus,
@@ -242,6 +245,7 @@ export function FamilyDetailPanel({
           sessions={sessions}
           phases={phases}
           programUnitId={programUnitId}
+          currentUserId={currentUserId}
           onChanged={onChanged}
           onRemoved={() => {
             onChanged();
@@ -316,16 +320,62 @@ export function FamilyDetailPanel({
   );
 }
 
+// Shown inline at the moment staff mark a family graduated/left, so the exit
+// outcome (check-in #1) gets captured right then instead of relying on
+// someone remembering to add it later.
+function ExitOutcomePrompt({
+  stablyHoused,
+  setStablyHoused,
+  notes,
+  setNotes,
+}: {
+  stablyHoused: boolean | null;
+  setStablyHoused: (v: boolean) => void;
+  notes: string;
+  setNotes: (v: string) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
+      <span className="field-label field-label-required">Stably housed?</span>
+      <div className="mt-1 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setStablyHoused(true)}
+          className={`btn-ghost border ${stablyHoused === true ? 'border-sparrow-green bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green' : 'border-sparrow-rule dark:border-sparrow-dark-border'}`}
+        >
+          Yes
+        </button>
+        <button
+          type="button"
+          onClick={() => setStablyHoused(false)}
+          className={`btn-ghost border ${stablyHoused === false ? 'border-priority-p1 bg-priority-p1/15 text-priority-p1' : 'border-sparrow-rule dark:border-sparrow-dark-border'}`}
+        >
+          No
+        </button>
+      </div>
+      <textarea
+        rows={2}
+        className="field-input mt-2"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="What's the situation? (optional, but this is the record you'll have later)"
+      />
+    </div>
+  );
+}
+
 // ── Progress ─────────────────────────────────────────────────────────
 function ProgressTab({
   family,
   sessions,
   phases,
   programUnitId,
+  currentUserId,
   onChanged,
   onRemoved,
 }: {
   family: Family;
+  currentUserId: string;
   sessions: CurriculumSession[];
   phases: LcpPhaseWithUnits[];
   programUnitId: number | null;
@@ -338,10 +388,55 @@ function ProgressTab({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [attendanceHistory, setAttendanceHistory] = useState<AttendanceHistoryEntry[]>([]);
+  const [outcomeCheckins, setOutcomeCheckins] = useState<OutcomeCheckin[]>([]);
+  // The exit outcome (stably housed y/n + notes) staff answer right when
+  // they click Graduate or Left the program -- becomes check-in #1 the
+  // moment they confirm. null = not yet answered, blocks confirming.
+  const [exitStablyHoused, setExitStablyHoused] = useState<boolean | null>(null);
+  const [exitNotes, setExitNotes] = useState('');
+  const [showLogCheckin, setShowLogCheckin] = useState(false);
+  const [newCheckinLabel, setNewCheckinLabel] = useState('');
+  const [newCheckinDate, setNewCheckinDate] = useState('');
+  const [newCheckinStablyHoused, setNewCheckinStablyHoused] = useState<boolean | null>(null);
+  const [newCheckinNotes, setNewCheckinNotes] = useState('');
 
   useEffect(() => {
     void fetchAttendanceHistoryForFamily(family.id).then(setAttendanceHistory);
+    void fetchOutcomeCheckins(family.id).then(setOutcomeCheckins);
   }, [family.id]);
+
+  function todayIso(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  async function logCheckin() {
+    if (newCheckinStablyHoused === null) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await addOutcomeCheckin(
+        family.id,
+        {
+          checkin_date: newCheckinDate || null,
+          label: newCheckinLabel || 'Check-in',
+          stably_housed: newCheckinStablyHoused,
+          notes: newCheckinNotes || null,
+        },
+        currentUserId,
+      );
+      setOutcomeCheckins(await fetchOutcomeCheckins(family.id));
+      setShowLogCheckin(false);
+      setNewCheckinLabel('');
+      setNewCheckinDate('');
+      setNewCheckinStablyHoused(null);
+      setNewCheckinNotes('');
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not log the check-in.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const allUnits = phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order);
   const currentProgramUnit = programUnitId ? allUnits.find((u) => u.id === programUnitId) : null;
@@ -365,10 +460,20 @@ function ProgressTab({
     setBusy(false);
     onChanged();
   }
+  async function recordExitCheckin() {
+    if (exitStablyHoused === null) return;
+    await addOutcomeCheckin(
+      family.id,
+      { checkin_date: todayIso(), label: 'Exit', stably_housed: exitStablyHoused, notes: exitNotes || null },
+      currentUserId,
+    );
+  }
   async function cancelParticipation() {
+    if (exitStablyHoused === null) return;
     setBusy(true);
     setErr(null);
     try {
+      await recordExitCheckin();
       await setFamilyActive(family.id, false);
       onRemoved();
     } catch (e) {
@@ -377,9 +482,11 @@ function ProgressTab({
     }
   }
   async function graduate() {
+    if (exitStablyHoused === null) return;
     setBusy(true);
     setErr(null);
     try {
+      await recordExitCheckin();
       await graduateFamily(family.id);
       onRemoved();
     } catch (e) {
@@ -506,6 +613,8 @@ function ProgressTab({
               onClick={() => {
                 setConfirmCancel(false);
                 setConfirmDelete(false);
+                setExitStablyHoused(null);
+                setExitNotes('');
                 setConfirmGraduate(true);
               }}
               className="btn-primary"
@@ -513,14 +622,22 @@ function ProgressTab({
               🎓 Graduate
             </button>
           ) : (
-            <div className="flex flex-wrap items-center gap-2 text-sm">
+            <div className="w-full space-y-2 text-sm">
               <span className="text-sparrow-ink dark:text-sparrow-dark-ink">Mark {familyDisplayName(family)} as graduated?</span>
-              <button disabled={busy} onClick={graduate} className="btn-primary">
-                {busy ? 'Working…' : 'Yes, graduated'}
-              </button>
-              <button disabled={busy} onClick={() => setConfirmGraduate(false)} className="btn-ghost">
-                Not yet
-              </button>
+              <ExitOutcomePrompt
+                stablyHoused={exitStablyHoused}
+                setStablyHoused={setExitStablyHoused}
+                notes={exitNotes}
+                setNotes={setExitNotes}
+              />
+              <div className="flex flex-wrap gap-2">
+                <button disabled={busy || exitStablyHoused === null} onClick={graduate} className="btn-primary">
+                  {busy ? 'Working…' : 'Confirm graduation'}
+                </button>
+                <button disabled={busy} onClick={() => setConfirmGraduate(false)} className="btn-ghost">
+                  Not yet
+                </button>
+              </div>
             </div>
           )}
 
@@ -529,6 +646,8 @@ function ProgressTab({
               disabled={busy}
               onClick={() => {
                 setConfirmDelete(false);
+                setExitStablyHoused(null);
+                setExitNotes('');
                 setConfirmCancel(true);
               }}
               className="btn-ghost border border-sparrow-rule dark:border-sparrow-dark-border"
@@ -540,14 +659,113 @@ function ProgressTab({
 
         <div className="mt-2">
           {confirmCancel && (
-            <div className="flex flex-wrap items-center gap-2 text-sm">
+            <div className="w-full space-y-2 text-sm">
               <span className="text-sparrow-ink dark:text-sparrow-dark-ink">Mark as having left the program before graduating?</span>
-              <button disabled={busy} onClick={cancelParticipation} className="btn-primary">
-                {busy ? 'Working…' : 'Yes, they left'}
+              <ExitOutcomePrompt
+                stablyHoused={exitStablyHoused}
+                setStablyHoused={setExitStablyHoused}
+                notes={exitNotes}
+                setNotes={setExitNotes}
+              />
+              <div className="flex flex-wrap gap-2">
+                <button disabled={busy || exitStablyHoused === null} onClick={cancelParticipation} className="btn-primary">
+                  {busy ? 'Working…' : 'Confirm, they left'}
+                </button>
+                <button disabled={busy} onClick={() => setConfirmCancel(false)} className="btn-ghost">
+                  Keep active
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
+          <div className="flex items-center justify-between">
+            <span className="field-label">Outcome check-ins</span>
+            {!showLogCheckin && (
+              <button disabled={busy} onClick={() => setShowLogCheckin(true)} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+                + Log a check-in
               </button>
-              <button disabled={busy} onClick={() => setConfirmCancel(false)} className="btn-ghost">
-                Keep active
-              </button>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            A history, not a single flag — a later check-in (6 months, a year, whenever staff actually
+            reach out) can show a different outcome than the day she left, without erasing what was true then.
+          </p>
+
+          {outcomeCheckins.length === 0 ? (
+            <p className="mt-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No check-ins logged yet.</p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {outcomeCheckins.map((c) => (
+                <li key={c.id} className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border p-2.5 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${c.stably_housed ? 'bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green' : 'bg-priority-p1/15 text-priority-p1'}`}>
+                      {c.stably_housed ? 'Stably housed' : 'Not stably housed'}
+                    </span>
+                    <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{c.label}</span>
+                    <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                      {c.checkin_date ? dayLabel(c.checkin_date) : 'date unknown'}
+                    </span>
+                  </div>
+                  {c.notes && <p className="mt-1 text-sparrow-gray dark:text-sparrow-dark-gray">{c.notes}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {showLogCheckin && (
+            <div className="mt-3 space-y-2 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input
+                  className="field-input mt-0"
+                  value={newCheckinLabel}
+                  onChange={(e) => setNewCheckinLabel(e.target.value)}
+                  placeholder="Label (e.g. 1-year follow-up)"
+                />
+                <input
+                  type="date"
+                  className="field-input mt-0"
+                  value={newCheckinDate}
+                  onChange={(e) => setNewCheckinDate(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setNewCheckinStablyHoused(true)}
+                  className={`btn-ghost border ${newCheckinStablyHoused === true ? 'border-sparrow-green bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green' : 'border-sparrow-rule dark:border-sparrow-dark-border'}`}
+                >
+                  Stably housed
+                </button>
+                <button
+                  onClick={() => setNewCheckinStablyHoused(false)}
+                  className={`btn-ghost border ${newCheckinStablyHoused === false ? 'border-priority-p1 bg-priority-p1/15 text-priority-p1' : 'border-sparrow-rule dark:border-sparrow-dark-border'}`}
+                >
+                  Not stably housed
+                </button>
+              </div>
+              <textarea
+                rows={2}
+                className="field-input mt-0"
+                value={newCheckinNotes}
+                onChange={(e) => setNewCheckinNotes(e.target.value)}
+                placeholder="What did you learn? (optional)"
+              />
+              <div className="flex gap-2">
+                <button disabled={busy || newCheckinStablyHoused === null} onClick={logCheckin} className="btn-primary">
+                  {busy ? 'Saving…' : 'Save check-in'}
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    setShowLogCheckin(false);
+                    setNewCheckinStablyHoused(null);
+                  }}
+                  className="btn-ghost"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>

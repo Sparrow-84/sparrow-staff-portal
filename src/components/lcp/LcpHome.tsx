@@ -42,6 +42,7 @@ interface Props {
   complianceFollowUps: ComplianceNote[];
   goals: Goal[];
   tocRequests: LcpMoveInRequest[];
+  checkinReminders: { family: Family; label: string; dueDateIso: string }[];
   currentUserId: string;
   onOpenFamily: (familyId: string, tab?: FamilyDetailTab) => void;
   onGoToSessionLog: () => void;
@@ -63,6 +64,7 @@ export function LcpHome({
   complianceFollowUps: complianceFollowUpNotes,
   goals,
   tocRequests,
+  checkinReminders,
   currentUserId,
   onOpenFamily,
   onGoToSessionLog,
@@ -199,6 +201,7 @@ export function LcpHome({
     openGoals.length +
     (canEditCurriculum ? curriculumNotes.length : 0) +
     pendingRedemptions.length +
+    checkinReminders.length +
     (materialsNeedPrep ? 1 : 0);
 
   if (loading) return <p className="py-8 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>;
@@ -340,6 +343,20 @@ export function LcpHome({
               detail={`${r.vouchers_spent} vouchers · requested ${dayLabel(r.requested_at)}`}
               cta="Fulfill →"
               onClick={() => onOpenFamily(r.family_id, 'finance')}
+            />
+          ))}
+        </SignalCard>
+      )}
+
+      {checkinReminders.length > 0 && (
+        <SignalCard title="📞 Past participant check-ins due" count={checkinReminders.length} tone="wait">
+          {checkinReminders.map(({ family, label, dueDateIso }) => (
+            <SignalRow
+              key={family.id}
+              who={familyDisplayName(family)}
+              detail={`${label} — was due ${dayLabel(dueDateIso)}`}
+              cta="Log check-in →"
+              onClick={() => onOpenFamily(family.id, 'progress')}
             />
           ))}
         </SignalCard>

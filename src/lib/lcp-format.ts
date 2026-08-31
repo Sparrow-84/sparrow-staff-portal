@@ -54,6 +54,38 @@ export function isOverdue(iso: string | null): boolean {
 }
 
 /**
+ * Earliest still-open post-program check-in milestone for a family that's
+ * left, or null if none is due yet (no program_end_date known, or every
+ * milestone up to today already has a check-in covering it). A check-in
+ * "covers" a milestone if it was logged on or after that milestone's due
+ * date -- staff aren't asked to tag which milestone they're answering, the
+ * date alone does the matching (deliberate simplification, see wasp-nest
+ * item 15 / tiger-den). Milestones are checked in ascending months order and
+ * the first uncovered-and-due one wins, since later ones can't be due yet
+ * if an earlier one isn't.
+ */
+export function nextCheckinDue(
+  programEndDate: string | null,
+  checkinDates: (string | null)[],
+  milestones: { label: string; months_after_exit: number }[],
+): { label: string; dueDateIso: string } | null {
+  if (!programEndDate) return null;
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const knownDates = checkinDates.filter((d): d is string => !!d).sort();
+  const exit = parseLocalDate(programEndDate);
+
+  for (const m of [...milestones].sort((a, b) => a.months_after_exit - b.months_after_exit)) {
+    const due = new Date(exit.getFullYear(), exit.getMonth() + m.months_after_exit, exit.getDate());
+    const dueIso = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+    if (dueIso > todayIso) return null;
+    const covered = knownDates.some((d) => d >= dueIso);
+    if (!covered) return { label: m.label, dueDateIso: dueIso };
+  }
+  return null;
+}
+
+/**
  * Overdue = no program fee payment logged since the start of last calendar
  * month, for a family that had already moved in by then. Pure recency check,
  * no amount/balance math — Audrey deliberately doesn't want a running-balance

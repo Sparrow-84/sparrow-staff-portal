@@ -5,6 +5,7 @@ import type {
   Attendance,
   AttendanceHistoryEntry,
   AttendanceStatus,
+  CheckinMilestone,
   ComplianceLabelRow,
   ComplianceNote,
   CurriculumPhase,
@@ -35,6 +36,7 @@ import type {
   Message,
   MessageReaction,
   MondayBucket,
+  OutcomeCheckin,
   ProgramFeeMethod,
   ProgramFeePayment,
   ProgramPosition,
@@ -1634,7 +1636,7 @@ export async function saveHouseholdAdult(
   const existing = await fetchHouseholdAdult(familyId);
   const row = {
     full_name: adult.full_name.trim(),
-    phone: adult.phone.trim(),
+    phone: adult.phone.trim() || null,
     date_of_birth: adult.date_of_birth || null,
   };
   if (existing) {
@@ -1685,6 +1687,58 @@ export async function updateHouseholdChild(id: string, child: ChildInput): Promi
 export async function deleteHouseholdChild(id: string): Promise<void> {
   const { error } = await supabase.from('lcp_household_children').delete().eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+// ── Outcome check-ins (post-program stably-housed tracking) ──────────
+// One row per assessment, not per family -- see migration 0176. families.
+// stably_housed is a DB-trigger-maintained cache of the latest row here
+// (for the future metrics hub); the app itself always derives "current
+// status" from this list directly rather than reading that column, so it
+// never depends on the app and DB agreeing on migration timing.
+export async function fetchOutcomeCheckins(familyId: string): Promise<OutcomeCheckin[]> {
+  const { data, error } = await supabase
+    .from('lcp_outcome_checkins')
+    .select('id, family_id, checkin_date, label, stably_housed, notes, logged_by, created_at')
+    .eq('family_id', familyId)
+    .order('checkin_date', { ascending: true, nullsFirst: true })
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OutcomeCheckin[];
+}
+
+/** Room-wide, for LcpHome's overdue-checkin reminder -- mirrors the pattern
+ *  of fetchAllComplianceFollowUps/fetchAllGoals (one query, filtered client-side). */
+export async function fetchAllOutcomeCheckins(): Promise<OutcomeCheckin[]> {
+  const { data, error } = await supabase
+    .from('lcp_outcome_checkins')
+    .select('id, family_id, checkin_date, label, stably_housed, notes, logged_by, created_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OutcomeCheckin[];
+}
+
+export async function addOutcomeCheckin(
+  familyId: string,
+  checkin: { checkin_date: string | null; label: string; stably_housed: boolean; notes: string | null },
+  staffUserId: string,
+): Promise<void> {
+  const { error } = await supabase.from('lcp_outcome_checkins').insert({
+    family_id: familyId,
+    checkin_date: checkin.checkin_date,
+    label: checkin.label.trim() || 'Check-in',
+    stably_housed: checkin.stably_housed,
+    notes: checkin.notes?.trim() || null,
+    logged_by: staffUserId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchCheckinMilestones(): Promise<CheckinMilestone[]> {
+  const { data, error } = await supabase
+    .from('lcp_checkin_milestones')
+    .select('id, label, months_after_exit, sort_order')
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CheckinMilestone[];
 }
 
 // ── TOC space lookup (for linking a family's home) ──────────────────────────────
