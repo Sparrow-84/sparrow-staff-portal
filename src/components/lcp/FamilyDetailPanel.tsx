@@ -141,6 +141,12 @@ export function FamilyDetailPanel({
   const [perfectWeeks, setPerfectWeeks] = useState<LcpPerfectWeek[]>([]);
   const [complianceNotes, setComplianceNotes] = useState<ComplianceNote[]>([]);
   const [reloadError, setReloadError] = useState<string | null>(null);
+  // General Info's view/edit default depends on whether a household adult
+  // exists -- but that isn't known until the fetch below resolves. Without
+  // this flag, GeneralInfoTab decides view-vs-edit at mount time, while
+  // householdAdult is still its initial `null`, and wrongly lands on "edit"
+  // with blank fields until a save closes the loop.
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   const familyId = family?.id;
 
@@ -184,11 +190,13 @@ export function FamilyDetailPanel({
         ? `${failed.length} part${failed.length > 1 ? 's' : ''} of this family's record didn't load — probably a database update still pending. Other tabs are unaffected.`
         : null,
     );
+    setInitialLoadDone(true);
   }, [familyId]);
 
   useEffect(() => {
     if (open && familyId) {
       setTab(initialTab ?? 'general');
+      setInitialLoadDone(false);
       void reloadDetail();
     }
   }, [open, familyId, reloadDetail, initialTab]);
@@ -222,6 +230,7 @@ export function FamilyDetailPanel({
           tocSpaces={tocSpaces}
           householdAdult={householdAdult}
           feePayments={feePayments}
+          initialLoadDone={initialLoadDone}
           onChanged={() => {
             void reloadDetail();
             onChanged();
@@ -1442,15 +1451,29 @@ function GeneralInfoTab({
   tocSpaces,
   householdAdult,
   feePayments,
+  initialLoadDone,
   onChanged,
 }: {
   family: Family;
   tocSpaces: TocSpaceSlim[];
   householdAdult: HouseholdAdult | null;
   feePayments: ProgramFeePayment[];
+  initialLoadDone: boolean;
   onChanged: () => void;
 }) {
-  const [mode, setMode] = useState<'view' | 'edit'>(householdAdult ? 'view' : 'edit');
+  const [mode, setMode] = useState<'view' | 'edit'>('view');
+  // Whether an adult is on file isn't known until the fetch in the parent
+  // resolves -- deciding view-vs-edit any earlier than that means judging it
+  // off householdAdult's placeholder `null`, which looks identical to "no
+  // adult exists" and wrongly lands on a blank edit form. Runs once per
+  // family (this component remounts on family switch via its `key` prop).
+  const [modeDecided, setModeDecided] = useState(false);
+  useEffect(() => {
+    if (initialLoadDone && !modeDecided) {
+      setMode(householdAdult ? 'view' : 'edit');
+      setModeDecided(true);
+    }
+  }, [initialLoadDone, modeDecided, householdAdult]);
   const [moveInRequest, setMoveInRequest] = useState<LcpMoveInRequest | null>(null);
 
   const reloadRequest = useCallback(async () => {
