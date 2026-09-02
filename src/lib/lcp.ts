@@ -1113,16 +1113,18 @@ export async function fetchAttendanceHistoryForFamily(familyId: string): Promise
     .eq('family_id', familyId)
     .order('session_date', { referencedTable: 'session_log', ascending: false });
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown[]).map((r) => {
-    const row = r as { status: AttendanceStatus; reason: string | null; session_log: { id: string; session_date: string; session_type: SessionLogType } };
-    return {
-      session_log_id: row.session_log.id,
-      session_date: row.session_log.session_date,
-      session_type: row.session_log.session_type,
-      status: row.status,
-      reason: row.reason,
-    };
-  });
+  return ((data ?? []) as unknown[])
+    .map((r) => {
+      const row = r as { status: AttendanceStatus; reason: string | null; session_log: { id: string; session_date: string; session_type: SessionLogType } };
+      return {
+        session_log_id: row.session_log.id,
+        session_date: row.session_log.session_date,
+        session_type: row.session_log.session_type,
+        status: row.status,
+        reason: row.reason,
+      };
+    })
+    .sort((a, b) => (a.session_date < b.session_date ? 1 : a.session_date > b.session_date ? -1 : 0));
 }
 
 /** Room-wide, joined to the real session date (not marked_at) -- for
