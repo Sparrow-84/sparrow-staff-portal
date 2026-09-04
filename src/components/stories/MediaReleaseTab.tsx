@@ -2,27 +2,26 @@ import { useState, useTransition } from 'react';
 import {
   createLayer2Consent,
   createMediaEvent,
+  deleteMediaEvent,
+  linkLayer2ConsentToParticipant,
   updateMediaEvent,
-  type ChildrenPhotoConsent,
+  type NamingChoice,
   type StoryLayer2Consent,
   type StoryMediaEvent,
+  type StoryParticipant,
 } from '@/lib/stories';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
-
-const CHILDREN_CONSENT_LABEL: Record<ChildrenPhotoConsent, string> = {
-  'n/a': 'No children in program',
-  yes: 'Yes, consented',
-  no: 'No, declined',
-};
+import { ParticipantPicker } from './ParticipantPicker';
 
 interface Props {
   events: StoryMediaEvent[];
   consents: StoryLayer2Consent[];
+  participants: StoryParticipant[];
   currentUserId: string;
   onChanged: () => void;
 }
 
-export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: Props) {
+export function MediaReleaseTab({ events, consents, participants, currentUserId, onChanged }: Props) {
   // Layer 1 inline form state
   const [showEventForm, setShowEventForm] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -46,23 +45,28 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
 
   // Layer 2 inline form state
   const [showConsentForm, setShowConsentForm] = useState(false);
-  const [participantName, setParticipantName] = useState('');
-  const [photoConsent, setPhotoConsent] = useState(false);
+  const [consentAdultId, setConsentAdultId] = useState<string | null>(null);
+  const [namingChoice, setNamingChoice] = useState<NamingChoice>('anonymous');
+  const [faceObscured, setFaceObscured] = useState(false);
+  const [childrenFaceObscured, setChildrenFaceObscured] = useState(false);
   const [dateSigned, setDateSigned] = useState('');
-  const [childrenPhotoConsent, setChildrenPhotoConsent] = useState<ChildrenPhotoConsent>('n/a');
   const [consentNotes, setConsentNotes] = useState('');
   const [consentPending, startConsentTransition] = useTransition();
   const [consentError, setConsentError] = useState<string | null>(null);
   const {
     missingMessage: consentMissingMessage,
     validate: validateConsent,
-    fieldClass: consentFieldClass,
     fieldError: consentFieldError,
     clear: clearConsent,
     reset: resetConsentValidation,
   } = useRequiredFields([
-    { key: 'mr-p-name', label: 'Participant name', valid: participantName.trim().length > 0 },
+    { key: 'mr-p-adult', label: 'Participant', valid: !!consentAdultId },
   ]);
+
+  // Inline "link to a participant" state for legacy rows with no household_adult_id yet.
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [linkPending, startLinkTransition] = useTransition();
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   function resetEventForm() {
     setEventName('');
@@ -86,10 +90,11 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
   }
 
   function resetConsentForm() {
-    setParticipantName('');
-    setPhotoConsent(false);
+    setConsentAdultId(null);
+    setNamingChoice('anonymous');
+    setFaceObscured(false);
+    setChildrenFaceObscured(false);
     setDateSigned('');
-    setChildrenPhotoConsent('n/a');
     setConsentNotes('');
     setConsentError(null);
     resetConsentValidation();
@@ -124,15 +129,30 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
     });
   }
 
+  function deleteEvent(ev: StoryMediaEvent) {
+    if (!window.confirm(`Delete the "${ev.event_name}" event log entry? This can't be undone.`)) return;
+    startEventTransition(async () => {
+      try {
+        await deleteMediaEvent(ev.id);
+        onChanged();
+      } catch (e) {
+        setEventError(e instanceof Error ? e.message : 'Could not delete.');
+      }
+    });
+  }
+
   function saveConsent() {
-    if (!validateConsent()) return;
+    if (!validateConsent() || !consentAdultId) return;
+    const participant = participants.find((p) => p.adult_id === consentAdultId);
     startConsentTransition(async () => {
       try {
         await createLayer2Consent({
-          participant_name: participantName.trim(),
-          photo_consent: photoConsent,
+          household_adult_id: consentAdultId,
+          participant_name: participant?.full_name ?? '',
+          naming_choice: namingChoice,
+          face_obscured: faceObscured,
+          children_face_obscured: childrenFaceObscured,
           date_signed: dateSigned || null,
-          children_photo_consent: childrenPhotoConsent,
           notes: consentNotes.trim() || null,
           logged_by: currentUserId,
         });
@@ -144,10 +164,50 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
     });
   }
 
+  function linkConsent(id: string, adultId: string | null) {
+    if (!adultId) return;
+    setLinkingId(id);
+    setLinkError(null);
+    startLinkTransition(async () => {
+      try {
+        await linkLayer2ConsentToParticipant(id, adultId);
+        onChanged();
+        setLinkingId(null);
+      } catch (e) {
+        setLinkError(e instanceof Error ? e.message : 'Could not link.');
+      }
+    });
+  }
+
   function formatDate(d: string) {
     return new Date(d + 'T12:00:00').toLocaleDateString(undefined, {
       month: 'short', day: 'numeric', year: 'numeric',
     });
+  }
+
+  function namingCell(c: StoryLayer2Consent) {
+    if (c.naming_choice) {
+      return c.naming_choice === 'named' ? 'Named' : 'Anonymous';
+    }
+    if (c.photo_consent !== null) {
+      // Legacy entry, signed under a prior version of the form that didn't ask this question.
+      return <span className="text-sparrow-gray dark:text-sparrow-dark-gray">— (prior form)</span>;
+    }
+    return <span className="text-sparrow-gray dark:text-sparrow-dark-gray">—</span>;
+  }
+
+  function faceCell(obscured: boolean | null, legacyConsent: boolean | null, legacyLabel: string) {
+    if (obscured !== null) {
+      return obscured ? 'Blurred' : 'Not blurred';
+    }
+    if (legacyConsent !== null) {
+      return (
+        <span className="text-sparrow-gray dark:text-sparrow-dark-gray">
+          {legacyConsent ? `${legacyLabel} consented (prior form)` : `${legacyLabel} declined (prior form)`}
+        </span>
+      );
+    }
+    return <span className="text-sparrow-gray dark:text-sparrow-dark-gray">—</span>;
   }
 
   return (
@@ -163,9 +223,9 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
           </li>
           <li>
             <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Layer 2 — Participant photo form</span> —
-            Everyone signs the release, but the photo/video sections (participant and children) are
-            separate optional checkboxes — a signed form does not by itself mean photos are allowed.
-            Documented here.
+            Story, photos &amp; video are a required part of joining LifeChange. The real choices on file
+            here are Named vs. Anonymous, and whether her face (and separately, her kids' faces) should
+            be blurred. Documented here.
           </li>
           <li>
             <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Layer 3 — Story-level verbal consent</span> —
@@ -281,12 +341,18 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{ev.notes ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
                       <button
                         onClick={() => startEditEvent(ev)}
                         className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                       >
                         Edit
+                      </button>
+                      <button
+                        onClick={() => deleteEvent(ev)}
+                        className="ml-3 text-xs font-medium text-priority-p1 hover:underline"
+                      >
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -315,17 +381,16 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
           <div className="mt-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="field-label field-label-required" htmlFor="mr-p-name">
-                  Participant name
+                <label className="field-label field-label-required" htmlFor="mr-p-adult">
+                  Participant
                 </label>
-                <input
-                  id="mr-p-name"
-                  className={consentFieldClass('mr-p-name')}
-                  value={participantName}
-                  onChange={(e) => { setParticipantName(e.target.value); clearConsent('mr-p-name'); }}
-                  placeholder="First name or initials"
+                <ParticipantPicker
+                  id="mr-p-adult"
+                  participants={participants}
+                  value={consentAdultId}
+                  onChange={(id) => { setConsentAdultId(id); clearConsent('mr-p-adult'); }}
                 />
-                {consentFieldError('mr-p-name') && <p className="mt-1 text-xs text-priority-p1">{consentFieldError('mr-p-name')}</p>}
+                {consentFieldError('mr-p-adult') && <p className="mt-1 text-xs text-priority-p1">{consentFieldError('mr-p-adult')}</p>}
               </div>
               <div>
                 <label className="field-label" htmlFor="mr-p-date">
@@ -342,41 +407,55 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
             </div>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div>
-                <label className="field-label" htmlFor="mr-p-photo">
-                  Photos/video of participant <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(Section 2 of the form)</span>
+                <label className="field-label" htmlFor="mr-p-naming">
+                  Named or Anonymous <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(Section 1)</span>
                 </label>
                 <select
-                  id="mr-p-photo"
+                  id="mr-p-naming"
                   className="field-input"
-                  value={photoConsent ? 'yes' : 'no'}
-                  onChange={(e) => setPhotoConsent(e.target.value === 'yes')}
+                  value={namingChoice}
+                  onChange={(e) => setNamingChoice(e.target.value as NamingChoice)}
                 >
-                  <option value="no">No, declined</option>
-                  <option value="yes">Yes, consented</option>
+                  <option value="anonymous">Anonymous (default) — pseudonym used</option>
+                  <option value="named">Named — real first name used</option>
+                </select>
+              </div>
+              <div />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <label className="field-label" htmlFor="mr-p-face">
+                  Her face in photos/video <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(Section 2)</span>
+                </label>
+                <select
+                  id="mr-p-face"
+                  className="field-input"
+                  value={faceObscured ? 'obscured' : 'unobscured'}
+                  onChange={(e) => setFaceObscured(e.target.value === 'obscured')}
+                >
+                  <option value="unobscured">Seen clearly (default)</option>
+                  <option value="obscured">Blurred / covered</option>
                 </select>
               </div>
               <div>
-                <label className="field-label" htmlFor="mr-p-children-photo">
-                  Photos/video of children <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(Section 3)</span>
+                <label className="field-label" htmlFor="mr-p-children-face">
+                  Her kids' faces in photos/video <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(Section 2)</span>
                 </label>
                 <select
-                  id="mr-p-children-photo"
+                  id="mr-p-children-face"
                   className="field-input"
-                  value={childrenPhotoConsent}
-                  onChange={(e) => setChildrenPhotoConsent(e.target.value as ChildrenPhotoConsent)}
+                  value={childrenFaceObscured ? 'obscured' : 'unobscured'}
+                  onChange={(e) => setChildrenFaceObscured(e.target.value === 'obscured')}
                 >
-                  {(Object.entries(CHILDREN_CONSENT_LABEL) as [ChildrenPhotoConsent, string][]).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
+                  <option value="unobscured">Seen clearly (default)</option>
+                  <option value="obscured">Blurred / covered</option>
                 </select>
               </div>
             </div>
             <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              Signing the release form is separate from consenting to photos — Sections 2 and 3 are optional
-              checkboxes on the form, so a signed form can still have either left unchecked. Log exactly what
-              the form says, not whether it was signed.
+              Story, photos &amp; video sharing is a required part of joining LifeChange — the only real
+              choices on the current form are Named vs. Anonymous and whether faces are blurred. Log
+              exactly what she chose.
             </p>
             <div className="mt-3">
               <label className="field-label" htmlFor="mr-p-notes">
@@ -413,32 +492,46 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 <tr className="bg-sparrow-green dark:bg-sparrow-dark-green">
                   <th className="px-4 py-2 text-left font-semibold text-white/90">Participant</th>
                   <th className="px-4 py-2 text-left font-semibold text-white/90">Date signed</th>
-                  <th className="px-4 py-2 text-center font-semibold text-white/90">Photos — participant</th>
-                  <th className="px-4 py-2 text-center font-semibold text-white/90">Photos — children</th>
+                  <th className="px-4 py-2 text-left font-semibold text-white/90">Named/Anonymous</th>
+                  <th className="px-4 py-2 text-left font-semibold text-white/90">Her face</th>
+                  <th className="px-4 py-2 text-left font-semibold text-white/90">Kids' faces</th>
                   <th className="px-4 py-2 text-left font-semibold text-white/90">Notes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
                 {consents.map((c) => (
                   <tr key={c.id}>
-                    <td className="px-4 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{c.participant_name}</td>
+                    <td className="px-4 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
+                      {c.household_adult_id ? (
+                        c.participant_name
+                      ) : linkingId === c.id ? (
+                        <ParticipantPicker
+                          participants={participants}
+                          value={null}
+                          onChange={(id) => linkConsent(c.id, id)}
+                        />
+                      ) : (
+                        <button
+                          onClick={() => setLinkingId(c.id)}
+                          className="text-xs font-medium text-priority-p1 hover:underline"
+                          title={c.participant_name}
+                        >
+                          {c.participant_name} — link to a participant
+                        </button>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">
                       {c.date_signed ? formatDate(c.date_signed) : '—'}
                     </td>
-                    <td className="px-4 py-2.5 text-center">
-                      {c.photo_consent ? (
-                        <span className="font-medium text-sparrow-green dark:text-sparrow-dark-green">Yes</span>
-                      ) : (
-                        <span className="font-medium text-priority-p1">No</span>
-                      )}
+                    <td className="px-4 py-2.5 text-sparrow-ink dark:text-sparrow-dark-ink">{namingCell(c)}</td>
+                    <td className="px-4 py-2.5 text-sparrow-ink dark:text-sparrow-dark-ink">
+                      {faceCell(c.face_obscured, c.photo_consent, 'Photos')}
                     </td>
-                    <td className="px-4 py-2.5 text-center">
-                      {c.children_photo_consent === 'yes' ? (
-                        <span className="font-medium text-sparrow-green dark:text-sparrow-dark-green">Yes</span>
-                      ) : c.children_photo_consent === 'no' ? (
-                        <span className="font-medium text-priority-p1">No</span>
-                      ) : (
-                        <span className="text-sparrow-gray dark:text-sparrow-dark-gray">—</span>
+                    <td className="px-4 py-2.5 text-sparrow-ink dark:text-sparrow-dark-ink">
+                      {faceCell(
+                        c.children_face_obscured,
+                        c.children_photo_consent === 'n/a' ? null : c.children_photo_consent === 'yes',
+                        'Kids’ photos',
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{c.notes ?? '—'}</td>
@@ -446,6 +539,8 @@ export function MediaReleaseTab({ events, consents, currentUserId, onChanged }: 
                 ))}
               </tbody>
             </table>
+            {linkPending && <p className="px-4 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Linking…</p>}
+            {linkError && <p className="px-4 py-2 text-xs text-priority-p1">{linkError}</p>}
           </div>
         )}
       </section>

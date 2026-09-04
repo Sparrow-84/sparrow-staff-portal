@@ -2,12 +2,17 @@ import { useEffect, useState, useTransition } from 'react';
 import { Drawer } from '@/components/lcp/Drawer';
 import { RichTextEditor } from './RichTextEditor';
 import { StoryTagPicker } from './StoryTagPicker';
+import { ParticipantPicker } from './ParticipantPicker';
 import {
   createStory,
+  currentConsentFor,
   deleteStory,
+  isClearedToPublish,
   updateStory,
   type GatheringMethod,
   type Story,
+  type StoryLayer2Consent,
+  type StoryParticipant,
   type StoryTag,
   type VerbalConsent,
 } from '@/lib/stories';
@@ -20,6 +25,8 @@ interface Props {
   story: Story | null; // null = add mode
   profiles: Profile[];
   storyTags: StoryTag[];
+  participants: StoryParticipant[];
+  consents: StoryLayer2Consent[];
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
@@ -55,7 +62,7 @@ const BODY_DISPLAY_CLASSES =
   '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 ' +
   '[&_li]:mb-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2';
 
-export function StoryPanel({ open, story, profiles, storyTags, currentUserId, onClose, onChanged, onTagsChanged }: Props) {
+export function StoryPanel({ open, story, profiles, storyTags, participants, consents, currentUserId, onClose, onChanged, onTagsChanged }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -63,6 +70,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
   const [copied, setCopied] = useState(false);
 
   const [title, setTitle] = useState('');
+  const [householdAdultId, setHouseholdAdultId] = useState<string | null>(null);
   const [subjectName, setSubjectName] = useState('');
   const [subjectAlias, setSubjectAlias] = useState('');
   const [dateGathered, setDateGathered] = useState('');
@@ -92,6 +100,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
     setMode(story ? 'view' : 'edit');
     if (story) {
       setTitle(story.title);
+      setHouseholdAdultId(story.household_adult_id);
       setSubjectName(story.subject_name);
       setSubjectAlias(story.subject_alias ?? '');
       setDateGathered(story.date_gathered);
@@ -104,6 +113,7 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
       setLayer3Preview(story.layer3_preview_requested);
     } else {
       setTitle('');
+      setHouseholdAdultId(null);
       setSubjectName('');
       setSubjectAlias('');
       setDateGathered('');
@@ -119,22 +129,50 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
     resetValidation();
   }, [open, story, currentUserId]);
 
+  // New stories must be linked to a real participant (no more typed names);
+  // an existing, already-legacy story can still be edited without forcing
+  // that cleanup in the same motion -- it's nudged, not blocked.
   const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'sp-title', label: 'Title', valid: title.trim().length > 0 },
+    { key: 'sp-participant', label: 'Participant', valid: story ? true : !!householdAdultId },
     { key: 'sp-subject', label: 'Real name', valid: subjectName.trim().length > 0 },
     { key: 'sp-alias', label: 'Alias', valid: subjectAlias.trim().length > 0 },
     { key: 'sp-date', label: 'Date gathered', valid: !!dateGathered },
   ]);
 
+  const cleared = isClearedToPublish(consents, householdAdultId);
+
+  function selectParticipant(adultId: string | null) {
+    setHouseholdAdultId(adultId);
+    clear('sp-participant');
+    const participant = participants.find((p) => p.adult_id === adultId);
+    if (!participant) return;
+    setSubjectName(participant.full_name);
+    clear('sp-subject');
+    const consent = currentConsentFor(consents, adultId);
+    if (consent?.naming_choice === 'named') {
+      setSubjectAlias(participant.full_name.split(' ')[0]);
+    } else {
+      setSubjectAlias('');
+    }
+    clear('sp-alias');
+  }
+
   function buildPayload() {
     return {
       title: title.trim(),
+      household_adult_id: householdAdultId,
       subject_name: subjectName.trim(),
       subject_alias: subjectAlias.trim() || null,
       date_gathered: dateGathered,
       gathering_method: gatheringMethod,
       logged_by: loggedBy || null,
       tags,
+      // The "Used in" input is disabled in the UI while not cleared to
+      // publish, so usedIn can't actually change via a form submit either --
+      // just pass it through as-is rather than forcing it null, so any
+      // already-saved value (e.g. a legacy story) isn't wiped by an
+      // unrelated edit elsewhere on the form.
       used_in: usedIn.trim() || null,
       body,
       layer3_verbal_consent: layer3Verbal,
@@ -186,6 +224,24 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
 
   const loggerName = (id: string | null) => profiles.find((p) => p.id === id)?.full_name ?? '—';
 
+  function clearedBanner() {
+    if (cleared) {
+      const consent = currentConsentFor(consents, householdAdultId);
+      return (
+        <div className="rounded-lg border border-sparrow-green/30 bg-sparrow-sage/40 dark:bg-sparrow-dark-green/10 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+          ✓ Cleared to publish{consent?.date_signed ? ` — consent on file, signed ${consent.date_signed}` : ' — consent on file'}.
+        </div>
+      );
+    }
+    return (
+      <div className="rounded-lg border border-priority-p1/30 bg-priority-p1/5 px-3 py-2 text-xs font-medium text-priority-p1">
+        ⚠ Not cleared to publish — {householdAdultId
+          ? 'no Photo & Media Release entry on file for this participant yet.'
+          : 'link this story to a participant to check her consent status.'} "Used in" is locked until then.
+      </div>
+    );
+  }
+
   if (story && mode === 'view') {
     return (
       <Drawer
@@ -216,6 +272,8 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
           </div>
         }
       >
+        <div className="mb-4">{clearedBanner()}</div>
+
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="field-label">Gathering method</span>
@@ -314,6 +372,27 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
       />
       {fieldError('sp-title') && <p className="mt-1 text-xs text-priority-p1">{fieldError('sp-title')}</p>}
 
+      {/* Who is this about */}
+      <div className="mt-4">
+        <label className="field-label field-label-required" htmlFor="sp-participant">
+          Who is this about
+        </label>
+        <ParticipantPicker
+          id="sp-participant"
+          participants={participants}
+          value={householdAdultId}
+          onChange={selectParticipant}
+        />
+        {fieldError('sp-participant') && <p className="mt-1 text-xs text-priority-p1">{fieldError('sp-participant')}</p>}
+        {!householdAdultId && story && (
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            This is an older story, logged before this picker existed — link it to a real participant when you get a chance.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-3">{clearedBanner()}</div>
+
       {/* Real name + Alias */}
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div>
@@ -322,10 +401,12 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
           </label>
           <input
             id="sp-subject"
-            className={fieldClass('sp-subject')}
+            className={householdAdultId ? 'field-input bg-sparrow-mist/40 dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray' : fieldClass('sp-subject')}
             value={subjectName}
             onChange={(e) => { setSubjectName(e.target.value); clear('sp-subject'); }}
             placeholder="e.g. Maria R."
+            disabled={!!householdAdultId}
+            title={householdAdultId ? 'Filled in automatically from the participant picked above' : undefined}
           />
           {fieldError('sp-subject') && <p className="mt-1 text-xs text-priority-p1">{fieldError('sp-subject')}</p>}
         </div>
@@ -416,11 +497,18 @@ export function StoryPanel({ open, story, profiles, storyTags, currentUserId, on
         </label>
         <input
           id="sp-used-in"
-          className="field-input"
+          className={cleared ? 'field-input' : 'field-input bg-sparrow-mist/40 dark:bg-sparrow-dark-surface2 cursor-not-allowed'}
           value={usedIn}
           onChange={(e) => setUsedIn(e.target.value)}
           placeholder="e.g. Aug 2026 newsletter"
+          disabled={!cleared}
+          title={cleared ? undefined : 'Locked until a Photo & Media Release entry is on file for this participant'}
         />
+        {!cleared && (
+          <p className="mt-1 text-xs text-priority-p1">
+            Locked — this story isn't cleared to publish yet (see banner above).
+          </p>
+        )}
       </div>
 
       {/* Story body */}

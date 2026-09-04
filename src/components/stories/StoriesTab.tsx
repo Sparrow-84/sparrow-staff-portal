@@ -1,11 +1,12 @@
 import type { Profile } from '@/lib/types';
-import type { Story, StoryTag } from '@/lib/stories';
+import { isClearedToPublish, type Story, type StoryLayer2Consent, type StoryTag } from '@/lib/stories';
 import { LABEL_COLORS } from '@/components/LabelPill';
 
 interface Props {
   stories: Story[];
   profiles: Profile[];
   storyTags: StoryTag[];
+  consents: StoryLayer2Consent[];
   currentUserId: string;
   onAdd: () => void;
   onEdit: (story: Story) => void;
@@ -23,7 +24,7 @@ function tagPillClass(tags: StoryTag[], name: string): string {
   return LABEL_COLORS.find((c) => c.id === color)?.pill ?? 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green';
 }
 
-export function StoriesTab({ stories, storyTags, onAdd, onEdit }: Props) {
+export function StoriesTab({ stories, storyTags, consents, onAdd, onEdit }: Props) {
   return (
     <div>
       {/* Rules box */}
@@ -77,7 +78,18 @@ export function StoriesTab({ stories, storyTags, onAdd, onEdit }: Props) {
               className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-sparrow-mist/50"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{s.title}</p>
+                <div className="flex items-center gap-2">
+                  <p className="truncate font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{s.title}</p>
+                  {isClearedToPublish(consents, s.household_adult_id) ? (
+                    <span className="shrink-0 rounded-full bg-sparrow-sage dark:bg-sparrow-dark-green/15 px-2 py-0.5 text-[10px] font-medium text-sparrow-green dark:text-sparrow-dark-green">
+                      ✓ Cleared
+                    </span>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-priority-p1/10 px-2 py-0.5 text-[10px] font-medium text-priority-p1">
+                      ⚠ Not cleared
+                    </span>
+                  )}
+                </div>
                 <p className="mt-0.5 truncate text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   {s.subject_name}
                   {s.subject_alias ? ` (as "${s.subject_alias}")` : ''} · {METHOD_LABEL[s.gathering_method] ?? s.gathering_method}

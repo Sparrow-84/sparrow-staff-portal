@@ -5,10 +5,12 @@ import { supabase } from './supabase';
 export type GatheringMethod = 'interview' | 'google_form' | 'freewrite' | 'staff_written';
 export type VerbalConsent = 'yes' | 'no' | 'not_asked';
 export type ChildrenPhotoConsent = 'n/a' | 'yes' | 'no';
+export type NamingChoice = 'anonymous' | 'named';
 
 export interface Story {
   id: string;
   title: string;
+  household_adult_id: string | null;
   subject_name: string;
   subject_alias: string | null;
   gathering_method: GatheringMethod;
@@ -27,6 +29,7 @@ export interface Story {
 
 export interface StoryInput {
   title: string;
+  household_adult_id: string | null;
   subject_name: string;
   subject_alias: string | null;
   gathering_method: GatheringMethod;
@@ -38,6 +41,18 @@ export interface StoryInput {
   tags: string[];
   used_in: string | null;
   created_by?: string | null;
+}
+
+// A real LCP participant, for the "who is this about" picker shared by the
+// Stories tab and the Photo & Media Release tab. Comes from a SECURITY
+// DEFINER function (not a direct table read) since stories_access staff
+// don't necessarily have general LCP access.
+export interface StoryParticipant {
+  adult_id: string;
+  full_name: string;
+  family_id: string;
+  family_display_name: string;
+  active: boolean;
 }
 
 export interface StoryMediaEvent {
@@ -68,20 +83,36 @@ export interface StoryTag {
 
 export interface StoryLayer2Consent {
   id: string;
+  household_adult_id: string | null;
   participant_name: string;
-  photo_consent: boolean;
+  // Current form (Sparrow Form 9.3-B, approved 2026-09): null on any entry
+  // signed under a prior version of the form, where these questions didn't
+  // exist in this shape.
+  naming_choice: NamingChoice | null;
+  face_obscured: boolean | null;
+  children_face_obscured: boolean | null;
+  // Legacy fields -- only ever set on entries signed under a prior version
+  // of the release form, where "consent to photos at all" was still a real
+  // (optional) question. Kept exactly as originally recorded, never
+  // reinterpreted -- see migration 0177. Always null on a current-form entry.
+  photo_consent: boolean | null;
+  children_photo_consent: ChildrenPhotoConsent | null;
   date_signed: string | null;
-  children_photo_consent: ChildrenPhotoConsent;
   notes: string | null;
   logged_by: string | null;
   created_at: string;
 }
 
+// What a current-form entry actually saves. (Legacy-shaped entries already
+// exist in the DB from before this form version -- nothing new is ever
+// created in that shape going forward.)
 export interface StoryLayer2ConsentInput {
+  household_adult_id: string;
   participant_name: string;
-  photo_consent: boolean;
+  naming_choice: NamingChoice;
+  face_obscured: boolean;
+  children_face_obscured: boolean;
   date_signed: string | null;
-  children_photo_consent: ChildrenPhotoConsent;
   notes: string | null;
   logged_by: string | null;
 }
@@ -170,6 +201,11 @@ export async function updateMediaEvent(
   if (error) throw new Error(error.message);
 }
 
+export async function deleteMediaEvent(id: string): Promise<void> {
+  const { error } = await supabase.from('story_media_events').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // ── Layer 2 Consents ─────────────────────────────────────────────────
 
 export async function getLayer2Consents(): Promise<StoryLayer2Consent[]> {
@@ -186,6 +222,37 @@ export async function createLayer2Consent(input: StoryLayer2ConsentInput): Promi
   if (error) throw new Error(error.message);
 }
 
+/** Only used to link an existing (usually legacy, pre-participant-linking) entry to a real participant. */
+export async function linkLayer2ConsentToParticipant(id: string, householdAdultId: string): Promise<void> {
+  const { error } = await supabase
+    .from('story_layer2_consents')
+    .update({ household_adult_id: householdAdultId })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Participants (shared "who is this about" picker) ───────────────────
+
+export async function getStoryParticipants(): Promise<StoryParticipant[]> {
+  const { data, error } = await supabase.rpc('list_participants_for_stories');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as StoryParticipant[];
+}
+
+/** Whichever of a participant's Photo & Media Release entries was signed most recently. Null if she has none on file yet. */
+export function currentConsentFor(consents: StoryLayer2Consent[], householdAdultId: string | null): StoryLayer2Consent | null {
+  if (!householdAdultId) return null;
+  const matches = consents.filter((c) => c.household_adult_id === householdAdultId);
+  if (matches.length === 0) return null;
+  return [...matches].sort((a, b) => (b.date_signed ?? b.created_at).localeCompare(a.date_signed ?? a.created_at))[0];
+}
+
+/** True if this participant has ANY signed Photo & Media Release entry on file (current form or a prior one) -- the actual gate for whether anything about her can be marked published. */
+export function isClearedToPublish(consents: StoryLayer2Consent[], householdAdultId: string | null): boolean {
+  if (!householdAdultId) return false;
+  return consents.some((c) => c.household_adult_id === householdAdultId);
+}
+
 // ── Internal helpers ──────────────────────────────────────────────────
 
 function normalizeStory(raw: unknown): Story {
@@ -194,6 +261,7 @@ function normalizeStory(raw: unknown): Story {
   return {
     id: r['id'] as string,
     title: r['title'] as string,
+    household_adult_id: (r['household_adult_id'] as string | null) ?? null,
     subject_name: r['subject_name'] as string,
     subject_alias: (r['subject_alias'] as string | null) ?? null,
     gathering_method: r['gathering_method'] as GatheringMethod,

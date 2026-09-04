@@ -5,10 +5,12 @@ import {
   getLayer2Consents,
   getMediaEvents,
   getStories,
+  getStoryParticipants,
   getStoryTags,
   type Story,
   type StoryLayer2Consent,
   type StoryMediaEvent,
+  type StoryParticipant,
   type StoryTag,
 } from '@/lib/stories';
 import { getStats, getStatLabels, type Stat, type StatLabel } from '@/lib/stats';
@@ -36,6 +38,7 @@ export function StoriesRoom() {
   const [stories, setStories] = useState<Story[]>([]);
   const [events, setEvents] = useState<StoryMediaEvent[]>([]);
   const [consents, setConsents] = useState<StoryLayer2Consent[]>([]);
+  const [participants, setParticipants] = useState<StoryParticipant[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [storyTags, setStoryTags] = useState<StoryTag[]>([]);
   const [stats, setStats] = useState<Stat[]>([]);
@@ -48,10 +51,11 @@ export function StoriesRoom() {
 
   const load = useCallback(async () => {
     try {
-      const [ss, ev, co, pp, tg, st, sl] = await Promise.all([
+      const [ss, ev, co, pt, pp, tg, st, sl] = await Promise.all([
         getStories(),
         getMediaEvents(),
         getLayer2Consents(),
+        getStoryParticipants(),
         fetchProfiles(),
         getStoryTags(),
         getStats(),
@@ -60,6 +64,7 @@ export function StoriesRoom() {
       setStories(ss);
       setEvents(ev);
       setConsents(co);
+      setParticipants(pt);
       setProfiles(pp);
       setStoryTags(tg);
       setStats(st);
@@ -145,6 +150,7 @@ export function StoriesRoom() {
             stories={stories}
             profiles={profiles}
             storyTags={storyTags}
+            consents={consents}
             currentUserId={profile?.id ?? ''}
             onAdd={openAdd}
             onEdit={openEdit}
@@ -154,6 +160,7 @@ export function StoriesRoom() {
           <MediaReleaseTab
             events={events}
             consents={consents}
+            participants={participants}
             currentUserId={profile?.id ?? ''}
             onChanged={load}
           />
@@ -174,6 +181,8 @@ export function StoriesRoom() {
         story={selectedStory}
         profiles={profiles}
         storyTags={storyTags}
+        participants={participants}
+        consents={consents}
         currentUserId={profile?.id ?? ''}
         onClose={closePanel}
         onChanged={load}
