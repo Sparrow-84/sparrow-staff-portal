@@ -8,6 +8,8 @@ import { certificationTone, daysSince, formatDate, formatMoney, type Grant } fro
 import { createProspect, fetchProspectLabels, fetchProspects } from '@/lib/grant-prospects';
 import {
   PROSPECT_ACTIVE_STATUSES,
+  prospectStatusChip,
+  prospectStatusLabel,
   type GrantProspect,
   type GrantProspectLabel,
 } from '@/lib/grant-prospects-types';
@@ -21,7 +23,7 @@ const DEFAULT_LEAD_TIME_DAYS = 30;
 type ModuleTab = 'active' | 'prospects' | 'no' | 'past';
 const MODULE_TABS: { key: ModuleTab; label: string; desc: string }[] = [
   { key: 'active', label: 'Active Grants', desc: 'Grants Sparrow currently holds. Dot = certification health (green ok, amber due soon, red overdue).' },
-  { key: 'prospects', label: 'Being Pursued', desc: 'Still in motion. Dot = status (gray not researched, blue researching, green decided to pursue, amber applied).' },
+  { key: 'prospects', label: 'Being Pursued', desc: 'Still in motion. Status column shows where each one stands — not researched, researching, decided to pursue, or applied.' },
   { key: 'no', label: 'Not Moving Forward', desc: 'Ended without funding, whether Sparrow passed or applied and was declined. No due dates here — the record of why matters more.' },
   { key: 'past', label: 'Past Grants', desc: 'Wrapped up. Every field, link, and document from when it was active stays intact.' },
 ];
@@ -35,13 +37,6 @@ function certificationDotColor(dueDateIso: string | null): string {
   if (d >= -60) return '#F0A500'; // due soon
   return '#2563EB'; // fine
 }
-
-const PROSPECT_DOT: Record<string, string> = {
-  not_researched: '#9CA3AF',
-  researching: '#2563EB',
-  decided_pursue: '#1E4D30',
-  applied: '#F0A500',
-};
 
 export function GrantsRoom() {
   const { profile } = useAuth();
@@ -466,7 +461,7 @@ function ProspectsTable({
   tierLabels: GrantProspectLabel[];
   onOpen: (id: string) => void;
 }) {
-  const [sortKey, setSortKey] = useState<'name' | 'owner' | 'deadline' | 'amount'>('deadline');
+  const [sortKey, setSortKey] = useState<'name' | 'status' | 'owner' | 'deadline' | 'amount'>('deadline');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   function onSort(k: typeof sortKey) {
@@ -477,6 +472,7 @@ function ProspectsTable({
   const sorted = [...prospects].sort((a, b) => {
     let cmp = 0;
     if (sortKey === 'name') cmp = a.name.localeCompare(b.name);
+    else if (sortKey === 'status') cmp = PROSPECT_ACTIVE_STATUSES.indexOf(a.status) - PROSPECT_ACTIVE_STATUSES.indexOf(b.status);
     else if (sortKey === 'amount') cmp = (a.est_amount ?? 0) - (b.est_amount ?? 0);
     else if (sortKey === 'owner') cmp = (profiles.find((p) => p.id === a.owner_id)?.full_name ?? '').localeCompare(profiles.find((p) => p.id === b.owner_id)?.full_name ?? '');
     else cmp = (daysSince(a.application_deadline) ?? 9999) - (daysSince(b.application_deadline) ?? 9999);
@@ -490,8 +486,8 @@ function ProspectsTable({
       <table className="w-full min-w-max border-collapse text-sm">
         <thead>
           <tr className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-green dark:bg-sparrow-dark-green">
-            <th className="w-6 px-3 py-2" />
             <Th label="Name" k="name" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+            <Th label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Tier</th>
             <Th label="Est. amount" k="amount" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <Th label="Owner" k="owner" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
@@ -506,8 +502,10 @@ function ProspectsTable({
             const overdue = (daysSince(p.application_deadline) ?? -9999) > 0;
             return (
               <tr key={p.id} onClick={() => onOpen(p.id)} className="cursor-pointer border-b border-sparrow-rule/60 bg-white dark:bg-sparrow-dark-surface hover:bg-sparrow-mist/40">
-                <td className="px-3 py-2.5"><span className="block h-2 w-2 rounded-full" style={{ background: PROSPECT_DOT[p.status] ?? '#9CA3AF' }} /></td>
                 <td className="whitespace-nowrap px-3 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{p.name}</td>
+                <td className="whitespace-nowrap px-3 py-2.5">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${prospectStatusChip(p.status)}`}>{prospectStatusLabel(p.status)}</span>
+                </td>
                 <td className="px-3 py-2.5"><LabelCell label={tier} /></td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{p.est_amount ? formatMoney(p.est_amount) : '—'}</td>
                 <td className="px-3 py-2.5"><OwnerCell owner={owner} ownerColors={ownerColors} /></td>
