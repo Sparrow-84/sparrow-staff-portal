@@ -14,6 +14,7 @@ export interface PrayerVolunteer {
   phone: string | null;
   notes: string | null;
   active: boolean;
+  snoozed_until: string | null;
   created_at: string;
 }
 
@@ -50,6 +51,19 @@ export async function fetchPrayerVolunteers(): Promise<PrayerVolunteer[]> {
 
 export async function updatePrayerVolunteerNotes(id: string, notes: string | null): Promise<void> {
   const { error } = await supabase.from('prayer_volunteers').update({ notes }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Staff-set "pause" — when a volunteer gives a heads-up (prompted or not), Bethany sets this
+ * to whatever date they expect to be back (any date is fine; there's no minimum). While set,
+ * the automatic missed-month ladder in PrayerMeetingTab is suppressed entirely. Two months
+ * after this date, if they still haven't attended, one follow-up check-in task fires — see
+ * PrayerMeetingTab's save() for that logic. Attending a meeting always clears this
+ * automatically, regardless of the date chosen.
+ */
+export async function updatePrayerVolunteerSnooze(id: string, snoozedUntil: string | null): Promise<void> {
+  const { error } = await supabase.from('prayer_volunteers').update({ snoozed_until: snoozedUntil }).eq('id', id);
   if (error) throw new Error(error.message);
 }
 
@@ -148,26 +162,37 @@ export async function logPrayerMeeting(
   }
 }
 
-// ── Consecutive miss detection ────────────────────────────────────────
-// Returns the number of consecutive meetings a volunteer has missed,
-// counting back from the most recent. Returns 0 if attended the last one.
+// ── Consecutive missed-month detection ─────────────────────────────────
+// The volunteer's commitment is "at least once a month," but meetings are held
+// weekly — so a "miss" has to mean a whole calendar month with zero attendance,
+// not a single missed weekly meeting. Groups attendance by the meeting's
+// YYYY-MM, counting back from the most recent month that actually had a
+// meeting, stopping at the first month they attended. A month with no meetings
+// logged at all is skipped, not counted as a miss.
 
-export async function consecutiveMisses(volunteerId: string): Promise<number> {
+export async function consecutiveMissedMonths(volunteerId: string): Promise<number> {
   const { data, error } = await supabase
     .from('prayer_attendance')
     .select('attended, prayer_meetings(meeting_date)')
     .eq('volunteer_id', volunteerId)
     .order('prayer_meetings(meeting_date)', { ascending: false })
-    .limit(10);
+    .limit(60);
   if (error) throw new Error(error.message);
 
-  let count = 0;
+  const months = new Map<string, boolean>();
   for (const row of data ?? []) {
-    if (!row.attended) {
-      count++;
-    } else {
-      break;
-    }
+    const meeting = row.prayer_meetings as unknown as { meeting_date: string } | null;
+    const dateStr = meeting?.meeting_date;
+    if (!dateStr) continue;
+    const monthKey = dateStr.slice(0, 7); // YYYY-MM
+    months.set(monthKey, (months.get(monthKey) ?? false) || !!row.attended);
+  }
+
+  const orderedMonths = Array.from(months.keys()).sort().reverse();
+  let count = 0;
+  for (const key of orderedMonths) {
+    if (months.get(key)) break;
+    count++;
   }
   return count;
 }

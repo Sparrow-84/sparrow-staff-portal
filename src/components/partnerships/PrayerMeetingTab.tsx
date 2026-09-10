@@ -2,21 +2,42 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import {
-  consecutiveMisses,
+  consecutiveMissedMonths,
   fetchMeetingsWithAttendance,
   fetchPrayerVolunteers,
   logPrayerMeeting,
   syncPrayerVolunteersFromDirectory,
   updatePrayerVolunteerNotes,
+  updatePrayerVolunteerSnooze,
   type MeetingWithAttendance,
   type PrayerVolunteer,
 } from '@/lib/prayer';
 import { supabase } from '@/lib/supabase';
 
-const MISS_THRESHOLD = 4;
+// How many months after a snoozed volunteer's stated return date we wait,
+// with still no attendance, before prompting one more check-in.
+const SNOOZE_BUFFER_MONTHS = 2;
+
+const MISS_SCRIPTS: Record<2 | 3 | 4, (name: string) => string> = {
+  2: (name) =>
+    `Hey ${name}, we've missed you at prayer meeting the last couple months — just wanted to check in and see how you're doing!`,
+  3: (name) =>
+    `Hey ${name}, we've noticed you've been away from prayer meeting for a few months now — just checking in, are you still wanting to be part of the prayer volunteer team? No pressure either way, just want to make sure we're not missing something on our end.`,
+  4: (name) =>
+    `Hey ${name}, we so appreciate the heart and time you've given as a Sparrow Prayer Volunteer. Because of the sensitive information we share with our prayer team, that role comes with a monthly attendance commitment — and it looks like that's not something that fits your season right now, so we've moved you off the active roster. We'd still love for you to stay connected — feel free to stay subscribed (or subscribe) to The Sparrow Monthly for updates and prayer requests, and keep praying for us anytime. And if things change and you'd like to rejoin the prayer team down the road, just reach out to us at partnerships@sparrowinc.org — we'd love to have you back.`,
+};
+
+const SNOOZE_CHECK_SCRIPT = (name: string) =>
+  `Hey ${name}, checking in since it's been a little while — are you still wanting to stay part of the prayer volunteer team? No pressure either way, just want to make sure we're not missing something on our end.`;
 
 function todayISO(): string {
   return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+}
+
+function addMonthsISO(iso: string, months: number): string {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setMonth(d.getMonth() + months);
+  return d.toLocaleDateString('en-CA');
 }
 
 function shortDate(iso: string): string {
@@ -62,22 +83,50 @@ function LogMeetingPanel({
       const attendanceRows = volunteers.map((v) => ({ volunteer_id: v.id, attended: attended[v.id] ?? false }));
       await logPrayerMeeting(date, notes.trim() || null, profile.id, attendanceRows);
 
-      // Check for 4-consecutive-miss flags — emit a task to the partnerships owner if needed
-      const missed = volunteers.filter((v) => !attended[v.id]);
-      for (const v of missed) {
-        const streak = await consecutiveMisses(v.id);
-        if (streak >= MISS_THRESHOLD) {
-          // Emit a flag task via the spine system task function
-          const due = new Date();
-          due.setDate(due.getDate() + 3);
+      // Missed-month ladder — runs per volunteer off this meeting's attendance.
+      // See the instructions box at the top of the tab for the full policy.
+      for (const v of volunteers) {
+        const didAttend = attended[v.id] ?? false;
+
+        if (didAttend) {
+          // Attendance always wins — clears any snooze and closes any open check-in task.
+          if (v.snoozed_until) await updatePrayerVolunteerSnooze(v.id, null);
+          await supabase.rpc('resolve_system_task', { p_system: 'crm', p_ref: `prayer_miss:${v.id}` });
+          await supabase.rpc('resolve_system_task', { p_system: 'crm', p_ref: `prayer_snooze_check:${v.id}` });
+          continue;
+        }
+
+        if (v.snoozed_until) {
+          // Paused by staff — the automatic ladder below is fully suppressed until
+          // the buffer past their stated return date, at which point it's one
+          // single check-in, not a resumption of the normal 2/3/4 sequence.
+          if (date >= addMonthsISO(v.snoozed_until, SNOOZE_BUFFER_MONTHS)) {
+            await supabase.rpc('emit_system_task', {
+              p_system: 'crm',
+              p_ref: `prayer_snooze_check:${v.id}`,
+              p_assignee: profile.id,
+              p_title: `Prayer volunteer check-in — ${v.full_name} (snoozed, still no-show)`,
+              p_department: 'partnerships',
+              p_priority: 'p3',
+              p_due: todayISO(),
+              p_notes: SNOOZE_CHECK_SCRIPT(v.full_name),
+            });
+          }
+          continue;
+        }
+
+        const streak = await consecutiveMissedMonths(v.id);
+        if (streak >= 2) {
+          const rung = (streak >= 4 ? 4 : streak) as 2 | 3 | 4;
           await supabase.rpc('emit_system_task', {
             p_system: 'crm',
             p_ref: `prayer_miss:${v.id}`,
             p_assignee: profile.id,
-            p_title: `Prayer volunteer check-in — ${v.full_name} (${streak} meetings missed)`,
+            p_title: `Prayer volunteer check-in — ${v.full_name} (${streak} month${streak === 1 ? '' : 's'} missed)`,
             p_department: 'partnerships',
-            p_priority: 'p3',
-            p_due: due.toLocaleDateString('en-CA'),
+            p_priority: rung === 4 ? 'p2' : 'p3',
+            p_due: todayISO(),
+            p_notes: MISS_SCRIPTS[rung](v.full_name),
           });
         }
       }
@@ -166,6 +215,9 @@ export function PrayerMeetingTab() {
   const [loggingMeeting, setLoggingMeeting] = useState(false);
   const [editVolunteerId, setEditVolunteerId] = useState<string | null>(null);
   const [editNotes, setEditNotes] = useState('');
+  const [editSnoozeId, setEditSnoozeId] = useState<string | null>(null);
+  const [snoozeDate, setSnoozeDate] = useState('');
+  const [missStreaks, setMissStreaks] = useState<Record<string, number>>({});
   const [expandedMeeting, setExpandedMeeting] = useState<string | null>(null);
   const mounted = useRef(true);
 
@@ -182,6 +234,12 @@ export function PrayerMeetingTab() {
       setVolunteers(vols);
       setMeetings(mtgs);
       setNotReady(false);
+
+      // Miss-streak badges — purely informational, computed for whoever isn't snoozed.
+      const toCheck = vols.filter((v) => v.active && !v.snoozed_until);
+      const streaks = await Promise.all(toCheck.map((v) => consecutiveMissedMonths(v.id).catch(() => 0)));
+      if (!mounted.current) return;
+      setMissStreaks(Object.fromEntries(toCheck.map((v, i) => [v.id, streaks[i]])));
     } catch (e) {
       if (!mounted.current) return;
       const msg = e instanceof Error ? e.message : '';
@@ -203,6 +261,18 @@ export function PrayerMeetingTab() {
   async function saveVolunteerNotes(id: string) {
     await updatePrayerVolunteerNotes(id, editNotes.trim() || null);
     setEditVolunteerId(null);
+    void load();
+  }
+
+  async function saveSnooze(id: string) {
+    if (!snoozeDate) return;
+    await updatePrayerVolunteerSnooze(id, snoozeDate);
+    setEditSnoozeId(null);
+    void load();
+  }
+
+  async function clearSnooze(id: string) {
+    await updatePrayerVolunteerSnooze(id, null);
     void load();
   }
 
@@ -240,6 +310,52 @@ export function PrayerMeetingTab() {
       {/* ── Meeting log ── */}
       {section === 'meetings' && (
         <div className="space-y-4">
+          {/* How missed meetings are handled */}
+          <div className="rounded-xl border border-sparrow-gold/30 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-4 py-3 text-sm">
+            <p className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">How we handle missed meetings</p>
+            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              This runs automatically off the attendance log below — a task lands on Partnerships Home
+              with a ready-to-send message at each step. Everything here is{' '}
+              <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">strongly recommended, not required</span>
+              {' '}— use your judgment on any individual volunteer.
+            </p>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { n: 1, label: '1 month missed', detail: 'Nothing happens — completely normal.' },
+                { n: 2, label: '2 months missed', detail: 'Task + script: "we\'ve missed you."' },
+                { n: 3, label: '3 months missed', detail: 'Task + script: "still interested?"' },
+                { n: 4, label: '4 months missed', detail: 'Task + script suggesting removal from the active roster.' },
+              ].map((step) => (
+                <div key={step.n} className="rounded-lg border border-sparrow-gold/20 bg-white/60 dark:bg-black/20 px-2.5 py-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sparrow-green dark:bg-sparrow-dark-green text-[11px] font-semibold text-white">
+                      {step.n}
+                    </span>
+                    <span className="text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{step.label}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{step.detail}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 space-y-1.5 border-t border-sparrow-gold/30 pt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              <p>
+                <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">If someone reaches out</span> — anytime,
+                prompted or not — go to the Volunteers tab and set <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">"Snooze until."</span>{' '}
+                Pick the date they said they'd be back (any date is fine if it's open-ended). This pauses the steps above completely.
+              </p>
+              <p>
+                Two months after that date, if they still haven't shown up, you'll get one more task — a gentle "still interested?"
+                check. What happens after that is your call: snooze them again, or let it move toward removal.
+              </p>
+              <p>
+                <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Nothing here removes anyone automatically.</span>{' '}
+                Every step just hands you a task and a message — marking someone inactive in Directory is always something you decide and do yourself.
+              </p>
+            </div>
+          </div>
+
           {!loggingMeeting && (
             <button onClick={() => setLoggingMeeting(true)} className="btn-primary">
               + Log this week's meeting
@@ -340,12 +456,21 @@ export function PrayerMeetingTab() {
           <div className="space-y-2">
             {activeVolunteers.map((v) => (
               <div key={v.id} className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4">
-                <div>
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{v.full_name}</p>
-                  <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-                    {v.phone && <span>{v.phone}</span>}
-                    {v.email && <span>{v.email}</span>}
-                  </div>
+                  {v.snoozed_until ? (
+                    <span className="rounded-full bg-amber-50 dark:bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                      Snoozed until {shortDate(v.snoozed_until)}
+                    </span>
+                  ) : (missStreaks[v.id] ?? 0) > 0 ? (
+                    <span className="rounded-full bg-amber-50 dark:bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                      {missStreaks[v.id]} {missStreaks[v.id] === 1 ? 'month' : 'months'} missed
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                  {v.phone && <span>{v.phone}</span>}
+                  {v.email && <span>{v.email}</span>}
                 </div>
 
                 {/* Notes — inline edit */}
@@ -377,6 +502,41 @@ export function PrayerMeetingTab() {
                     </button>
                   </div>
                 )}
+
+                {/* Snooze — pause the missed-month ladder when someone's given a heads-up */}
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-3">
+                  {editSnoozeId === v.id ? (
+                    <>
+                      <input
+                        type="date"
+                        className="field-input mt-0 w-auto"
+                        value={snoozeDate}
+                        onChange={(e) => setSnoozeDate(e.target.value)}
+                      />
+                      <button onClick={() => void saveSnooze(v.id)} className="btn-primary py-1 text-xs">Save</button>
+                      <button onClick={() => setEditSnoozeId(null)} className="btn-secondary py-1 text-xs">Cancel</button>
+                    </>
+                  ) : v.snoozed_until ? (
+                    <>
+                      <button
+                        onClick={() => { setEditSnoozeId(v.id); setSnoozeDate(v.snoozed_until ?? todayISO()); }}
+                        className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline"
+                      >
+                        Change snooze date
+                      </button>
+                      <button onClick={() => void clearSnooze(v.id)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:underline">
+                        Clear snooze
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => { setEditSnoozeId(v.id); setSnoozeDate(todayISO()); }}
+                      className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline"
+                    >
+                      Snooze until…
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
