@@ -18,17 +18,17 @@ import { supabase } from '@/lib/supabase';
 // with still no attendance, before prompting one more check-in.
 const SNOOZE_BUFFER_MONTHS = 2;
 
-const MISS_SCRIPTS: Record<2 | 3 | 4, (name: string) => string> = {
-  2: (name) =>
-    `Hey ${name}, we've missed you at prayer meeting the last couple months — just wanted to check in and see how you're doing!`,
+const MISS_SCRIPTS: Record<2 | 3 | 4, (name: string, meetingDate: string) => string> = {
+  2: (name, meetingDate) =>
+    `Hey ${name}, we've missed you at prayer meeting the last couple months — just wanted to check in and see how you're doing! We'd love to see you at prayer in ${nextMonthName(meetingDate)}.`,
   3: (name) =>
-    `Hey ${name}, we've noticed you've been away from prayer meeting for a few months now — just checking in, are you still wanting to be part of the prayer volunteer team? No pressure either way, just want to make sure we're not missing something on our end.`,
+    `Hey ${name}, we've noticed you've been away from prayer meeting for a few months now — no worries at all, we just wanted to check in! If you're not able to make it this month but you'd still like to stay involved, just let us know. If we don't hear back or see you at any prayer meetings this month, we'll go ahead and move you off the active roster to help make sure we don't keep sending you check-ins if now just isn't the season for it. We so value your time and capacity.`,
   4: (name) =>
-    `Hey ${name}, we so appreciate the heart and time you've given as a Sparrow Prayer Volunteer. Because of the sensitive information we share with our prayer team, that role comes with a monthly attendance commitment — and it looks like that's not something that fits your season right now, so we've moved you off the active roster. We'd still love for you to stay connected — feel free to stay subscribed (or subscribe) to The Sparrow Monthly for updates and prayer requests, and keep praying for us anytime. And if things change and you'd like to rejoin the prayer team down the road, just reach out to us at partnerships@sparrowinc.org — we'd love to have you back.`,
+    `Hey ${name}, we so appreciate the heart and time you've given as a Sparrow Prayer Volunteer. Because of the sensitive information we share with our prayer team, that role comes with a monthly attendance commitment — and it looks like that's not something that fits your season right now, so we've moved you off the active roster. We'd still love for you to stay connected — feel free to stay subscribed (or subscribe) to The Sparrow Monthly at sparrowinc.org for updates and prayer requests, and keep praying for us anytime. And if things change and you'd like to rejoin the prayer team down the road, just reach out to us at partnerships@sparrowinc.org — we'd love to have you back.`,
 };
 
 const SNOOZE_CHECK_SCRIPT = (name: string) =>
-  `Hey ${name}, checking in since it's been a little while — are you still wanting to stay part of the prayer volunteer team? No pressure either way, just want to make sure we're not missing something on our end.`;
+  `Hey ${name}, just checking in since it's been a little while — no worries at all! If you're not able to make it this month but you'd still like to stay involved, just let us know. If we don't hear back or see you at any prayer meetings this month, we'll go ahead and move you off the active roster to help make sure we don't keep sending you check-ins if now just isn't the season for it. We so value your time and capacity.`;
 
 function todayISO(): string {
   return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
@@ -38,6 +38,12 @@ function addMonthsISO(iso: string, months: number): string {
   const d = new Date(`${iso}T12:00:00`);
   d.setMonth(d.getMonth() + months);
   return d.toLocaleDateString('en-CA');
+}
+
+function nextMonthName(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setMonth(d.getMonth() + 1);
+  return d.toLocaleDateString(undefined, { month: 'long' });
 }
 
 function shortDate(iso: string): string {
@@ -126,7 +132,7 @@ function LogMeetingPanel({
             p_department: 'partnerships',
             p_priority: rung === 4 ? 'p2' : 'p3',
             p_due: todayISO(),
-            p_notes: MISS_SCRIPTS[rung](v.full_name),
+            p_notes: MISS_SCRIPTS[rung](v.full_name, date),
           });
         }
       }
@@ -352,6 +358,14 @@ export function PrayerMeetingTab() {
               <p>
                 <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Nothing here removes anyone automatically.</span>{' '}
                 Every step just hands you a task and a message — marking someone inactive in Directory is always something you decide and do yourself.
+              </p>
+              <p>
+                <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">These scripts are for silence, not for someone you're already talking to.</span>{' '}
+                They're built for two situations: a true no-call-no-show (you haven't heard from them at all), or a volunteer who keeps
+                saying "yes, still interested" every time you check in but attendance never actually follows — at some point, continuing
+                to just wait isn't fair to either of you, and it's fine to let the roster move forward. If someone's working out real
+                logistics with you (like a specific date they'll be back), use Snooze instead and let that play out — these scripts
+                aren't for them.
               </p>
             </div>
           </div>
