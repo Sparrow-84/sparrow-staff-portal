@@ -13,7 +13,10 @@ import {
   fetchNeedsReviewDonations,
   resolveDonationAsNewPartner,
   resolveDonationLink,
+  fetchRecentUnsubscribes,
+  dismissUnsubscribe,
   type NeedsReviewDonation,
+  type RecentUnsubscribe,
 } from '@/lib/partnerships';
 import { fetchAllContacts, type PersonalContactWithOwner } from '@/lib/personalContacts';
 import { WidgetCard } from '@/components/home/widgets';
@@ -37,8 +40,24 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
   const [needsReview, setNeedsReview] = useState<NeedsReviewDonation[]>([]);
   const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
   const [newContacts, setNewContacts] = useState<PersonalContactWithOwner[]>([]);
+  const [unsubscribes, setUnsubscribes] = useState<RecentUnsubscribe[]>([]);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const loadUnsubscribes = useCallback(() => {
+    fetchRecentUnsubscribes().then(setUnsubscribes).catch(() => undefined);
+  }, []);
+
+  async function dismiss(partnerId: string) {
+    setDismissingId(partnerId);
+    try {
+      await dismissUnsubscribe(partnerId);
+      loadUnsubscribes();
+    } finally {
+      setDismissingId(null);
+    }
+  }
 
   const loadNeedsReview = useCallback(() => {
     fetchNeedsReviewDonations().then(setNeedsReview).catch(() => undefined);
@@ -47,12 +66,13 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([fetchHomeItems(), fetchNeedsReviewDonations(), fetchAllContacts()])
-      .then(([homeItems, review, contacts]) => {
+    Promise.all([fetchHomeItems(), fetchNeedsReviewDonations(), fetchAllContacts(), fetchRecentUnsubscribes()])
+      .then(([homeItems, review, contacts, recentUnsubs]) => {
         if (!cancelled) {
           setItems(homeItems);
           setNeedsReview(review);
           setNewContacts(contacts.filter((c) => !c.converted_to_partner_id));
+          setUnsubscribes(recentUnsubs);
         }
       })
       .catch((e) => {
@@ -184,6 +204,30 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
           </ul>
           <p className="mt-2 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
             Not a to-do — just everything logged in My Contacts that hasn't been added to the Directory yet.
+          </p>
+        </WidgetCard>
+      )}
+
+      {unsubscribes.length > 0 && (
+        <WidgetCard title={`📭 Recent unsubscribes (${unsubscribes.length})`}>
+          <ul className="space-y-2">
+            {unsubscribes.map((u) => (
+              <li key={u.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm">
+                <span className="min-w-0 truncate text-sparrow-ink dark:text-sparrow-dark-ink">
+                  <span className="font-medium">{u.name}</span> unsubscribed from The Sparrow Monthly
+                </span>
+                <button
+                  onClick={() => void dismiss(u.id)}
+                  disabled={dismissingId === u.id}
+                  className="shrink-0 rounded-lg px-2 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray transition hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink disabled:opacity-50"
+                >
+                  Dismiss
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+            Not a to-do — their "newsletter subscribed" checkbox already updated on its own. Just so you know.
           </p>
         </WidgetCard>
       )}

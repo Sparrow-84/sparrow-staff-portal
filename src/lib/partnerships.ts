@@ -400,6 +400,44 @@ export async function resolveDonationAsNewPartner(donationId: string): Promise<s
   return data as string;
 }
 
+export interface RecentUnsubscribe {
+  id: string;
+  name: string;
+  newsletter_unsubscribed_at: string;
+}
+
+/**
+ * Partners whose Brevo unsubscribe (synced automatically by the brevo-webhook Edge
+ * Function, migration 0179) hasn't yet been acknowledged on Partnerships Home. Not a
+ * to-do — mirrors "New contacts to review"'s tone exactly, just situational awareness.
+ * Degrades gracefully (returns []) if migration 0179 hasn't landed on a given environment
+ * yet, same convention used elsewhere for columns not yet migrated everywhere.
+ */
+export async function fetchRecentUnsubscribes(): Promise<RecentUnsubscribe[]> {
+  const { data, error } = await supabase
+    .from('partners')
+    .select('id, name, newsletter_unsubscribed_at, newsletter_unsubscribe_dismissed_at')
+    .eq('active', true)
+    .not('newsletter_unsubscribed_at', 'is', null)
+    .order('newsletter_unsubscribed_at', { ascending: false });
+  if (error) {
+    if (error.message.includes('does not exist') || error.message.includes('schema cache')) return [];
+    throw new Error(error.message);
+  }
+  return ((data ?? []) as (RecentUnsubscribe & { newsletter_unsubscribe_dismissed_at: string | null })[])
+    .filter((p) => !p.newsletter_unsubscribe_dismissed_at || p.newsletter_unsubscribe_dismissed_at < p.newsletter_unsubscribed_at)
+    .map(({ id, name, newsletter_unsubscribed_at }) => ({ id, name, newsletter_unsubscribed_at }));
+}
+
+/** Acknowledge one partner's unsubscribe FYI card — dismisses it until/unless they unsubscribe again later. */
+export async function dismissUnsubscribe(partnerId: string): Promise<void> {
+  const { error } = await supabase
+    .from('partners')
+    .update({ newsletter_unsubscribe_dismissed_at: new Date().toISOString() })
+    .eq('id', partnerId);
+  if (error) throw new Error(error.message);
+}
+
 /**
  * Merge a duplicate partner into another — moves donations + touchpoints, then
  * deletes the duplicate. Does not reconcile notes/tier/cadence; the caller's UI

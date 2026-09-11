@@ -97,6 +97,10 @@ export interface Partner {
   giving_method: string | null;
   newsletter_subscribed: boolean;
   first_gift_date: string | null;
+  // Brevo unsubscribe auto-sync (0179) — set by brevo-webhook, surfaced as a Partnerships
+  // Home FYI card until dismissed.
+  newsletter_unsubscribed_at: string | null;
+  newsletter_unsubscribe_dismissed_at: string | null;
   // community/church-only (0037)
   sparrow_provides: string | null;
   partner_provides: string | null;
