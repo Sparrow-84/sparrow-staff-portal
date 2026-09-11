@@ -132,12 +132,12 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
     updateMilestone(milestoneId, patch).catch(console.error);
   }
 
+  // Deliberately not a hardcoded cap (was fixed at 3) — the count of asks the org actually
+  // plans for a given year can change, and this badge is informational, not a warning system:
+  // we track asks to stay mindful of the relationship, not to enforce a strict limit.
   const asksSent = comms.filter((c) => c.is_financial_ask && c.status === 'sent').length;
-  const asksCounterColor =
-    asksSent === 0 ? 'text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-500/15'
-    : asksSent === 1 ? 'text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-green/10'
-    : asksSent === 2 ? 'text-amber-600 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/15'
-    : 'text-red-600 dark:text-red-300 bg-red-100 dark:bg-red-500/15';
+  const totalAsks = comms.filter((c) => c.is_financial_ask).length;
+  const asksCounterColor = 'text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-green/10';
 
   const todayISO = localDate();
   const leadTimeDays = setting?.lead_time_days ?? 14;
@@ -172,7 +172,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
         </div>
 
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${asksCounterColor}`}>
-          {asksSent} of 3 financial asks used
+          {asksSent} of {totalAsks} financial asks sent
         </span>
       </div>
 

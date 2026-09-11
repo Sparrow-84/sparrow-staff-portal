@@ -140,8 +140,8 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
                 body="Get the newsletter and event invites, but no donation asks or year-end giving appeals. Move their stage back to Active manually once they start giving again."
               />
               <Rule
-                title="3 financial asks per year — donors only"
-                body="April TSM (Easter), Giving Tuesday (November), December TSM (Christmas). All other communications are relational — no asks."
+                title="Financial asks are counted, not capped — donors only"
+                body="The Comms tab tracks how many financial asks go out each year (e.g. April TSM/Easter, Giving Tuesday, December TSM/Christmas) so we stay mindful of the relationship — it's not a hard limit, and the count can change year to year. Everything else is relational — no ask."
               />
             </div>
           </section>
