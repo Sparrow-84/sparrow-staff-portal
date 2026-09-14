@@ -133,7 +133,7 @@ const SNIPPETS: Snippet[] = [
   },
   {
     kind: 'phrase',
-    text: 'Our programs are designed to awaken life, not just stabilize crisis.',
+    text: 'Our programs are designed to awaken life, not just stabilize crises.',
   },
   {
     kind: 'verse',
