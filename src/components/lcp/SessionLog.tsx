@@ -23,7 +23,7 @@ import {
   updatePrepNotes,
 } from '@/lib/lcp';
 import { timeLabel } from '@/lib/lcp-format';
-import { computeCurriculumTrack } from '@/lib/curriculum-track';
+import { computeCurriculumTrack, computeNextSession, findSessionById } from '@/lib/curriculum-track';
 import { CurriculumTrackVertical } from './CurriculumTrack';
 import { MondaySessionPanel } from './MondaySessionPanel';
 import { SessionLogByBucket } from './SessionLogByBucket';
@@ -136,46 +136,76 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
       .finally(() => setMondayLoading(false));
   }, [entry, programSessionId]);
 
-  // Thursday Group's left pane shows the actual Teacher Guide for tonight's
-  // session — "whatever comes right after the last one filed," same rule
-  // SessionLogEntry uses to decide what it's about to file. Also creates (or
-  // finds) tonight's log row right away, so prep notes have somewhere to
-  // save before the session is actually filed.
+  // Thursday Group's left pane shows the actual Teacher Guide for whichever
+  // session this specific log is PINNED to (lcp_session_logs.session_id,
+  // migration 0180) -- not recomputed live from lcp_program_position every
+  // render. Also creates (or finds) tonight's log row right away, so prep
+  // notes have somewhere to save before the session is actually filed.
+  // findOrCreateThursdaySessionLog only uses computeNextSession's guess for
+  // a genuinely NEW row -- an existing row's own pinned session_id always
+  // wins, so re-running this effect (e.g. programSessionId changing while
+  // this screen is open) can never silently overwrite a correction.
   useEffect(() => {
     if (!entry || entry.sessionType !== 'thursday_group') return;
-    const allUnits = phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order);
-    const allSessions = allUnits.flatMap((u) => u.sessions).sort((a, b) => a.session_number - b.session_number);
-    const lastCompletedIndex = programSessionId != null ? allSessions.findIndex((s) => s.id === programSessionId) : -1;
-    const sessionToTeach = allSessions[lastCompletedIndex + 1] ?? null;
-    setThursdaySessionId(sessionToTeach?.id ?? null);
-    if (!sessionToTeach) {
-      setThursdayGuideContent(null);
-      setThursdaySessionLogId(null);
-      setThursdayPrepNotes('');
-      setThursdayCurriculumNotes('');
-      return;
-    }
+    let cancelled = false;
+    const defaultSession = computeNextSession(phases, programSessionId);
     setThursdayGuideLoading(true);
-    Promise.all([
-      fetchSessionResources(sessionToTeach.id),
-      fetchSessionCurriculumNotes(sessionToTeach.id),
-      findOrCreateThursdaySessionLog(entry.sessionDate, entry.eventId, currentUserId),
-    ])
-      .then(([resources, curriculumNotes, logId]) => {
+    findOrCreateThursdaySessionLog(entry.sessionDate, entry.eventId, currentUserId, defaultSession?.id ?? null)
+      .then(({ id: logId, session_id: pinnedId }) => {
+        if (cancelled) return;
+        setThursdaySessionLogId(logId);
+        const pinned = findSessionById(phases, pinnedId) ?? defaultSession;
+        setThursdaySessionId(pinned?.id ?? null);
+        if (!pinned) {
+          setThursdayGuideContent(null);
+          setThursdayPrepNotes('');
+          setThursdayCurriculumNotes('');
+          return;
+        }
+        return Promise.all([
+          fetchSessionResources(pinned.id),
+          fetchSessionCurriculumNotes(pinned.id),
+          fetchSessionLogPrepNotes(logId),
+        ]).then(([resources, curriculumNotes, prepNotes]) => {
+          if (cancelled) return;
+          const guide = resources.find((r) => r.kind === 'teacher_guide') ?? null;
+          setThursdayGuideContent({
+            sessionNumber: pinned.session_number,
+            sessionTitle: pinned.title,
+            teacherGuide: guide?.content ?? null,
+            teacherGuideDriveUrl: guide?.drive_url ?? null,
+          });
+          setThursdayCurriculumNotes(curriculumNotes.notes ?? '');
+          setThursdayPrepNotes(prepNotes ?? '');
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setThursdayGuideLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [entry, phases, programSessionId, currentUserId]);
+
+  // Fired when SessionLogEntry's "Fix it" picker relabels tonight's session
+  // -- refreshes the Teacher Guide / resources pane to match, without
+  // re-running the find-or-create above (the row already exists).
+  function handleSessionCorrected(newSessionId: number) {
+    const pinned = findSessionById(phases, newSessionId);
+    setThursdaySessionId(pinned?.id ?? null);
+    if (!pinned) return;
+    setThursdayGuideLoading(true);
+    Promise.all([fetchSessionResources(pinned.id), fetchSessionCurriculumNotes(pinned.id)])
+      .then(([resources, curriculumNotes]) => {
         const guide = resources.find((r) => r.kind === 'teacher_guide') ?? null;
         setThursdayGuideContent({
-          sessionNumber: sessionToTeach.session_number,
-          sessionTitle: sessionToTeach.title,
+          sessionNumber: pinned.session_number,
+          sessionTitle: pinned.title,
           teacherGuide: guide?.content ?? null,
           teacherGuideDriveUrl: guide?.drive_url ?? null,
         });
         setThursdayCurriculumNotes(curriculumNotes.notes ?? '');
-        setThursdaySessionLogId(logId);
-        return fetchSessionLogPrepNotes(logId);
       })
-      .then((prepNotes) => setThursdayPrepNotes(prepNotes ?? ''))
       .finally(() => setThursdayGuideLoading(false));
-  }, [entry, phases, programSessionId, currentUserId]);
+  }
 
   function handleFiled() {
     setEntry(null);
@@ -229,6 +259,11 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         thursdayGuideContent={thursdayGuideContent}
         thursdayGuideLoading={thursdayGuideLoading}
         thursdayNotes={thursdayNotes}
+        phases={phases}
+        currentUnitId={programUnitId}
+        currentSessionId={programSessionId}
+        currentUserId={currentUserId}
+        onProgramPositionChanged={onChanged}
       >
         {entry.sessionType === 'monday_mentoring' ? (
           <MondaySessionPanel
@@ -250,7 +285,8 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
             currentUserName={currentUserName}
             phases={phases}
             programUnitId={programUnitId}
-            programSessionId={programSessionId}
+            pinnedSessionId={entry.sessionType === 'thursday_group' ? thursdaySessionId : null}
+            onSessionCorrected={handleSessionCorrected}
             onBack={() => setEntry(null)}
             onFiled={handleFiled}
             onOpenFamily={onOpenFamily}

@@ -1,4 +1,4 @@
-import type { LcpPhaseWithUnits } from './lcp-types';
+import type { LcpPhaseWithUnits, LcpSessionSlim } from './lcp-types';
 import { PHASE_COLORS } from '@/components/lcp/PhaseProgressBar';
 
 export type TrackSessionState = 'done' | 'current' | 'upcoming';
@@ -87,6 +87,38 @@ export function computeCurriculumTrack(
     },
     upcomingUnits,
   };
+}
+
+/** All sessions program-wide, ordered by session_number -- the shared base
+ *  computeNextSession and findSessionById both look up against. */
+function allSessionsOrdered(phases: LcpPhaseWithUnits[]): LcpSessionSlim[] {
+  return [...phases]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .flatMap((p) => p.units)
+    .flatMap((u) => u.sessions)
+    .sort((a, b) => a.session_number - b.session_number);
+}
+
+/** "Whatever comes right after the current program position" -- the
+ *  starting guess for a brand-new Thursday Group log, before it gets
+ *  pinned to the row (see lcp_session_logs.session_id, migration 0180).
+ *  Once a log exists, its own pinned session_id is the source of truth,
+ *  not a fresh call to this function -- this is only for stamping a NEW
+ *  row's initial value. */
+export function computeNextSession(
+  phases: LcpPhaseWithUnits[],
+  programSessionId: number | null,
+): LcpSessionSlim | null {
+  const sessions = allSessionsOrdered(phases);
+  const lastCompletedIndex = programSessionId != null ? sessions.findIndex((s) => s.id === programSessionId) : -1;
+  return sessions[lastCompletedIndex + 1] ?? null;
+}
+
+/** Looks up a specific session by id (e.g. a Thursday log's pinned
+ *  session_id) -- same shape as computeNextSession. */
+export function findSessionById(phases: LcpPhaseWithUnits[], sessionId: number | null): LcpSessionSlim | null {
+  if (sessionId == null) return null;
+  return allSessionsOrdered(phases).find((s) => s.id === sessionId) ?? null;
 }
 
 /** A lighter tint of a unit's own color, for "not reached yet" sessions

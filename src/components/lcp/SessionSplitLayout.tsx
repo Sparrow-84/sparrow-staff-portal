@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { MONDAY_GUIDE_INSTRUCTIONS, type SessionLogType } from '@/lib/lcp-types';
+import { MONDAY_GUIDE_INSTRUCTIONS, type LcpPhaseWithUnits, type SessionLogType } from '@/lib/lcp-types';
+import { advanceAllFamiliesToSession, advanceProgramPosition } from '@/lib/lcp';
 import { RichTextView } from './RichText';
 
 function formatDateHeader(iso: string) {
@@ -45,6 +46,11 @@ export function SessionSplitLayout({
   thursdayGuideContent,
   thursdayGuideLoading,
   thursdayNotes,
+  phases,
+  currentUnitId,
+  currentSessionId,
+  currentUserId,
+  onProgramPositionChanged,
   children,
 }: {
   sessionLabel: string;
@@ -55,6 +61,18 @@ export function SessionSplitLayout({
   thursdayGuideContent?: ThursdayGuideContent | null;
   thursdayGuideLoading?: boolean;
   thursdayNotes?: ThursdayNotes | null;
+  // Monday only: lets "Pick a different room" correct lcp_program_position
+  // directly (same effect as the Progress tab's "Set position manually"),
+  // for when Monday Mentoring is showing a stale session in the moment,
+  // rather than sending Shelly off to a different screen to fix it.
+  // currentUnitId/currentSessionId are the live lcp_program_position values
+  // (same ones the parent already has), used only to seed the picker's
+  // starting selection -- not string-matched against mondayContent.
+  phases?: LcpPhaseWithUnits[];
+  currentUnitId?: number | null;
+  currentSessionId?: number | null;
+  currentUserId?: string;
+  onProgramPositionChanged?: () => void;
   children: ReactNode;
 }) {
   const [notesOpen, setNotesOpen] = useState(true);
@@ -68,6 +86,44 @@ export function SessionSplitLayout({
   const [justSaved, setJustSaved] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
+
+  // ── Monday: "Pick a different room" quick-fix ──────────────────────
+  const allUnits = useMemo(
+    () => (phases ?? []).flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order),
+    [phases],
+  );
+  const [pickingRoom, setPickingRoom] = useState(false);
+  const [roomUnitId, setRoomUnitId] = useState<number | null>(null);
+  const [roomSessionId, setRoomSessionId] = useState<number | null>(null);
+  const [savingRoom, setSavingRoom] = useState(false);
+  const [roomErr, setRoomErr] = useState<string | null>(null);
+
+  function openRoomPicker() {
+    const currentUnit = allUnits.find((u) => u.id === currentUnitId) ?? allUnits[0] ?? null;
+    setRoomUnitId(currentUnit?.id ?? null);
+    setRoomSessionId(currentUnit?.sessions.find((s) => s.id === currentSessionId)?.id ?? currentUnit?.sessions[0]?.id ?? null);
+    setRoomErr(null);
+    setPickingRoom(true);
+  }
+
+  async function saveRoomPick() {
+    if (!currentUserId || roomSessionId == null || roomUnitId == null) return;
+    setSavingRoom(true);
+    setRoomErr(null);
+    try {
+      const unit = allUnits.find((u) => u.id === roomUnitId);
+      const session = unit?.sessions.find((s) => s.id === roomSessionId);
+      if (!unit || !session) throw new Error('Pick a session first.');
+      await advanceProgramPosition(session.id, unit.id, currentUserId);
+      await advanceAllFamiliesToSession(session.session_number);
+      onProgramPositionChanged?.();
+      setPickingRoom(false);
+    } catch (e) {
+      setRoomErr(e instanceof Error ? e.message : 'Could not update the position.');
+    } finally {
+      setSavingRoom(false);
+    }
+  }
 
   useEffect(() => { localStorage.setItem('lcp-session-text-scale', textScale); }, [textScale]);
   useEffect(() => { setPrepDraft(thursdayNotes?.prepNotes ?? ''); }, [thursdayNotes?.prepNotes]);
@@ -181,10 +237,65 @@ export function SessionSplitLayout({
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-sparrow-gold">
                         {mondayContent.phaseName} · {mondayContent.unitName}
                       </p>
-                      <p className="mb-3 text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green">
+                      <p className="text-sm font-semibold text-sparrow-green dark:text-sparrow-dark-green">
                         Session {mondayContent.sessionNumber} · {mondayContent.sessionTitle}
                       </p>
-                      <div className="mb-4">
+
+                      {currentUserId && (!pickingRoom ? (
+                        <button
+                          onClick={openRoomPicker}
+                          className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-sparrow-rule dark:border-sparrow-dark-border px-2.5 py-0.5 text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+                        >
+                          Pick a different room →
+                        </button>
+                      ) : (
+                        <div className="mt-2 mb-1 rounded-xl border border-sparrow-green/25 bg-sparrow-sage/30 dark:bg-sparrow-green/15 p-3">
+                          <p className="mb-2 text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">We're actually on:</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <select
+                              value={roomUnitId ?? ''}
+                              onChange={(e) => {
+                                const unitId = Number(e.target.value);
+                                setRoomUnitId(unitId);
+                                setRoomSessionId(allUnits.find((u) => u.id === unitId)?.sessions[0]?.id ?? null);
+                              }}
+                              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-xs text-sparrow-ink dark:text-sparrow-dark-ink"
+                            >
+                              {allUnits.map((u) => (
+                                <option key={u.id} value={u.id}>{u.name}</option>
+                              ))}
+                            </select>
+                            <select
+                              value={roomSessionId ?? ''}
+                              onChange={(e) => setRoomSessionId(Number(e.target.value))}
+                              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-xs text-sparrow-ink dark:text-sparrow-dark-ink"
+                            >
+                              {allUnits
+                                .find((u) => u.id === roomUnitId)
+                                ?.sessions.map((s, i, arr) => (
+                                  <option key={s.id} value={s.id}>Session {i + 1} of {arr.length}: {s.title}</option>
+                                ))}
+                            </select>
+                            <button
+                              disabled={savingRoom || roomSessionId == null}
+                              onClick={saveRoomPick}
+                              className="btn-primary px-3 py-1 text-xs"
+                            >
+                              {savingRoom ? 'Updating…' : 'Update'}
+                            </button>
+                            <button
+                              disabled={savingRoom}
+                              onClick={() => setPickingRoom(false)}
+                              className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                          {roomErr && <p className="mt-2 text-xs text-priority-p1">{roomErr}</p>}
+                        </div>
+                      ))}
+
+                      <div className="mb-4 mt-4">
                         <p className="session-content-heading">Mentor Brief</p>
                         <RichTextView html={mondayContent.brief} empty="Not filled in yet — add it in Curriculum Admin." />
                       </div>

@@ -273,6 +273,11 @@ export interface SessionLog {
   event_id: string | null;
   group_note: string | null;
   prep_notes: string | null;
+  // Which curriculum session this Thursday Group log is actually about --
+  // pinned at creation, editable afterward, independent of wherever
+  // lcp_program_position currently points. Null for Monday/ad-hoc logs and
+  // for historical Thursday logs from before this was tracked.
+  session_id: number | null;
   filed_at: string | null;
   created_by: string | null;
   created_by_name: string | null;

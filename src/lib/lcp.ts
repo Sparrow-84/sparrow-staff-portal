@@ -882,7 +882,7 @@ export async function fetchRecentSessionLogs(weeksBack = 8): Promise<SessionLog[
   const { data, error } = await supabase
     .from('lcp_session_logs')
     .select(`
-      id, session_date, session_type, event_id, group_note, prep_notes, filed_at, created_by, created_at,
+      id, session_date, session_type, event_id, group_note, prep_notes, session_id, filed_at, created_by, created_at,
       created_by_profile:profiles!lcp_session_logs_created_by_fkey(full_name),
       attendance:lcp_session_attendance(id, session_log_id, family_id, status, voucher_awarded, marked_by, marked_at)
     `)
@@ -918,6 +918,7 @@ export async function createSessionLog(input: {
   group_note: string | null;
   created_by: string;
   filed_at: string | null;
+  session_id?: number | null;
 }): Promise<string> {
   const { data, error } = await supabase
     .from('lcp_session_logs')
@@ -963,28 +964,48 @@ export async function findOrCreateMondaySessionLog(
 // before the session actually happens. filed_at stays null until fileSession()
 // explicitly finalizes it; that's what tells a draft apart from a filed log
 // now that existence alone no longer means "filed" for this type.
+//
+// defaultSessionId only applies to a brand-new row -- it's the caller's best
+// guess ("whatever comes after the current program position") at the moment
+// of creation, per computeNextSession. An EXISTING row's own session_id
+// (possibly since corrected via updateSessionLogSessionId) always wins --
+// that's the whole point of pinning it (see migration 0180): re-opening a
+// draft must never silently recompute a fresh guess and overwrite what's
+// already pinned.
 export async function findOrCreateThursdaySessionLog(
   sessionDate: string,
   eventId: string | null,
   createdBy: string,
-): Promise<string> {
+  defaultSessionId: number | null,
+): Promise<{ id: string; session_id: number | null }> {
   const { data: existing, error: findErr } = await supabase
     .from('lcp_session_logs')
-    .select('id')
+    .select('id, session_id')
     .eq('session_date', sessionDate)
     .eq('session_type', 'thursday_group')
     .maybeSingle();
   if (findErr) throw new Error(findErr.message);
-  if (existing) return (existing as { id: string }).id;
+  if (existing) return existing as { id: string; session_id: number | null };
 
-  return createSessionLog({
+  const id = await createSessionLog({
     session_date: sessionDate,
     session_type: 'thursday_group',
     event_id: eventId,
     group_note: null,
     created_by: createdBy,
     filed_at: null,
+    session_id: defaultSessionId,
   });
+  return { id, session_id: defaultSessionId };
+}
+
+/** The "Fix it" correction -- relabels which curriculum session tonight's
+ *  Thursday log is actually about. Independent of lcp_program_position;
+ *  only affects this one log row (and, if "Session complete" is later
+ *  clicked, which session filing it advances to). */
+export async function updateSessionLogSessionId(sessionLogId: string, sessionId: number): Promise<void> {
+  const { error } = await supabase.from('lcp_session_logs').update({ session_id: sessionId }).eq('id', sessionLogId);
+  if (error) throw new Error(error.message);
 }
 
 export async function updatePrepNotes(sessionLogId: string, prepNotes: string | null): Promise<void> {

@@ -32,12 +32,13 @@ import {
   markGoalMet,
   setHomeworkStatus,
   updateSessionLog,
+  updateSessionLogSessionId,
   upsertFamilySessionNote,
   upsertSessionAttendance,
 } from '@/lib/lcp';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
-import { computeCurriculumTrack } from '@/lib/curriculum-track';
+import { computeCurriculumTrack, findSessionById } from '@/lib/curriculum-track';
 import { CurriculumTrackHorizontal } from './CurriculumTrack';
 import { RichTextField } from './RichText';
 
@@ -77,7 +78,16 @@ interface Props {
   currentUserName: string;
   phases: LcpPhaseWithUnits[];
   programUnitId: number | null;
-  programSessionId: number | null;
+  // Thursday only: which curriculum session this specific log is pinned to
+  // (lcp_session_logs.session_id, migration 0180) -- the source of truth for
+  // "tonight's session," independent of wherever lcp_program_position
+  // currently sits. Null only while the parent's find-or-create call is
+  // still in flight, or for non-Thursday session types.
+  pinnedSessionId: number | null;
+  // Thursday only: called after the "Fix it" picker saves a correction, so
+  // the parent (which owns the Teacher Guide / resources pane) can refresh
+  // to match instead of this component silently diverging from it.
+  onSessionCorrected: (newSessionId: number) => void;
   onBack: () => void;
   onFiled: () => void;
   onOpenFamily: (familyId: string) => void;
@@ -103,28 +113,56 @@ export function SessionLogEntry({
   currentUserName,
   phases,
   programUnitId,
-  programSessionId,
+  pinnedSessionId,
+  onSessionCorrected,
   onBack,
   onFiled,
   onOpenFamily,
 }: Props) {
   // ── curriculum advance (thursday only) ────────────────────────────
-  // The group moves together, so "the session to teach tonight" is simply
-  // whatever comes right after the last one filed (programSessionId). Filing
-  // tonight's session advances the pointer to it — that same pointer is what
-  // Monday Mentoring reads afterward as "the session she recently attended."
+  // "Tonight's session" is whatever this log's own session_id is pinned to
+  // (set when the draft was created, correctable via "Fix it" below) — NOT
+  // recomputed live from lcp_program_position. Filing + "Session complete"
+  // advances the pointer to THIS pinned session, which is what keeps Monday
+  // Mentoring's "session she recently attended" correct even if the pointer
+  // drifted for some other reason while this draft sat open. See migration
+  // 0180.
   const allUnits = useMemo(
     () => phases.flatMap((p) => p.units).sort((a, b) => a.sort_order - b.sort_order),
     [phases],
   );
-  const allSessions = useMemo(
-    () => allUnits.flatMap((u) => u.sessions).sort((a, b) => a.session_number - b.session_number),
-    [allUnits],
-  );
-  const lastCompletedIndex = programSessionId != null ? allSessions.findIndex((s) => s.id === programSessionId) : -1;
-  const sessionToTeach = allSessions[lastCompletedIndex + 1] ?? null;
+  const sessionToTeach = useMemo(() => findSessionById(phases, pinnedSessionId), [phases, pinnedSessionId]);
   const willCrossUnit = programUnitId != null && sessionToTeach != null && sessionToTeach.unit_id !== programUnitId;
   const nextUnit = willCrossUnit ? allUnits.find((u) => u.id === sessionToTeach!.unit_id) ?? null : null;
+
+  // ── "Fix it" — relabel which session tonight's log is actually about ──
+  const [editingSession, setEditingSession] = useState(false);
+  const [pickerUnitId, setPickerUnitId] = useState<number | null>(null);
+  const [pickerSessionId, setPickerSessionId] = useState<number | null>(null);
+  const [savingSession, setSavingSession] = useState(false);
+  const [sessionCorrectionErr, setSessionCorrectionErr] = useState<string | null>(null);
+
+  function openSessionEditor() {
+    setPickerUnitId(sessionToTeach?.unit_id ?? allUnits[0]?.id ?? null);
+    setPickerSessionId(sessionToTeach?.id ?? null);
+    setSessionCorrectionErr(null);
+    setEditingSession(true);
+  }
+
+  async function saveSessionCorrection() {
+    if (!sessionLogId || pickerSessionId == null) return;
+    setSavingSession(true);
+    setSessionCorrectionErr(null);
+    try {
+      await updateSessionLogSessionId(sessionLogId, pickerSessionId);
+      onSessionCorrected(pickerSessionId);
+      setEditingSession(false);
+    } catch (e) {
+      setSessionCorrectionErr(e instanceof Error ? e.message : 'Could not update the session.');
+    } finally {
+      setSavingSession(false);
+    }
+  }
 
   const [filed, setFiled] = useState(false);
   const [advancing, setAdvancing] = useState(false);
@@ -445,7 +483,7 @@ export function SessionLogEntry({
   const showVouchers = !isAdHoc;
 
   if (filed && sessionToTeach) {
-    // programSessionId (the prop) is still last week's position here -- the
+    // lcp_program_position itself is still last week's position here -- the
     // real advance only happens if "Session complete" below is clicked.
     // Tonight's session was just filed though, so treat it as current for
     // this FYI screen: here's what you just covered, here's what's next.
@@ -617,10 +655,22 @@ export function SessionLogEntry({
         <section className="rounded-2xl border border-sparrow-green/30 bg-sparrow-sage/20 dark:bg-sparrow-green/15 p-4 shadow-card">
           {sessionToTeach ? (
             <>
-              <p className="field-label">Tonight</p>
-              <p className="mt-1 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
-                Session {sessionToTeach.session_number} · {sessionToTeach.title}
-              </p>
+              <div className="flex items-baseline justify-between gap-3">
+                <div>
+                  <p className="field-label">Tonight</p>
+                  <p className="mt-1 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
+                    Session {sessionToTeach.session_number} · {sessionToTeach.title}
+                  </p>
+                </div>
+                {!editingSession && (
+                  <button
+                    onClick={openSessionEditor}
+                    className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+                  >
+                    Not this session? Fix it
+                  </button>
+                )}
+              </div>
 
               {/* Quick access to tonight's materials — Teacher Guide itself is on the left */}
               <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -649,6 +699,57 @@ export function SessionLogEntry({
                   <span className="rounded-lg px-3 py-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Handout not added</span>
                 )}
               </div>
+
+              {editingSession && (
+                <div className="mt-3 space-y-2 border-t border-sparrow-green/20 pt-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={pickerUnitId ?? ''}
+                      onChange={(e) => {
+                        const unitId = Number(e.target.value);
+                        setPickerUnitId(unitId);
+                        setPickerSessionId(allUnits.find((u) => u.id === unitId)?.sessions[0]?.id ?? null);
+                      }}
+                      className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2.5 py-1.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink"
+                    >
+                      {allUnits.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={pickerSessionId ?? ''}
+                      onChange={(e) => setPickerSessionId(Number(e.target.value))}
+                      className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2.5 py-1.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink"
+                    >
+                      {allUnits
+                        .find((u) => u.id === pickerUnitId)
+                        ?.sessions.map((s, i, arr) => (
+                          <option key={s.id} value={s.id}>Session {i + 1} of {arr.length}: {s.title}</option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      disabled={savingSession || pickerSessionId == null}
+                      onClick={saveSessionCorrection}
+                      className="btn-primary px-3 py-1.5 text-xs"
+                    >
+                      {savingSession ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      disabled={savingSession}
+                      onClick={() => setEditingSession(false)}
+                      className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {sessionCorrectionErr && <p className="text-xs text-priority-p1">{sessionCorrectionErr}</p>}
+                  <p className="text-xs italic text-sparrow-gray dark:text-sparrow-dark-gray">
+                    This only relabels tonight's log — it won't change what Monday Mentoring shows until this session is filed and "Session complete" is clicked, or you fix it directly from Monday's screen.
+                  </p>
+                </div>
+              )}
             </>
           ) : (
             <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
