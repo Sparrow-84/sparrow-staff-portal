@@ -76,6 +76,14 @@ export function StaffThread({
   // Reactions
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
   const [emojiPickerId, setEmojiPickerId] = useState<string | null>(null);
+  const [viewImage, setViewImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!viewImage) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setViewImage(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [viewImage]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -268,7 +276,14 @@ export function StaffThread({
 
                         {/* Content */}
                         {m.image_url ? (
-                          <img src={m.image_url} alt="" loading="lazy" className="max-h-64 w-auto max-w-full rounded-lg" />
+                          <button
+                            type="button"
+                            onClick={() => setViewImage(m.image_url)}
+                            className="block cursor-zoom-in"
+                            aria-label="View photo full size"
+                          >
+                            <img src={m.image_url} alt="" loading="lazy" className="max-h-64 w-auto max-w-full rounded-lg" />
+                          </button>
                         ) : m.voice_url ? (
                           <VoiceMessagePlayer url={m.voice_url} duration={m.voice_duration ?? 0} mine={fromStaff} />
                         ) : (
@@ -422,6 +437,30 @@ export function StaffThread({
               Send
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Image lightbox */}
+      {viewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setViewImage(null)}
+        >
+          <button
+            onClick={() => setViewImage(null)}
+            aria-label="Close"
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+          <img
+            src={viewImage}
+            alt=""
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-full max-w-full rounded-lg object-contain"
+          />
         </div>
       )}
     </div>
