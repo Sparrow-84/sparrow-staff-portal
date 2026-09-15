@@ -27,6 +27,7 @@ import {
   fetchGoalsForFamily,
   fetchHomeworkForFamily,
   fetchSessionResources,
+  fetchNotesForSessionLog,
   finalizeThursdaySessionLog,
   markGoalMet,
   setHomeworkStatus,
@@ -69,6 +70,7 @@ interface Props {
   eventId: string | null;
   sessionLogId: string | null;
   label: string;
+  initialGroupNote?: string | null;
   families: Family[];
   homeworkByFamily: Map<string, Homework[]>;
   currentUserId: string;
@@ -94,6 +96,7 @@ export function SessionLogEntry({
   eventId,
   sessionLogId,
   label,
+  initialGroupNote,
   families,
   homeworkByFamily,
   currentUserId,
@@ -174,7 +177,34 @@ export function SessionLogEntry({
       return {};
     }
   });
-  const [groupNote, setGroupNote] = useState('');
+  const [groupNote, setGroupNote] = useState(initialGroupNote ?? '');
+
+  // Reopening an unfiled Thursday draft: the group note itself arrives
+  // synchronously via initialGroupNote (already in the recent-logs list the
+  // parent fetched), but each family's private note lives in lcp_staff_notes
+  // and has to be fetched separately by sessionLogId, which only resolves
+  // after this component's first render. RichTextField only reads its
+  // initialValue on mount (see RichText.tsx), so familyNotes arriving late
+  // wouldn't show up without forcing FamilySection to remount once hydrated
+  // -- see notesHydrated used in the FamilySection key below.
+  const [notesHydrated, setNotesHydrated] = useState(sessionType !== 'thursday_group');
+  useEffect(() => {
+    if (sessionType !== 'thursday_group' || !sessionLogId) return;
+    let cancelled = false;
+    fetchNotesForSessionLog(sessionLogId)
+      .then((notes) => {
+        if (cancelled) return;
+        const existing: Record<string, string> = {};
+        for (const n of notes) {
+          if (n.bucket == null) existing[n.family_id] = n.body;
+        }
+        setFamilyNotes((prev) => ({ ...existing, ...prev }));
+      })
+      .finally(() => {
+        if (!cancelled) setNotesHydrated(true);
+      });
+    return () => { cancelled = true; };
+  }, [sessionType, sessionLogId]);
 
   // Thursday/Monday: real DB row exists from the moment this screen opened,
   // so autosave writes there directly. Ad-hoc: no row yet until filed, so
@@ -646,7 +676,7 @@ export function SessionLogEntry({
       {/* Per-family sections */}
       {activeFamilies.map((f) => (
         <FamilySection
-          key={f.id}
+          key={`${f.id}:${notesHydrated ? 'loaded' : 'loading'}`}
           family={f}
           sessionType={sessionType}
           note={familyNotes[f.id] ?? ''}

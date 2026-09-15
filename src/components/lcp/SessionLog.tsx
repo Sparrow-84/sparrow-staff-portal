@@ -52,6 +52,11 @@ type EntryConfig = {
   sessionDate: string;
   eventId: string | null;
   label: string;
+  // Thursday Group's group-session-note autosaves as soon as it's typed (see
+  // SessionLogEntry), so reopening an unfiled draft must carry whatever was
+  // already saved back in -- otherwise the editor mounts blank and looks like
+  // the note was lost, even though it's sitting in the DB the whole time.
+  initialGroupNote?: string | null;
 };
 
 function todayISO() {
@@ -192,6 +197,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         sessionDate: log.session_date,
         eventId: log.event_id,
         label: SESSION_LOG_LABEL[log.session_type],
+        initialGroupNote: log.group_note,
       });
     }
   }
