@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { Message, MessageReaction } from '@/lib/lcp-types';
 import { dayLabel, timeLabel } from '@/lib/lcp-format';
 import {
@@ -441,9 +442,9 @@ export function StaffThread({
       )}
 
       {/* Image lightbox */}
-      {viewImage && (
+      {viewImage && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-sparrow-ink/90 p-4 cursor-zoom-out"
           onClick={() => setViewImage(null)}
         >
           <button
@@ -459,9 +460,10 @@ export function StaffThread({
             src={viewImage}
             alt=""
             onClick={(e) => e.stopPropagation()}
-            className="max-h-full max-w-full rounded-lg object-contain"
+            className="max-h-full max-w-full rounded-lg object-contain shadow-xl"
           />
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
