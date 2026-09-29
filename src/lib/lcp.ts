@@ -879,21 +879,34 @@ export async function setBucketStatus(
 export async function fetchRecentSessionLogs(weeksBack = 8): Promise<SessionLog[]> {
   const since = new Date();
   since.setDate(since.getDate() - weeksBack * 7);
-  const { data, error } = await supabase
-    .from('lcp_session_logs')
-    .select(`
-      id, session_date, session_type, event_id, group_note, prep_notes, session_id, filed_at, created_by, created_at,
+  const baseSelect = `
+      id, session_date, session_type, event_id, group_note, prep_notes, filed_at, created_by, created_at,
       created_by_profile:profiles!lcp_session_logs_created_by_fkey(full_name),
       attendance:lcp_session_attendance(id, session_log_id, family_id, status, voucher_awarded, marked_by, marked_at)
-    `)
+    `;
+  let data: unknown[] | null;
+  let error: { code?: string; message: string } | null;
+  ({ data, error } = await supabase
+    .from('lcp_session_logs')
+    .select(`${baseSelect}, session_id`)
     .gte('session_date', localDateOf(since))
     .order('session_date', { ascending: false })
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }));
+  if (error?.code === '42703') {
+    // migration 0180 (session_id) not yet run -- degrade instead of taking the whole room down
+    ({ data, error } = await supabase
+      .from('lcp_session_logs')
+      .select(baseSelect)
+      .gte('session_date', localDateOf(since))
+      .order('session_date', { ascending: false })
+      .order('created_at', { ascending: false }));
+  }
   if (error) throw new Error(error.message);
   return ((data ?? []) as unknown[]).map((r) => {
     const row = r as Record<string, unknown>;
     return {
       ...row,
+      session_id: (row.session_id as number | null | undefined) ?? null,
       created_by_name: (row.created_by_profile as { full_name: string } | null)?.full_name ?? null,
     } as SessionLog;
   });
