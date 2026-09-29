@@ -128,7 +128,14 @@ export function PartnershipsRoom() {
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [addPrefill, setAddPrefill] = useState<{ name: string; organization: string | null } | null>(null);
+  const [addPrefill, setAddPrefill] = useState<{
+    name: string;
+    organization: string | null;
+    role: string | null;
+    phone: string | null;
+    email: string | null;
+    website: string | null;
+  } | null>(null);
   const [batchOpen, setBatchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -311,8 +318,15 @@ export function PartnershipsRoom() {
           {activeTab === 'social' && <PartnershipSocialTab profiles={profiles} />}
           {activeTab === 'events' && (
             <PartnershipEventsTab
-              onBecomePartner={(name, organization) => {
-                setAddPrefill({ name, organization });
+              onBecomePartner={(conn) => {
+                setAddPrefill({
+                  name: conn.name,
+                  organization: conn.organization,
+                  role: conn.role,
+                  phone: conn.phone,
+                  email: conn.email,
+                  website: conn.website,
+                });
                 setAddOpen(true);
               }}
             />
@@ -471,7 +485,16 @@ export function PartnershipsRoom() {
         onInterestsCreated={load}
         initialValues={
           addPrefill
-            ? { name: addPrefill.name, phone: '', email: '', notes: null, organization: addPrefill.organization, originLabel: 'meaningful connection' }
+            ? {
+                name: addPrefill.name,
+                phone: addPrefill.phone ?? '',
+                email: addPrefill.email ?? '',
+                notes: null,
+                organization: addPrefill.organization,
+                role: addPrefill.role,
+                website: addPrefill.website,
+                originLabel: 'meaningful connection',
+              }
             : undefined
         }
       />

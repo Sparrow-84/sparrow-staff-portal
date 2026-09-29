@@ -611,9 +611,11 @@ export function PartnerDetailPanel({
             <div className="space-y-1.5 rounded-xl border border-sparrow-rule/70 px-3 py-3">
               <InfoRow label="Name" value={partner.name} />
               <InfoRow label="Contact" value={partner.contact_name} />
+              <InfoRow label="Role" value={partner.role} />
               <InfoRow label="Org" value={partner.organization} />
               <InfoRow label="Email" value={partner.email} href={partner.email ? `mailto:${partner.email}` : undefined} />
               <InfoRow label="Phone" value={partner.phone} href={partner.phone ? `tel:${partner.phone}` : undefined} />
+              <InfoRow label="Website" value={partner.website} href={partner.website ? withScheme(partner.website) : undefined} />
               <InfoRow label="Address" value={partner.address} />
               <InfoRow label="Source" value={partner.source} />
             </div>
@@ -629,8 +631,9 @@ export function PartnerDetailPanel({
               />
               <div className="grid grid-cols-2 gap-3">
                 <EditField label="Primary contact" value={partner.contact_name ?? ''} disabled={busy} onSave={(v) => void patch({ contact_name: v })} />
-                <EditField label="Organization" value={partner.organization ?? ''} disabled={busy} onSave={(v) => void patch({ organization: v })} />
+                <EditField label="Role / title" value={partner.role ?? ''} disabled={busy} onSave={(v) => void patch({ role: v })} />
               </div>
+              <EditField label="Organization" value={partner.organization ?? ''} disabled={busy} onSave={(v) => void patch({ organization: v })} />
               <div className="grid grid-cols-2 gap-3">
                 <EditField
                   label="Email"
@@ -648,6 +651,13 @@ export function PartnerDetailPanel({
                   action={partner.phone ? <a className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={`tel:${partner.phone}`}>Call</a> : undefined}
                 />
               </div>
+              <EditField
+                label="Website"
+                value={partner.website ?? ''}
+                disabled={busy}
+                onSave={(v) => void patch({ website: v })}
+                action={partner.website ? <a className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={withScheme(partner.website)} target="_blank" rel="noreferrer">Visit</a> : undefined}
+              />
               <div>
                 <span className="field-label">Mailing address</span>
                 <textarea
@@ -1140,6 +1150,12 @@ export function PartnerDetailPanel({
 }
 
 // ── Sub-components ──
+
+// Website values are typed freehand ("sparrowinc.org") — add a scheme so the link actually
+// navigates instead of resolving relative to the current page.
+function withScheme(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
 
 function InfoRow({ label, value, href }: { label: string; value: string | null; href?: string }) {
   const display = value || '—';

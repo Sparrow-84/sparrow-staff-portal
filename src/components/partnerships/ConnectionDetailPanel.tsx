@@ -74,6 +74,10 @@ export function ConnectionDetailPanel({
         event_id: connection.event_id,
         name: connection.name,
         organization: connection.organization,
+        role: connection.role,
+        phone: connection.phone,
+        email: connection.email,
+        website: connection.website,
         what_discussed: connection.what_discussed,
         next_action: connection.next_action,
         followup_due: connection.followup_due,
@@ -137,6 +141,10 @@ export function ConnectionDetailPanel({
                   event_id: connection.event_id,
                   name: connection.name,
                   organization: connection.organization,
+                  role: connection.role,
+                  phone: connection.phone,
+                  email: connection.email,
+                  website: connection.website,
                   what_discussed: connection.what_discussed,
                   next_action: connection.next_action,
                   followup_due: connection.followup_due,
@@ -160,6 +168,43 @@ export function ConnectionDetailPanel({
           <div>
             <p className="field-label">Organization</p>
             <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{connection.organization ?? '—'}</p>
+          </div>
+          <div>
+            <p className="field-label">Role / title</p>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{connection.role ?? '—'}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="field-label">Phone</p>
+              {connection.phone ? (
+                <a className="text-sm text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={`tel:${connection.phone}`}>{connection.phone}</a>
+              ) : (
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">—</p>
+              )}
+            </div>
+            <div>
+              <p className="field-label">Email</p>
+              {connection.email ? (
+                <a className="text-sm text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={`mailto:${connection.email}`}>{connection.email}</a>
+              ) : (
+                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">—</p>
+              )}
+            </div>
+          </div>
+          <div>
+            <p className="field-label">Website</p>
+            {connection.website ? (
+              <a
+                className="text-sm text-sparrow-green dark:text-sparrow-dark-green hover:underline"
+                href={/^https?:\/\//i.test(connection.website) ? connection.website : `https://${connection.website}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {connection.website}
+              </a>
+            ) : (
+              <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">—</p>
+            )}
           </div>
           <div>
             <p className="field-label">What was discussed</p>
@@ -248,6 +293,41 @@ export function ConnectionDetailPanel({
               className="field-input w-full"
               value={form.organization ?? ''}
               onChange={(e) => setForm((f) => f && { ...f, organization: e.target.value || null })}
+            />
+          </div>
+          <div>
+            <label className="field-label">Role / title</label>
+            <input
+              className="field-input w-full"
+              value={form.role ?? ''}
+              onChange={(e) => setForm((f) => f && { ...f, role: e.target.value || null })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label">Phone</label>
+              <input
+                className="field-input w-full"
+                value={form.phone ?? ''}
+                onChange={(e) => setForm((f) => f && { ...f, phone: e.target.value || null })}
+              />
+            </div>
+            <div>
+              <label className="field-label">Email</label>
+              <input
+                type="email"
+                className="field-input w-full"
+                value={form.email ?? ''}
+                onChange={(e) => setForm((f) => f && { ...f, email: e.target.value || null })}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="field-label">Website</label>
+            <input
+              className="field-input w-full"
+              value={form.website ?? ''}
+              onChange={(e) => setForm((f) => f && { ...f, website: e.target.value || null })}
             />
           </div>
           <div>

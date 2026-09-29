@@ -81,6 +81,9 @@ export interface Partner {
   owner_id: string | null;
   organization: string | null;
   contact_name: string | null;
+  // Business-card fields (migration 0181) -- the contact's title/role and org website.
+  role: string | null;
+  website: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;

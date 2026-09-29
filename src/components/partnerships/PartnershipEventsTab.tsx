@@ -41,13 +41,17 @@ const EMPTY_CONN_FORM: ConnectionInput = {
   event_id: null,
   name: '',
   organization: null,
+  role: null,
+  phone: null,
+  email: null,
+  website: null,
   what_discussed: null,
   next_action: null,
   followup_due: null,
   owner_id: null,
 };
 
-export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (name: string, organization: string | null) => void }) {
+export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (conn: PartnershipConnection) => void }) {
   const { profile } = useAuth();
   const [events, setEvents] = useState<PartnershipEvent[]>([]);
   const [connections, setConnections] = useState<PartnershipConnection[]>([]);
@@ -310,6 +314,40 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
                   onChange={(e) => setConnForm((f) => ({ ...f, organization: e.target.value || null }))}
                 />
               </div>
+              <div>
+                <label className="field-label">Role / title</label>
+                <input
+                  className="field-input w-full"
+                  value={connForm.role ?? ''}
+                  onChange={(e) => setConnForm((f) => ({ ...f, role: e.target.value || null }))}
+                  placeholder="Their title at the organization"
+                />
+              </div>
+              <div>
+                <label className="field-label">Phone</label>
+                <input
+                  className="field-input w-full"
+                  value={connForm.phone ?? ''}
+                  onChange={(e) => setConnForm((f) => ({ ...f, phone: e.target.value || null }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">Email</label>
+                <input
+                  type="email"
+                  className="field-input w-full"
+                  value={connForm.email ?? ''}
+                  onChange={(e) => setConnForm((f) => ({ ...f, email: e.target.value || null }))}
+                />
+              </div>
+              <div>
+                <label className="field-label">Website</label>
+                <input
+                  className="field-input w-full"
+                  value={connForm.website ?? ''}
+                  onChange={(e) => setConnForm((f) => ({ ...f, website: e.target.value || null }))}
+                />
+              </div>
               <div className="col-span-2">
                 <label className="field-label">What was discussed</label>
                 <textarea
@@ -445,7 +483,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (na
                       </td>
                       <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => onBecomePartner(conn.name, conn.organization)}
+                          onClick={() => onBecomePartner(conn)}
                           className="whitespace-nowrap text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                           title="Open Add Partner panel with this person's details"
                         >

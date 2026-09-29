@@ -100,6 +100,12 @@ export interface PartnershipConnection {
   event_id: string | null;
   name: string;
   organization: string | null;
+  // Business-card fields (migration 0181) — carried over to the partner record if this
+  // connection becomes a partner (see AddPartnerPanel's initialValues).
+  role: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
   what_discussed: string | null;
   next_action: string | null;
   followup_due: string | null;
@@ -466,7 +472,7 @@ export async function fetchConnections(eventId?: string): Promise<PartnershipCon
 
 export type ConnectionInput = Pick<
   PartnershipConnection,
-  'event_id' | 'name' | 'organization' | 'what_discussed' | 'next_action' | 'followup_due' | 'owner_id'
+  'event_id' | 'name' | 'organization' | 'role' | 'phone' | 'email' | 'website' | 'what_discussed' | 'next_action' | 'followup_due' | 'owner_id'
 >;
 
 export async function createConnection(input: ConnectionInput): Promise<void> {
@@ -476,7 +482,7 @@ export async function createConnection(input: ConnectionInput): Promise<void> {
 
 export async function updateConnection(
   id: string,
-  patch: Partial<Pick<PartnershipConnection, 'name' | 'organization' | 'what_discussed' | 'next_action' | 'followup_due' | 'followup_done' | 'event_id' | 'owner_id'>>,
+  patch: Partial<Pick<PartnershipConnection, 'name' | 'organization' | 'role' | 'phone' | 'email' | 'website' | 'what_discussed' | 'next_action' | 'followup_due' | 'followup_done' | 'event_id' | 'owner_id'>>,
 ): Promise<void> {
   const { error } = await supabase
     .from('partnership_connections')

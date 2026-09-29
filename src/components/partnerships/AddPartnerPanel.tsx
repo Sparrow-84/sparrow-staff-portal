@@ -62,6 +62,8 @@ export function AddPartnerPanel({
     notes: string | null;
     source?: string;
     organization?: string | null;
+    role?: string | null;
+    website?: string | null;
     originLabel?: string;
   } | null;
   onCreatedFromContact?: (partnerId: string) => void;
@@ -74,6 +76,8 @@ export function AddPartnerPanel({
   const [ownerId, setOwnerId] = useState<string>('');
   const [contactName, setContactName] = useState('');
   const [organization, setOrganization] = useState('');
+  const [role, setRole] = useState('');
+  const [website, setWebsite] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -95,6 +99,8 @@ export function AddPartnerPanel({
       setOwnerId(defaultOwnerId ?? '');
       setContactName('');
       setOrganization(initialValues?.organization ?? '');
+      setRole(initialValues?.role ?? '');
+      setWebsite(initialValues?.website ?? '');
       setEmail(initialValues?.email ?? '');
       setPhone(initialValues?.phone ?? '');
       setAddress('');
@@ -156,6 +162,8 @@ export function AddPartnerPanel({
         owner_id: ownerId || null,
         organization: organization.trim() || null,
         contact_name: contactName.trim() || null,
+        role: role.trim() || null,
+        website: website.trim() || null,
         email: email.trim() || null,
         phone: phone.trim() || null,
         address: address.trim() || null,
@@ -315,14 +323,25 @@ export function AddPartnerPanel({
             <input id="pa-contact" className="field-input" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="optional" />
           </div>
           <div>
+            <label className="field-label" htmlFor="pa-role">Role / title</label>
+            <input id="pa-role" className="field-input" value={role} onChange={(e) => setRole(e.target.value)} placeholder="optional" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
             <label className="field-label" htmlFor="pa-phone">Phone</label>
             <input id="pa-phone" className="field-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="optional" />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="pa-email">Email</label>
+            <input id="pa-email" type="email" className="field-input" value={email} onChange={(e) => { setEmail(e.target.value); setDuplicateWarning(null); }} placeholder="optional" />
           </div>
         </div>
 
         <div>
-          <label className="field-label" htmlFor="pa-email">Email</label>
-          <input id="pa-email" type="email" className="field-input" value={email} onChange={(e) => { setEmail(e.target.value); setDuplicateWarning(null); }} placeholder="optional" />
+          <label className="field-label" htmlFor="pa-website">Website</label>
+          <input id="pa-website" className="field-input" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="optional" />
         </div>
 
         <div>
