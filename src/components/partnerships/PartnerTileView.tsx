@@ -88,7 +88,7 @@ export function PartnerTileView({
             )}
 
             {/* Stage + donor tier + MOU badges — MOU applies to community/church only */}
-            {(p.stage === 'prospect' || tier === 'major' || tier === 'lapsed' || tier === 'first_time' || mouNeeded) && (
+            {(p.stage === 'prospect' || tier === 'major' || (p.type === 'donor' && (tier === 'lapsed' || tier === 'first_time')) || mouNeeded) && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {p.stage === 'prospect' && (
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${PARTNER_STAGE['prospect'].chip}`}>
@@ -105,7 +105,7 @@ export function PartnerTileView({
                     Lapsed giving
                   </span>
                 )}
-                {tier === 'first_time' && (
+                {tier === 'first_time' && p.type === 'donor' && (
                   <span className="rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">
                     First gift
                   </span>

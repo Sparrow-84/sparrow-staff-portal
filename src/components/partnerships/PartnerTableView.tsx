@@ -204,7 +204,7 @@ export function PartnerTableView({
                 const tier = derivedDonorTier(p.donor_tier, donorStatMap.get(p.id));
                 if (tier === 'major') return <span className="whitespace-nowrap rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Major</span>;
                 if (tier === 'lapsed' && p.type === 'donor') return <span className="whitespace-nowrap rounded-full bg-orange-100 dark:bg-orange-500/15 px-2 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-300">Lapsed giving</span>;
-                if (tier === 'first_time') return <span className="whitespace-nowrap rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">First gift</span>;
+                if (tier === 'first_time' && p.type === 'donor') return <span className="whitespace-nowrap rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">First gift</span>;
                 return null;
               })()}
               {(p.type === 'community' || p.type === 'church') && p.mou_status === 'needed' && (
