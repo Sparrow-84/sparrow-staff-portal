@@ -69,7 +69,9 @@ export function AddPartnerPanel({
   onCreatedFromContact?: (partnerId: string) => void;
 }) {
   const [name, setName] = useState('');
-  const [type, setType] = useState<PartnerType>('donor');
+  // No default -- staff must actively pick a type (previously defaulted to 'donor', which
+  // silently mistyped anyone added via "Become a partner" from a non-donor context).
+  const [type, setType] = useState<PartnerType | ''>('');
   const [secondaryTypes, setSecondaryTypes] = useState<PartnerType[]>([]);
   const [interestIds, setInterestIds] = useState<string[]>([]);
   const [stage, setStage] = useState<PartnerStage>('prospect');
@@ -83,7 +85,7 @@ export function AddPartnerPanel({
   const [address, setAddress] = useState('');
   const [source, setSource] = useState('');
   const [notes, setNotes] = useState('');
-  const [cadence, setCadence] = useState<number | null>(DEFAULT_CADENCE.donor);
+  const [cadence, setCadence] = useState<number | null>(null);
   const [leadTime, setLeadTime] = useState<number | null>(DEFAULT_LEAD_TIME);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +94,7 @@ export function AddPartnerPanel({
   useEffect(() => {
     if (open) {
       setName(initialValues?.name ?? '');
-      setType('donor');
+      setType('');
       setSecondaryTypes([]);
       setInterestIds([]);
       setStage('prospect');
@@ -106,7 +108,7 @@ export function AddPartnerPanel({
       setAddress('');
       setSource(initialValues?.source ?? '');
       setNotes(initialValues?.notes ?? '');
-      setCadence(DEFAULT_CADENCE.donor);
+      setCadence(null);
       setLeadTime(DEFAULT_LEAD_TIME);
       setError(null);
       setBusy(false);
@@ -119,6 +121,7 @@ export function AddPartnerPanel({
   // so a save attempt never hits the DB constraint as its only feedback.
   const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'pa-name', label: 'Name', valid: name.trim().length > 0 },
+    { key: 'pa-type', label: 'Type', valid: type !== '' },
     { key: 'pa-cadence', label: 'Cadence (days)', valid: cadence != null && cadence > 0 },
     { key: 'pa-lead-time', label: 'Lead time (days)', valid: leadTime != null && leadTime > 0 },
   ]);
@@ -131,7 +134,7 @@ export function AddPartnerPanel({
   }
 
   async function save() {
-    if (!validate() || cadence == null || leadTime == null) return;
+    if (!validate() || type === '' || cadence == null || leadTime == null) return;
     const trimmedName = name.trim();
 
     // First pass: warn on a likely duplicate rather than silently creating a second record.
@@ -238,12 +241,23 @@ export function AddPartnerPanel({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="field-label" htmlFor="pa-type">Type</label>
-            <select id="pa-type" className="field-input" value={type} onChange={(e) => pickType(e.target.value as PartnerType)}>
+            <label className="field-label field-label-required" htmlFor="pa-type">Type</label>
+            <select
+              id="pa-type"
+              className={fieldClass('pa-type')}
+              value={type}
+              onChange={(e) => {
+                const v = e.target.value as PartnerType;
+                pickType(v);
+                clear('pa-type');
+              }}
+            >
+              <option value="" disabled>— Select type —</option>
               {PARTNER_TYPES.map((t) => (
                 <option key={t} value={t}>{PARTNER_TYPE[t].label}</option>
               ))}
             </select>
+            {fieldError('pa-type') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-type')}</p>}
           </div>
           <div>
             <label className="field-label" htmlFor="pa-stage">Stage</label>
@@ -313,8 +327,10 @@ export function AddPartnerPanel({
           </div>
         </div>
         <p className="-mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-          Cadence defaulted from the type ({PARTNER_TYPE[type].label}); lead time defaults to {DEFAULT_LEAD_TIME} days'
-          advance warning. Both required — adjust to the rhythm this relationship needs.
+          {type
+            ? `Cadence defaulted from the type (${PARTNER_TYPE[type].label}); lead time defaults to ${DEFAULT_LEAD_TIME} days'`
+            : `Cadence follows the type once picked above; lead time defaults to ${DEFAULT_LEAD_TIME} days'`}
+          {' '}advance warning. Both required — adjust to the rhythm this relationship needs.
         </p>
 
         <div className="grid grid-cols-2 gap-3">
