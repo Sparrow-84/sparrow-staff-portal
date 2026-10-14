@@ -35,6 +35,10 @@ export interface Family {
   housing_savings_announced_cents: number;
   active: boolean;
   created_at: string;
+  // Staff override for "Onboarding start" -- null means keep showing created_at
+  // (the default for anyone actually onboarded after this system existed).
+  // See migration 0182 + [[lcp-onboarding-dates-editable-2026-10]].
+  onboarding_start_date: string | null;
   toc_space_id: string | null;
   toc_tenant_id: string | null;
   move_in_date: string | null;

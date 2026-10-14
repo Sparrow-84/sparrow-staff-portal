@@ -1,0 +1,21 @@
+-- Migration 0182: LCP onboarding start date becomes a real, staff-editable field.
+--
+-- "Onboarding start" has always just displayed families.created_at (when the
+-- staff profile row was created) -- correct for anyone onboarded after this
+-- system existed, wrong for every participant who actually joined LCP earlier
+-- (their real onboarding date predates the system; created_at only reflects
+-- when someone got around to typing them in). Shelly flagged this live on
+-- Kim's record (created_at Aug 10 2026, but she joined well before that).
+--
+-- Decision (Susanna, 2026-10-13): make this editable now, while LCP staff are
+-- still getting the system's historical data squared away -- see
+-- [[lcp-onboarding-dates-editable-2026-10]] for the full rationale and the
+-- planned revisit once staff are fully ramped up and new families are only
+-- ever entered in real time (at which point created_at is always correct and
+-- this override stops being needed).
+--
+-- Nullable, defaults to null -- every existing family keeps showing
+-- created_at exactly as before until someone deliberately overrides it.
+-- Plain date (not timestamptz) to match move_in_date/program_end_date's
+-- existing "YYYY-MM-DD, no time component" convention.
+ALTER TABLE families ADD COLUMN IF NOT EXISTS onboarding_start_date date;

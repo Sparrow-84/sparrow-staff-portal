@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { localDate } from '@/lib/date';
+import { toLocalDate } from '@/lib/calendar';
 import {
   AREA_LABEL,
   ATTENDANCE_LABEL,
@@ -1600,18 +1601,21 @@ function GeneralInfoView({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
           <span className="field-label">Onboarding start</span>
-          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{dayLabel(family.created_at)}</p>
+          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+            {dayLabel(family.onboarding_start_date ?? family.created_at)}
+            {family.onboarding_start_date && (
+              <span className="ml-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">(set by staff)</span>
+            )}
+          </p>
         </div>
         <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
           <span className="field-label">Move-in date</span>
           <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{family.move_in_date ? dayLabel(family.move_in_date) : 'Not set yet'}</p>
         </div>
-        {family.program_end_date && (
-          <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3 sm:col-span-2">
-            <span className="field-label">Program end date</span>
-            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{dayLabel(family.program_end_date)}</p>
-          </div>
-        )}
+        <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3 sm:col-span-2">
+          <span className="field-label">Program end date</span>
+          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{family.program_end_date ? dayLabel(family.program_end_date) : 'Not set yet'}</p>
+        </div>
       </div>
 
       <div>
@@ -1656,7 +1660,9 @@ function GeneralInfoEdit({
   const [adultPhone, setAdultPhone] = useState(adult?.phone ?? '');
   const [adultDob, setAdultDob] = useState(adult?.date_of_birth ?? '');
   const [emergencyContact, setEmergencyContact] = useState(family.emergency_contact_notes ?? '');
+  const [onboardingStartDate, setOnboardingStartDate] = useState(family.onboarding_start_date ?? toLocalDate(family.created_at));
   const [moveInDate, setMoveInDate] = useState(family.move_in_date ?? '');
+  const [programEndDate, setProgramEndDate] = useState(family.program_end_date ?? '');
   const [spaceId, setSpaceId] = useState(family.toc_space_id ?? '');
   const [busy, setBusy] = useState(false);
   const overdue = isFeeOverdue(family.move_in_date, family.status, feePayments.map((p) => p.paid_date));
@@ -1668,10 +1674,23 @@ function GeneralInfoEdit({
         await saveHouseholdAdult(family.id, { full_name: adultName, phone: adultPhone, date_of_birth: adultDob || null });
       }
 
-      const patch: Partial<{ emergency_contact_notes: string | null; move_in_date: string | null; toc_space_id: string | null }> = {};
+      const patch: Partial<{
+        emergency_contact_notes: string | null;
+        move_in_date: string | null;
+        toc_space_id: string | null;
+        onboarding_start_date: string | null;
+        program_end_date: string | null;
+      }> = {};
       if (emergencyContact !== (family.emergency_contact_notes ?? '')) patch.emergency_contact_notes = emergencyContact.trim() || null;
       if (moveInDate !== (family.move_in_date ?? '')) patch.move_in_date = moveInDate || null;
       if (spaceId !== (family.toc_space_id ?? '')) patch.toc_space_id = spaceId || null;
+      // Defaults to created_at's date in the field above, so "unchanged" means it still
+      // matches whichever of onboarding_start_date/created_at was showing -- an empty
+      // field means "clear the override, go back to showing created_at" (null), not
+      // literally blank.
+      const onboardingDefault = family.onboarding_start_date ?? toLocalDate(family.created_at);
+      if (onboardingStartDate !== onboardingDefault) patch.onboarding_start_date = onboardingStartDate || null;
+      if (programEndDate !== (family.program_end_date ?? '')) patch.program_end_date = programEndDate || null;
       if (Object.keys(patch).length > 0) await updateFamily(family.id, patch);
 
       onDone();
@@ -1743,7 +1762,15 @@ function GeneralInfoEdit({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
           <span className="field-label">Onboarding start</span>
-          <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{dayLabel(family.created_at)}</p>
+          <input
+            type="date"
+            value={onboardingStartDate}
+            onChange={(e) => setOnboardingStartDate(e.target.value)}
+            className="mt-0.5 w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-sm"
+          />
+          <p className="mt-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+            Defaults to when this profile was created — override only if she actually joined LCP earlier (or later) than that.
+          </p>
         </div>
         <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
           <span className="field-label">Move-in date</span>
@@ -1754,12 +1781,18 @@ function GeneralInfoEdit({
             className="mt-0.5 w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-sm"
           />
         </div>
-        {family.program_end_date && (
-          <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3 sm:col-span-2">
-            <span className="field-label">Program end date</span>
-            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{dayLabel(family.program_end_date)}</p>
-          </div>
-        )}
+        <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3 sm:col-span-2">
+          <span className="field-label">Program end date</span>
+          <input
+            type="date"
+            value={programEndDate}
+            onChange={(e) => setProgramEndDate(e.target.value)}
+            className="mt-0.5 w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2 py-1 text-sm"
+          />
+          <p className="mt-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+            Normally set automatically when a family graduates or leaves — override only if that's wrong (e.g. she left before this system existed).
+          </p>
+        </div>
       </div>
 
       <div>
