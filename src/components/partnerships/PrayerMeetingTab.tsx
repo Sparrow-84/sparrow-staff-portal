@@ -225,13 +225,20 @@ export function PrayerMeetingTab() {
   const [snoozeDate, setSnoozeDate] = useState('');
   const [missStreaks, setMissStreaks] = useState<Record<string, number>>({});
   const [expandedMeeting, setExpandedMeeting] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const mounted = useRef(true);
 
   const load = useCallback(async () => {
     try {
       // One door: Directory (Prayer type/tag) decides who's on the roster — refresh it
       // here before reading, same opportunistic-sync pattern the rest of the room uses.
-      await syncPrayerVolunteersFromDirectory().catch(() => undefined);
+      // Swallowed (not re-thrown) so a sync hiccup can't crash the whole tab -- but surfaced
+      // as a visible banner below, not silently discarded. A past version of this silently
+      // ate a real bug (prayer_volunteers_partner_uniq's ON CONFLICT mismatch, migration
+      // 0185) for an unknown stretch of time with zero sign anything was wrong.
+      await syncPrayerVolunteersFromDirectory()
+        .then(() => setSyncError(null))
+        .catch((e) => setSyncError(e instanceof Error ? e.message : 'Could not sync from Directory.'));
       const [vols, mtgs] = await Promise.all([
         fetchPrayerVolunteers(),
         fetchMeetingsWithAttendance(),
@@ -455,6 +462,12 @@ export function PrayerMeetingTab() {
       {/* ── Volunteer roster ── */}
       {section === 'volunteers' && (
         <div className="space-y-4">
+          {syncError && (
+            <p className="rounded-lg bg-priority-p1/10 px-3 py-2 text-xs text-priority-p1">
+              Couldn't refresh this roster from Directory just now ({syncError}) — the list below may be
+              out of date. Try reopening this tab; if it keeps happening, flag it.
+            </p>
+          )}
           <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             This roster follows Directory automatically — tag someone as "Prayer volunteer"
             there (Type or "Also involved as") to add them here; remove the tag to take them

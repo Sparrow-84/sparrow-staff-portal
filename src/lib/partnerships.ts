@@ -16,7 +16,7 @@ import type {
 // manage everything; a partner's named owner sees/stewards their own.
 
 const PARTNER_COLS =
-  'id, name, type, secondary_types, stage, owner_id, organization, contact_name, role, website, email, phone, address, donor_tier, cadence_days, lead_time_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status, business_card_front_path, business_card_back_path';
+  'id, name, type, secondary_types, stage, owner_id, organization, contact_name, role, website, email, phone, address, donor_tier, cadence_days, lead_time_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status, business_card_front_path, business_card_back_path, touchpoint_reminder_note';
 
 // ── Partners ─────────────────────────────────────────────────────────
 export async function fetchPartners(): Promise<Partner[]> {
@@ -125,6 +125,7 @@ export async function updatePartner(
       | 'sparrow_provides'
       | 'partner_provides'
       | 'mou_status'
+      | 'touchpoint_reminder_note'
     >
   >,
 ): Promise<void> {

@@ -95,6 +95,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'volunteer', label: 'Volunteers' },
   { key: 'prayer', label: 'Prayer' },
   { key: 'fst', label: 'FST' },
+  { key: 'business', label: 'Business' },
   { key: 'foundation', label: 'Foundations' },
   { key: 'advisory', label: 'Advisory' },
 ];

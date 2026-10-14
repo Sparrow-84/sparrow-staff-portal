@@ -1,0 +1,38 @@
+-- Migration 0185: fix prayer_volunteers' Directory sync -- it's been silently
+-- broken since 0108 shipped.
+--
+-- Real bug, confirmed via direct DB check 2026-10-14: 7 partners are correctly
+-- tagged "prayer" in the Directory, but only 4 rows exist in prayer_volunteers
+-- -- Miranda Martinez, David Livingston, and Karen Cornwell never made it in,
+-- matching exactly what Bethany/Susanna reported (7 show in the Directory's
+-- Prayer filter, only 4 in the Prayer tab's own roster).
+--
+-- Root cause: migration 0108 created prayer_volunteers_partner_uniq as a
+-- PARTIAL unique index (`WHERE partner_id IS NOT NULL`), but
+-- syncPrayerVolunteersFromDirectory() upserts via
+-- `.upsert(rows, { onConflict: 'partner_id' })`, which PostgREST translates to
+-- a plain `ON CONFLICT (partner_id)` with no WHERE clause -- Postgres can't
+-- match that to a partial index as the arbiter, and the whole upsert throws
+-- "there is no unique or exclusion constraint matching the ON CONFLICT
+-- specification" every single time it's called. Confirmed directly by
+-- reproducing the exact error via EXPLAIN against the live schema. The one
+-- caller (PrayerMeetingTab.tsx) wraps this in `.catch(() => undefined)` --
+-- deliberately so a sync failure can't crash the whole tab, but it also means
+-- this has been failing silently, in full, since 0108. The 4 rows that do
+-- exist predate this break (or were added some other way) and have simply
+-- never been touched since -- nothing has ever successfully synced from
+-- Directory into prayer_volunteers through this path.
+--
+-- This exact "partial index can't arbitrate a plain ON CONFLICT via the
+-- Supabase JS client" failure mode has hit this codebase before (see the
+-- Google Calendar import sync incident, wasp-nest 2026-08-24) -- that one was
+-- fixed by rewriting the sync as an explicit select-then-update-or-insert.
+-- Here, the simpler fix applies: the partial predicate was never actually
+-- necessary. A plain (non-partial) unique index on a nullable column already
+-- allows unlimited NULLs in Postgres (NULL is never considered equal to
+-- another NULL) while still enforcing uniqueness among real partner_ids --
+-- exactly the behavior 0108 was trying to express, just via a WHERE clause
+-- that wasn't needed and broke upsert in the process.
+
+DROP INDEX IF EXISTS prayer_volunteers_partner_uniq;
+CREATE UNIQUE INDEX IF NOT EXISTS prayer_volunteers_partner_uniq ON prayer_volunteers(partner_id);

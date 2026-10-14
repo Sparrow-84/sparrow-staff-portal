@@ -551,6 +551,23 @@ export function PartnerDetailPanel({
             </div>
           </div>
           <div>
+            <span className="field-label">Custom reminder wording <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span></span>
+            <textarea
+              className="field-input"
+              rows={2}
+              value={partner.touchpoint_reminder_note ?? ''}
+              onChange={(e) => void patch({ touchpoint_reminder_note: e.target.value.trim() || null })}
+              disabled={busy}
+              placeholder='e.g. "When did you last stand up and give the church a Sparrow update? Do this every 6 months."'
+            />
+            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
+              Shows under this partner's touchpoint-due reminder on Home instead of the generic wording —
+              use it when a casual conversation shouldn't count as "caught up" (The Hive's case: talking to
+              people there isn't the same as actually giving the church a real update). Doesn't change the
+              cadence itself, just what the reminder asks.
+            </p>
+          </div>
+          <div>
             <span className="field-label">Stage</span>
             <select
               value={partner.stage}

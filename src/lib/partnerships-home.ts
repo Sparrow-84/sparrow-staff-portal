@@ -21,6 +21,10 @@ export interface HomeItem {
   key: string;
   kind: HomeItemKind;
   title: string;
+  /** Optional second line -- e.g. a partner's custom touchpoint_reminder_note,
+   *  for a relationship where the generic "touchpoint due" wording doesn't say
+   *  enough (see The Hive, inbound-message-triage-2026-10 Batch 2 item 1). */
+  detail?: string;
   due_date: string; // YYYY-MM-DD
   owner_id: string;
   /** Set on touchpoint items — lets the caller open that partner's detail panel directly. */
@@ -65,6 +69,7 @@ interface PartnerRow {
   cadence_days: number | null;
   last_touchpoint_at: string | null;
   created_at: string;
+  touchpoint_reminder_note: string | null;
 }
 
 interface CollateralRow {
@@ -138,7 +143,7 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
   ] = await Promise.all([
     supabase
       .from('partners')
-      .select('id, name, owner_id, active, stage, cadence_days, last_touchpoint_at, created_at')
+      .select('id, name, owner_id, active, stage, cadence_days, last_touchpoint_at, created_at, touchpoint_reminder_note')
       .eq('active', true),
     supabase
       .from('partnership_collateral')
@@ -184,6 +189,7 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
       key: `touchpoint:${p.id}`,
       kind: 'touchpoint',
       title: `Touchpoint due — ${p.name}`,
+      detail: p.touchpoint_reminder_note ?? undefined,
       due_date: due,
       owner_id: p.owner_id,
       partnerId: p.id,

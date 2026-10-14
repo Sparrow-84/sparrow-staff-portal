@@ -5,6 +5,7 @@ import { localDate } from '@/lib/date';
 import { Drawer } from '../lcp/Drawer';
 import {
   addConnectionNote,
+  deleteConnection,
   fetchConnectionNotes,
   updateConnection,
   type ConnectionInput,
@@ -43,6 +44,7 @@ export function ConnectionDetailPanel({
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<EditableFields | null>(null);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [notes, setNotes] = useState<ConnectionNote[]>([]);
   const [logOpen, setLogOpen] = useState(false);
@@ -122,6 +124,19 @@ export function ConnectionDetailPanel({
     }
   }
 
+  async function remove() {
+    if (!connection) return;
+    if (!window.confirm(`Delete this connection with ${connection.name}? This also removes its logged interactions. This can't be undone.`)) return;
+    setDeleting(true);
+    try {
+      await deleteConnection(connection.id);
+      onChanged();
+      onClose();
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <Drawer
       open={open}
@@ -157,9 +172,14 @@ export function ConnectionDetailPanel({
             </button>
           </div>
         ) : (
-          <button onClick={() => setEditing(true)} className="btn-primary w-full">
-            Edit
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setEditing(true)} className="btn-primary flex-1">
+              Edit
+            </button>
+            <button onClick={() => void remove()} disabled={deleting} className="btn-ghost text-priority-p1">
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
         )
       }
     >

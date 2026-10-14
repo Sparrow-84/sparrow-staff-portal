@@ -111,6 +111,12 @@ export interface Partner {
   // Business card photos (migration 0111) — storage paths, not URLs (private bucket).
   business_card_front_path: string | null;
   business_card_back_path: string | null;
+  // Custom "touchpoint due" wording (migration 0186) -- for a relationship where the
+  // generic reminder doesn't say enough (e.g. The Hive: a casual conversation
+  // shouldn't read as "caught up," only an actual stood-up-front-of-church update
+  // should). Shown as a second line under the Home due-reminder when set; the
+  // cadence/due-date math itself is unchanged -- this only changes the wording.
+  touchpoint_reminder_note: string | null;
 }
 
 export interface Touchpoint {

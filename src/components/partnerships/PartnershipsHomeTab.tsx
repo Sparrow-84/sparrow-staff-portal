@@ -294,21 +294,26 @@ function ItemsByOwner({
               <li key={item.key}>
                 <button
                   onClick={() => onOpen(item)}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2"
+                  className="flex w-full flex-col gap-0.5 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2"
                 >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span aria-hidden>{KIND_ICON[item.kind]}</span>
-                    <span className="truncate text-sparrow-ink dark:text-sparrow-dark-ink">{item.title}</span>
+                  <span className="flex w-full items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span aria-hidden>{KIND_ICON[item.kind]}</span>
+                      <span className="truncate text-sparrow-ink dark:text-sparrow-dark-ink">{item.title}</span>
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        bucketFor(item.due_date, false, today) === 'overdue'
+                          ? 'bg-priority-p1/15 text-priority-p1'
+                          : 'bg-sparrow-gold/20 text-sparrow-ink dark:text-sparrow-dark-ink'
+                      }`}
+                    >
+                      {dueLabel(item.due_date, today)}
+                    </span>
                   </span>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      bucketFor(item.due_date, false, today) === 'overdue'
-                        ? 'bg-priority-p1/15 text-priority-p1'
-                        : 'bg-sparrow-gold/20 text-sparrow-ink dark:text-sparrow-dark-ink'
-                    }`}
-                  >
-                    {dueLabel(item.due_date, today)}
-                  </span>
+                  {item.detail && (
+                    <span className="pl-6 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{item.detail}</span>
+                  )}
                 </button>
               </li>
             ))}

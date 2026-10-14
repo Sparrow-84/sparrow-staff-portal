@@ -491,6 +491,11 @@ export async function updateConnection(
   if (error) throw new Error(error.message);
 }
 
+export async function deleteConnection(id: string): Promise<void> {
+  const { error } = await supabase.from('partnership_connections').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 /** Multiple dated interactions with the same connection -- not a cadenced
  *  touchpoint (a connection has no cadence yet), just a plain log so a second
  *  or third conversation doesn't have to get crammed into what_discussed. */
