@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { KIND_LABEL, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
+import { RichTextField } from '../lcp/RichText';
 import type { SaveStatus, SharedNotesHandle } from './SharedNotesEditor';
 
 // Lazy-loaded: Yjs + TipTap only need to be fetched once someone actually opens a
@@ -15,63 +16,18 @@ interface Props {
   onClose: () => void;
 }
 
-function Toolbar() {
-  function apply(cmd: string) {
-    document.execCommand(cmd, false, undefined);
-  }
-  return (
-    <div className="flex items-center gap-0.5 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-1.5">
-      <button
-        onMouseDown={(e) => { e.preventDefault(); apply('bold'); }}
-        className="rounded px-2.5 py-1 text-sm font-bold text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
-        title="Bold (Ctrl+B)"
-      >
-        B
-      </button>
-      <button
-        onMouseDown={(e) => { e.preventDefault(); apply('italic'); }}
-        className="rounded px-2.5 py-1 text-sm italic text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
-        title="Italic (Ctrl+I)"
-      >
-        I
-      </button>
-      <div className="mx-1.5 h-4 w-px bg-sparrow-rule dark:bg-sparrow-dark-border" />
-      <button
-        onMouseDown={(e) => { e.preventDefault(); apply('insertUnorderedList'); }}
-        className="rounded px-2.5 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
-        title="Bullet list"
-      >
-        • List
-      </button>
-      <button
-        onMouseDown={(e) => { e.preventDefault(); apply('insertOrderedList'); }}
-        className="rounded px-2.5 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
-        title="Numbered list"
-      >
-        1. List
-      </button>
-    </div>
-  );
-}
-
-const CONTENT_CLASSES =
-  'flex-1 overflow-y-auto p-6 text-sm leading-relaxed text-sparrow-ink dark:text-sparrow-dark-ink focus:outline-none ' +
-  '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 ' +
-  '[&_li]:mb-0.5 [&_b]:font-semibold [&_strong]:font-semibold [&_p]:mb-2';
-
 export function MeetingNotesView({ event, userId, onClose }: Props) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // Fetched content held in state so a second effect can write it to the
-  // contentEditable refs after the DOM has rendered (refs are null during loading).
+  // Fetched content held in state — handed to RichTextField as its
+  // initialValue once loading finishes (RichTextField only reads
+  // initialValue at mount, so this can't be applied any later than that).
   const [initialContent, setInitialContent] = useState<{ prep: string; live: string } | null>(null);
   const [privateStatus, setPrivateStatus] = useState<SaveStatus>('idle');
   const [sharedStatus, setSharedStatus] = useState<SaveStatus>('idle');
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState<string | null>(null);
 
-  const prepRef = useRef<HTMLDivElement>(null);
-  const liveRef = useRef<HTMLDivElement>(null);
   const sharedEditorRef = useRef<SharedNotesHandle>(null);
 
   const latestPrep = useRef('');
@@ -111,14 +67,6 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
     }
     void load();
   }, [event.id, userId]);
-
-  // Apply fetched content to contentEditable refs after the DOM renders.
-  // Runs once when initialContent is set (loading false → divs are in the DOM).
-  useEffect(() => {
-    if (!initialContent) return;
-    if (prepRef.current) prepRef.current.innerHTML = initialContent.prep;
-    if (liveRef.current) liveRef.current.innerHTML = initialContent.live;
-  }, [initialContent]);
 
   // Flush any unsaved content on unmount — best-effort, no await.
   // Skipped entirely if initial load failed to prevent overwriting existing notes with empty state.
@@ -203,25 +151,15 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
     onClose();
   }
 
-  function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
-    e.preventDefault();
-    const html = e.nativeEvent.clipboardData?.getData('text/html');
-    if (html) {
-      // Strip inline styles and classes so pasted content uses our own styling
-      const clean = html.replace(/ style="[^"]*"/g, '').replace(/ class="[^"]*"/g, '');
-      document.execCommand('insertHTML', false, clean);
-    } else {
-      const text = e.nativeEvent.clipboardData?.getData('text/plain') ?? '';
-      document.execCommand('insertText', false, text);
-    }
-  }
-
-  function handlePrepInput() {
-    latestPrep.current = prepRef.current?.innerHTML ?? '';
+  // RichTextField already sanitizes on every change (strips pasted inline
+  // styles/classes down to plain structure) -- no separate paste handling
+  // needed here anymore.
+  function handlePrepChange(html: string) {
+    latestPrep.current = html;
     schedulePrivateSave();
   }
-  function handleLiveInput() {
-    latestLive.current = liveRef.current?.innerHTML ?? '';
+  function handleLiveChange(html: string) {
+    latestLive.current = html;
     schedulePrivateSave();
   }
 
@@ -266,6 +204,11 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
       </div>
     );
   }
+
+  // Can't actually happen once loading is false and loadError is null (load()
+  // always sets one of initialContent/loadError before clearing loading) --
+  // just here so TS knows initialContent.prep/.live below are real strings.
+  if (!initialContent) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-sparrow-dark-surface">
@@ -314,9 +257,6 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         </div>
       )}
 
-      {/* Formatting toolbar */}
-      <Toolbar />
-
       {/* Three-column notes area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Prep Notes */}
@@ -325,14 +265,15 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Prep Notes</p>
             <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Before the meeting · only visible to you</p>
           </div>
-          <div
-            ref={prepRef}
-            contentEditable
-            suppressContentEditableWarning
-            onInput={handlePrepInput}
-            onPaste={handlePaste}
-            className={`${CONTENT_CLASSES} bg-amber-50/20 dark:bg-amber-500/10`}
-          />
+          <div className="flex-1 overflow-y-auto bg-amber-50/20 p-4 dark:bg-amber-500/10">
+            <RichTextField
+              initialValue={initialContent.prep}
+              onChange={handlePrepChange}
+              toolbar
+              minHeightRem={20}
+              placeholder="Notes before the meeting…"
+            />
+          </div>
         </div>
 
         {/* Live Notes */}
@@ -341,14 +282,15 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
             <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">Live Notes</p>
             <p className="text-xs text-sparrow-green/60 dark:text-sparrow-dark-green/60">During the meeting · only visible to you</p>
           </div>
-          <div
-            ref={liveRef}
-            contentEditable
-            suppressContentEditableWarning
-            onInput={handleLiveInput}
-            onPaste={handlePaste}
-            className={`${CONTENT_CLASSES} bg-green-50/20 dark:bg-green-500/10`}
-          />
+          <div className="flex-1 overflow-y-auto bg-green-50/20 p-4 dark:bg-green-500/10">
+            <RichTextField
+              initialValue={initialContent.live}
+              onChange={handleLiveChange}
+              toolbar
+              minHeightRem={20}
+              placeholder="Notes during the meeting…"
+            />
+          </div>
         </div>
 
         {/* Shared Notes — live collaborative, unlike Prep/Live above */}

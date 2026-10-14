@@ -1,5 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import { sanitizeRichText } from '@/lib/sanitize';
+
+// How many steps back Undo can go (and Redo can replay). Cheap to keep high —
+// these are just short HTML strings -- so err on the side of more insurance.
+const HISTORY_LIMIT = 10;
 
 // Paste-formatted-content field: paste from Google Docs, a rendered Claude
 // reply, etc. and the real bold/headings/tables/quotes come in with it —
@@ -18,20 +22,83 @@ export function RichTextField({
   onChange: (html: string) => void;
   placeholder?: string;
   minHeightRem?: number;
-  /** Show Bold/Italic/Bullet-list buttons above the field. */
+  /** Show Bold/Italic/Bullet-list/Undo/Redo buttons above the field. */
   toolbar?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
+  // Own undo/redo stack -- deliberately not relying on the browser's native
+  // contentEditable undo, which is unreliable once execCommand (Bold/Italic/
+  // Bullet) has touched the field. lastCommitted is "what the field looked
+  // like after the most recent change we accepted" -- every commit() pushes
+  // that prior value onto undo before overwriting it, so the entry sitting on
+  // top of the stack right after any edit (including an accidental
+  // select-all-and-overwrite) is always the full content from just before it.
+  const lastCommittedRef = useRef(initialValue);
+  const undoStackRef = useRef<string[]>([]);
+  const redoStackRef = useRef<string[]>([]);
+  // Undo/Redo button enabled-state is read from the refs above (not re-render
+  // state) -- this just forces that read to happen after each change.
+  const [, bumpHistory] = useReducer((n: number) => n + 1, 0);
+
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = initialValue;
+    lastCommittedRef.current = initialValue;
+    undoStackRef.current = [];
+    redoStackRef.current = [];
     // Intentionally mount-only — see note above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function commit() {
     if (!ref.current) return;
-    onChange(sanitizeRichText(ref.current.innerHTML));
+    const next = sanitizeRichText(ref.current.innerHTML);
+    if (next === lastCommittedRef.current) return;
+    undoStackRef.current = [lastCommittedRef.current, ...undoStackRef.current].slice(0, HISTORY_LIMIT);
+    redoStackRef.current = []; // a fresh edit invalidates whatever redo history there was
+    lastCommittedRef.current = next;
+    onChange(next);
+    bumpHistory();
+  }
+
+  // Applies a value from the undo/redo stack directly -- distinct from
+  // commit() because this must NOT itself push onto undo (that would just
+  // re-record the step we're undoing).
+  function applyFromHistory(value: string) {
+    if (ref.current) ref.current.innerHTML = value;
+    lastCommittedRef.current = value;
+    onChange(value);
+  }
+
+  function undo() {
+    const [prev, ...rest] = undoStackRef.current;
+    if (prev === undefined) return;
+    redoStackRef.current = [lastCommittedRef.current, ...redoStackRef.current].slice(0, HISTORY_LIMIT);
+    undoStackRef.current = rest;
+    applyFromHistory(prev);
+    bumpHistory();
+  }
+
+  function redo() {
+    const [next, ...rest] = redoStackRef.current;
+    if (next === undefined) return;
+    undoStackRef.current = [lastCommittedRef.current, ...undoStackRef.current].slice(0, HISTORY_LIMIT);
+    redoStackRef.current = rest;
+    applyFromHistory(next);
+    bumpHistory();
+  }
+
+  // Ctrl+Z / Cmd+Z and Ctrl+Shift+Z (or Ctrl+Y) drive our own stack instead of
+  // the browser's native undo -- this is the muscle-memory path most people
+  // reach for before ever looking at a toolbar button.
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'z' && e.key.toLowerCase() !== 'y') return;
+    e.preventDefault();
+    if (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)) {
+      redo();
+    } else {
+      undo();
+    }
   }
 
   // execCommand is deprecated but remains the only zero-dependency way to
@@ -47,7 +114,15 @@ export function RichTextField({
   return (
     <div>
       {toolbar && (
-        <div className="mb-1 flex items-center gap-1">
+        <div
+          // Sticky, not just docked at the top -- on a long note, the
+          // buttons (Bullet list especially) need to stay reachable without
+          // scrolling all the way back up to the start of the field and then
+          // back down to where the cursor actually is. Pinned to the
+          // viewport while any part of this field is in view; scrolls away
+          // normally once the whole field has passed.
+          className="sticky top-0 z-10 mb-1 flex items-center gap-1 bg-white/95 py-1 backdrop-blur-sm dark:bg-sparrow-dark-surface/95"
+        >
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
@@ -75,6 +150,27 @@ export function RichTextField({
           >
             • List
           </button>
+          <span className="mx-1 h-4 w-px bg-sparrow-rule dark:bg-sparrow-dark-border" />
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={undo}
+            disabled={undoStackRef.current.length === 0}
+            title="Undo (Ctrl+Z)"
+            className="rounded px-2 py-1 text-xs text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink disabled:pointer-events-none disabled:opacity-30 dark:text-sparrow-dark-gray dark:hover:bg-sparrow-dark-surface2 dark:hover:text-sparrow-dark-ink"
+          >
+            ↶ Undo
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={redo}
+            disabled={redoStackRef.current.length === 0}
+            title="Redo (Ctrl+Shift+Z)"
+            className="rounded px-2 py-1 text-xs text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink disabled:pointer-events-none disabled:opacity-30 dark:text-sparrow-dark-gray dark:hover:bg-sparrow-dark-surface2 dark:hover:text-sparrow-dark-ink"
+          >
+            ↷ Redo
+          </button>
         </div>
       )}
       <div
@@ -83,6 +179,7 @@ export function RichTextField({
         suppressContentEditableWarning
         onInput={commit}
         onBlur={commit}
+        onKeyDown={handleKeyDown}
         data-placeholder={placeholder}
         className="rich-text rich-text-editor"
         style={{ minHeight: `${minHeightRem}rem` }}
