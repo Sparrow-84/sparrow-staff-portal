@@ -58,7 +58,6 @@ import { DeptCalendar } from '@/components/calendar/DeptCalendar';
 import { LcpProgress } from './LcpProgress';
 import { PhaseProgressBar } from './PhaseProgressBar';
 import { LcpHome } from './LcpHome';
-import type { View } from '@/components/Sidebar';
 
 const LCP_TOUR_STEPS: TourStep[] = [
   {
@@ -139,7 +138,7 @@ async function recomputeFamilyStatuses(
   return corrected;
 }
 
-export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
+export function LcpRoom() {
   const { tourOpen, dismissTour } = useRoomTour('sparrow_lcp_toured_v1');
   const { profile } = useAuth();
   const canEditCurriculum = profile?.role === 'admin' || (profile?.lcp_role === 'full' && profile?.lcp_curriculum_access === true);
@@ -358,7 +357,6 @@ export function LcpRoom({ onNavigate }: { onNavigate?: (view: View) => void }) {
           onOpenFamily={openFamily}
           onGoToSessionLog={() => setTab('session-log')}
           onGoToCurriculum={() => setTab('curriculum')}
-          onGoToTwinOaks={() => onNavigate?.('twin-oaks')}
           canEditCurriculum={canEditCurriculum}
           onAcknowledgeSavingsAward={async (familyId, cents) => {
             await acknowledgeHousingSavingsAnnouncement(familyId, cents);

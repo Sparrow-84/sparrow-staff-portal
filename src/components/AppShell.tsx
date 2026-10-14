@@ -95,7 +95,7 @@ export function AppShell() {
             {view === 'contacts' && <MyContactsView />}
             {view === 'settings' && <SettingsView />}
             {view === 'twin-oaks' && <TwinOaksRoom />}
-            {view === 'lcp' && <LcpRoom onNavigate={handleNavigate} />}
+            {view === 'lcp' && <LcpRoom />}
             {view === 'partnerships' && <PartnershipsRoom />}
             {view === 'operations' && <OperationsRoom />}
             {view === 'documents' && <DocumentsRoom />}

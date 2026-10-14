@@ -47,7 +47,6 @@ interface Props {
   onOpenFamily: (familyId: string, tab?: FamilyDetailTab) => void;
   onGoToSessionLog: () => void;
   onGoToCurriculum: () => void;
-  onGoToTwinOaks: (requestId: string) => void;
   canEditCurriculum: boolean;
   onAcknowledgeSavingsAward: (familyId: string, currentCents: number) => Promise<void>;
 }
@@ -69,7 +68,6 @@ export function LcpHome({
   onOpenFamily,
   onGoToSessionLog,
   onGoToCurriculum,
-  onGoToTwinOaks,
   canEditCurriculum,
   onAcknowledgeSavingsAward,
 }: Props) {
@@ -187,9 +185,13 @@ export function LcpHome({
     setJustPrepped(null);
   }
 
-  function respondToToc(requestId: string) {
-    sessionStorage.setItem('sparrow.pendingTocRequestOpen', requestId);
-    onGoToTwinOaks(requestId);
+  // Takes Shelly straight to the family's own General Info tab -- that's
+  // where Home Unit/move-in date actually live and can be fixed. Previously
+  // this sent her to the Twin Oaks room instead (where the question came
+  // from), which only shows a read-only request preview + a notes box --
+  // nowhere to actually act on it. Real bug, reported by Shelly 2026-10-14.
+  function respondToToc(request: LcpMoveInRequest) {
+    onOpenFamily(request.family_id, 'general');
   }
 
   const totalOpen =
@@ -264,7 +266,7 @@ export function LcpHome({
               who={`${r.family_display_name} — move-in request`}
               detail={r.notes ?? undefined}
               cta="Respond →"
-              onClick={() => respondToToc(r.id)}
+              onClick={() => respondToToc(r)}
             />
           ))}
         </SignalCard>
