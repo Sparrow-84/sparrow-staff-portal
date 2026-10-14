@@ -17,15 +17,17 @@ import { getStats, getStatLabels, type Stat, type StatLabel } from '@/lib/stats'
 import type { Profile } from '@/lib/types';
 import { StoriesTab } from './StoriesTab';
 import { MediaReleaseTab } from './MediaReleaseTab';
+import { PermissionsTab } from './PermissionsTab';
 import { StoryPanel } from './StoryPanel';
 import { StatsTab } from './StatsTab';
 import { StatPanel } from './StatPanel';
 
-type Tab = 'stories' | 'media' | 'stats';
+type Tab = 'stories' | 'media' | 'permissions' | 'stats';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'stories', label: 'Stories' },
   { key: 'media', label: 'Photo & Media Release' },
+  { key: 'permissions', label: 'Permissions' },
   { key: 'stats', label: 'Stats' },
 ];
 
@@ -164,6 +166,9 @@ export function StoriesRoom() {
             currentUserId={profile?.id ?? ''}
             onChanged={load}
           />
+        )}
+        {activeTab === 'permissions' && (
+          <PermissionsTab participants={participants} consents={consents} />
         )}
         {activeTab === 'stats' && (
           <StatsTab

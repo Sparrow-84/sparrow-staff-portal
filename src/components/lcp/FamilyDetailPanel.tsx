@@ -57,6 +57,7 @@ import {
   fetchGoalResponsesForFamily,
   fetchGoalsForFamily,
   fetchHomeworkForFamily,
+  fetchFamilyConsentSummary,
   fetchHouseholdAdult,
   fetchHouseholdChildren,
   fetchHousingSavingsMonths,
@@ -89,12 +90,14 @@ import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { ComplianceLabelPicker } from './ComplianceLabelPicker';
 import { LabelPill } from '@/components/LabelPill';
 import { RichTextField, RichOrPlainView } from './RichText';
+import { currentConsentFor, isClearedToPublish, type StoryLayer2Consent } from '@/lib/stories';
 
-export type FamilyDetailTab = 'general' | 'children' | 'progress' | 'finance' | 'compliance' | 'goals' | 'homework' | 'messages' | 'notes';
+export type FamilyDetailTab = 'general' | 'children' | 'consent' | 'progress' | 'finance' | 'compliance' | 'goals' | 'homework' | 'messages' | 'notes';
 type Tab = FamilyDetailTab;
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General Info' },
   { key: 'children', label: 'Children' },
+  { key: 'consent', label: 'Consent' },
   { key: 'progress', label: 'Progress' },
   { key: 'finance', label: 'Finance' },
   { key: 'compliance', label: 'Compliance' },
@@ -141,6 +144,7 @@ export function FamilyDetailPanel({
   const [housingSavingsMonths, setHousingSavingsMonths] = useState<HousingSavingsMonth[]>([]);
   const [perfectWeeks, setPerfectWeeks] = useState<LcpPerfectWeek[]>([]);
   const [complianceNotes, setComplianceNotes] = useState<ComplianceNote[]>([]);
+  const [consents, setConsents] = useState<StoryLayer2Consent[]>([]);
   const [reloadError, setReloadError] = useState<string | null>(null);
   // General Info's view/edit default depends on whether a household adult
   // exists -- but that isn't known until the fetch below resolves. Without
@@ -156,7 +160,7 @@ export function FamilyDetailPanel({
   // other 11 from refreshing, or a save on one tab looks broken on every tab.
   const reloadDetail = useCallback(async () => {
     if (!familyId) return;
-    const [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn, pw] = await Promise.allSettled([
+    const [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn, pw, cs] = await Promise.allSettled([
       fetchHomeworkForFamily(familyId),
       fetchMessages(familyId),
       fetchStaffNotes(familyId),
@@ -170,6 +174,7 @@ export function FamilyDetailPanel({
       fetchHousingSavingsMonths(familyId),
       fetchComplianceNotes(familyId),
       fetchPerfectWeeksForFamily(familyId),
+      fetchFamilyConsentSummary(familyId),
     ]);
     if (hw.status === 'fulfilled') setHomework(hw.value);
     if (msg.status === 'fulfilled') setMessages(msg.value);
@@ -184,8 +189,9 @@ export function FamilyDetailPanel({
     if (sm.status === 'fulfilled') setHousingSavingsMonths(sm.value);
     if (cn.status === 'fulfilled') setComplianceNotes(cn.value);
     if (pw.status === 'fulfilled') setPerfectWeeks(pw.value);
+    if (cs.status === 'fulfilled') setConsents(cs.value);
 
-    const failed = [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn, pw].filter((r) => r.status === 'rejected');
+    const failed = [hw, msg, nt, vo, red, gl, gr, fp, ha, hc, sm, cn, pw, cs].filter((r) => r.status === 'rejected');
     setReloadError(
       failed.length > 0
         ? `${failed.length} part${failed.length > 1 ? 's' : ''} of this family's record didn't load — probably a database update still pending. Other tabs are unaffected.`
@@ -248,6 +254,9 @@ export function FamilyDetailPanel({
             onChanged();
           }}
         />
+      )}
+      {tab === 'consent' && (
+        <ConsentTab adult={householdAdult} consents={consents} />
       )}
       {tab === 'progress' && (
         <ProgressTab
@@ -327,6 +336,110 @@ export function FamilyDetailPanel({
         <NotesTab family={family} notes={notes} currentUserId={currentUserId} onChanged={reloadDetail} />
       )}
     </Drawer>
+  );
+}
+
+// Read-only summary of the Stories & Media room's Photo & Media Release record
+// for this family's adult -- Shelly's ask (see inbound-message-triage-2026-10
+// Batch 1 item 4): a central place to check each participant's photo/story
+// permissions without hunting through individual stories. Pulls from
+// fetch_family_consent_summary() (migration 0184) so it works for any
+// LCP-full staff regardless of whether they separately have stories_access.
+// story_layer2_consents has always been a log, not a single overwritable row
+// -- shows the current (most recent) entry prominently, with any earlier
+// ones listed below as history, exactly as the underlying data already
+// supports (see currentConsentFor/isClearedToPublish in lib/stories.ts).
+function ConsentTab({ adult, consents }: { adult: HouseholdAdult | null; consents: StoryLayer2Consent[] }) {
+  if (!adult) {
+    return (
+      <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
+        No adult on file yet — add one on General Info first.
+      </p>
+    );
+  }
+
+  const current = currentConsentFor(consents, adult.id);
+  const cleared = isClearedToPublish(consents, adult.id);
+  const history = consents.filter((c) => c.household_adult_id === adult.id && c.id !== current?.id);
+
+  function namingLabel(c: StoryLayer2Consent): string {
+    if (c.naming_choice) return c.naming_choice === 'named' ? 'Named' : 'Anonymous';
+    if (c.photo_consent !== null) return '— (prior form)';
+    return '—';
+  }
+
+  function faceLabel(obscured: boolean | null, legacyConsent: boolean | null): string {
+    if (obscured !== null) return obscured ? 'Blurred' : 'Not blurred';
+    if (legacyConsent !== null) return legacyConsent ? 'Consented (prior form)' : 'Declined (prior form)';
+    return '—';
+  }
+
+  function dateLabel(c: StoryLayer2Consent): string {
+    return dayLabel(c.date_signed ?? c.created_at);
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className={`rounded-xl px-4 py-3 ${cleared ? 'bg-sparrow-green/10' : 'bg-priority-p1/10'}`}>
+        <p className={`text-sm font-medium ${cleared ? 'text-sparrow-green dark:text-sparrow-dark-green' : 'text-priority-p1'}`}>
+          {cleared ? '✓ Cleared to publish' : '⚠ Not cleared — no signed photo/media release on file yet'}
+        </p>
+        <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+          To log or update this, use the Stories &amp; Media room's Photo &amp; Media Release tab — it shows up here automatically.
+        </p>
+      </div>
+
+      {current ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
+            <span className="field-label">Named or Anonymous</span>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{namingLabel(current)}</p>
+          </div>
+          <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
+            <span className="field-label">Date signed</span>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{dateLabel(current)}</p>
+          </div>
+          <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
+            <span className="field-label">Her face</span>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{faceLabel(current.face_obscured, current.photo_consent)}</p>
+          </div>
+          <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
+            <span className="field-label">Kids' faces</span>
+            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+              {faceLabel(
+                current.children_face_obscured,
+                current.children_photo_consent === 'n/a' ? null : current.children_photo_consent === 'yes',
+              )}
+            </p>
+          </div>
+          {current.notes && (
+            <div className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3 sm:col-span-2">
+              <span className="field-label">Notes</span>
+              <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink whitespace-pre-wrap">{current.notes}</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No photo/media release on file for her yet.</p>
+      )}
+
+      {history.length > 0 && (
+        <div>
+          <span className="field-label">Earlier entries</span>
+          <ul className="mt-2 space-y-2">
+            {history.map((c) => (
+              <li
+                key={c.id}
+                className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray"
+              >
+                {dateLabel(c)} — {namingLabel(c)}, her face: {faceLabel(c.face_obscured, c.photo_consent)}, kids' faces:{' '}
+                {faceLabel(c.children_face_obscured, c.children_photo_consent === 'n/a' ? null : c.children_photo_consent === 'yes')}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

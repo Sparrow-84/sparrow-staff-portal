@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { localDate, localDateOf } from './date';
 import { withTzOffset, toLocalDate } from './calendar';
+import type { StoryLayer2Consent } from './stories';
 import type {
   Attendance,
   AttendanceHistoryEntry,
@@ -1733,6 +1734,17 @@ export async function updateHouseholdChild(id: string, child: ChildInput): Promi
 export async function deleteHouseholdChild(id: string): Promise<void> {
   const { error } = await supabase.from('lcp_household_children').delete().eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+// ── Consent summary (Stories & Media's photo/story consent, read into LCP) ──
+// SECURITY DEFINER-gated (lcp_is_full(), not stories_access) -- see migration
+// 0184. Returns the raw story_layer2_consents shape so the existing
+// currentConsentFor()/isClearedToPublish() helpers from lib/stories.ts work
+// unchanged here, newest first.
+export async function fetchFamilyConsentSummary(familyId: string): Promise<StoryLayer2Consent[]> {
+  const { data, error } = await supabase.rpc('fetch_family_consent_summary', { p_family_id: familyId });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as StoryLayer2Consent[];
 }
 
 // ── Outcome check-ins (post-program stably-housed tracking) ──────────
