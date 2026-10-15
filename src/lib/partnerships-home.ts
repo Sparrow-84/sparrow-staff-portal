@@ -143,7 +143,10 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
   ] = await Promise.all([
     supabase
       .from('partners')
-      .select('id, name, owner_id, active, stage, cadence_days, last_touchpoint_at, created_at, touchpoint_reminder_note')
+      // touchpoint_reminder_note left out of this select until migration 0186 is confirmed
+      // applied -- selecting a not-yet-existing column broke the whole Partnerships room
+      // 2026-10-15. Add back once confirmed.
+      .select('id, name, owner_id, active, stage, cadence_days, last_touchpoint_at, created_at')
       .eq('active', true),
     supabase
       .from('partnership_collateral')

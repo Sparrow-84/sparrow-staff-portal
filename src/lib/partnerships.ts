@@ -15,8 +15,13 @@ import type {
 // All reads/writes are gated by RLS (0008_partnerships.sql): partnerships staff + admins
 // manage everything; a partner's named owner sees/stewards their own.
 
+// touchpoint_reminder_note (migration 0186) deliberately left OUT of this select for now --
+// Byron hasn't run 0186 yet, and selecting a column that doesn't exist live breaks this
+// query for EVERY partner fetch, which took down the entire Partnerships room 2026-10-15
+// (confirmed: "column partners.touchpoint_reminder_note does not exist"). Add it back once
+// 0186 is confirmed applied -- see byron-pending-items.
 const PARTNER_COLS =
-  'id, name, type, secondary_types, stage, owner_id, organization, contact_name, role, website, email, phone, address, donor_tier, cadence_days, lead_time_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status, business_card_front_path, business_card_back_path, touchpoint_reminder_note';
+  'id, name, type, secondary_types, stage, owner_id, organization, contact_name, role, website, email, phone, address, donor_tier, cadence_days, lead_time_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status, business_card_front_path, business_card_back_path';
 
 // ── Partners ─────────────────────────────────────────────────────────
 export async function fetchPartners(): Promise<Partner[]> {
