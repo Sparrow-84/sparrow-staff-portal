@@ -87,7 +87,7 @@ interface Props {
   // Thursday only: called after the "Fix it" picker saves a correction, so
   // the parent (which owns the Teacher Guide / resources pane) can refresh
   // to match instead of this component silently diverging from it.
-  onSessionCorrected: (newSessionId: number) => void;
+  onSessionCorrected: (newSessionId: number | null) => void;
   onBack: () => void;
   onFiled: () => void;
   onOpenFamily: (familyId: string) => void;
@@ -143,8 +143,9 @@ export function SessionLogEntry({
   const [sessionCorrectionErr, setSessionCorrectionErr] = useState<string | null>(null);
 
   function openSessionEditor() {
-    setPickerUnitId(sessionToTeach?.unit_id ?? allUnits[0]?.id ?? null);
-    setPickerSessionId(sessionToTeach?.id ?? null);
+    const unitId = sessionToTeach?.unit_id ?? allUnits[0]?.id ?? null;
+    setPickerUnitId(unitId);
+    setPickerSessionId(sessionToTeach?.id ?? allUnits.find((u) => u.id === unitId)?.sessions[0]?.id ?? null);
     setSessionCorrectionErr(null);
     setEditingSession(true);
   }
@@ -156,6 +157,27 @@ export function SessionLogEntry({
     try {
       await updateSessionLogSessionId(sessionLogId, pickerSessionId);
       onSessionCorrected(pickerSessionId);
+      setEditingSession(false);
+    } catch (e) {
+      setSessionCorrectionErr(e instanceof Error ? e.message : 'Could not update the session.');
+    } finally {
+      setSavingSession(false);
+    }
+  }
+
+  // "No curriculum tonight" -- for a guest speaker, holiday, special program,
+  // etc. where the group met but the regular curriculum wasn't covered at
+  // all. Previously the only option was to pick SOME real session, which
+  // misrepresented what actually happened (Audrey found this 2026-10-19,
+  // Oct 8's guest-speaker night). Always reversible via "Pick a session"
+  // below, same as any other correction.
+  async function markNoCurriculumTonight() {
+    if (!sessionLogId) return;
+    setSavingSession(true);
+    setSessionCorrectionErr(null);
+    try {
+      await updateSessionLogSessionId(sessionLogId, null);
+      onSessionCorrected(null);
       setEditingSession(false);
     } catch (e) {
       setSessionCorrectionErr(e instanceof Error ? e.message : 'Could not update the session.');
@@ -414,11 +436,16 @@ export function SessionLogEntry({
         }
       }
 
-      if (sessionType === 'thursday_group' && sessionToTeach) {
+      if (sessionType === 'thursday_group') {
         // Whether to actually advance is always Shelly's call, not automatic --
         // she may want another night on the same session either way, not just
         // at a unit boundary. Tonight's attendance/notes/homework/goals above
-        // are already saved regardless of what she picks next.
+        // are already saved regardless of what she picks next. Shows the
+        // "Session complete?" advance prompt when a real session was
+        // covered, or a plain confirmation when tonight was logged as a
+        // special event with no curriculum (sessionToTeach null) -- either
+        // way, filing always lands on a confirmation screen rather than
+        // closing silently.
         setFiled(true);
       } else {
         onFiled();
@@ -481,6 +508,30 @@ export function SessionLogEntry({
   const isThursday = sessionType === 'thursday_group';
   const isAdHoc = sessionType === 'ad_hoc';
   const showVouchers = !isAdHoc;
+
+  // Filed as a special event (no curriculum tonight) -- nothing to advance,
+  // so this just confirms it and lets you leave, rather than falling through
+  // to the full editing form again (that was the actual bug Audrey hit: the
+  // only way to express "we didn't do curriculum tonight" was to force-pick
+  // a real session, since this state had no dedicated screen of its own).
+  if (filed && isThursday && !sessionToTeach) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-5 shadow-card">
+          <p className="text-sm font-medium text-sparrow-green dark:text-sparrow-dark-green">Session filed ✓</p>
+          <p className="mt-3 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+            Logged as a special event — no curriculum session tonight. The curriculum position is unchanged,
+            so next time you'll pick up right where the group left off.
+          </p>
+          <div className="mt-4">
+            <button onClick={onFiled} className="btn-primary">
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (filed && sessionToTeach) {
     // lcp_program_position itself is still last week's position here -- the
@@ -653,108 +704,124 @@ export function SessionLogEntry({
       {/* Thursday: which session tonight covers */}
       {isThursday && (
         <section className="rounded-2xl border border-sparrow-green/30 bg-sparrow-sage/20 dark:bg-sparrow-green/15 p-4 shadow-card">
-          {sessionToTeach ? (
-            <>
-              <div className="flex items-baseline justify-between gap-3">
-                <div>
-                  <p className="field-label">Tonight</p>
-                  <p className="mt-1 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
-                    Session {sessionToTeach.session_number} · {sessionToTeach.title}
-                  </p>
-                </div>
-                {!editingSession && (
+          <div className="flex items-baseline justify-between gap-3">
+            <div>
+              <p className="field-label">Tonight</p>
+              {sessionToTeach ? (
+                <p className="mt-1 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
+                  Session {sessionToTeach.session_number} · {sessionToTeach.title}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
+                  No curriculum tonight — special event
+                </p>
+              )}
+            </div>
+            {!editingSession && (
+              <div className="flex shrink-0 items-center gap-3">
+                {sessionToTeach && (
                   <button
-                    onClick={openSessionEditor}
-                    className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+                    onClick={markNoCurriculumTonight}
+                    disabled={savingSession}
+                    className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
                   >
-                    Not this session? Fix it
+                    No curriculum tonight
                   </button>
                 )}
+                <button
+                  onClick={openSessionEditor}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+                >
+                  {sessionToTeach ? 'Not this session? Fix it' : 'Pick a session instead'}
+                </button>
               </div>
+            )}
+          </div>
 
-              {/* Quick access to tonight's materials — Teacher Guide itself is on the left */}
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {tonightSlideshow?.drive_url ? (
-                  <a
-                    href={tonightSlideshow.drive_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-lg bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green shadow-sm ring-1 ring-sparrow-rule transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
-                  >
-                    Open Slideshow ↗
-                  </a>
-                ) : (
-                  <span className="rounded-lg px-3 py-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Slideshow not added</span>
-                )}
-                {tonightHandout?.drive_url ? (
-                  <a
-                    href={tonightHandout.drive_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-lg bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green shadow-sm ring-1 ring-sparrow-rule transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
-                  >
-                    Open Student Handout ↗
-                  </a>
-                ) : (
-                  <span className="rounded-lg px-3 py-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Handout not added</span>
-                )}
-              </div>
-
-              {editingSession && (
-                <div className="mt-3 space-y-2 border-t border-sparrow-green/20 pt-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={pickerUnitId ?? ''}
-                      onChange={(e) => {
-                        const unitId = Number(e.target.value);
-                        setPickerUnitId(unitId);
-                        setPickerSessionId(allUnits.find((u) => u.id === unitId)?.sessions[0]?.id ?? null);
-                      }}
-                      className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2.5 py-1.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink"
-                    >
-                      {allUnits.map((u) => (
-                        <option key={u.id} value={u.id}>{u.name}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={pickerSessionId ?? ''}
-                      onChange={(e) => setPickerSessionId(Number(e.target.value))}
-                      className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2.5 py-1.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink"
-                    >
-                      {allUnits
-                        .find((u) => u.id === pickerUnitId)
-                        ?.sessions.map((s, i, arr) => (
-                          <option key={s.id} value={s.id}>Session {i + 1} of {arr.length}: {s.title}</option>
-                        ))}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      disabled={savingSession || pickerSessionId == null}
-                      onClick={saveSessionCorrection}
-                      className="btn-primary px-3 py-1.5 text-xs"
-                    >
-                      {savingSession ? 'Saving…' : 'Save'}
-                    </button>
-                    <button
-                      disabled={savingSession}
-                      onClick={() => setEditingSession(false)}
-                      className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  {sessionCorrectionErr && <p className="text-xs text-priority-p1">{sessionCorrectionErr}</p>}
-                  <p className="text-xs italic text-sparrow-gray dark:text-sparrow-dark-gray">
-                    This only relabels tonight's log — it won't change what Monday Mentoring shows until this session is filed and "Session complete" is clicked, or you fix it directly from Monday's screen.
-                  </p>
-                </div>
+          {sessionToTeach ? (
+            /* Quick access to tonight's materials — Teacher Guide itself is on the left */
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {tonightSlideshow?.drive_url ? (
+                <a
+                  href={tonightSlideshow.drive_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green shadow-sm ring-1 ring-sparrow-rule transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
+                >
+                  Open Slideshow ↗
+                </a>
+              ) : (
+                <span className="rounded-lg px-3 py-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Slideshow not added</span>
               )}
-            </>
+              {tonightHandout?.drive_url ? (
+                <a
+                  href={tonightHandout.drive_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green shadow-sm ring-1 ring-sparrow-rule transition hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
+                >
+                  Open Student Handout ↗
+                </a>
+              ) : (
+                <span className="rounded-lg px-3 py-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Handout not added</span>
+              )}
+            </div>
           ) : (
-            <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-              No more sessions left in the curriculum to advance to.
+            <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              Guest speaker, holiday, or another special night — nothing from the curriculum is logged for
+              tonight, and the curriculum position won't move. Pick a session above if this was a mistake.
             </p>
+          )}
+
+          {editingSession && (
+            <div className="mt-3 space-y-2 border-t border-sparrow-green/20 pt-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={pickerUnitId ?? ''}
+                  onChange={(e) => {
+                    const unitId = Number(e.target.value);
+                    setPickerUnitId(unitId);
+                    setPickerSessionId(allUnits.find((u) => u.id === unitId)?.sessions[0]?.id ?? null);
+                  }}
+                  className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2.5 py-1.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink"
+                >
+                  {allUnits.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={pickerSessionId ?? ''}
+                  onChange={(e) => setPickerSessionId(Number(e.target.value))}
+                  className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-2.5 py-1.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink"
+                >
+                  {allUnits
+                    .find((u) => u.id === pickerUnitId)
+                    ?.sessions.map((s, i, arr) => (
+                      <option key={s.id} value={s.id}>Session {i + 1} of {arr.length}: {s.title}</option>
+                    ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  disabled={savingSession || pickerSessionId == null}
+                  onClick={saveSessionCorrection}
+                  className="btn-primary px-3 py-1.5 text-xs"
+                >
+                  {savingSession ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  disabled={savingSession}
+                  onClick={() => setEditingSession(false)}
+                  className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray"
+                >
+                  Cancel
+                </button>
+              </div>
+              {sessionCorrectionErr && <p className="text-xs text-priority-p1">{sessionCorrectionErr}</p>}
+              <p className="text-xs italic text-sparrow-gray dark:text-sparrow-dark-gray">
+                This only relabels tonight's log — it won't change what Monday Mentoring shows until this session is filed and "Session complete" is clicked, or you fix it directly from Monday's screen.
+              </p>
+            </div>
           )}
         </section>
       )}

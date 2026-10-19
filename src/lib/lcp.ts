@@ -1027,7 +1027,11 @@ export async function findOrCreateThursdaySessionLog(
  *  Thursday log is actually about. Independent of lcp_program_position;
  *  only affects this one log row (and, if "Session complete" is later
  *  clicked, which session filing it advances to). */
-export async function updateSessionLogSessionId(sessionLogId: string, sessionId: number): Promise<void> {
+// sessionId may be null -- "Fix it" also offers marking a Thursday night as a
+// special event (guest speaker, holiday, etc.) with no curriculum covered at
+// all, not just relabeling to a different real session. See migration 0180's
+// original nullable column + the Oct 8 guest-speaker gap Audrey found.
+export async function updateSessionLogSessionId(sessionLogId: string, sessionId: number | null): Promise<void> {
   const { error } = await supabase.from('lcp_session_logs').update({ session_id: sessionId }).eq('id', sessionLogId);
   if (error) throw new Error(error.message);
 }

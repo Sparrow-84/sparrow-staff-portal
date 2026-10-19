@@ -188,10 +188,17 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
   // Fired when SessionLogEntry's "Fix it" picker relabels tonight's session
   // -- refreshes the Teacher Guide / resources pane to match, without
   // re-running the find-or-create above (the row already exists).
-  function handleSessionCorrected(newSessionId: number) {
-    const pinned = findSessionById(phases, newSessionId);
+  function handleSessionCorrected(newSessionId: number | null) {
+    const pinned = newSessionId == null ? null : findSessionById(phases, newSessionId);
     setThursdaySessionId(pinned?.id ?? null);
-    if (!pinned) return;
+    if (!pinned) {
+      // Marked as a special event (no curriculum tonight) -- clear the
+      // Teacher Guide pane instead of leaving the previous session's content
+      // showing stale, same as the initial find-or-create effect already does.
+      setThursdayGuideContent(null);
+      setThursdayCurriculumNotes('');
+      return;
+    }
     setThursdayGuideLoading(true);
     Promise.all([fetchSessionResources(pinned.id), fetchSessionCurriculumNotes(pinned.id)])
       .then(([resources, curriculumNotes]) => {
