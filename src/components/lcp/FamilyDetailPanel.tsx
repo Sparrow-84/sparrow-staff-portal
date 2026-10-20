@@ -118,6 +118,7 @@ export function FamilyDetailPanel({
   onClose,
   onChanged,
   initialTab,
+  notesReadOnly,
 }: {
   open: boolean;
   family: Family | null;
@@ -129,6 +130,10 @@ export function FamilyDetailPanel({
   onClose: () => void;
   onChanged: () => void;
   initialTab?: Tab;
+  // True when opened via a session-log "click a name to see past notes" link
+  // -- a glance-at-history view, not a place to add a new note. See LcpRoom's
+  // openFamily().
+  notesReadOnly?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>('general');
   const [homework, setHomework] = useState<Homework[]>([]);
@@ -333,7 +338,7 @@ export function FamilyDetailPanel({
         </div>
       )}
       {tab === 'notes' && (
-        <NotesTab family={family} notes={notes} currentUserId={currentUserId} onChanged={reloadDetail} />
+        <NotesTab family={family} notes={notes} currentUserId={currentUserId} onChanged={reloadDetail} readOnly={notesReadOnly} />
       )}
     </Drawer>
   );
@@ -2332,11 +2337,13 @@ function NotesTab({
   notes,
   currentUserId,
   onChanged,
+  readOnly,
 }: {
   family: Family;
   notes: StaffNote[];
   currentUserId: string;
   onChanged: () => void;
+  readOnly?: boolean;
 }) {
   const [body, setBody] = useState('');
   const [composerKey, setComposerKey] = useState(0);
@@ -2369,19 +2376,27 @@ function NotesTab({
       <p className="rounded-lg bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
         🔒 Internal — never visible to the family or to non-LCP staff.
       </p>
-      <div>
-        <RichTextField
-          key={composerKey}
-          initialValue={body}
-          onChange={setBody}
-          toolbar
-          minHeightRem={4}
-          placeholder="Add a note for the LCP team…"
-        />
-        <button onClick={add} disabled={busy || !body.trim()} className="btn-primary mt-2">
-          Add note
-        </button>
-      </div>
+      {readOnly && (
+        <p className="rounded-lg bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+          Read-only view of past notes. To continue a note you're mid-writing tonight, go back to the session
+          log and use its own note box for {familyDisplayName(family)} — not this screen.
+        </p>
+      )}
+      {!readOnly && (
+        <div>
+          <RichTextField
+            key={composerKey}
+            initialValue={body}
+            onChange={setBody}
+            toolbar
+            minHeightRem={4}
+            placeholder="Add a note for the LCP team…"
+          />
+          <button onClick={add} disabled={busy || !body.trim()} className="btn-primary mt-2">
+            Add note
+          </button>
+        </div>
+      )}
       <ul className="space-y-2">
         {notes.length === 0 && <li className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No notes yet.</li>}
         {notes.map((n) => (
@@ -2421,7 +2436,7 @@ function NotesTab({
                       : dayLabel(n.created_at)}
                     {n.author_name && ` · ${n.author_name}`}
                   </p>
-                  {n.author_id === currentUserId && (
+                  {!readOnly && n.author_id === currentUserId && (
                     <button
                       onClick={() => { setEditingId(n.id); setEditBody(n.body); }}
                       className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green"

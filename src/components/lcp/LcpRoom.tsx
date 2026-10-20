@@ -168,6 +168,14 @@ export function LcpRoom() {
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [familyOpenTab, setFamilyOpenTab] = useState<FamilyDetailTab | undefined>(undefined);
+  // True only when opened via the session-log "click a name to see past
+  // notes" links (SessionLogEntry/SessionLogViewer) -- Audrey kept mistaking
+  // that glance-at-history view for the place to continue a note she was
+  // mid-writing on the actual session screen, since it also has a compose
+  // box. Making it read-only there (no Add/Edit) points her back to the real
+  // editing spot instead. Every other way of opening a family explicitly
+  // passes false (the default), so this never leaks into a normal open.
+  const [familyNotesReadOnly, setFamilyNotesReadOnly] = useState(false);
   const [event, setEvent] = useState<LcpEvent | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<LcpEvent | null>(null);
@@ -287,9 +295,10 @@ export function LcpRoom() {
     feeOverdue: families.filter(feeOverdue).length,
   };
 
-  function openFamily(id: string, tab?: FamilyDetailTab) {
+  function openFamily(id: string, tab?: FamilyDetailTab, notesReadOnly = false) {
     setFamilyId(id);
     setFamilyOpenTab(tab);
+    setFamilyNotesReadOnly(notesReadOnly);
     setFamilyOpen(true);
   }
   function openBrief(ev: LcpEvent) {
@@ -374,7 +383,7 @@ export function LcpRoom() {
             programUnitId={programPosition?.unit_id ?? null}
             programSessionId={programPosition?.session_id ?? null}
             onChanged={load}
-            onOpenFamily={(id) => openFamily(id, 'notes')}
+            onOpenFamily={(id) => openFamily(id, 'notes', true)}
           />
         </div>
       ) : tab === 'families' ? (
@@ -519,10 +528,11 @@ export function LcpRoom() {
               key={calendarLog.id}
               log={calendarLog}
               families={families}
+              phases={phases}
               currentUserId={profile?.id ?? ''}
               onBack={() => setCalendarLog(null)}
               onChanged={() => { setCalendarLog(null); void load(); }}
-              onOpenFamily={(id) => openFamily(id, 'notes')}
+              onOpenFamily={(id) => openFamily(id, 'notes', true)}
             />
           ) : (
             <LcpCalendar
@@ -547,6 +557,7 @@ export function LcpRoom() {
         onClose={() => setFamilyOpen(false)}
         onChanged={load}
         initialTab={familyOpenTab}
+        notesReadOnly={familyNotesReadOnly}
       />
       <SessionBriefPanel
         open={briefOpen}

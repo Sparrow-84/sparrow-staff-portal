@@ -5,12 +5,14 @@ import {
   MONDAY_BUCKET_LABEL,
   SESSION_LOG_LABEL,
   type Family,
+  type LcpPhaseWithUnits,
   type SessionLog,
   type StaffNote,
 } from '@/lib/lcp-types';
 import { familyDisplayName, fetchNotesForSessionLog, updateSessionLog, updateStaffNote } from '@/lib/lcp';
 import { dayLabel } from '@/lib/lcp-format';
 import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
+import { findSessionById } from '@/lib/curriculum-track';
 import { RichTextField, RichOrPlainView } from './RichText';
 
 function formatDate(iso: string) {
@@ -23,13 +25,21 @@ function formatDate(iso: string) {
 interface Props {
   log: SessionLog;
   families: Family[];
+  phases: LcpPhaseWithUnits[];
   currentUserId: string;
   onBack: () => void;
   onChanged: () => void;
   onOpenFamily: (familyId: string) => void;
 }
 
-export function SessionLogViewer({ log, families, currentUserId, onBack, onChanged, onOpenFamily }: Props) {
+export function SessionLogViewer({ log, families, phases, currentUserId, onBack, onChanged, onOpenFamily }: Props) {
+  // Thursday Group only -- which curriculum session this night actually
+  // covered (or that it was a special event with none), per the same pinned
+  // session_id the live entry screen uses. Previously this read-only view
+  // showed no sign of either, so looking back later gave no way to tell
+  // "Session 19" from "guest speaker night" apart from whatever ended up in
+  // the group note. Susanna asked for this 2026-10-19.
+  const pinnedSession = log.session_type === 'thursday_group' ? findSessionById(phases, log.session_id) : null;
   const [notes, setNotes] = useState<StaffNote[]>([]);
   const [groupNote, setGroupNote] = useState(log.group_note ?? '');
   const [savingGroup, setSavingGroup] = useState(false);
@@ -90,6 +100,11 @@ export function SessionLogViewer({ log, families, currentUserId, onBack, onChang
             {formatDate(log.session_date)}
             {log.created_by_name && ` · Filed by ${log.created_by_name}`}
           </p>
+          {log.session_type === 'thursday_group' && (
+            <p className="mt-1 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
+              {pinnedSession ? `Session ${pinnedSession.session_number} · ${pinnedSession.title}` : 'Special event — no curriculum covered'}
+            </p>
+          )}
         </div>
       </div>
 

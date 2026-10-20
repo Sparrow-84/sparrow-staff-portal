@@ -309,6 +309,7 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         key={viewing.id}
         log={viewing}
         families={families}
+        phases={phases}
         currentUserId={currentUserId}
         onBack={() => setViewing(null)}
         onChanged={() => { void load(); onChanged(); }}
@@ -319,6 +320,25 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
 
   function openManual() {
     if (!validate()) return;
+    // Thursday Group is one log per date (findOrCreateThursdaySessionLog keys
+    // on session_date + session_type), so picking an already-logged date here
+    // was never actually starting something new -- it silently found the
+    // same DB row (which is why individual family notes still showed up) but
+    // built a brand-new `entry` with no `initialGroupNote`, so the group note
+    // looked wiped even though it wasn't. Audrey hit this editing a Thursday
+    // log the day after writing it (2026-10-19). Routing through the exact
+    // same selectLog() used when scrolling down and clicking the session
+    // directly fixes this for good, instead of two different code paths that
+    // can drift. Ad-hoc is deliberately excluded -- unlike Thursday, several
+    // genuinely separate ad-hoc sessions can happen on the same date.
+    if (manualType === 'thursday_group') {
+      const existing = logs.find((l) => l.session_date === manualDate && l.session_type === 'thursday_group');
+      if (existing) {
+        selectLog(existing);
+        setShowDatePicker(false);
+        return;
+      }
+    }
     setEntry({ sessionType: manualType, sessionDate: manualDate, eventId: null, label: SESSION_LOG_LABEL[manualType] });
     setShowDatePicker(false);
   }
