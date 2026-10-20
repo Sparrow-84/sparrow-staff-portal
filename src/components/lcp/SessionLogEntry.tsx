@@ -27,6 +27,7 @@ import {
   fetchGoalsForFamily,
   fetchHomeworkForFamily,
   fetchSessionResources,
+  fetchAttendanceForSessionLog,
   fetchNotesForSessionLog,
   finalizeThursdaySessionLog,
   markGoalMet,
@@ -227,6 +228,33 @@ export function SessionLogEntry({
   // ── vouchers (Monday + Thursday only) ────────────────────────────
   const [vouchers, setVouchers] = useState<Set<string>>(new Set());
 
+  // Reopening an unfiled Thursday draft used to show every family as "Not
+  // marked yet" even after attendance had already been clicked earlier --
+  // unlike family notes (autosaved below), nothing wrote attendance to
+  // lcp_session_attendance until "File session," so navigating away and back
+  // lost it outright. Fetches whatever's already on file by sessionLogId,
+  // same pattern as the notes hydration effect just below. Local state wins
+  // over the fetch on conflict, matching that same effect's race-guard.
+  useEffect(() => {
+    if (sessionType !== 'thursday_group' || !sessionLogId) return;
+    let cancelled = false;
+    fetchAttendanceForSessionLog(sessionLogId).then((rows) => {
+      if (cancelled) return;
+      const existingStatus: Record<string, AttendanceStatus> = {};
+      const existingReason: Record<string, string> = {};
+      const existingVouchers = new Set<string>();
+      for (const r of rows) {
+        existingStatus[r.family_id] = r.status;
+        if (r.reason) existingReason[r.family_id] = r.reason;
+        if (r.voucher_awarded) existingVouchers.add(r.family_id);
+      }
+      setAttendance((prev) => ({ ...existingStatus, ...prev }));
+      setAttendanceReason((prev) => ({ ...existingReason, ...prev }));
+      setVouchers((prev) => new Set([...existingVouchers, ...prev]));
+    });
+    return () => { cancelled = true; };
+  }, [sessionType, sessionLogId]);
+
   // ── notes ─────────────────────────────────────────────────────────
   const [familyNotes, setFamilyNotes] = useState<Record<string, string>>(() => {
     if (sessionType !== 'ad_hoc') return {};
@@ -290,6 +318,20 @@ export function SessionLogEntry({
       }
     }
   }, [familyNotes], 1500);
+
+  // Same reasoning as the notes autosave above, for attendance/reason/
+  // vouchers -- only writes families that actually have a status set, so an
+  // unmarked family never gets silently written as "on_time" just because
+  // this effect fired. Ad-hoc has no attendance UI at all, so this is
+  // Thursday-only by construction, not just by the sessionType guard.
+  useDebouncedEffect(() => {
+    if (sessionType !== 'thursday_group' || !sessionLogId) return;
+    for (const family of activeFamilies) {
+      const status = attendance[family.id];
+      if (status == null) continue;
+      void upsertSessionAttendance(sessionLogId, family.id, status, vouchers.has(family.id), currentUserId, attendanceReason[family.id]);
+    }
+  }, [attendance, attendanceReason, vouchers], 1500);
 
   // ── homework ──────────────────────────────────────────────────────
   const [liveHomework, setLiveHomework] = useState<Record<string, Homework[]>>(() => {
