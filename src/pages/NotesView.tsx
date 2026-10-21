@@ -239,6 +239,144 @@ function NoteList({
   );
 }
 
+// Defined at module level, not nested inside IdeasTab -- it used to be a
+// function declared INSIDE IdeasTab's own body, which meant every keystroke
+// in the edit title/description fields (both live in IdeasTab's state, so
+// typing re-renders IdeasTab) created a brand-new `Row` function identity.
+// React treats that as a different component type between renders, so it
+// unmounted and remounted the DOM every single keystroke -- and since the
+// title input has autoFocus, that remount yanked focus back to the title
+// field after every letter typed in the description. Shelly hit this
+// 2026-10-20ish ("I have to move the cursor from the title for every letter
+// I edit"). Fixed by hoisting this out so its identity stays stable across
+// IdeasTab's re-renders -- everything it used to close over is now explicit
+// props instead.
+function IdeaRow({
+  idea,
+  mine,
+  editingId,
+  editTitle,
+  editDescription,
+  editSaving,
+  onEditTitleChange,
+  onEditDescriptionChange,
+  onCancelEdit,
+  onSaveEdit,
+  onToggle,
+  onShare,
+  onStartEdit,
+  onRemove,
+  authorName,
+}: {
+  idea: Idea;
+  mine: boolean;
+  editingId: string | null;
+  editTitle: string;
+  editDescription: string;
+  editSaving: boolean;
+  onEditTitleChange: (v: string) => void;
+  onEditDescriptionChange: (v: string) => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (idea: Idea) => void;
+  onToggle: (idea: Idea) => void;
+  onShare: (idea: Idea, shared: boolean) => void;
+  onStartEdit: (idea: Idea) => void;
+  onRemove: (idea: Idea) => void;
+  authorName: (id: string) => string;
+}) {
+  if (mine && editingId === idea.id) {
+    return (
+      <div className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2.5">
+        <input
+          type="text"
+          value={editTitle}
+          onChange={(e) => onEditTitleChange(e.target.value)}
+          className="w-full border-none bg-transparent p-1 text-sm font-semibold outline-none"
+          autoFocus
+        />
+        <textarea
+          value={editDescription}
+          onChange={(e) => onEditDescriptionChange(e.target.value)}
+          rows={4}
+          className="w-full resize-none border-none bg-transparent p-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray outline-none"
+        />
+        <div className="mt-1 flex items-center justify-end gap-2 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
+          <button onClick={onCancelEdit} className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
+            Cancel
+          </button>
+          <button
+            onClick={() => onSaveEdit(idea)}
+            disabled={!editTitle.trim() || editSaving}
+            className="rounded-lg bg-sparrow-green px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {editSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group flex items-start gap-3 rounded-lg px-2 py-2.5 hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2">
+      <input
+        type="checkbox"
+        checked={Boolean(idea.completed_at)}
+        onChange={() => (mine ? onToggle(idea) : undefined)}
+        disabled={!mine}
+        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green disabled:cursor-default"
+      />
+      <div className="min-w-0 flex-1">
+        <p className={`text-sm font-medium ${idea.completed_at ? 'text-sparrow-gray dark:text-sparrow-dark-gray line-through' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
+          {idea.title}
+        </p>
+        {idea.description && (
+          <p className={`mt-0.5 whitespace-pre-wrap text-xs ${idea.completed_at ? 'text-sparrow-gray/70 line-through' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
+            {idea.description}
+          </p>
+        )}
+        <p className="mt-1 text-[11px] text-sparrow-gray/60">
+          {mine ? `Added ${formatDate(idea.created_at)}` : `${authorName(idea.created_by)} · ${formatDate(idea.created_at)}`}
+        </p>
+      </div>
+      {mine && (
+        <>
+          <button
+            onClick={() => onShare(idea, !idea.shared)}
+            title={idea.shared ? 'Shared with the team — click to make private' : 'Share with the team'}
+            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium opacity-0 group-hover:opacity-100 ${
+              idea.shared ? 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green opacity-100' : 'border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray'
+            }`}
+          >
+            {idea.shared ? 'Shared ✓' : 'Share'}
+          </button>
+          <button
+            onClick={() => onStartEdit(idea)}
+            title="Edit"
+            aria-label="Edit idea"
+            className="shrink-0 rounded p-1 text-sparrow-gray/50 opacity-0 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink group-hover:opacity-100"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => onRemove(idea)}
+            title="Delete"
+            aria-label="Delete idea"
+            className="shrink-0 rounded p-1 text-sparrow-gray/50 opacity-0 hover:text-priority-p1 group-hover:opacity-100"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 6h18" />
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            </svg>
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function IdeasTab({ userId }: { userId: string }) {
   const [scope, setScope] = useState<'mine' | 'team'>('mine');
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -333,100 +471,6 @@ function IdeasTab({ userId }: { userId: string }) {
   const teamActive = teamIdeas.filter((i) => !i.completed_at);
   const teamDone = teamIdeas.filter((i) => i.completed_at);
 
-  function Row({ idea, mine }: { idea: Idea; mine: boolean }) {
-    if (mine && editingId === idea.id) {
-      return (
-        <div className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2.5">
-          <input
-            type="text"
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            className="w-full border-none bg-transparent p-1 text-sm font-semibold outline-none"
-            autoFocus
-          />
-          <textarea
-            value={editDescription}
-            onChange={(e) => setEditDescription(e.target.value)}
-            rows={4}
-            className="w-full resize-none border-none bg-transparent p-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray outline-none"
-          />
-          <div className="mt-1 flex items-center justify-end gap-2 border-t border-dashed border-sparrow-rule dark:border-sparrow-dark-border pt-2">
-            <button onClick={cancelEdit} className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
-              Cancel
-            </button>
-            <button
-              onClick={() => void saveEdit(idea)}
-              disabled={!editTitle.trim() || editSaving}
-              className="rounded-lg bg-sparrow-green px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
-            >
-              {editSaving ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="group flex items-start gap-3 rounded-lg px-2 py-2.5 hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2">
-        <input
-          type="checkbox"
-          checked={Boolean(idea.completed_at)}
-          onChange={() => (mine ? void toggle(idea) : undefined)}
-          disabled={!mine}
-          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-green dark:text-sparrow-dark-green focus:ring-sparrow-green dark:focus:ring-sparrow-dark-green disabled:cursor-default"
-        />
-        <div className="min-w-0 flex-1">
-          <p className={`text-sm font-medium ${idea.completed_at ? 'text-sparrow-gray dark:text-sparrow-dark-gray line-through' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
-            {idea.title}
-          </p>
-          {idea.description && (
-            <p className={`mt-0.5 whitespace-pre-wrap text-xs ${idea.completed_at ? 'text-sparrow-gray/70 line-through' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>
-              {idea.description}
-            </p>
-          )}
-          <p className="mt-1 text-[11px] text-sparrow-gray/60">
-            {mine ? `Added ${formatDate(idea.created_at)}` : `${authorName(idea.created_by)} · ${formatDate(idea.created_at)}`}
-          </p>
-        </div>
-        {mine && (
-          <>
-            <button
-              onClick={() => void share(idea, !idea.shared)}
-              title={idea.shared ? 'Shared with the team — click to make private' : 'Share with the team'}
-              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium opacity-0 group-hover:opacity-100 ${
-                idea.shared ? 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green opacity-100' : 'border border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray'
-              }`}
-            >
-              {idea.shared ? 'Shared ✓' : 'Share'}
-            </button>
-            <button
-              onClick={() => startEdit(idea)}
-              title="Edit"
-              aria-label="Edit idea"
-              className="shrink-0 rounded p-1 text-sparrow-gray/50 opacity-0 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink group-hover:opacity-100"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => void remove(idea)}
-              title="Delete"
-              aria-label="Delete idea"
-              className="shrink-0 rounded p-1 text-sparrow-gray/50 opacity-0 hover:text-priority-p1 group-hover:opacity-100"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 6h18" />
-                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              </svg>
-            </button>
-          </>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div>
       <form onSubmit={handleSubmit} className="mb-5 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3">
@@ -486,7 +530,24 @@ function IdeasTab({ userId }: { userId: string }) {
         ) : (
           <>
             {active.map((idea) => (
-              <Row key={idea.id} idea={idea} mine />
+              <IdeaRow
+                key={idea.id}
+                idea={idea}
+                mine
+                editingId={editingId}
+                editTitle={editTitle}
+                editDescription={editDescription}
+                editSaving={editSaving}
+                onEditTitleChange={setEditTitle}
+                onEditDescriptionChange={setEditDescription}
+                onCancelEdit={cancelEdit}
+                onSaveEdit={saveEdit}
+                onToggle={toggle}
+                onShare={share}
+                onStartEdit={startEdit}
+                onRemove={remove}
+                authorName={authorName}
+              />
             ))}
             {done.length > 0 && (
               <>
@@ -494,7 +555,24 @@ function IdeasTab({ userId }: { userId: string }) {
                   Checked off
                 </p>
                 {done.map((idea) => (
-                  <Row key={idea.id} idea={idea} mine />
+                  <IdeaRow
+                key={idea.id}
+                idea={idea}
+                mine
+                editingId={editingId}
+                editTitle={editTitle}
+                editDescription={editDescription}
+                editSaving={editSaving}
+                onEditTitleChange={setEditTitle}
+                onEditDescriptionChange={setEditDescription}
+                onCancelEdit={cancelEdit}
+                onSaveEdit={saveEdit}
+                onToggle={toggle}
+                onShare={share}
+                onStartEdit={startEdit}
+                onRemove={remove}
+                authorName={authorName}
+              />
                 ))}
               </>
             )}
@@ -507,7 +585,24 @@ function IdeasTab({ userId }: { userId: string }) {
       ) : (
         <>
           {teamActive.map((idea) => (
-            <Row key={idea.id} idea={idea} mine={idea.created_by === userId} />
+            <IdeaRow
+              key={idea.id}
+              idea={idea}
+              mine={idea.created_by === userId}
+              editingId={editingId}
+              editTitle={editTitle}
+              editDescription={editDescription}
+              editSaving={editSaving}
+              onEditTitleChange={setEditTitle}
+              onEditDescriptionChange={setEditDescription}
+              onCancelEdit={cancelEdit}
+              onSaveEdit={saveEdit}
+              onToggle={toggle}
+              onShare={share}
+              onStartEdit={startEdit}
+              onRemove={remove}
+              authorName={authorName}
+            />
           ))}
           {teamDone.length > 0 && (
             <>
@@ -515,7 +610,24 @@ function IdeasTab({ userId }: { userId: string }) {
                 Checked off
               </p>
               {teamDone.map((idea) => (
-                <Row key={idea.id} idea={idea} mine={idea.created_by === userId} />
+                <IdeaRow
+                  key={idea.id}
+                  idea={idea}
+                  mine={idea.created_by === userId}
+                  editingId={editingId}
+                  editTitle={editTitle}
+                  editDescription={editDescription}
+                  editSaving={editSaving}
+                  onEditTitleChange={setEditTitle}
+                  onEditDescriptionChange={setEditDescription}
+                  onCancelEdit={cancelEdit}
+                  onSaveEdit={saveEdit}
+                  onToggle={toggle}
+                  onShare={share}
+                  onStartEdit={startEdit}
+                  onRemove={remove}
+                  authorName={authorName}
+                />
               ))}
             </>
           )}
