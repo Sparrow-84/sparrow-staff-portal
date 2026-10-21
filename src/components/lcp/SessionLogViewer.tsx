@@ -10,7 +10,7 @@ import {
   type StaffNote,
 } from '@/lib/lcp-types';
 import { familyDisplayName, fetchNotesForSessionLog, updateSessionLog, updateStaffNote } from '@/lib/lcp';
-import { dayLabel } from '@/lib/lcp-format';
+import { dayLabel, isNoteEditable } from '@/lib/lcp-format';
 import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
 import { findSessionById } from '@/lib/curriculum-track';
 import { RichTextField, RichOrPlainView } from './RichText';
@@ -26,13 +26,12 @@ interface Props {
   log: SessionLog;
   families: Family[];
   phases: LcpPhaseWithUnits[];
-  currentUserId: string;
   onBack: () => void;
   onChanged: () => void;
   onOpenFamily: (familyId: string) => void;
 }
 
-export function SessionLogViewer({ log, families, phases, currentUserId, onBack, onChanged, onOpenFamily }: Props) {
+export function SessionLogViewer({ log, families, phases, onBack, onChanged, onOpenFamily }: Props) {
   // Thursday Group only -- which curriculum session this night actually
   // covered (or that it was a special event with none), per the same pinned
   // session_id the live entry screen uses. Previously this read-only view
@@ -180,7 +179,6 @@ export function SessionLogViewer({ log, families, phases, currentUserId, onBack,
               <NoteList
                 notes={notes.filter((n) => n.bucket === bucket)}
                 familyMap={familyMap}
-                currentUserId={currentUserId}
                 editingNoteId={editingNoteId}
                 editNoteBody={editNoteBody}
                 savingNote={savingNote}
@@ -205,7 +203,6 @@ export function SessionLogViewer({ log, families, phases, currentUserId, onBack,
           <NoteList
             notes={notes}
             familyMap={familyMap}
-            currentUserId={currentUserId}
             editingNoteId={editingNoteId}
             editNoteBody={editNoteBody}
             savingNote={savingNote}
@@ -225,7 +222,6 @@ export function SessionLogViewer({ log, families, phases, currentUserId, onBack,
 function NoteList({
   notes,
   familyMap,
-  currentUserId,
   editingNoteId,
   editNoteBody,
   savingNote,
@@ -238,7 +234,6 @@ function NoteList({
 }: {
   notes: StaffNote[];
   familyMap: Map<string, Family>;
-  currentUserId: string;
   editingNoteId: string | null;
   editNoteBody: string;
   savingNote: boolean;
@@ -256,9 +251,10 @@ function NoteList({
     <ul className="mt-3 space-y-3">
       {notes.map((n) => {
         const family = familyMap.get(n.family_id);
-        // Bucket notes are a shared record any staff can edit; non-bucket notes
-        // (Thursday/ad-hoc) stay author-only, as before.
-        const canEdit = n.bucket !== null || n.author_id === currentUserId;
+        // Any LCP-full staff can edit any note now (2026-10-21) -- the only
+        // gate left is the 30-day age lock (isNoteEditable), also enforced at
+        // the RLS level (migration 0187) so this isn't just a hidden button.
+        const canEdit = isNoteEditable(n.created_at);
         return (
           <li key={n.id} className="rounded-xl border border-sparrow-rule/70 p-3">
             {family && (
@@ -297,10 +293,14 @@ function NoteList({
                       : dayLabel(n.created_at)}
                   </p>
                   <div className="flex items-center gap-2">
-                    {canEdit && (
+                    {canEdit ? (
                       <button onClick={() => onEditStart(n)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green">
                         Edit
                       </button>
+                    ) : (
+                      <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray" title="Notes lock 30 days after they're written">
+                        🔒 Locked
+                      </span>
                     )}
                   </div>
                 </div>

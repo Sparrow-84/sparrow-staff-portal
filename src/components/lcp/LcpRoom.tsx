@@ -529,7 +529,6 @@ export function LcpRoom() {
               log={calendarLog}
               families={families}
               phases={phases}
-              currentUserId={profile?.id ?? ''}
               onBack={() => setCalendarLog(null)}
               onChanged={() => { setCalendarLog(null); void load(); }}
               onOpenFamily={(id) => openFamily(id, 'notes', true)}

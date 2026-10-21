@@ -46,6 +46,19 @@ export function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
+// Any LCP-full staff can edit an individual session note now (2026-10-21,
+// Susanna's call) -- previously author-only, which turned out to be a UI-only
+// restriction (RLS never actually enforced it, see migration 0005's
+// staff_notes_all policy). The safety net she asked for: a note locks 30 days
+// after it was CREATED (not last edited -- otherwise editing would keep
+// resetting its own clock), enforced client-side here for a clear "why can't
+// I edit this" message, AND at the RLS level (migration 0187) so it's a real
+// lock, not just a hidden button.
+const NOTE_EDIT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+export function isNoteEditable(createdAt: string): boolean {
+  return Date.now() - new Date(createdAt).getTime() < NOTE_EDIT_WINDOW_MS;
+}
+
 export function isOverdue(iso: string | null): boolean {
   if (!iso) return false;
   const today = new Date();

@@ -310,7 +310,6 @@ export function SessionLog({ families, homeworkByFamily, currentUserId, currentU
         log={viewing}
         families={families}
         phases={phases}
-        currentUserId={currentUserId}
         onBack={() => setViewing(null)}
         onChanged={() => { void load(); onChanged(); }}
         onOpenFamily={onOpenFamily}

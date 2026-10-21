@@ -83,7 +83,7 @@ import {
   updateHomework,
   updateHouseholdChild,
 } from '@/lib/lcp';
-import { money, dayLabel, dobLabel, dueLabel, isFeeOverdue, isOverdue, ageFromDob } from '@/lib/lcp-format';
+import { money, dayLabel, dobLabel, dueLabel, isFeeOverdue, isNoteEditable, isOverdue, ageFromDob } from '@/lib/lcp-format';
 import { Drawer } from './Drawer';
 import { StaffThread } from './StaffThread';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
@@ -2436,13 +2436,19 @@ function NotesTab({
                       : dayLabel(n.created_at)}
                     {n.author_name && ` · ${n.author_name}`}
                   </p>
-                  {!readOnly && n.author_id === currentUserId && (
-                    <button
-                      onClick={() => { setEditingId(n.id); setEditBody(n.body); }}
-                      className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
-                    >
-                      Edit
-                    </button>
+                  {!readOnly && (
+                    isNoteEditable(n.created_at) ? (
+                      <button
+                        onClick={() => { setEditingId(n.id); setEditBody(n.body); }}
+                        className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green"
+                      >
+                        Edit
+                      </button>
+                    ) : (
+                      <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray" title="Notes lock 30 days after they're written">
+                        🔒 Locked
+                      </span>
+                    )
                   )}
                 </div>
               </>
