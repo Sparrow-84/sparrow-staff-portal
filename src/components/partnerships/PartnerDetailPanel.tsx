@@ -846,7 +846,7 @@ export function PartnerDetailPanel({
                 <p className="mt-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">On file ✓</p>
               )}
               <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-                An MOU is needed when both organizations are formally doing something for each other — services, client referrals, or access to participants. If you're not sure, ask Susanna.
+                An MOU is needed when both organizations are formally committing to something — sharing client information, a set referral process, ongoing services, or access to participants. Just passing along Sparrow's contact info doesn't need one. If you're not sure, ask Susanna.
               </p>
             </div>
           </section>
