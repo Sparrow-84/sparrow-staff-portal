@@ -98,6 +98,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'business', label: 'Business' },
   { key: 'foundation', label: 'Foundations' },
   { key: 'advisory', label: 'Advisory' },
+  { key: 'lcp_referral', label: 'LCP referrals' },
 ];
 
 // Order the directory by how badly each relationship needs attention.
@@ -235,6 +236,37 @@ export function PartnershipsRoom() {
       return a.name.localeCompare(b.name);
     });
   }, [partners, archivedPartners, filter, search, interestMap]);
+
+  // "Copy emails" — copies every email in whatever the Directory is showing right now
+  // (filter tab + search), comma-separated so it pastes straight into BCC. Names anyone
+  // without an email so whoever's sending knows who'll be missed.
+  const [copyResult, setCopyResult] = useState<
+    { copied: number; missing: string[]; failedText?: string } | null
+  >(null);
+  useEffect(() => setCopyResult(null), [filter, search]);
+
+  async function copyVisibleEmails() {
+    const seen = new Set<string>();
+    const emails: string[] = [];
+    const missing: string[] = [];
+    for (const p of visible) {
+      const email = p.email?.trim();
+      if (!email) { missing.push(p.name); continue; }
+      const key = email.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      emails.push(email);
+    }
+    if (emails.length === 0) { setCopyResult({ copied: 0, missing }); return; }
+    const text = emails.join(', ');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyResult({ copied: emails.length, missing });
+    } catch {
+      // Clipboard blocked (older browser / permissions) — show the list to copy by hand.
+      setCopyResult({ copied: emails.length, missing, failedText: text });
+    }
+  }
 
   function openPartner(id: string) {
     setPartnerId(id);
@@ -418,6 +450,15 @@ export function PartnershipsRoom() {
               )}
             </div>
 
+            <div className="flex shrink-0 items-center gap-2">
+            <button
+              onClick={() => void copyVisibleEmails()}
+              disabled={visible.length === 0}
+              title="Copy the email address of every partner shown below, ready to paste into BCC"
+              className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink transition hover:border-sparrow-green dark:hover:border-sparrow-dark-green disabled:opacity-50"
+            >
+              Copy emails
+            </button>
             {/* View toggle */}
             <div className="flex shrink-0 items-center gap-1 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-0.5">
               {(['table', 'tile'] as View[]).map((v) => (
@@ -434,7 +475,50 @@ export function PartnershipsRoom() {
                 </button>
               ))}
             </div>
+            </div>
           </div>
+
+          {copyResult && (
+            <div className="mt-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-2.5 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  {copyResult.copied === 0 ? (
+                    <p>No one shown here has an email on file — nothing copied.</p>
+                  ) : copyResult.failedText ? (
+                    <p>Your browser blocked copying — select the {copyResult.copied} email{copyResult.copied === 1 ? '' : 's'} below and copy them by hand.</p>
+                  ) : (
+                    <p>
+                      <span className="font-medium text-sparrow-green dark:text-sparrow-dark-green">
+                        Copied {copyResult.copied} email{copyResult.copied === 1 ? '' : 's'}.
+                      </span>{' '}
+                      Paste into the BCC line of your email.
+                    </p>
+                  )}
+                  {copyResult.missing.length > 0 && (
+                    <p className="text-sparrow-gray dark:text-sparrow-dark-gray">
+                      {copyResult.missing.length} partner{copyResult.missing.length === 1 ? ' has' : 's have'} no email on file: {copyResult.missing.join(', ')}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setCopyResult(null)}
+                  className="text-lg leading-none text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+                  aria-label="Dismiss"
+                >
+                  ×
+                </button>
+              </div>
+              {copyResult.failedText && (
+                <textarea
+                  readOnly
+                  value={copyResult.failedText}
+                  onFocus={(e) => e.currentTarget.select()}
+                  rows={3}
+                  className="field-input mt-2 text-xs"
+                />
+              )}
+            </div>
+          )}
 
           {/* Partner directory */}
           <div className="mt-5">

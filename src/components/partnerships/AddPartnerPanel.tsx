@@ -20,7 +20,8 @@ import { createInterest, setPartnerInterests, type PartnershipInterest } from '@
 // rhythm is the defect the room exists to surface" applies across the board now, donors
 // included). Church: quarterly per role doc. Community/business: 1-2x/year. Advisory/
 // foundation: annual grant cycle. Donor/prayer/fst: semi-annual personal check-in as a
-// starting point — always editable.
+// starting point — always editable. LCP referral: annual — usually a tag on a community
+// partner (whose own cadence applies); Shelly reaches out when an LCP spot opens, not on a rhythm.
 const DEFAULT_CADENCE: Record<PartnerType, number> = {
   donor:      182,
   church:     90,
@@ -31,6 +32,7 @@ const DEFAULT_CADENCE: Record<PartnerType, number> = {
   business:   182,
   foundation: 365,
   advisory:   365,
+  lcp_referral: 365,
 };
 
 // Universal default lead time (days of advance warning before a touchpoint is due) — matches

@@ -7,6 +7,7 @@ import {
   STEWARDSHIP,
   derivedDonorTier,
   dueLabel,
+  hasPartnershipTerms,
   shortDate,
   stewardshipStatus,
   type DonorStat,
@@ -44,8 +45,8 @@ export function PartnerTileView({
         const type = PARTNER_TYPE[p.type];
         const stat = donorStatMap.get(p.id);
         const tier = derivedDonorTier(p.donor_tier, stat);
-        // MOU status only applies to community/church partner types.
-        const mouNeeded = (p.type === 'community' || p.type === 'church') && p.mou_status === 'needed';
+        // MOU status only applies to community/church/LCP referral partners.
+        const mouNeeded = hasPartnershipTerms(p) && p.mou_status === 'needed';
         return (
           <button
             key={p.id}

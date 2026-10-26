@@ -14,7 +14,8 @@ export type PartnerType =
   | 'fst'
   | 'business'
   | 'foundation'
-  | 'advisory';
+  | 'advisory'
+  | 'lcp_referral';
 export type PartnerStage = 'prospect' | 'active' | 'lapsed' | 'reengaging' | 'inactive';
 export type DonorTier = 'first_time' | 'recurring' | 'major' | 'lapsed';
 export type TouchpointMethod = 'email' | 'phone' | 'in_person' | 'text' | 'letter' | 'event' | 'other';
@@ -139,6 +140,7 @@ export const PARTNER_TYPE: Record<PartnerType, { label: string; icon: string }> 
   business:   { label: 'Business partner', icon: '🏢' },
   foundation: { label: 'Foundation',       icon: '🏛️' },
   advisory:   { label: 'Advisory',         icon: '🧭' },
+  lcp_referral: { label: 'LCP referral partner', icon: '🔗' },
 };
 
 export const PARTNER_STAGE: Record<PartnerStage, { label: string; chip: string }> = {
@@ -184,6 +186,7 @@ export const PARTNER_TYPES: PartnerType[] = [
   'business',
   'foundation',
   'advisory',
+  'lcp_referral',
 ];
 export const PARTNER_STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'lapsed', 'inactive'];
 export const TOUCHPOINT_METHODS: TouchpointMethod[] = [
@@ -216,6 +219,13 @@ export const STEWARDSHIP: Record<StewardshipStatus, { label: string; dot: string
  *  Directory filter tab that applies to them, not just their primary type's tab. */
 export function partnerMatchesType(p: Partner, t: PartnerType): boolean {
   return p.type === t || p.secondary_types.includes(t);
+}
+
+/** Whether the Partnership terms section (what each side provides + MOU status) applies.
+ *  Community/church go by main type; LCP referral partners count whether it's their main
+ *  type or a tag, since they're usually a community org that also refers people to LCP. */
+export function hasPartnershipTerms(p: Partner): boolean {
+  return p.type === 'community' || p.type === 'church' || partnerMatchesType(p, 'lcp_referral');
 }
 
 const DAY_MS = 86_400_000;

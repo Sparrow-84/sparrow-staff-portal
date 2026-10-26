@@ -16,6 +16,7 @@ import {
   TOUCHPOINT_METHOD,
   TOUCHPOINT_METHODS,
   dueLabel,
+  hasPartnershipTerms,
   shortDate,
   showInactivePrompt,
   stewardshipStatus,
@@ -148,7 +149,7 @@ export function PartnerDetailPanel({
   );
 
   const isDonor = partner.type === 'donor';
-  const isCommunityOrChurch = partner.type === 'community' || partner.type === 'church';
+  const showPartnershipTerms = hasPartnershipTerms(partner);
   const lastTouchpoint = touchpoints[0] ?? null;
 
   async function patch(p: Parameters<typeof updatePartner>[1]) {
@@ -789,8 +790,8 @@ export function PartnerDetailPanel({
           </section>
         )}
 
-        {/* ── 9. Partnership terms — bottom, community/church only ── */}
-        {isCommunityOrChurch && (
+        {/* ── 9. Partnership terms — bottom, community/church/LCP referral only ── */}
+        {showPartnershipTerms && (
           <section className="space-y-3 rounded-xl border border-sparrow-rule/70 p-3">
             <span className="field-label block">Partnership terms</span>
             <div>
