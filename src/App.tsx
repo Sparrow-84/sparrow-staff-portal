@@ -51,5 +51,23 @@ export function App() {
     );
   }
 
+  // Deactivated in Staff admin. Migration 0191 also blocks sign-in at the auth level;
+  // this covers a session that was already open when they were deactivated.
+  if (profile.active === false) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-sparrow-sage dark:bg-sparrow-dark-bg px-4">
+        <div className="max-w-sm rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center shadow-card">
+          <h1 className="font-serif text-xl font-semibold">Account deactivated</h1>
+          <p className="mt-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
+            This account has been deactivated. If you think that's a mistake, contact a Sparrow admin.
+          </p>
+          <button onClick={signOut} className="btn-primary mt-6 w-full">
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return <AppShell />;
 }

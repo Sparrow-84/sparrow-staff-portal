@@ -189,12 +189,15 @@ export function parseMentionIds(body: string, staff: ChatPerson[]): string[] {
 export async function fetchStaff(meId: string): Promise<ChatPerson[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, department')
+    .select('*')
     .eq('active', true)
     .neq('id', meId)
     .order('full_name');
   if (error) throw new Error(error.message);
-  return (data ?? []) as ChatPerson[];
+  // select('*') rather than naming hidden_from_lists so this works before migration 0191.
+  return (data ?? [])
+    .filter((p) => !(p as { hidden_from_lists?: boolean }).hidden_from_lists)
+    .map((p) => ({ id: p.id, full_name: p.full_name, department: p.department })) as ChatPerson[];
 }
 
 // ── Realtime ─────────────────────────────────────────────────────────

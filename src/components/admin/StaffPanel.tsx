@@ -36,6 +36,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
   const [opsAccess, setOpsAccess] = useState(false);
   const [storiesAccess, setStoriesAccess] = useState(false);
   const [sopAdminRooms, setSopAdminRooms] = useState<SopRoom[]>([]);
+  const [hiddenFromLists, setHiddenFromLists] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -55,6 +56,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setOpsAccess(staff.ops_access);
       setStoriesAccess(staff.stories_access);
       setSopAdminRooms(staff.sop_admin_rooms ?? []);
+      setHiddenFromLists(staff.hidden_from_lists ?? false);
     } else {
       setFullName('');
       setEmail('');
@@ -70,6 +72,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setOpsAccess(false);
       setStoriesAccess(false);
       setSopAdminRooms([]);
+      setHiddenFromLists(false);
     }
   }, [open, staff]);
 
@@ -103,6 +106,8 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
     const roomsChanged =
       sopAdminRooms.length !== originalRooms.length || sopAdminRooms.some((r) => !originalRooms.includes(r));
     if (roomsChanged) base.sop_admin_rooms = sopAdminRooms;
+    // Same reason: column arrives with migration 0191.
+    if (hiddenFromLists !== (staff?.hidden_from_lists ?? false)) base.hidden_from_lists = hiddenFromLists;
     startTransition(async () => {
       try {
         if (staff) await updateStaff(staff.id, { ...base, active });
@@ -388,6 +393,25 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
             </div>
           </div>
 
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-3">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={hiddenFromLists}
+                onChange={(e) => setHiddenFromLists(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-sparrow-green"
+              />
+              <span>
+                <span className="font-medium">Hide from Team page and staff lists</span>
+                <span className="mt-0.5 block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                  For people who need to sign in but aren't Sparrow staff, like a subcontractor. They
+                  keep all the access set above, but don't appear on the Team page, in assignee
+                  pickers, or in the new-message list.
+                </span>
+              </span>
+            </label>
+          </div>
+
           {staff && (
             <label className="mt-4 flex items-center gap-2 text-sm">
               <input
@@ -398,6 +422,12 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
               />
               Active (can sign in)
             </label>
+          )}
+          {staff && !active && (
+            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              Unchecked = deactivated: they're signed out and can't sign in. Their past messages,
+              tasks and notes stay.
+            </p>
           )}
 
           {error && <p className="mt-4 text-sm text-priority-p1">{error}</p>}

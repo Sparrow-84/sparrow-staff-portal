@@ -42,7 +42,16 @@ export function StaffAdmin() {
     email ? (staff.find((s) => s.email === email)?.full_name ?? email) : '—';
 
   async function toggleActive(s: Profile) {
-    await updateStaff(s.id, { active: !s.active });
+    if (s.active && !window.confirm(
+      `Deactivate ${s.full_name}?
+
+They'll be signed out and won't be able to sign in. Their past messages, tasks and notes stay. You can reactivate them any time.`,
+    )) return;
+    try {
+      await updateStaff(s.id, { active: !s.active });
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Could not update.');
+    }
     void load();
   }
   async function remove(s: Profile) {
@@ -115,6 +124,11 @@ export function StaffAdmin() {
                     <td className="px-4 py-3">
                       <div className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{s.full_name}</div>
                       <div className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{s.email}</div>
+                      {s.hidden_from_lists && (
+                        <span className="mt-1 inline-block rounded-full bg-sparrow-rule/60 px-2 py-0.5 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+                          Hidden from staff lists
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">{roleLabel(s.role)}</td>
                     <td className="px-4 py-3">{departmentLabel(s.department)}</td>

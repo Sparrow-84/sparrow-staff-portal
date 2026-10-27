@@ -16,6 +16,7 @@ export interface StaffInput {
   stories_access?: boolean;
   role_description?: string | null;
   sop_admin_rooms?: SopRoom[];
+  hidden_from_lists?: boolean;
 }
 
 /** All staff including deactivated (admin view). RLS still restricts this to admins in practice. */

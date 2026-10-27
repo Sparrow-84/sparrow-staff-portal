@@ -25,7 +25,7 @@ export async function fetchProfiles(): Promise<Profile[]> {
     .eq('active', true)
     .order('full_name');
   if (error) throw new Error(error.message);
-  return (data ?? []) as Profile[];
+  return ((data ?? []) as Profile[]).filter((p) => !p.hidden_from_lists);
 }
 
 export async function fetchTasks(): Promise<TaskWithPeople[]> {

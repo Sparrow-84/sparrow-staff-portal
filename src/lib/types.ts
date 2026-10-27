@@ -57,6 +57,8 @@ export interface Profile {
   stories_access: boolean;
   /** Rooms where this person is a Room admin (SOPs) — can add/edit/link that room's SOPs. Undefined until migration 0189 runs. */
   sop_admin_rooms?: SopRoom[];
+  /** Active but kept off the Team page, staff pickers and chat (e.g. a subcontractor). Undefined until migration 0191 runs. */
+  hidden_from_lists?: boolean;
   work_schedule: WorkSchedule | null;
   blurb: string | null;
   photo_url: string | null;
