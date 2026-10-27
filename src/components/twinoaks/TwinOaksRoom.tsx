@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { RoomSopsButton } from '@/components/documents/RoomSops';
 import { fetchProfiles } from '@/lib/data';
 import { fetchAllNotices, fetchSpaces, fetchTenants, fetchWorkOrders, type WorkOrderWithAssignee } from '@/lib/housing';
 import { fetchOpenLcpMoveInRequests } from '@/lib/lcp';
@@ -194,6 +195,7 @@ export function TwinOaksRoom() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <RoomSopsButton room="twin-oaks" />
           {tab === 'workorders' && canManage && (
             <button onClick={() => newWorkOrder(null)} className="btn-primary">
               + New work order

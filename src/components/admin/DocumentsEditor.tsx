@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { addOrgDocument, deleteOrgDocument, fetchOrgDocuments, updateOrgDocument } from '@/lib/documents';
-import { DOCUMENT_CATEGORIES, type OrgDocument } from '@/lib/documents-types';
+import { addOrgDocument, deleteOrgDocument, fetchDocLinkedRooms, fetchOrgDocuments, updateOrgDocument } from '@/lib/documents';
+import { DOCUMENT_CATEGORIES, sopRoomLabel, type OrgDocument } from '@/lib/documents-types';
 
 type EditState = { id: string; title: string; category: string; description: string; url: string };
 
@@ -72,7 +72,11 @@ export function DocumentsEditor() {
   }
 
   async function remove(doc: OrgDocument) {
-    if (!window.confirm(`Delete "${doc.title}"?`)) return;
+    const linked = await fetchDocLinkedRooms(doc.id);
+    const where = linked.length > 0
+      ? `\n\nThis is also shown in ${linked.map(sopRoomLabel).join(', ')}. Deleting removes it there too.`
+      : '';
+    if (!window.confirm(`Delete "${doc.title}"?${where}\n\n(The Google Drive file itself isn't touched.)`)) return;
     setBusy(true);
     try {
       await deleteOrgDocument(doc.id);

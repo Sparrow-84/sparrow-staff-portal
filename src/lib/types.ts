@@ -1,3 +1,5 @@
+import type { SopRoom } from './documents-types';
+
 export type AppRole = 'admin' | 'manager' | 'staff';
 export type Department = 'toc' | 'lcp' | 'partnerships' | 'ops' | 'exec';
 export type Priority = 'p1' | 'p2' | 'p3' | 'p4';
@@ -53,6 +55,8 @@ export interface Profile {
   toc_access: boolean;
   /** Stories & Media Room access. */
   stories_access: boolean;
+  /** Rooms where this person is a Room admin (SOPs) — can add/edit/link that room's SOPs. Undefined until migration 0189 runs. */
+  sop_admin_rooms?: SopRoom[];
   work_schedule: WorkSchedule | null;
   blurb: string | null;
   photo_url: string | null;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { RoomSopsButton } from '@/components/documents/RoomSops';
 import { localDate } from '@/lib/date';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
@@ -310,6 +311,7 @@ export function PartnershipsRoom() {
           >
             ?
           </button>
+          <RoomSopsButton room="partnerships" />
           <button onClick={() => setBatchOpen(true)} className="btn-secondary">
             Log touchpoint for multiple partners
           </button>

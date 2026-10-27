@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { RoomSopsButton } from '@/components/documents/RoomSops';
 import { fetchProfiles } from '@/lib/data';
 import {
   getLayer2Consents,
@@ -126,6 +127,7 @@ export function StoriesRoom() {
             {stats.length} {stats.length === 1 ? 'stat' : 'stats'}
           </p>
         </div>
+        <RoomSopsButton room="stories" />
       </div>
 
       {/* Tab bar */}

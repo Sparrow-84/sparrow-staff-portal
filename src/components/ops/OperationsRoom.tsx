@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { RoomSopsButton } from '@/components/documents/RoomSops';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
 import { fetchActiveChecklists, fetchAllReviews, fetchAllTouchpoints, fetchOpenIssues } from '@/lib/ops';
@@ -118,9 +119,12 @@ export function OperationsRoom() {
   return (
     <div className={`mx-auto px-4 py-8 sm:px-6 ${opsTab === 'inventory' || opsTab === 'grants' ? 'max-w-[1800px]' : 'max-w-4xl'}`}>
       <RoomTour steps={OPS_TOUR_STEPS} open={tourOpen} onDismiss={dismissTour} />
-      <div>
-        <h1 className="font-serif text-2xl font-semibold">Operations</h1>
-        <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Staff management · {staff.length} people</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-2xl font-semibold">Operations</h1>
+          <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Staff management · {staff.length} people</p>
+        </div>
+        <RoomSopsButton room="operations" />
       </div>
 
       {/* Tabs */}

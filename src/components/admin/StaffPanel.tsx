@@ -7,6 +7,7 @@ import {
   type Profile,
 } from '@/lib/types';
 import { createStaff, updateStaff, type StaffInput } from '@/lib/admin';
+import { SOP_ROOMS, type SopRoom } from '@/lib/documents-types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 
 interface Props {
@@ -34,6 +35,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
   const [partnershipsAccess, setPartnershipsAccess] = useState(false);
   const [opsAccess, setOpsAccess] = useState(false);
   const [storiesAccess, setStoriesAccess] = useState(false);
+  const [sopAdminRooms, setSopAdminRooms] = useState<SopRoom[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -52,6 +54,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setPartnershipsAccess(staff.partnerships_access);
       setOpsAccess(staff.ops_access);
       setStoriesAccess(staff.stories_access);
+      setSopAdminRooms(staff.sop_admin_rooms ?? []);
     } else {
       setFullName('');
       setEmail('');
@@ -66,6 +69,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setPartnershipsAccess(false);
       setOpsAccess(false);
       setStoriesAccess(false);
+      setSopAdminRooms([]);
     }
   }, [open, staff]);
 
@@ -93,6 +97,12 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       ops_access: opsAccess,
       stories_access: storiesAccess,
     };
+    // Only send when changed — the column doesn't exist until migration 0189 runs,
+    // and sending it unconditionally would break every staff save before then.
+    const originalRooms = staff?.sop_admin_rooms ?? [];
+    const roomsChanged =
+      sopAdminRooms.length !== originalRooms.length || sopAdminRooms.some((r) => !originalRooms.includes(r));
+    if (roomsChanged) base.sop_admin_rooms = sopAdminRooms;
     startTransition(async () => {
       try {
         if (staff) await updateStaff(staff.id, { ...base, active });
@@ -351,6 +361,31 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
                 </span>
               </span>
             </label>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-3">
+            <p className="text-sm font-medium">Room admin (SOPs)</p>
+            <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              Lets this person add, edit, and remove SOPs in these rooms, and link in docs from elsewhere.
+              It doesn't change anything else they can do. Admins can already do this everywhere.
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+              {SOP_ROOMS.map((r) => (
+                <label key={r.value} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={sopAdminRooms.includes(r.value)}
+                    onChange={(e) =>
+                      setSopAdminRooms((prev) =>
+                        e.target.checked ? [...prev, r.value] : prev.filter((x) => x !== r.value),
+                      )
+                    }
+                    className="h-4 w-4 accent-sparrow-green"
+                  />
+                  {r.label}
+                </label>
+              ))}
+            </div>
           </div>
 
           {staff && (

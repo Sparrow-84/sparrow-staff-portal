@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { RoomSopsButton } from '@/components/documents/RoomSops';
 import {
   acknowledgeHousingSavingsAnnouncement,
   fetchAllAttendanceWithSessionDate,
@@ -321,11 +322,14 @@ export function LcpRoom() {
             {stats.feeOverdue > 0 && <span className="text-priority-p1"> · {stats.feeOverdue} program fee overdue</span>}
           </p>
         </div>
-        {tab === 'families' && familiesView === 'active' && (
-          <button onClick={() => setAddOpen(true)} className="btn-primary shrink-0">
-            + Add family
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          <RoomSopsButton room="lcp" />
+          {tab === 'families' && familiesView === 'active' && (
+            <button onClick={() => setAddOpen(true)} className="btn-primary shrink-0">
+              + Add family
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}

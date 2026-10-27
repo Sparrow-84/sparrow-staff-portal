@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { AppRole, Department, LcpRole, Profile } from './types';
+import type { SopRoom } from './documents-types';
 
 export interface StaffInput {
   full_name: string;
@@ -14,6 +15,7 @@ export interface StaffInput {
   toc_access: boolean;
   stories_access?: boolean;
   role_description?: string | null;
+  sop_admin_rooms?: SopRoom[];
 }
 
 /** All staff including deactivated (admin view). RLS still restricts this to admins in practice. */
