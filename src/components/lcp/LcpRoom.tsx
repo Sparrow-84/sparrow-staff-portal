@@ -59,6 +59,7 @@ import { DeptCalendar } from '@/components/calendar/DeptCalendar';
 import { LcpProgress } from './LcpProgress';
 import { PhaseProgressBar } from './PhaseProgressBar';
 import { LcpHome } from './LcpHome';
+import { LcpImpactReport } from './LcpImpactReport';
 
 const LCP_TOUR_STEPS: TourStep[] = [
   {
@@ -160,7 +161,7 @@ export function LcpRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'home' | 'families' | 'progress' | 'session-log' | 'session-cal' | 'team-cal' | 'curriculum'>('home');
+  const [tab, setTab] = useState<'home' | 'families' | 'progress' | 'session-log' | 'session-cal' | 'team-cal' | 'curriculum' | 'impact'>('home');
   const [familiesView, setFamiliesView] = useState<'active' | 'past'>('active');
   const [pastFamilies, setPastFamilies] = useState<Family[]>([]);
   const [pastLoaded, setPastLoaded] = useState(false);
@@ -334,7 +335,7 @@ export function LcpRoom() {
 
       {/* Tabs */}
       <div className="mt-6 inline-flex flex-wrap rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-1 text-sm">
-        {(['home', 'families', 'progress', 'session-log', 'session-cal', 'team-cal', 'curriculum'] as const)
+        {(['home', 'families', 'progress', 'session-log', 'session-cal', 'team-cal', 'curriculum', 'impact'] as const)
           .filter((t) => t !== 'curriculum' || canEditCurriculum)
           .map((t) => (
           <button
@@ -347,6 +348,7 @@ export function LcpRoom() {
             {t === 'session-log' ? 'Session Log'
               : t === 'session-cal' ? 'Session Cal'
               : t === 'team-cal' ? 'Team Cal'
+              : t === 'impact' ? 'Impact Report'
               : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
@@ -519,6 +521,8 @@ export function LcpRoom() {
           currentUserId={profile?.id ?? ''}
           onChanged={load}
         />
+      ) : tab === 'impact' ? (
+        <LcpImpactReport onOpenFamily={(id) => openFamily(id)} />
       ) : tab === 'curriculum' && canEditCurriculum ? (
         <CurriculumAdmin />
       ) : tab === 'team-cal' ? (

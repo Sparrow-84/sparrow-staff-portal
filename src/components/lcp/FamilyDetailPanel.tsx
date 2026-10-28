@@ -539,14 +539,14 @@ function ProgressTab({
   }
 
   async function logCheckin() {
-    if (newCheckinStablyHoused === null) return;
+    if (newCheckinStablyHoused === null || !newCheckinDate) return;
     setBusy(true);
     setErr(null);
     try {
       await addOutcomeCheckin(
         family.id,
         {
-          checkin_date: newCheckinDate || null,
+          checkin_date: newCheckinDate,
           label: newCheckinLabel || 'Check-in',
           stably_housed: newCheckinStablyHoused,
           notes: newCheckinNotes || null,
@@ -811,13 +811,20 @@ function ProgressTab({
           <div className="flex items-center justify-between">
             <span className="field-label">Outcome check-ins</span>
             {!showLogCheckin && (
-              <button disabled={busy} onClick={() => setShowLogCheckin(true)} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+              <button
+                disabled={busy}
+                onClick={() => {
+                  setNewCheckinDate(todayIso());
+                  setShowLogCheckin(true);
+                }}
+                className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green"
+              >
                 + Log a check-in
               </button>
             )}
           </div>
           <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            A history, not a single flag — a later check-in (6 months, a year, whenever staff actually
+            A history, not a single flag — a later check-in (the 3-month check-in, or whenever staff
             reach out) can show a different outcome than the day she left, without erasing what was true then.
           </p>
 
@@ -849,10 +856,12 @@ function ProgressTab({
                   className="field-input mt-0"
                   value={newCheckinLabel}
                   onChange={(e) => setNewCheckinLabel(e.target.value)}
-                  placeholder="Label (e.g. 1-year follow-up)"
+                  placeholder="Label (e.g. 3-month check-in)"
                 />
                 <input
                   type="date"
+                  required
+                  aria-label="Check-in date"
                   className="field-input mt-0"
                   value={newCheckinDate}
                   onChange={(e) => setNewCheckinDate(e.target.value)}
@@ -880,7 +889,7 @@ function ProgressTab({
                 placeholder="What did you learn? (optional)"
               />
               <div className="flex gap-2">
-                <button disabled={busy || newCheckinStablyHoused === null} onClick={logCheckin} className="btn-primary">
+                <button disabled={busy || newCheckinStablyHoused === null || !newCheckinDate} onClick={logCheckin} className="btn-primary">
                   {busy ? 'Saving…' : 'Save check-in'}
                 </button>
                 <button
@@ -2063,9 +2072,15 @@ function ChildEditCard({
   const [specialInstructions, setSpecialInstructions] = useState(child?.special_instructions ?? '');
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Birthday is required: the LCP Impact Report uses it to decide which
+  // report year a child (e.g. a baby born mid-program) starts counting in.
+  const { validate, fieldClass, fieldError, clear } = useRequiredFields([
+    { key: 'child-name', label: 'Full name', valid: fullName.trim().length > 0 },
+    { key: 'child-dob', label: 'Birthday', valid: !!dob },
+  ]);
 
   async function save() {
-    if (!fullName.trim()) return;
+    if (!validate()) return;
     setBusy(true);
     const payload: ChildInput = {
       full_name: fullName,
@@ -2094,12 +2109,32 @@ function ChildEditCard({
     <div className="space-y-3 rounded-xl border border-sparrow-green/40 dark:border-sparrow-dark-green/40 p-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <span className="field-label">Full name</span>
-          <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name" className="field-input" />
+          <span className="field-label">Full name *</span>
+          <input
+            id="child-name"
+            value={fullName}
+            onChange={(e) => {
+              setFullName(e.target.value);
+              clear('child-name');
+            }}
+            placeholder="Full name"
+            className={fieldClass('child-name')}
+          />
+          {fieldError('child-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('child-name')}</p>}
         </div>
         <div>
-          <span className="field-label">Birthday</span>
-          <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="field-input" />
+          <span className="field-label">Birthday *</span>
+          <input
+            id="child-dob"
+            type="date"
+            value={dob}
+            onChange={(e) => {
+              setDob(e.target.value);
+              clear('child-dob');
+            }}
+            className={fieldClass('child-dob')}
+          />
+          {fieldError('child-dob') && <p className="mt-1 text-xs text-priority-p1">{fieldError('child-dob')}</p>}
         </div>
       </div>
       <div>
@@ -2151,7 +2186,7 @@ function ChildEditCard({
 
       <div className="flex items-center justify-between pt-1">
         <div className="flex gap-2">
-          <button onClick={save} disabled={busy || !fullName.trim()} className="btn-primary">
+          <button onClick={save} disabled={busy} className="btn-primary">
             {busy ? 'Saving…' : 'Save'}
           </button>
           <button onClick={onCancel} disabled={busy} className="btn-ghost">

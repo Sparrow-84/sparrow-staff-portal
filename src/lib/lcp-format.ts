@@ -69,30 +69,48 @@ export function isOverdue(iso: string | null): boolean {
 /**
  * Earliest still-open post-program check-in milestone for a family that's
  * left, or null if none is due yet (no program_end_date known, or every
- * milestone up to today already has a check-in covering it). A check-in
- * "covers" a milestone if it was logged on or after that milestone's due
- * date -- staff aren't asked to tag which milestone they're answering, the
+ * milestone up to today already has a check-in covering it). A milestone
+ * opens CHECKIN_LEAD_DAYS before its due date, and a check-in "covers" it if
+ * it was logged on or after that same opening day -- so calling a week early
+ * counts. Staff aren't asked to tag which milestone they're answering, the
  * date alone does the matching (deliberate simplification, see wasp-nest
  * item 15 / tiger-den). Milestones are checked in ascending months order and
- * the first uncovered-and-due one wins, since later ones can't be due yet
- * if an earlier one isn't.
+ * the first uncovered-and-open one wins, since later ones can't be open yet
+ * if an earlier one isn't. The daily reminder job (emit_lcp_checkin_tasks,
+ * migration 0192) uses the same window -- keep the two in step.
  */
+export const CHECKIN_LEAD_DAYS = 7;
+
+function isoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Due date of a post-exit milestone, e.g. exit + 3 months. */
+export function checkinDueIso(programEndDate: string, monthsAfterExit: number): string {
+  const exit = parseLocalDate(programEndDate);
+  return isoDate(new Date(exit.getFullYear(), exit.getMonth() + monthsAfterExit, exit.getDate()));
+}
+
+/** First day a check-in counts toward a milestone due on dueIso. */
+export function checkinWindowOpensIso(dueIso: string): string {
+  const due = parseLocalDate(dueIso);
+  return isoDate(new Date(due.getFullYear(), due.getMonth(), due.getDate() - CHECKIN_LEAD_DAYS));
+}
+
 export function nextCheckinDue(
   programEndDate: string | null,
   checkinDates: (string | null)[],
   milestones: { label: string; months_after_exit: number }[],
 ): { label: string; dueDateIso: string } | null {
   if (!programEndDate) return null;
-  const today = new Date();
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const todayIso = isoDate(new Date());
   const knownDates = checkinDates.filter((d): d is string => !!d).sort();
-  const exit = parseLocalDate(programEndDate);
 
   for (const m of [...milestones].sort((a, b) => a.months_after_exit - b.months_after_exit)) {
-    const due = new Date(exit.getFullYear(), exit.getMonth() + m.months_after_exit, exit.getDate());
-    const dueIso = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
-    if (dueIso > todayIso) return null;
-    const covered = knownDates.some((d) => d >= dueIso);
+    const dueIso = checkinDueIso(programEndDate, m.months_after_exit);
+    const opensIso = checkinWindowOpensIso(dueIso);
+    if (opensIso > todayIso) return null;
+    const covered = knownDates.some((d) => d >= opensIso);
     if (!covered) return { label: m.label, dueDateIso: dueIso };
   }
   return null;

@@ -1922,3 +1922,51 @@ export async function deleteProgramFeePayment(id: string): Promise<void> {
   const { error } = await supabase.from('lcp_program_fee_payments').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
+
+// ── Impact Report (Charity Navigator Reach/Succeed) ─────────────────────────────
+
+/** PostgREST caps a response at 1000 rows -- page through so a multi-year
+ *  attendance history never gets silently truncated. */
+async function fetchAllPages<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+  const size = 1000;
+  const out: T[] = [];
+  for (let from = 0; ; from += size) {
+    const { data, error } = await page(from, from + size - 1);
+    if (error) throw new Error(error.message);
+    out.push(...(data ?? []));
+    if (!data || data.length < size) return out;
+  }
+}
+
+/** Every child across every household (active and past), slim -- the report
+ *  only needs who belongs to which family and when they were born. */
+export async function fetchAllHouseholdChildrenSlim(): Promise<Pick<HouseholdChild, 'id' | 'family_id' | 'full_name' | 'date_of_birth'>[]> {
+  return fetchAllPages((from, to) =>
+    supabase.from('lcp_household_children').select('id, family_id, full_name, date_of_birth').order('id').range(from, to),
+  );
+}
+
+/** Monday/Thursday session logs on or after `sinceIso`, plus every attendance
+ *  row marked on them. Ad-hoc sessions are left out: the Reach definition is
+ *  "80% of Monday and Thursday sessions offered". */
+export async function fetchImpactAttendance(sinceIso: string): Promise<{
+  logs: { id: string; session_date: string; session_type: SessionLogType }[];
+  attendance: { session_log_id: string; family_id: string; status: AttendanceStatus }[];
+}> {
+  const logs = await fetchAllPages<{ id: string; session_date: string; session_type: SessionLogType }>((from, to) =>
+    supabase
+      .from('lcp_session_logs')
+      .select('id, session_date, session_type')
+      .in('session_type', ['monday_mentoring', 'thursday_group'])
+      .gte('session_date', sinceIso)
+      .order('id')
+      .range(from, to),
+  );
+  // Filtered to those logs client-side rather than via a referenced-table
+  // filter, which has silently misbehaved in this codebase before.
+  const logIds = new Set(logs.map((l) => l.id));
+  const attendance = await fetchAllPages<{ session_log_id: string; family_id: string; status: AttendanceStatus }>((from, to) =>
+    supabase.from('lcp_session_attendance').select('session_log_id, family_id, status').order('id').range(from, to),
+  );
+  return { logs, attendance: attendance.filter((a) => logIds.has(a.session_log_id)) };
+}
