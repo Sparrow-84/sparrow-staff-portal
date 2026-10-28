@@ -10,6 +10,15 @@ export interface Stat {
   source_report_name: string;
   source_url: string | null;
   source_date: string | null;
+  // False when only the month/year is actually known -- source_date still
+  // holds a real date (the 1st of that month) for sorting, this just
+  // controls display so a day nobody actually reported never gets shown as
+  // if it were. See migration 0188.
+  source_date_day_known: boolean;
+  // Freeform, ready-to-copy citation text -- separate from the structured
+  // source fields above, since a real citation's exact wording/format
+  // varies per use (grant narrative vs. social post vs. annual report).
+  citation: string | null;
   verified: boolean;
   verified_by: string | null;
   verified_by_name: string | null; // joined from profiles
@@ -30,6 +39,8 @@ export interface StatInput {
   source_report_name: string;
   source_url: string | null;
   source_date: string | null;
+  source_date_day_known: boolean;
+  citation: string | null;
   verified: boolean;
   verified_by: string | null;
   verified_at: string | null;
@@ -110,6 +121,16 @@ export async function deleteStatLabel(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** "October 2026" when only the month/year is actually known, otherwise the
+ *  full "October 3, 2026" -- never invents a day that wasn't really reported. */
+export function formatSourceDate(sourceDate: string | null, dayKnown: boolean): string | null {
+  if (!sourceDate) return null;
+  const [y, m, d] = sourceDate.split('-').map(Number);
+  return dayKnown
+    ? new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
 // ── Internal helpers ──────────────────────────────────────────────────
 
 function normalizeStat(raw: unknown): Stat {
@@ -124,6 +145,10 @@ function normalizeStat(raw: unknown): Stat {
     source_report_name: r['source_report_name'] as string,
     source_url: (r['source_url'] as string | null) ?? null,
     source_date: (r['source_date'] as string | null) ?? null,
+    // Defaults true/null until migration 0188 lands -- select('*') just won't
+    // return these columns yet, never errors, so this degrades safely.
+    source_date_day_known: (r['source_date_day_known'] as boolean | undefined) ?? true,
+    citation: (r['citation'] as string | null) ?? null,
     verified: (r['verified'] as boolean) ?? false,
     verified_by: (r['verified_by'] as string | null) ?? null,
     verified_by_name: verifierProfile?.full_name ?? null,

@@ -1,4 +1,4 @@
-import type { Stat, StatLabel } from '@/lib/stats';
+import { formatSourceDate, type Stat, type StatLabel } from '@/lib/stats';
 import { LABEL_COLORS } from '@/components/LabelPill';
 
 interface Props {
@@ -67,7 +67,7 @@ export function StatsTab({ stats, statLabels, onAdd, onEdit }: Props) {
                 <p className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{s.stat_text}</p>
                 <p className="mt-0.5 truncate text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   {s.source_publisher} · {s.source_report_name}
-                  {s.source_date ? ` (${s.source_date})` : ''}
+                  {s.source_date ? ` (${formatSourceDate(s.source_date, s.source_date_day_known)})` : ''}
                   {s.logged_by_name ? ` · logged by ${s.logged_by_name}` : ''}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-1">

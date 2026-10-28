@@ -4,6 +4,7 @@ import { StatLabelPicker } from './StatLabelPicker';
 import {
   createStat,
   deleteStat,
+  formatSourceDate,
   updateStat,
   type Stat,
   type StatLabel,
@@ -36,6 +37,9 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
   const [sourceReportName, setSourceReportName] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [sourceDate, setSourceDate] = useState('');
+  const [sourceDateDayKnown, setSourceDateDayKnown] = useState(true);
+  const [citation, setCitation] = useState('');
+  const [citationCopied, setCitationCopied] = useState(false);
   const [verified, setVerified] = useState(false);
   const [verifiedBy, setVerifiedBy] = useState<string | null>(null);
   const [verifiedAt, setVerifiedAt] = useState<string | null>(null);
@@ -61,6 +65,8 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
       setSourceReportName(stat.source_report_name);
       setSourceUrl(stat.source_url ?? '');
       setSourceDate(stat.source_date ?? '');
+      setSourceDateDayKnown(stat.source_date_day_known);
+      setCitation(stat.citation ?? '');
       setVerified(stat.verified);
       setVerifiedBy(stat.verified_by);
       setVerifiedAt(stat.verified_at);
@@ -74,6 +80,8 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
       setSourceReportName('');
       setSourceUrl('');
       setSourceDate('');
+      setSourceDateDayKnown(true);
+      setCitation('');
       setVerified(false);
       setVerifiedBy(null);
       setVerifiedAt(null);
@@ -109,6 +117,8 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
       source_report_name: sourceReportName.trim(),
       source_url: sourceUrl.trim() || null,
       source_date: sourceDate || null,
+      source_date_day_known: sourceDateDayKnown,
+      citation: citation.trim() || null,
       verified,
       verified_by: verifiedBy,
       verified_at: verifiedAt,
@@ -157,6 +167,12 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
     await navigator.clipboard.writeText(stat?.stat_text ?? '');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function copyCitation() {
+    await navigator.clipboard.writeText(stat?.citation ?? '');
+    setCitationCopied(true);
+    setTimeout(() => setCitationCopied(false), 2000);
   }
 
   const loggerName = (id: string | null) => profiles.find((p) => p.id === id)?.full_name ?? '—';
@@ -218,7 +234,9 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
           </div>
           <div>
             <span className="field-label">Source date</span>
-            <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{stat.source_date || '—'}</p>
+            <p className="text-sparrow-ink dark:text-sparrow-dark-ink">
+              {formatSourceDate(stat.source_date, stat.source_date_day_known) ?? '—'}
+            </p>
           </div>
           {stat.source_url && (
             <div className="col-span-2">
@@ -239,6 +257,18 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
             <p className="text-sparrow-ink dark:text-sparrow-dark-ink">{stat.used_in || '—'}</p>
           </div>
         </div>
+
+        {stat.citation && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between">
+              <span className="field-label">Citation</span>
+              <button onClick={copyCitation} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
+                {citationCopied ? 'Copied!' : 'Copy citation'}
+              </button>
+            </div>
+            <p className="whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{stat.citation}</p>
+          </div>
+        )}
 
         {stat.labels.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1">
@@ -370,14 +400,48 @@ export function StatPanel({ open, stat, profiles, statLabels, currentUserId, onC
           <label className="field-label" htmlFor="stp-source-date">
             Source date <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
           </label>
-          <input
-            id="stp-source-date"
-            type="date"
-            className="field-input"
-            value={sourceDate}
-            onChange={(e) => setSourceDate(e.target.value)}
-          />
+          {sourceDateDayKnown ? (
+            <input
+              id="stp-source-date"
+              type="date"
+              className="field-input"
+              value={sourceDate}
+              onChange={(e) => setSourceDate(e.target.value)}
+            />
+          ) : (
+            <input
+              id="stp-source-date"
+              type="month"
+              className="field-input"
+              value={sourceDate ? sourceDate.slice(0, 7) : ''}
+              onChange={(e) => setSourceDate(e.target.value ? `${e.target.value}-01` : '')}
+            />
+          )}
+          <label className="mt-1.5 flex items-center gap-1.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            <input
+              type="checkbox"
+              checked={!sourceDateDayKnown}
+              onChange={(e) => setSourceDateDayKnown(!e.target.checked)}
+              className="h-3.5 w-3.5 accent-sparrow-green"
+            />
+            Only the month/year is known
+          </label>
         </div>
+      </div>
+
+      {/* Citation */}
+      <div className="mt-4">
+        <label className="field-label" htmlFor="stp-citation">
+          Citation <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional — a ready-to-copy citation for grant narratives, social posts, etc.)</span>
+        </label>
+        <textarea
+          id="stp-citation"
+          className="field-input"
+          rows={2}
+          value={citation}
+          onChange={(e) => setCitation(e.target.value)}
+          placeholder="e.g. Benton County, 2024 Point-in-Time Count, January 2024."
+        />
       </div>
 
       {/* Logged by */}
