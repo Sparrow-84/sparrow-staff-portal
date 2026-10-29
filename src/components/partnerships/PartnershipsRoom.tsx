@@ -117,6 +117,10 @@ export function PartnershipsRoom() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
+  // "Ready for Brevo sync" -- active/reengaging relationships with an email on file, the set
+  // that should actually be on a Brevo list. Prospects are deliberately excluded: they haven't
+  // joined anything yet, so auto-enrolling them in ongoing comms would be presumptuous.
+  const [brevoReadyOnly, setBrevoReadyOnly] = useState(false);
   const [view, setView] = useState<View>(
     () => {
       const stored = localStorage.getItem('partnerships_view');
@@ -226,6 +230,9 @@ export function PartnershipsRoom() {
       return [...list].sort((a, b) => a.name.localeCompare(b.name));
     }
     let list = filter === 'all' ? partners : partners.filter((p) => partnerMatchesType(p, filter));
+    if (brevoReadyOnly) {
+      list = list.filter((p) => (p.stage === 'active' || p.stage === 'reengaging') && !!p.email?.trim());
+    }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((p) => matchesSearch(p, q));
@@ -236,7 +243,7 @@ export function PartnershipsRoom() {
       if (ra !== rb) return ra - rb;
       return a.name.localeCompare(b.name);
     });
-  }, [partners, archivedPartners, filter, search, interestMap]);
+  }, [partners, archivedPartners, filter, brevoReadyOnly, search, interestMap]);
 
   // "Copy emails" — copies every email in whatever the Directory is showing right now
   // (filter tab + search), comma-separated so it pastes straight into BCC. Names anyone
@@ -244,7 +251,7 @@ export function PartnershipsRoom() {
   const [copyResult, setCopyResult] = useState<
     { copied: number; missing: string[]; failedText?: string } | null
   >(null);
-  useEffect(() => setCopyResult(null), [filter, search]);
+  useEffect(() => setCopyResult(null), [filter, brevoReadyOnly, search]);
 
   async function copyVisibleEmails() {
     const seen = new Set<string>();
@@ -448,6 +455,22 @@ export function PartnershipsRoom() {
                   }`}
                 >
                   Archived <span className="opacity-70">{archivedPartners.length}</span>
+                </button>
+              )}
+              {filter !== 'archived' && (
+                <button
+                  onClick={() => setBrevoReadyOnly((v) => !v)}
+                  title="Active or reengaging relationships with an email on file -- the set that belongs on a Brevo list. Prospects are left out on purpose."
+                  className={`rounded-lg border px-3 py-1.5 font-medium transition ${
+                    brevoReadyOnly
+                      ? 'border-sparrow-gold dark:border-sparrow-dark-green bg-sparrow-gold text-white'
+                      : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
+                  }`}
+                >
+                  Ready for Brevo sync{' '}
+                  <span className="opacity-70">
+                    {partners.filter((p) => (filter === 'all' || partnerMatchesType(p, filter)) && (p.stage === 'active' || p.stage === 'reengaging') && !!p.email?.trim()).length}
+                  </span>
                 </button>
               )}
             </div>
