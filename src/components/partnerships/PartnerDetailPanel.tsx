@@ -6,8 +6,6 @@ import { deletePartner, deleteTouchpoint, emitFirstTimeDonorTask, emitRevisitTas
 import {
   DONOR_TIER,
   DONOR_TIER_DESC,
-  GIVING_METHOD_PRESETS,
-  isCustomGivingMethod,
   MOU_STATUS,
   PARTNER_STAGE,
   PARTNER_STAGE_DESC,
@@ -36,6 +34,7 @@ import { RichTextView } from '../lcp/RichText';
 import { RichTextEditor } from '../stories/RichTextEditor';
 import { LEAD_TIME_PRESETS } from '@/lib/cadence';
 import { CadenceInput } from './CadenceInput';
+import { GivingMethodEditor } from './GivingMethodEditor';
 import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import { createInterest, setPartnerInterests, type PartnershipInterest } from '@/lib/partnership-interests';
 import { BusinessCardPhotos } from './BusinessCardPhotos';
@@ -750,31 +749,12 @@ export function PartnerDetailPanel({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="field-label">Giving method</span>
-                {isCustomGivingMethod(partner.giving_method) ? (
-                  <input
-                    type="text"
-                    value={partner.giving_method ?? ''}
-                    onChange={(e) => void patch({ giving_method: e.target.value || null })}
-                    placeholder="Describe how they give…"
-                    disabled={busy}
-                    className="field-input mt-0"
-                  />
-                ) : (
-                  <select
-                    value={partner.giving_method ?? ''}
-                    onChange={(e) => void patch({ giving_method: e.target.value || null })}
-                    disabled={busy}
-                    className="field-input mt-0"
-                  >
-                    <option value="">—</option>
-                    {GIVING_METHOD_PRESETS.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                    <option value="Other">Other (specify)…</option>
-                  </select>
-                )}
+                <GivingMethodEditor
+                  value={partner.giving_method}
+                  onSave={(v) => void patch({ giving_method: v })}
+                  disabled={busy}
+                  inputClassName="field-input mt-0"
+                />
               </div>
               <div>
                 <span className="field-label">First gift date</span>

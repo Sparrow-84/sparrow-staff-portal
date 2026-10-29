@@ -4,12 +4,11 @@ import { updatePartner } from '@/lib/partnerships';
 import { assignAvatarColors } from '@/lib/avatarColors';
 import { LEAD_TIME_PRESETS } from '@/lib/cadence';
 import { CadenceInput } from './CadenceInput';
+import { GivingMethodEditor } from './GivingMethodEditor';
 import { LabelPill } from '@/components/LabelPill';
 import type { PartnershipInterest } from '@/lib/partnership-interests';
 import {
   DONOR_TIER,
-  GIVING_METHOD_PRESETS,
-  isCustomGivingMethod,
   MOU_STATUS,
   PARTNER_STAGE,
   PARTNER_TYPE,
@@ -30,7 +29,7 @@ import {
 } from '@/lib/partnerships-types';
 import {
   useColumnLayout, useHeaderInteractions, GridTableShell,
-  InlineText, InlineSelect, ExpandableText, InlineCheckbox,
+  InlineText, InlineSelect, ExpandableText, InlineCheckbox, editableBase,
   type GridColumn,
 } from '@/components/gridtable/GridTable';
 
@@ -318,24 +317,14 @@ export function PartnerTableView({
           />
         );
       case 'giving_method':
-        return isCustomGivingMethod(p.giving_method) ? (
+        return (
           <Stop>
-            <InlineText
-              value={p.giving_method ?? ''}
-              placeholder="Describe how they give…"
-              onSave={(v) => void patch(p.id, { giving_method: v || null })}
+            <GivingMethodEditor
+              value={p.giving_method}
+              onSave={(v) => void patch(p.id, { giving_method: v })}
+              inputClassName={`${editableBase} cursor-pointer text-sm text-sparrow-ink dark:text-sparrow-dark-ink`}
             />
           </Stop>
-        ) : (
-          <InlineSelect
-            value={p.giving_method ?? ''}
-            onSave={(v) => void patch(p.id, { giving_method: v || null })}
-            options={[
-              { value: '', label: '—' },
-              ...GIVING_METHOD_PRESETS.map((m) => ({ value: m, label: m })),
-              { value: 'Other', label: 'Other (specify)…' },
-            ]}
-          />
         );
       case 'newsletter':
         return <InlineCheckbox checked={p.newsletter_subscribed} onSave={(v) => void patch(p.id, { newsletter_subscribed: v })} />;
