@@ -176,6 +176,15 @@ export const MOU_STATUS: Record<MouStatus, string> = {
 
 export const GIVING_METHODS: GivingMethod[] = ['Givebutter', 'Check', 'Cash', 'Stock', 'Other'];
 
+// The real, pickable presets -- 'Other' isn't one of these, it's the signal to switch to
+// free text instead. A stored value that isn't one of these (and isn't empty) IS that free
+// text, e.g. "Donor-Advised Fund" -- not the literal word "Other".
+export const GIVING_METHOD_PRESETS = GIVING_METHODS.filter((m) => m !== 'Other');
+
+export function isCustomGivingMethod(value: string | null): boolean {
+  return !!value && !(GIVING_METHOD_PRESETS as string[]).includes(value);
+}
+
 export const PARTNER_TYPES: PartnerType[] = [
   'donor',
   'church',

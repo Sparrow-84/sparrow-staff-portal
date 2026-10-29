@@ -8,7 +8,8 @@ import { LabelPill } from '@/components/LabelPill';
 import type { PartnershipInterest } from '@/lib/partnership-interests';
 import {
   DONOR_TIER,
-  GIVING_METHODS,
+  GIVING_METHOD_PRESETS,
+  isCustomGivingMethod,
   MOU_STATUS,
   PARTNER_STAGE,
   PARTNER_TYPE,
@@ -317,11 +318,23 @@ export function PartnerTableView({
           />
         );
       case 'giving_method':
-        return (
+        return isCustomGivingMethod(p.giving_method) ? (
+          <Stop>
+            <InlineText
+              value={p.giving_method ?? ''}
+              placeholder="Describe how they give…"
+              onSave={(v) => void patch(p.id, { giving_method: v || null })}
+            />
+          </Stop>
+        ) : (
           <InlineSelect
             value={p.giving_method ?? ''}
             onSave={(v) => void patch(p.id, { giving_method: v || null })}
-            options={[{ value: '', label: '—' }, ...GIVING_METHODS.map((m) => ({ value: m, label: m }))]}
+            options={[
+              { value: '', label: '—' },
+              ...GIVING_METHOD_PRESETS.map((m) => ({ value: m, label: m })),
+              { value: 'Other', label: 'Other (specify)…' },
+            ]}
           />
         );
       case 'newsletter':

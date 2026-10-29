@@ -6,7 +6,8 @@ import { deletePartner, deleteTouchpoint, emitFirstTimeDonorTask, emitRevisitTas
 import {
   DONOR_TIER,
   DONOR_TIER_DESC,
-  GIVING_METHODS,
+  GIVING_METHOD_PRESETS,
+  isCustomGivingMethod,
   MOU_STATUS,
   PARTNER_STAGE,
   PARTNER_STAGE_DESC,
@@ -749,19 +750,31 @@ export function PartnerDetailPanel({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="field-label">Giving method</span>
-                <select
-                  value={partner.giving_method ?? ''}
-                  onChange={(e) => void patch({ giving_method: e.target.value || null })}
-                  disabled={busy}
-                  className="field-input mt-0"
-                >
-                  <option value="">—</option>
-                  {GIVING_METHODS.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
+                {isCustomGivingMethod(partner.giving_method) ? (
+                  <input
+                    type="text"
+                    value={partner.giving_method ?? ''}
+                    onChange={(e) => void patch({ giving_method: e.target.value || null })}
+                    placeholder="Describe how they give…"
+                    disabled={busy}
+                    className="field-input mt-0"
+                  />
+                ) : (
+                  <select
+                    value={partner.giving_method ?? ''}
+                    onChange={(e) => void patch({ giving_method: e.target.value || null })}
+                    disabled={busy}
+                    className="field-input mt-0"
+                  >
+                    <option value="">—</option>
+                    {GIVING_METHOD_PRESETS.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                    <option value="Other">Other (specify)…</option>
+                  </select>
+                )}
               </div>
               <div>
                 <span className="field-label">First gift date</span>
