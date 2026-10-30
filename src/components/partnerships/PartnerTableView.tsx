@@ -69,7 +69,7 @@ const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'active', label: 'Active', defaultWidth: 70 },
   { key: 'mou_status', label: 'MOU status', defaultWidth: 140 },
   { key: 'giving_method', label: 'Giving method', defaultWidth: 130 },
-  { key: 'newsletter', label: 'Newsletter', defaultWidth: 100 },
+  { key: 'newsletter', label: 'Subscribed to TSM', defaultWidth: 130 },
   { key: 'first_gift_date', label: 'First gift date', defaultWidth: 140 },
   { key: 'sparrow_provides', label: 'Sparrow provides', defaultWidth: 200 },
   { key: 'partner_provides', label: 'Partner provides', defaultWidth: 200 },

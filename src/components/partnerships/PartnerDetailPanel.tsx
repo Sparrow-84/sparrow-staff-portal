@@ -742,6 +742,22 @@ export function PartnerDetailPanel({
           />
         </section>
 
+        {/* ── Newsletter — every partner type, not just donors. TSM subscription is a
+             relationship-wide concept (donors, community partners, and volunteers can all be
+             on TSM), not a donor-specific attribute. ── */}
+        <section className="space-y-3 rounded-xl border border-sparrow-rule/70 p-3">
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={partner.newsletter_subscribed}
+              onChange={(e) => void patch({ newsletter_subscribed: e.target.checked })}
+              disabled={busy}
+              className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border accent-sparrow-green"
+            />
+            <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Subscribed to TSM</span>
+          </label>
+        </section>
+
         {/* ── 8. Donor details — bottom, donor only ── */}
         {isDonor && (
           <section className="space-y-3 rounded-xl border border-sparrow-rule/70 p-3">
@@ -770,16 +786,6 @@ export function PartnerDetailPanel({
                 />
               </div>
             </div>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={partner.newsletter_subscribed}
-                onChange={(e) => void patch({ newsletter_subscribed: e.target.checked })}
-                disabled={busy}
-                className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border accent-sparrow-green"
-              />
-              <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Newsletter subscribed</span>
-            </label>
           </section>
         )}
 
