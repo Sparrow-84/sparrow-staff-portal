@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GIVING_METHOD_PRESETS, isCustomGivingMethod } from '@/lib/partnerships-types';
 
 /** Dropdown stays visible and pickable even while "Other" is active -- picking a different
@@ -20,6 +20,7 @@ export function GivingMethodEditor({
   const [pendingOther, setPendingOther] = useState(false);
   const showDescribe = storedCustom || pendingOther;
   const selectValue = showDescribe ? 'Other' : value ?? '';
+  const describeRef = useRef<HTMLInputElement>(null);
 
   const [draft, setDraft] = useState(storedCustom ? value ?? '' : '');
   useEffect(() => {
@@ -36,6 +37,12 @@ export function GivingMethodEditor({
           if (v === 'Other') {
             setPendingOther(true);
             setDraft('');
+            // Focus explicitly, only on this deliberate transition into Other -- autoFocus on
+            // the input itself would re-steal focus on every remount of an already-custom
+            // record (e.g. scrolling the table, or leaving and returning to the Directory),
+            // silently landing keystrokes in a donor's giving method field. That's exactly
+            // what corrupted a real record before this fix.
+            requestAnimationFrame(() => describeRef.current?.focus());
           } else {
             setPendingOther(false);
             onSave(v || null);
@@ -54,6 +61,7 @@ export function GivingMethodEditor({
       </select>
       {showDescribe && (
         <input
+          ref={describeRef}
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -64,7 +72,6 @@ export function GivingMethodEditor({
           }}
           placeholder="Describe how they give…"
           disabled={disabled}
-          autoFocus
           className={inputClassName}
         />
       )}
