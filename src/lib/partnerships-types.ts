@@ -1,26 +1,26 @@
 // Partnerships Room ("CRM") — types + the stewardship-status derivation.
-// Mirrors the schema in supabase/migrations/0008_partnerships.sql and
-// 0037_partnerships_schema_v2.sql. The room's organizing idea (from the
-// Partnership System Architecture): every relationship needs a named OWNER
-// and a CADENCE — a record without a rhythm is the defect the room exists
-// to surface.
+// Taxonomy rebuilt 2026-10-31 (migration 0193): four relationship-based categories down to
+// three real ones (donor, community ["Community Partner"], volunteer — archived is a stage,
+// not a category), plus a new sub_category describing what kind of entity a record is.
+// Church/business/foundation/advisory/fst/prayer/lcp_referral are no longer assignable —
+// see the Partnerships SOP for the full reasoning. A record can carry more than one
+// category at once via `secondary_types`, same mechanism as before.
 
-export type PartnerType =
-  | 'donor'
-  | 'church'
-  | 'community'
-  | 'volunteer'
-  | 'prayer'
-  | 'fst'
-  | 'business'
-  | 'foundation'
-  | 'advisory'
-  | 'lcp_referral';
-export type PartnerStage = 'prospect' | 'active' | 'lapsed' | 'reengaging' | 'inactive';
+export type PartnerType = 'donor' | 'community' | 'volunteer';
+export type PartnerSubCategory = 'individual' | 'business' | 'nonprofit' | 'church' | 'prayer';
+export type PartnerStage = 'prospect' | 'active' | 'inactive';
 export type DonorTier = 'first_time' | 'recurring' | 'major' | 'lapsed';
 export type TouchpointMethod = 'email' | 'phone' | 'in_person' | 'text' | 'letter' | 'event' | 'other';
 export type GivingMethod = 'Givebutter' | 'Check' | 'Cash' | 'Stock' | 'Other';
 export type MouStatus = 'not_needed' | 'needed' | 'on_file';
+export type PartnerProvidesTag =
+  | 'LCP Participant Referral'
+  | 'Volunteers for events'
+  | 'In-kind donations'
+  | 'Professional services'
+  | 'Event sponsorship'
+  | 'Speaking or presentation opportunities'
+  | 'Other';
 
 export interface Donation {
   id: string;
@@ -73,11 +73,14 @@ export interface Partner {
   id: string;
   name: string;
   type: PartnerType;
-  /** Extra tags on top of the primary type (migration 0107) — e.g. a donor who's also a
-   *  prayer volunteer. Purely additive: only affects tag display + which Directory filter
-   *  tabs a partner shows up under. The primary `type` alone still drives cadence defaults
-   *  and which extra fields (donor/MOU) show. */
+  /** Extra categories on top of the primary type — e.g. a church that's both a Community
+   *  Partner and a Donor. Purely additive: affects tag display + which Directory filter
+   *  tabs a partner shows up under. */
   secondary_types: PartnerType[];
+  /** What kind of entity this record is. Shared across Donor/Community Partner
+   *  (individual/business/nonprofit/church) and Volunteer (prayer is the only option
+   *  today). Null only for records predating this field that haven't been touched since. */
+  sub_category: PartnerSubCategory | null;
   stage: PartnerStage;
   owner_id: string | null;
   organization: string | null;
@@ -89,9 +92,13 @@ export interface Partner {
   phone: string | null;
   address: string | null;
   donor_tier: DonorTier | null;
-  cadence_days: number | null;
-  /** Required (migration 0080). Days ahead of the cadence due date the owner is warned. */
-  lead_time_days: number;
+  /** The one-off, named, dated item a relationship needs beyond its default coverage —
+   *  e.g. "MOU check-in", due 2028-10-01. Mainly relevant to Community Partners; most
+   *  Donor/Volunteer records never need this at all. Replaces the old recurring
+   *  cadence_days model (migration 0193) — this is a specific real deadline, not a rhythm. */
+  needs_additional_touchpoint: boolean;
+  additional_touchpoint_label: string | null;
+  additional_touchpoint_due: string | null;
   last_touchpoint_at: string | null;
   source: string | null;
   notes: string | null;
@@ -105,9 +112,14 @@ export interface Partner {
   // Home FYI card until dismissed.
   newsletter_unsubscribed_at: string | null;
   newsletter_unsubscribe_dismissed_at: string | null;
-  // community/church-only (0037)
+  // community-only (0037)
   sparrow_provides: string | null;
+  /** Deprecated (0193) — migrated into `notes` and `partner_provides_tags`. Kept on the type
+   *  only so old rows that haven't been re-tagged yet don't silently disappear; don't write
+   *  to this going forward. */
   partner_provides: string | null;
+  /** What a Community Partner actually contributes — multi-select (migration 0193). */
+  partner_provides_tags: PartnerProvidesTag[];
   mou_status: MouStatus | null;
   // Business card photos (migration 0111) — storage paths, not URLs (private bucket).
   business_card_front_path: string | null;
@@ -116,7 +128,7 @@ export interface Partner {
   // generic reminder doesn't say enough (e.g. The Hive: a casual conversation
   // shouldn't read as "caught up," only an actual stood-up-front-of-church update
   // should). Shown as a second line under the Home due-reminder when set; the
-  // cadence/due-date math itself is unchanged -- this only changes the wording.
+  // due-date math itself is unchanged -- this only changes the wording.
   touchpoint_reminder_note: string | null;
 }
 
@@ -131,24 +143,30 @@ export interface Touchpoint {
 }
 
 export const PARTNER_TYPE: Record<PartnerType, { label: string; icon: string }> = {
-  donor:      { label: 'Donor',            icon: '💛' },
-  church:     { label: 'Church partner',   icon: '⛪' },
-  community:  { label: 'Community partner', icon: '🤝' },
-  volunteer:  { label: 'Volunteer',        icon: '🙌' },
-  prayer:     { label: 'Prayer volunteer', icon: '🙏' },
-  fst:        { label: 'FST member',       icon: '👪' },
-  business:   { label: 'Business partner', icon: '🏢' },
-  foundation: { label: 'Foundation',       icon: '🏛️' },
-  advisory:   { label: 'Advisory',         icon: '🧭' },
-  lcp_referral: { label: 'LCP referral partner', icon: '🔗' },
+  donor:      { label: 'Donor',             icon: '💛' },
+  community:  { label: 'Community Partner', icon: '🤝' },
+  volunteer:  { label: 'Volunteer',         icon: '🙌' },
+};
+
+export const PARTNER_SUB_CATEGORY: Record<PartnerSubCategory, string> = {
+  individual: 'Individual',
+  business: 'Business',
+  nonprofit: 'Nonprofit',
+  church: 'Church',
+  prayer: 'Prayer',
+};
+
+/** Which sub-categories are offered under each top-level category. */
+export const SUB_CATEGORIES_FOR_TYPE: Record<PartnerType, PartnerSubCategory[]> = {
+  donor: ['individual', 'business', 'nonprofit', 'church'],
+  community: ['individual', 'business', 'nonprofit', 'church'],
+  volunteer: ['prayer'],
 };
 
 export const PARTNER_STAGE: Record<PartnerStage, { label: string; chip: string }> = {
-  prospect:   { label: 'Prospect',     chip: 'bg-priority-p3/15 text-priority-p3' },
-  active:     { label: 'Active',       chip: 'bg-sparrow-green/10 text-sparrow-green' },
-  reengaging: { label: 'Re-engaging',  chip: 'bg-sparrow-gold/20 text-sparrow-ink' },
-  lapsed:     { label: 'Lapsed',       chip: 'bg-orange-500/15 text-orange-700' },
-  inactive:   { label: 'Inactive',     chip: 'bg-sparrow-mist text-sparrow-gray' },
+  prospect: { label: 'Prospect', chip: 'bg-priority-p3/15 text-priority-p3' },
+  active:   { label: 'Active',   chip: 'bg-sparrow-green/10 text-sparrow-green' },
+  inactive: { label: 'Inactive', chip: 'bg-sparrow-mist text-sparrow-gray' },
 };
 
 export const DONOR_TIER: Record<DonorTier, string> = {
@@ -185,19 +203,20 @@ export function isCustomGivingMethod(value: string | null): boolean {
   return !!value && !(GIVING_METHOD_PRESETS as string[]).includes(value);
 }
 
-export const PARTNER_TYPES: PartnerType[] = [
-  'donor',
-  'church',
-  'community',
-  'volunteer',
-  'prayer',
-  'fst',
-  'business',
-  'foundation',
-  'advisory',
-  'lcp_referral',
+export const PARTNER_PROVIDES_TAGS: PartnerProvidesTag[] = [
+  'LCP Participant Referral',
+  'Volunteers for events',
+  'In-kind donations',
+  'Professional services',
+  'Event sponsorship',
+  'Speaking or presentation opportunities',
+  'Other',
 ];
-export const PARTNER_STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'lapsed', 'inactive'];
+
+export const PARTNER_PROVIDES_PRESETS = PARTNER_PROVIDES_TAGS.filter((t) => t !== 'Other');
+
+export const PARTNER_TYPES: PartnerType[] = ['donor', 'community', 'volunteer'];
+export const PARTNER_STAGES: PartnerStage[] = ['prospect', 'active', 'inactive'];
 export const TOUCHPOINT_METHODS: TouchpointMethod[] = [
   'email',
   'phone',
@@ -209,42 +228,37 @@ export const TOUCHPOINT_METHODS: TouchpointMethod[] = [
 ];
 
 // ── Stewardship status — the derived state that color-codes the room ──
-// "Every relationship needs a rhythm, not just a record." A partner is stewarded on time
-// (green), coming due (amber), overdue (red), missing a cadence entirely (slate — the
-// defect), lapsed, or paused. Computed client-side, like the Twin Oaks rent-cap math.
-export type StewardshipStatus = 'on_cadence' | 'due_soon' | 'overdue' | 'no_cadence' | 'lapsed' | 'inactive';
+// Simplified to 2 colors (migration 0193 / SOP rebuild): most relationships have nothing to
+// track at all (TSM + their fixed thank-yous is the complete plan), so there's nothing to
+// color. The only thing worth a visual flag is "something needs attention" — an overdue
+// named touchpoint, or an unacknowledged Brevo-unsubscribe notice. Inactive records show no
+// dot at all; they're already off the active list.
+export type StewardshipStatus = 'needs_attention' | 'ok' | 'inactive';
 
 export const STEWARDSHIP: Record<StewardshipStatus, { label: string; dot: string; chip: string }> = {
-  on_cadence: { label: 'On cadence',  dot: 'bg-sparrow-green', chip: 'bg-sparrow-green/10 text-sparrow-green' },
-  due_soon:   { label: 'Due soon',    dot: 'bg-sparrow-gold',  chip: 'bg-sparrow-gold/20 text-sparrow-ink' },
-  overdue:    { label: 'Overdue',     dot: 'bg-priority-p1',   chip: 'bg-priority-p1/15 text-priority-p1' },
-  no_cadence: { label: 'No cadence',  dot: 'bg-slate-400',     chip: 'bg-slate-400/15 text-slate-600' },
-  lapsed:     { label: 'Lapsed',      dot: 'bg-orange-500',    chip: 'bg-orange-500/15 text-orange-700' },
-  inactive:   { label: 'Inactive',    dot: 'bg-sparrow-rule',  chip: 'bg-sparrow-mist text-sparrow-gray' },
+  needs_attention: { label: 'Needs attention', dot: 'bg-priority-p1',  chip: 'bg-priority-p1/15 text-priority-p1' },
+  ok:              { label: 'All good',        dot: 'bg-sparrow-green', chip: 'bg-sparrow-green/10 text-sparrow-green' },
+  inactive:        { label: 'Inactive',        dot: '',                chip: 'bg-sparrow-mist text-sparrow-gray' },
 };
 
 /** True if a partner is this type either as their primary type or as a secondary tag —
- *  used so a multi-tagged partner (e.g. donor + prayer volunteer) shows up under every
+ *  used so a multi-category partner (e.g. donor + community partner) shows up under every
  *  Directory filter tab that applies to them, not just their primary type's tab. */
 export function partnerMatchesType(p: Partner, t: PartnerType): boolean {
   return p.type === t || p.secondary_types.includes(t);
 }
 
-/** Whether the Partnership terms section (what each side provides + MOU status) applies.
- *  Community/church go by main type; LCP referral partners count whether it's their main
- *  type or a tag, since they're usually a community org that also refers people to LCP. */
+/** Whether the Partnership terms section (what each side provides + MOU status) applies. */
 export function hasPartnershipTerms(p: Partner): boolean {
-  return p.type === 'community' || p.type === 'church' || partnerMatchesType(p, 'lcp_referral');
+  return partnerMatchesType(p, 'community');
 }
 
 const DAY_MS = 86_400_000;
-const LAPSED_DAYS = 365;
 
-/** Days until the next touchpoint is due. null when the partner has no cadence. */
+/** Days until the named additional touchpoint is due. null when the record doesn't need one. */
 export function daysUntilDue(p: Partner, today: Date = new Date()): number | null {
-  if (p.cadence_days == null) return null;
-  const anchor = p.last_touchpoint_at ?? p.created_at;
-  const due = new Date(anchor).getTime() + p.cadence_days * DAY_MS;
+  if (!p.needs_additional_touchpoint || !p.additional_touchpoint_due) return null;
+  const due = new Date(`${p.additional_touchpoint_due}T12:00:00`).getTime();
   return Math.floor((due - today.getTime()) / DAY_MS);
 }
 
@@ -254,32 +268,38 @@ export function daysSinceTouch(p: Partner, today: Date = new Date()): number {
   return Math.floor((today.getTime() - new Date(anchor).getTime()) / DAY_MS);
 }
 
-export function stewardshipStatus(p: Partner, today: Date = new Date()): StewardshipStatus {
-  if (!p.active || p.stage === 'inactive') return 'inactive';
-  // Re-engaging partners follow normal cadence — they've been re-contacted, not lapsed
-  if (p.stage !== 'reengaging' && p.stage !== 'prospect') {
-    if (daysSinceTouch(p, today) >= LAPSED_DAYS) return 'lapsed';
-  }
-  if (p.cadence_days == null) return 'no_cadence';
-  const days = daysUntilDue(p, today)!;
-  if (days < 0) return 'overdue';
-  if (days <= 7) return 'due_soon';
-  return 'on_cadence';
+/** The computed "lapsed" overlay (12+ months no contact) applies to Community Partner and
+ *  Volunteer only — a Donor who gave once and went quiet may just have been a one-time
+ *  donor, not a stalled relationship, so it's deliberately not flagged for them. */
+const LAPSED_DAYS = 365;
+export function isLapsed(p: Partner, today: Date = new Date()): boolean {
+  if (p.type === 'donor' && p.secondary_types.length === 0) return false;
+  if (p.stage !== 'active') return false;
+  return daysSinceTouch(p, today) >= LAPSED_DAYS;
 }
 
-/** Short human label for when the partner is next due (or how overdue).
- *  Urgent states (overdue, due today, due this week) use relative language.
- *  Anything more than 7 days out shows the actual calendar date.
- *  nextCommLabel is used for donors/prayer volunteers who have no day-based cadence. */
-export function dueLabel(p: Partner, today: Date = new Date(), nextCommLabel?: string): string {
+export function stewardshipStatus(p: Partner, today: Date = new Date()): StewardshipStatus {
+  if (!p.active || p.stage === 'inactive') return 'inactive';
+  if (p.newsletter_unsubscribed_at
+    && (!p.newsletter_unsubscribe_dismissed_at || p.newsletter_unsubscribe_dismissed_at < p.newsletter_unsubscribed_at)) {
+    return 'needs_attention';
+  }
+  if (isLapsed(p, today)) return 'needs_attention';
   const days = daysUntilDue(p, today);
-  if (days == null) return nextCommLabel ?? 'No cadence set';
+  if (days != null && days < 0) return 'needs_attention';
+  return 'ok';
+}
+
+/** Short human label for when a record's additional touchpoint is next due (or how overdue).
+ *  null when the record doesn't need one at all — most records, by design. */
+export function dueLabel(p: Partner, today: Date = new Date()): string | null {
+  const days = daysUntilDue(p, today);
+  if (days == null) return null;
   if (days < 0) return `${Math.abs(days)}d overdue`;
   if (days === 0) return 'Due today';
   if (days <= 7) return `Due in ${days}d`;
-  const anchor = p.last_touchpoint_at ?? p.created_at;
-  const dueDate = new Date(new Date(anchor).getTime() + p.cadence_days! * DAY_MS);
-  return `Due ${dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const due = new Date(`${p.additional_touchpoint_due}T12:00:00`);
+  return `Due ${due.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
 }
 
 /** Render a stored date (YYYY-MM-DD or ISO) as e.g. "Apr 12".
@@ -294,39 +314,20 @@ export function shortDate(value: string | null): string {
 // ── Reference descriptions — shown in the help modal and inline in the detail panel ──
 
 export const PARTNER_STAGE_DESC: Record<PartnerStage, string> = {
-  prospect:   'Someone you\'re considering as a future partner. Move them to Active once they\'ve agreed to partnership — this can be as simple as them expressing they\'d like to hear more from us, stay connected to Sparrow, or give in some way.',
-  active:     'Currently engaged in a regular stewardship rhythm.',
-  reengaging: 'You\'ve reached out — waiting for a response. Relational care only, no donation asks. If 60 days pass with no response, click "archive" for them — the system will prompt you to do this. Archiving moves them to Inactive: off your active list, though they\'ll still get TSM unless they unsubscribe.',
-  // Not a stage you can set anywhere in the app (no dropdown offers it, no live partner has
-  // it) — kept only because the type/DB enum still has this value historically. The real
-  // "Lapsed" staff will ever see is the auto-computed status dot; see PartnershipsHelpModal's
-  // clarifying note.
-  lapsed:     'Auto-detected: no meaningful engagement logged in 12+ months. Log a touchpoint using "We reached out" to move them to Re-engaging.',
-  inactive:   'Archived. Off the active list. Still receives TSM unless they unsubscribe.',
+  prospect: 'An early, unconfirmed relationship — not yet subscribed to TSM. Move to Active once the relationship warrants ongoing stewardship.',
+  active:   'A current, healthy relationship that warrants ongoing stewardship. Subscribed to TSM automatically.',
+  inactive: 'Off the active list. Still receives TSM unless they\'ve unsubscribed.',
 };
 
 export const DONOR_TIER_DESC: Record<DonorTier, string> = {
   first_time: 'Gave for the first time. 72-hr personal follow-up email required.',
-  recurring:  'Gives on a regular pattern. No special action beyond normal cadence.',
+  recurring:  'Gives on a regular pattern. No special action beyond normal stewardship.',
   major:      '$10,000+ total giving. Andrew is notified and calls within 72 hrs of this tier being set.',
-  lapsed:     'Previously gave but hasn\'t given in 12+ months. This is about giving history — stage tracks the relationship separately. A donor can be re-engaging in stage while their tier still reads Stopped giving.',
+  lapsed:     'Previously gave but hasn\'t given in 12+ months. This is about giving history, separate from relationship stage.',
 };
 
 export const STEWARDSHIP_DESC: Record<StewardshipStatus, string> = {
-  on_cadence: 'Up to date — last touchpoint logged within the cadence window.',
-  due_soon:   'Touchpoint due within 7 days. Good time to plan ahead.',
-  overdue:    'Cadence window passed. A task has been pushed to the owner\'s inbox.',
-  no_cadence: 'No stewardship rhythm set. Open this record and set a cadence.',
-  lapsed:     'Auto-detected — no meaningful engagement logged in 12+ months. Log "We reached out" to move this to Re-engaging and start the 60-day response window.',
-  inactive:   'Off the active stewardship list. Still receives the newsletter unless unsubscribed.',
+  needs_attention: 'An overdue touchpoint, or an unacknowledged Brevo-unsubscribe notice. Worth a look.',
+  ok: 'Covered — either nothing additional is needed beyond TSM, or the named touchpoint isn\'t due yet.',
+  inactive: 'Off the active stewardship list. Still receives the newsletter unless unsubscribed.',
 };
-
-/**
- * True when Bethany has reached out to a re-engaging partner (stage = reengaging)
- * but 60+ days have passed with no response logged. Surfaces the "move to archive"
- * prompt — the default action, not a decision she needs to think about.
- */
-export function showInactivePrompt(p: Partner, today: Date = new Date()): boolean {
-  if (p.stage !== 'reengaging' || !p.last_touchpoint_at) return false;
-  return daysSinceTouch(p, today) >= 60;
-}

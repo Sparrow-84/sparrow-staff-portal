@@ -18,14 +18,12 @@ export function PartnerTileView({
   partners,
   profiles,
   onOpenPartner,
-  nextCommLabel,
   donorStatMap = new Map(),
   interestMap = new Map(),
 }: {
   partners: Partner[];
   profiles: Profile[];
   onOpenPartner: (id: string) => void;
-  nextCommLabel?: string;
   donorStatMap?: Map<string, DonorStat>;
   interestMap?: Map<string, PartnershipInterest[]>;
 }) {
@@ -75,9 +73,11 @@ export function PartnerTileView({
               </div>
             )}
 
-            <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${st.chip}`}>
-              {dueLabel(p, new Date(), p.cadence_days == null ? nextCommLabel : undefined)}
-            </span>
+            {dueLabel(p, new Date()) && (
+              <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${st.chip}`}>
+                {dueLabel(p, new Date())}
+              </span>
+            )}
 
             {/* Donation summary for donors */}
             {p.type === 'donor' && (

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { RoomSopsButton } from '@/components/documents/RoomSops';
-import { localDate } from '@/lib/date';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
 import { fetchArchivedPartners, fetchDonorStats, fetchPartners, syncDueTouchpointTasks, syncLapsedDonorTiers, syncLapsedPartnerTasks } from '@/lib/partnerships';
@@ -30,7 +29,6 @@ import { PartnershipSocialTab } from './PartnershipSocialTab';
 import { PartnershipEventsTab } from './PartnershipEventsTab';
 import { PrayerMeetingTab } from './PrayerMeetingTab';
 import { PartnershipContactsTab } from './PartnershipContactsTab';
-import { fetchComms } from '@/lib/partnerships-tabs';
 import { DeptCalendar } from '@/components/calendar/DeptCalendar';
 
 const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
@@ -91,19 +89,12 @@ const TABS: { key: Tab; label: string }[] = [
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'donor', label: 'Donors' },
-  { key: 'church', label: 'Churches' },
-  { key: 'community', label: 'Community' },
+  { key: 'community', label: 'Community Partners' },
   { key: 'volunteer', label: 'Volunteers' },
-  { key: 'prayer', label: 'Prayer' },
-  { key: 'fst', label: 'FST' },
-  { key: 'business', label: 'Business' },
-  { key: 'foundation', label: 'Foundations' },
-  { key: 'advisory', label: 'Advisory' },
-  { key: 'lcp_referral', label: 'LCP referrals' },
 ];
 
 // Order the directory by how badly each relationship needs attention.
-const STATUS_RANK = { overdue: 0, lapsed: 1, due_soon: 2, no_cadence: 3, on_cadence: 4, inactive: 5 } as const;
+const STATUS_RANK = { needs_attention: 0, ok: 1, inactive: 2 } as const;
 
 export function PartnershipsRoom() {
   const { tourOpen, dismissTour } = useRoomTour('sparrow_partnerships_toured_v1');
@@ -117,10 +108,6 @@ export function PartnershipsRoom() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
-  // "Ready for Brevo sync" -- active/reengaging relationships with an email on file, the set
-  // that should actually be on a Brevo list. Prospects are deliberately excluded: they haven't
-  // joined anything yet, so auto-enrolling them in ongoing comms would be presumptuous.
-  const [brevoReadyOnly, setBrevoReadyOnly] = useState(false);
   const [view, setView] = useState<View>(
     () => {
       const stored = localStorage.getItem('partnerships_view');
@@ -128,7 +115,6 @@ export function PartnershipsRoom() {
     },
   );
 
-  const [nextCommLabel, setNextCommLabel] = useState<string | undefined>(undefined);
   const [donorStatMap, setDonorStatMap] = useState<Map<string, DonorStat>>(new Map());
   const [interests, setInterests] = useState<PartnershipInterest[]>([]);
   const [interestMap, setInterestMap] = useState<Map<string, PartnershipInterest[]>>(new Map());
@@ -152,12 +138,10 @@ export function PartnershipsRoom() {
 
   const load = useCallback(async () => {
     try {
-      const year = new Date().getFullYear();
-      const [pp, pr, archived, comms, stats, interestList, partnerInterests] = await Promise.all([
+      const [pp, pr, archived, stats, interestList, partnerInterests] = await Promise.all([
         fetchPartners(),
         fetchProfiles(),
         fetchArchivedPartners(),
-        fetchComms(year),
         fetchDonorStats(),
         fetchInterests(),
         fetchPartnerInterestMap(),
@@ -168,15 +152,6 @@ export function PartnershipsRoom() {
       setDonorStatMap(new Map(stats.map((s) => [s.partner_id, s])));
       setInterests(interestList);
       setInterestMap(partnerInterests);
-      // Find the next upcoming comm that hasn't been sent — shown for donors/prayer in place of "No cadence"
-      const today = localDate();
-      const next = comms
-        .filter((c) => c.status !== 'sent' && c.publish_date >= today)
-        .sort((a, b) => a.publish_date.localeCompare(b.publish_date))[0];
-      if (next) {
-        const d = new Date(`${next.publish_date}T12:00:00`);
-        setNextCommLabel(`${next.title} — ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`);
-      }
       // Best-effort background syncs — overdue tasks, lapsed stages, lapsed donor tiers.
       void syncDueTouchpointTasks().catch(() => undefined);
       void syncLapsedPartnerTasks().catch(() => undefined);
@@ -200,18 +175,11 @@ export function PartnershipsRoom() {
   }, [partners, deepId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = useMemo(() => {
-    let overdue = 0;
-    let dueSoon = 0;
-    let noCadence = 0;
-    let lapsed = 0;
+    let needsAttention = 0;
     for (const p of partners) {
-      const s = stewardshipStatus(p);
-      if (s === 'overdue') overdue++;
-      else if (s === 'due_soon') dueSoon++;
-      else if (s === 'no_cadence') noCadence++;
-      else if (s === 'lapsed') lapsed++;
+      if (stewardshipStatus(p) === 'needs_attention') needsAttention++;
     }
-    return { total: partners.length, overdue, dueSoon, noCadence, lapsed };
+    return { total: partners.length, overdue: needsAttention };
   }, [partners]);
 
   // Search matches a partner's name OR any of their assigned Interest labels — so typing
@@ -230,9 +198,6 @@ export function PartnershipsRoom() {
       return [...list].sort((a, b) => a.name.localeCompare(b.name));
     }
     let list = filter === 'all' ? partners : partners.filter((p) => partnerMatchesType(p, filter));
-    if (brevoReadyOnly) {
-      list = list.filter((p) => (p.stage === 'active' || p.stage === 'reengaging') && !!p.email?.trim());
-    }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((p) => matchesSearch(p, q));
@@ -243,7 +208,7 @@ export function PartnershipsRoom() {
       if (ra !== rb) return ra - rb;
       return a.name.localeCompare(b.name);
     });
-  }, [partners, archivedPartners, filter, brevoReadyOnly, search, interestMap]);
+  }, [partners, archivedPartners, filter, search, interestMap]);
 
   // "Copy emails" — copies every email in whatever the Directory is showing right now
   // (filter tab + search), comma-separated so it pastes straight into BCC. Names anyone
@@ -251,7 +216,7 @@ export function PartnershipsRoom() {
   const [copyResult, setCopyResult] = useState<
     { copied: number; missing: string[]; failedText?: string } | null
   >(null);
-  useEffect(() => setCopyResult(null), [filter, brevoReadyOnly, search]);
+  useEffect(() => setCopyResult(null), [filter, search]);
 
   async function copyVisibleEmails() {
     const seen = new Set<string>();
@@ -287,7 +252,7 @@ export function PartnershipsRoom() {
   }
 
   const firstOverdue = useMemo(
-    () => visible.find((p) => stewardshipStatus(p) === 'overdue'),
+    () => visible.find((p) => stewardshipStatus(p) === 'needs_attention'),
     [visible],
   );
 
@@ -306,8 +271,7 @@ export function PartnershipsRoom() {
         <div>
           <h1 className="font-serif text-2xl font-semibold">Partnerships</h1>
           <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-            {stats.total} relationships · {stats.overdue} overdue · {stats.dueSoon} due soon
-            {stats.noCadence > 0 && ` · ${stats.noCadence} without a cadence`}
+            {stats.total} relationships · {stats.overdue} need attention
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -398,13 +362,6 @@ export function PartnershipsRoom() {
             </div>
           )}
 
-          {stats.noCadence > 0 && (
-            <p className="mt-2 rounded-xl border border-slate-300/60 dark:border-slate-500/30 bg-slate-50 dark:bg-sparrow-dark-surface2 px-4 py-2 text-xs text-slate-600 dark:text-slate-300">
-              {stats.noCadence} relationship{stats.noCadence > 1 ? 's have' : ' has'} no stewardship cadence set — a
-              record without a rhythm isn't stewarded. Open it to set one.
-            </p>
-          )}
-
           {/* Search bar */}
           <div className="relative mt-4">
             <input
@@ -455,22 +412,6 @@ export function PartnershipsRoom() {
                   }`}
                 >
                   Archived <span className="opacity-70">{archivedPartners.length}</span>
-                </button>
-              )}
-              {filter !== 'archived' && (
-                <button
-                  onClick={() => setBrevoReadyOnly((v) => !v)}
-                  title="Active or reengaging relationships with an email on file -- the set that belongs on a Brevo list. Prospects are left out on purpose."
-                  className={`rounded-lg border px-3 py-1.5 font-medium transition ${
-                    brevoReadyOnly
-                      ? 'border-sparrow-gold dark:border-sparrow-dark-green bg-sparrow-gold text-white'
-                      : 'border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
-                  }`}
-                >
-                  Ready for Brevo sync{' '}
-                  <span className="opacity-70">
-                    {partners.filter((p) => (filter === 'all' || partnerMatchesType(p, filter)) && (p.stage === 'active' || p.stage === 'reengaging') && !!p.email?.trim()).length}
-                  </span>
                 </button>
               )}
             </div>
@@ -553,7 +494,6 @@ export function PartnershipsRoom() {
                 profiles={profiles}
                 onOpenPartner={openPartner}
                 onChanged={load}
-                nextCommLabel={nextCommLabel}
                 donorStatMap={donorStatMap}
                 interestMap={interestMap}
               />
@@ -563,7 +503,6 @@ export function PartnershipsRoom() {
                 partners={visible}
                 profiles={profiles}
                 onOpenPartner={openPartner}
-                nextCommLabel={nextCommLabel}
                 donorStatMap={donorStatMap}
                 interestMap={interestMap}
               />

@@ -7,6 +7,7 @@ import type {
   MouStatus,
   Partner,
   PartnerStage,
+  PartnerSubCategory,
   PartnerType,
   Touchpoint,
   TouchpointMethod,
@@ -21,7 +22,7 @@ import type {
 // (confirmed: "column partners.touchpoint_reminder_note does not exist"). Add it back once
 // 0186 is confirmed applied -- see byron-pending-items.
 const PARTNER_COLS =
-  'id, name, type, secondary_types, stage, owner_id, organization, contact_name, role, website, email, phone, address, donor_tier, cadence_days, lead_time_days, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, sparrow_provides, partner_provides, mou_status, business_card_front_path, business_card_back_path';
+  'id, name, type, secondary_types, sub_category, stage, owner_id, organization, contact_name, role, website, email, phone, address, donor_tier, needs_additional_touchpoint, additional_touchpoint_label, additional_touchpoint_due, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, newsletter_unsubscribed_at, newsletter_unsubscribe_dismissed_at, sparrow_provides, partner_provides, partner_provides_tags, mou_status, business_card_front_path, business_card_back_path';
 
 // ── Partners ─────────────────────────────────────────────────────────
 export async function fetchPartners(): Promise<Partner[]> {
@@ -48,6 +49,7 @@ export interface PartnerInput {
   name: string;
   type: PartnerType;
   secondary_types: PartnerType[];
+  sub_category: PartnerSubCategory | null;
   stage: PartnerStage;
   owner_id: string | null;
   organization: string | null;
@@ -58,10 +60,6 @@ export interface PartnerInput {
   phone: string | null;
   address: string | null;
   donor_tier: DonorTier | null;
-  /** Required (migration 0080) — every partner needs a stewardship rhythm. */
-  cadence_days: number;
-  /** Required (migration 0080) — days ahead of due date the owner is warned. */
-  lead_time_days: number;
   source: string | null;
   notes: string | null;
 }
@@ -109,6 +107,7 @@ export async function updatePartner(
       | 'name'
       | 'type'
       | 'secondary_types'
+      | 'sub_category'
       | 'stage'
       | 'owner_id'
       | 'organization'
@@ -119,16 +118,19 @@ export async function updatePartner(
       | 'phone'
       | 'address'
       | 'donor_tier'
-      | 'cadence_days'
-      | 'lead_time_days'
+      | 'needs_additional_touchpoint'
+      | 'additional_touchpoint_label'
+      | 'additional_touchpoint_due'
       | 'source'
       | 'notes'
       | 'active'
       | 'giving_method'
       | 'newsletter_subscribed'
       | 'first_gift_date'
+      | 'newsletter_unsubscribe_dismissed_at'
       | 'sparrow_provides'
       | 'partner_provides'
+      | 'partner_provides_tags'
       | 'mou_status'
       | 'touchpoint_reminder_note'
     >

@@ -2,18 +2,20 @@ import { useMemo, useState, type ReactNode } from 'react';
 import type { Profile } from '@/lib/types';
 import { updatePartner } from '@/lib/partnerships';
 import { assignAvatarColors } from '@/lib/avatarColors';
-import { LEAD_TIME_PRESETS } from '@/lib/cadence';
-import { CadenceInput } from './CadenceInput';
 import { GivingMethodEditor } from './GivingMethodEditor';
 import { LabelPill } from '@/components/LabelPill';
+import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import type { PartnershipInterest } from '@/lib/partnership-interests';
 import {
   DONOR_TIER,
   MOU_STATUS,
+  PARTNER_PROVIDES_PRESETS,
   PARTNER_STAGE,
+  PARTNER_SUB_CATEGORY,
   PARTNER_TYPE,
   PARTNER_TYPES,
   STEWARDSHIP,
+  SUB_CATEGORIES_FOR_TYPE,
   daysUntilDue,
   derivedDonorTier,
   dueLabel,
@@ -24,7 +26,9 @@ import {
   type DonorTier,
   type MouStatus,
   type Partner,
+  type PartnerProvidesTag,
   type PartnerStage,
+  type PartnerSubCategory,
   type PartnerType,
 } from '@/lib/partnerships-types';
 import {
@@ -34,24 +38,24 @@ import {
 } from '@/components/gridtable/GridTable';
 
 type ColKey =
-  | 'status' | 'name' | 'type' | 'secondary_types' | 'organization' | 'contact_name'
+  | 'status' | 'name' | 'type' | 'sub_category' | 'organization' | 'contact_name'
   | 'email' | 'phone' | 'address' | 'donor_tier' | 'interests' | 'stage' | 'owner'
-  | 'last_touch' | 'due' | 'cadence' | 'lead_time' | 'gift_count' | 'last_gift'
+  | 'last_touch' | 'due' | 'needs_touchpoint' | 'gift_count' | 'last_gift'
   | 'source' | 'active' | 'mou_status' | 'giving_method' | 'newsletter' | 'first_gift_date'
   | 'sparrow_provides' | 'partner_provides';
 type SortDir = 'asc' | 'desc';
 
-const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'inactive'];
+const STAGES: PartnerStage[] = ['prospect', 'active', 'inactive'];
 const TIERS: DonorTier[] = ['first_time', 'recurring', 'major', 'lapsed'];
 const MOU_STATUSES: MouStatus[] = ['not_needed', 'needed', 'on_file'];
 
 const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'status', label: '', defaultWidth: 36 },
   { key: 'name', label: 'Name', defaultWidth: 200 },
-  { key: 'type', label: 'Type', defaultWidth: 170 },
-  { key: 'secondary_types', label: 'Also involved as', defaultWidth: 160 },
+  { key: 'type', label: 'Category', defaultWidth: 150 },
+  { key: 'sub_category', label: 'Sub-category', defaultWidth: 130 },
   { key: 'organization', label: 'Organization', defaultWidth: 170 },
-  { key: 'contact_name', label: 'Contact', defaultWidth: 150 },
+  { key: 'contact_name', label: 'Contact Person', defaultWidth: 150 },
   { key: 'email', label: 'Email', defaultWidth: 190 },
   { key: 'phone', label: 'Phone', defaultWidth: 130 },
   { key: 'address', label: 'Address', defaultWidth: 200 },
@@ -60,10 +64,9 @@ const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'stage', label: 'Stage', defaultWidth: 130 },
   { key: 'owner', label: 'Owner', defaultWidth: 170 },
   { key: 'last_touch', label: 'Last touch', defaultWidth: 100 },
-  { key: 'due', label: 'Due', defaultWidth: 120 },
-  { key: 'cadence', label: 'Cadence', defaultWidth: 150 },
-  { key: 'lead_time', label: 'Lead time', defaultWidth: 150 },
-  { key: 'gift_count', label: 'Gifts', align: 'right', defaultWidth: 70 },
+  { key: 'due', label: 'Next Touchpoint Due', defaultWidth: 150 },
+  { key: 'needs_touchpoint', label: 'Needs additional touchpoint', defaultWidth: 220 },
+  { key: 'gift_count', label: 'Total Gifts', align: 'right', defaultWidth: 90 },
   { key: 'last_gift', label: 'Last gift', defaultWidth: 100 },
   { key: 'source', label: 'Source', defaultWidth: 170 },
   { key: 'active', label: 'Active', defaultWidth: 70 },
@@ -72,7 +75,7 @@ const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'newsletter', label: 'Subscribed to TSM', defaultWidth: 130 },
   { key: 'first_gift_date', label: 'First gift date', defaultWidth: 140 },
   { key: 'sparrow_provides', label: 'Sparrow provides', defaultWidth: 200 },
-  { key: 'partner_provides', label: 'Partner provides', defaultWidth: 200 },
+  { key: 'partner_provides', label: 'Partner provides', defaultWidth: 220 },
 ];
 
 // Admin/back-office fields start hidden so the directory doesn't open
@@ -96,7 +99,6 @@ export function PartnerTableView({
   profiles,
   onOpenPartner,
   onChanged,
-  nextCommLabel,
   donorStatMap = new Map(),
   interestMap = new Map(),
 }: {
@@ -104,7 +106,6 @@ export function PartnerTableView({
   profiles: Profile[];
   onOpenPartner: (id: string) => void;
   onChanged: () => void;
-  nextCommLabel?: string;
   donorStatMap?: Map<string, DonorStat>;
   interestMap?: Map<string, PartnershipInterest[]>;
 }) {
@@ -123,6 +124,7 @@ export function PartnerTableView({
     switch (key) {
       case 'name': return a.name.localeCompare(b.name);
       case 'type': return a.type.localeCompare(b.type);
+      case 'sub_category': return (a.sub_category ?? '').localeCompare(b.sub_category ?? '');
       case 'organization': return (a.organization ?? '').localeCompare(b.organization ?? '');
       case 'contact_name': return (a.contact_name ?? '').localeCompare(b.contact_name ?? '');
       case 'email': return (a.email ?? '').localeCompare(b.email ?? '');
@@ -141,8 +143,7 @@ export function PartnerTableView({
         const db = daysUntilDue(b, today) ?? 9999;
         return da - db;
       }
-      case 'cadence': return (a.cadence_days ?? 9999) - (b.cadence_days ?? 9999);
-      case 'lead_time': return a.lead_time_days - b.lead_time_days;
+      case 'needs_touchpoint': return Number(a.needs_additional_touchpoint) - Number(b.needs_additional_touchpoint);
       case 'gift_count': return (donorStatMap.get(a.id)?.gift_count ?? 0) - (donorStatMap.get(b.id)?.gift_count ?? 0);
       case 'last_gift': return (donorStatMap.get(a.id)?.last_gift_date ?? '').localeCompare(donorStatMap.get(b.id)?.last_gift_date ?? '');
       case 'source': return (a.source ?? '').localeCompare(b.source ?? '');
@@ -157,8 +158,8 @@ export function PartnerTableView({
 
   const layout = useColumnLayout(COLUMNS, STORAGE_PREFIX, DEFAULT_HIDDEN);
   const sortableKeys: ColKey[] = [
-    'name', 'type', 'organization', 'contact_name', 'email', 'phone', 'address', 'donor_tier',
-    'stage', 'owner', 'last_touch', 'due', 'cadence', 'lead_time', 'gift_count', 'last_gift',
+    'name', 'type', 'sub_category', 'organization', 'contact_name', 'email', 'phone', 'address', 'donor_tier',
+    'stage', 'owner', 'last_touch', 'due', 'needs_touchpoint', 'gift_count', 'last_gift',
     'source', 'active', 'mou_status', 'giving_method', 'newsletter', 'first_gift_date',
   ];
   const layoutState = useSortState<ColKey>('name');
@@ -187,7 +188,9 @@ export function PartnerTableView({
     // Changing the primary type shouldn't lose the old one — fold it into
     // secondary tags (and drop the new type from there if it was already tagged).
     const nextSecondary = Array.from(new Set([...(p.secondary_types ?? []).filter((t) => t !== nextType), p.type]));
-    void patch(p.id, { type: nextType, secondary_types: nextSecondary });
+    // Sub-category options differ per category — carry it forward only if still valid.
+    const subStillValid = p.sub_category && SUB_CATEGORIES_FOR_TYPE[nextType].includes(p.sub_category);
+    void patch(p.id, { type: nextType, secondary_types: nextSecondary, sub_category: subStillValid ? p.sub_category : null });
   }
 
   function renderCell(p: Partner, key: ColKey) {
@@ -222,15 +225,13 @@ export function PartnerTableView({
             options={PARTNER_TYPES.map((t) => ({ value: t, label: `${PARTNER_TYPE[t].icon} ${PARTNER_TYPE[t].label}` }))}
           />
         );
-      case 'secondary_types':
+      case 'sub_category':
         return (
-          <div className="flex flex-wrap gap-1">
-            {p.secondary_types.length === 0
-              ? <span className="text-sparrow-gray/50 dark:text-sparrow-dark-gray/50">—</span>
-              : p.secondary_types.map((t) => (
-                <span key={t} className="whitespace-nowrap text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{PARTNER_TYPE[t].icon} {PARTNER_TYPE[t].label}</span>
-              ))}
-          </div>
+          <InlineSelect
+            value={p.sub_category ?? ''}
+            onSave={(v) => void patch(p.id, { sub_category: (v || null) as PartnerSubCategory | null })}
+            options={[{ value: '', label: '—' }, ...SUB_CATEGORIES_FOR_TYPE[p.type].map((sc) => ({ value: sc, label: PARTNER_SUB_CATEGORY[sc] }))]}
+          />
         );
       case 'organization':
         return <Stop><InlineText value={p.organization ?? ''} placeholder="—" onSave={(v) => void patch(p.id, { organization: v.trim() || null })} /></Stop>;
@@ -281,16 +282,42 @@ export function PartnerTableView({
         );
       case 'last_touch':
         return <span className="whitespace-nowrap text-sparrow-gray dark:text-sparrow-dark-gray">{shortDate(p.last_touchpoint_at)}</span>;
-      case 'due':
+      case 'due': {
+        const label = dueLabel(p, today);
+        if (!label) return <span className="text-sparrow-gray/50 dark:text-sparrow-dark-gray/50">—</span>;
         return (
           <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium ${st.chip}`}>
-            {dueLabel(p, today, p.cadence_days == null ? nextCommLabel : undefined)}
+            {label}
           </span>
         );
-      case 'cadence':
-        return <Stop><CadenceInput value={p.cadence_days} onCommit={(v) => void patch(p.id, { cadence_days: v })} /></Stop>;
-      case 'lead_time':
-        return <Stop><CadenceInput value={p.lead_time_days} onCommit={(v) => void patch(p.id, { lead_time_days: v })} presets={LEAD_TIME_PRESETS} /></Stop>;
+      }
+      case 'needs_touchpoint':
+        return (
+          <Stop>
+            <div className="flex items-center gap-1.5">
+              <InlineCheckbox
+                checked={p.needs_additional_touchpoint}
+                onSave={(v) => void patch(p.id, v
+                  ? { needs_additional_touchpoint: true }
+                  : { needs_additional_touchpoint: false, additional_touchpoint_label: null, additional_touchpoint_due: null })}
+              />
+              {p.needs_additional_touchpoint && (
+                <>
+                  <InlineText
+                    value={p.additional_touchpoint_label ?? ''}
+                    placeholder="What's due"
+                    onSave={(v) => void patch(p.id, { additional_touchpoint_label: v.trim() || null })}
+                  />
+                  <InlineText
+                    type="date"
+                    value={p.additional_touchpoint_due ?? ''}
+                    onSave={(v) => void patch(p.id, { additional_touchpoint_due: v || null })}
+                  />
+                </>
+              )}
+            </div>
+          </Stop>
+        );
       case 'gift_count': {
         const stat = donorStatMap.get(p.id);
         return <span className="text-sparrow-gray dark:text-sparrow-dark-gray">{stat ? stat.gift_count : '—'}</span>;
@@ -333,7 +360,16 @@ export function PartnerTableView({
       case 'sparrow_provides':
         return <ExpandableText value={p.sparrow_provides} placeholder="—" onSave={(v) => void patch(p.id, { sparrow_provides: v })} />;
       case 'partner_provides':
-        return <ExpandableText value={p.partner_provides} placeholder="—" onSave={(v) => void patch(p.id, { partner_provides: v })} />;
+        return (
+          <Stop>
+            <MultiSelectDropdown
+              options={PARTNER_PROVIDES_PRESETS.map((t) => ({ value: t, label: t }))}
+              selected={p.partner_provides_tags}
+              onChange={(next) => void patch(p.id, { partner_provides_tags: next as PartnerProvidesTag[] })}
+              placeholder="—"
+            />
+          </Stop>
+        );
       default:
         return null;
     }

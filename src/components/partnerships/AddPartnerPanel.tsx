@@ -3,41 +3,18 @@ import type { Profile } from '@/lib/types';
 import { createPartner, emitFirstTimeDonorTask, findPossibleDuplicatePartner } from '@/lib/partnerships';
 import {
   PARTNER_STAGE,
+  PARTNER_SUB_CATEGORY,
   PARTNER_TYPE,
   PARTNER_TYPES,
+  SUB_CATEGORIES_FOR_TYPE,
   type PartnerStage,
+  type PartnerSubCategory,
   type PartnerType,
 } from '@/lib/partnerships-types';
 import { Drawer } from '../lcp/Drawer';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
-import { LEAD_TIME_PRESETS } from '@/lib/cadence';
-import { CadenceInput } from './CadenceInput';
 import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import { createInterest, setPartnerInterests, type PartnershipInterest } from '@/lib/partnership-interests';
-
-// Default stewardship cadence by type (days between touchpoints). Every partner now needs a
-// cadence value (migration 0080 makes partners.cadence_days NOT NULL — "a record without a
-// rhythm is the defect the room exists to surface" applies across the board now, donors
-// included). Church: quarterly per role doc. Community/business: 1-2x/year. Advisory/
-// foundation: annual grant cycle. Donor/prayer/fst: semi-annual personal check-in as a
-// starting point — always editable. LCP referral: annual — usually a tag on a community
-// partner (whose own cadence applies); Shelly reaches out when an LCP spot opens, not on a rhythm.
-const DEFAULT_CADENCE: Record<PartnerType, number> = {
-  donor:      182,
-  church:     90,
-  community:  182,
-  volunteer:  182,
-  prayer:     90,
-  fst:        90,
-  business:   182,
-  foundation: 365,
-  advisory:   365,
-  lcp_referral: 365,
-};
-
-// Universal default lead time (days of advance warning before a touchpoint is due) — matches
-// the 14-day default migration 0080 backfilled everywhere else in the reminder engine.
-const DEFAULT_LEAD_TIME = 14;
 
 export function AddPartnerPanel({
   open,
@@ -71,9 +48,10 @@ export function AddPartnerPanel({
   onCreatedFromContact?: (partnerId: string) => void;
 }) {
   const [name, setName] = useState('');
-  // No default -- staff must actively pick a type (previously defaulted to 'donor', which
-  // silently mistyped anyone added via "Become a partner" from a non-donor context).
+  // No default -- staff must actively pick a category (previously defaulted to 'donor', which
+  // silently mistyped anyone added via "Add to Directory" from a non-donor context).
   const [type, setType] = useState<PartnerType | ''>('');
+  const [subCategory, setSubCategory] = useState<PartnerSubCategory | ''>('');
   const [secondaryTypes, setSecondaryTypes] = useState<PartnerType[]>([]);
   const [interestIds, setInterestIds] = useState<string[]>([]);
   const [stage, setStage] = useState<PartnerStage>('prospect');
@@ -87,8 +65,6 @@ export function AddPartnerPanel({
   const [address, setAddress] = useState('');
   const [source, setSource] = useState('');
   const [notes, setNotes] = useState('');
-  const [cadence, setCadence] = useState<number | null>(null);
-  const [leadTime, setLeadTime] = useState<number | null>(DEFAULT_LEAD_TIME);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
@@ -97,6 +73,7 @@ export function AddPartnerPanel({
     if (open) {
       setName(initialValues?.name ?? '');
       setType('');
+      setSubCategory('');
       setSecondaryTypes([]);
       setInterestIds([]);
       setStage('prospect');
@@ -110,8 +87,6 @@ export function AddPartnerPanel({
       setAddress('');
       setSource(initialValues?.source ?? '');
       setNotes(initialValues?.notes ?? '');
-      setCadence(null);
-      setLeadTime(DEFAULT_LEAD_TIME);
       setError(null);
       setBusy(false);
       setDuplicateWarning(null);
@@ -119,24 +94,24 @@ export function AddPartnerPanel({
     }
   }, [open, defaultOwnerId, initialValues]);
 
-  // Cadence + lead time are required (migration 0080 — NOT NULL at the DB level). Validate here
-  // so a save attempt never hits the DB constraint as its only feedback.
   const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'pa-name', label: 'Name', valid: name.trim().length > 0 },
-    { key: 'pa-type', label: 'Type', valid: type !== '' },
-    { key: 'pa-cadence', label: 'Cadence (days)', valid: cadence != null && cadence > 0 },
-    { key: 'pa-lead-time', label: 'Lead time (days)', valid: leadTime != null && leadTime > 0 },
+    { key: 'pa-type', label: 'Category', valid: type !== '' },
+    { key: 'pa-subcategory', label: 'Sub-category', valid: subCategory !== '' },
   ]);
 
   function pickType(t: PartnerType) {
     setType(t);
-    setCadence(DEFAULT_CADENCE[t]); // follow the type's default rhythm unless the user overrides
-    clear('pa-cadence');
-    setSecondaryTypes((prev) => prev.filter((s) => s !== t)); // can't tag the same type twice
+    // Reset sub-category when the category changes -- the options differ per category
+    // (e.g. Volunteer only offers Prayer), so a stale pick from the old category shouldn't
+    // silently carry over.
+    setSubCategory('');
+    clear('pa-type');
+    setSecondaryTypes((prev) => prev.filter((s) => s !== t)); // can't tag the same category twice
   }
 
   async function save() {
-    if (!validate() || type === '' || cadence == null || leadTime == null) return;
+    if (!validate() || type === '' || subCategory === '') return;
     const trimmedName = name.trim();
 
     // First pass: warn on a likely duplicate rather than silently creating a second record.
@@ -163,6 +138,7 @@ export function AddPartnerPanel({
         name: trimmedName,
         type,
         secondary_types: secondaryTypes,
+        sub_category: subCategory,
         stage,
         owner_id: ownerId || null,
         organization: organization.trim() || null,
@@ -173,8 +149,6 @@ export function AddPartnerPanel({
         phone: phone.trim() || null,
         address: address.trim() || null,
         donor_tier: type === 'donor' ? 'first_time' : null,
-        cadence_days: cadence,
-        lead_time_days: leadTime,
         source: source.trim() || null,
         notes: notes.trim() || null,
       });
@@ -196,12 +170,14 @@ export function AddPartnerPanel({
     }
   }
 
+  const subCategoryOptions = type ? SUB_CATEGORIES_FOR_TYPE[type] : [];
+
   return (
     <Drawer
       open={open}
       onClose={onClose}
       title="Add partner"
-      subtitle="Name the owner and a cadence — that's what makes it stewarded"
+      subtitle="Name a category and sub-category — stage starts at Prospect"
       footer={
         <div className="space-y-2">
           {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
@@ -215,7 +191,7 @@ export function AddPartnerPanel({
       <div className="space-y-4">
         {initialValues && (
           <p className="rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green dark:text-sparrow-dark-green">
-            Prefilled from {initialValues.name}'s {initialValues.originLabel ?? 'My Contacts entry'}. Pick a type and confirm the cadence to add them to the Directory.
+            Prefilled from {initialValues.name}'s {initialValues.originLabel ?? 'My Contacts entry'}. Pick a category and sub-category to add them to the Directory.
           </p>
         )}
         <div>
@@ -243,18 +219,14 @@ export function AddPartnerPanel({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="field-label field-label-required" htmlFor="pa-type">Type</label>
+            <label className="field-label field-label-required" htmlFor="pa-type">Category</label>
             <select
               id="pa-type"
               className={fieldClass('pa-type')}
               value={type}
-              onChange={(e) => {
-                const v = e.target.value as PartnerType;
-                pickType(v);
-                clear('pa-type');
-              }}
+              onChange={(e) => pickType(e.target.value as PartnerType)}
             >
-              <option value="" disabled>— Select type —</option>
+              <option value="" disabled>— Select category —</option>
               {PARTNER_TYPES.map((t) => (
                 <option key={t} value={t}>{PARTNER_TYPE[t].label}</option>
               ))}
@@ -262,17 +234,37 @@ export function AddPartnerPanel({
             {fieldError('pa-type') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-type')}</p>}
           </div>
           <div>
-            <label className="field-label" htmlFor="pa-stage">Stage</label>
-            <select id="pa-stage" className="field-input" value={stage} onChange={(e) => setStage(e.target.value as PartnerStage)}>
-              {(['prospect', 'active', 'reengaging'] as PartnerStage[]).map((s) => (
-                <option key={s} value={s}>{PARTNER_STAGE[s].label}</option>
+            <label className="field-label field-label-required" htmlFor="pa-subcategory">Sub-category</label>
+            <select
+              id="pa-subcategory"
+              className={fieldClass('pa-subcategory')}
+              value={subCategory}
+              disabled={!type}
+              onChange={(e) => { setSubCategory(e.target.value as PartnerSubCategory); clear('pa-subcategory'); }}
+            >
+              <option value="" disabled>{type ? '— Select —' : 'Pick a category first'}</option>
+              {subCategoryOptions.map((sc) => (
+                <option key={sc} value={sc}>{PARTNER_SUB_CATEGORY[sc]}</option>
               ))}
             </select>
+            {fieldError('pa-subcategory') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-subcategory')}</p>}
           </div>
         </div>
 
         <div>
-          <label className="field-label">Also involved as (optional)</label>
+          <label className="field-label" htmlFor="pa-stage">Stage</label>
+          <select id="pa-stage" className="field-input" value={stage} onChange={(e) => setStage(e.target.value as PartnerStage)}>
+            {(['prospect', 'active'] as PartnerStage[]).map((s) => (
+              <option key={s} value={s}>{PARTNER_STAGE[s].label}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            Prospects aren't subscribed to TSM automatically — only Active relationships are.
+          </p>
+        </div>
+
+        <div>
+          <label className="field-label">Also a (optional)</label>
           <MultiSelectDropdown
             options={PARTNER_TYPES.filter((t) => t !== type).map((t) => ({
               value: t,
@@ -284,9 +276,9 @@ export function AddPartnerPanel({
             placeholder="None"
           />
           <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-            Someone who's more than one thing to Sparrow — e.g. a donor who's also a prayer
-            volunteer. Cadence still follows the main Type above; tag the other roles here so
-            they also show up under those Directory tabs.
+            Someone who's more than one kind of relationship to Sparrow — e.g. a church that's
+            also a Donor. Tag the other categories here so they also show up under those
+            Directory tabs; it's one record, not two.
           </p>
         </div>
 
@@ -303,37 +295,9 @@ export function AddPartnerPanel({
               ))}
           </select>
           <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            Every relationship needs a named owner — it's the precondition for stewardship.
+            The staff member responsible for this relationship.
           </p>
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="field-label field-label-required" htmlFor="pa-cadence">Cadence</label>
-            <CadenceInput
-              value={cadence}
-              onCommit={(v) => { setCadence(v); clear('pa-cadence'); }}
-              invalid={!!fieldError('pa-cadence')}
-            />
-            {fieldError('pa-cadence') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-cadence')}</p>}
-          </div>
-          <div>
-            <label className="field-label field-label-required" htmlFor="pa-lead-time">Lead time</label>
-            <CadenceInput
-              value={leadTime}
-              onCommit={(v) => { setLeadTime(v); clear('pa-lead-time'); }}
-              presets={LEAD_TIME_PRESETS}
-              invalid={!!fieldError('pa-lead-time')}
-            />
-            {fieldError('pa-lead-time') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-lead-time')}</p>}
-          </div>
-        </div>
-        <p className="-mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-          {type
-            ? `Cadence defaulted from the type (${PARTNER_TYPE[type].label}); lead time defaults to ${DEFAULT_LEAD_TIME} days'`
-            : `Cadence follows the type once picked above; lead time defaults to ${DEFAULT_LEAD_TIME} days'`}
-          {' '}advance warning. Both required — adjust to the rhythm this relationship needs.
-        </p>
 
         <div className="grid grid-cols-2 gap-3">
           <div>

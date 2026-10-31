@@ -7,7 +7,7 @@ import {
   type PartnerStage,
 } from '@/lib/partnerships-types';
 
-const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'inactive'];
+const STAGES: PartnerStage[] = ['prospect', 'active', 'inactive'];
 const TIERS: DonorTier[] = ['first_time', 'recurring', 'major', 'lapsed'];
 
 export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -37,10 +37,12 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
         <div className="space-y-6 px-6 py-5">
 
           <p className="text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">
-            A <strong>touchpoint</strong> is any logged, personal contact — a call, email, text,
-            letter, meeting, or event. Receiving TSM (the newsletter) doesn't count on its own,
-            since it's not one-on-one contact — if you also reached out to them directly about
-            it, log that separately.
+            A <strong>touchpoint</strong> is a personal, 1:1 interaction — a call, a personal
+            email, a text, a letter, a meeting, or a visit. For most relationships, no separate
+            touchpoint is expected at all: TSM subscription plus any fixed thank-you moments is
+            the complete plan. Community Partners are the exception — they need specific, named,
+            dated check-ins, since the relationship is ongoing and practical rather than built
+            around a single gift or signup.
           </p>
 
           {/* ── Do I have a to-do right now? ── The most important section */}
@@ -49,22 +51,21 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
               Do I have a to-do right now?
             </h3>
 
-            <p className="mb-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Yes — act when the dot is:</p>
+            <p className="mb-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Yes — when the dot is:</p>
             <div className="space-y-2 pl-1">
-              <DotRow dot="bg-priority-p1" label="Overdue (red)" desc="Your cadence window passed without a logged touchpoint. A task has been added to your Incoming Tasks." />
-              <DotRow dot="bg-slate-400" label="No cadence (gray)" desc="No stewardship rhythm is set. Open the record and add a cadence so the relationship is tracked." />
+              <DotRow dot="bg-priority-p1" label="Red — needs attention" desc="An overdue named touchpoint, or an unacknowledged Brevo-unsubscribe notice. Worth a look." />
             </div>
 
-            <p className="mb-2 mt-4 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Not right now — when the dot is:</p>
+            <p className="mb-2 mt-4 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Not right now:</p>
             <div className="space-y-2 pl-1">
-              <DotRow dot="bg-sparrow-green" label="On cadence (green)" desc="You're up to date. Nothing needed until the next cadence window opens." />
-              <DotRow dot="bg-sparrow-gold" label="Due soon (gold)" desc="Touchpoint due within 7 days. Good time to plan ahead — not urgent yet." />
-              <DotRow dot="bg-orange-500" label="Lapsed (orange)" desc="The relationship has gone cold — 12+ months since they engaged. If you've already sent the warm check-in, you're done. The record will prompt you when 60 days passes with no response." />
-              <DotRow dot="bg-sparrow-rule dark:bg-sparrow-dark-border" label="Inactive (light gray)" desc="Off your active list. No action needed. They still receive TSM unless they unsubscribe." />
+              <DotRow dot="bg-sparrow-green" label="Green — all good" desc="Covered — either nothing additional is needed beyond TSM, or the named touchpoint isn't due yet." />
+              <DotRow dot="bg-sparrow-rule dark:bg-sparrow-dark-border" label="No dot — inactive" desc="Off the active list entirely. No action needed. They still receive TSM unless they unsubscribe." />
             </div>
 
             <p className="mt-4 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              The colored dot system applies to <strong>all partner types</strong> — donors, churches, community partners, volunteers, everyone. Cadences are set per record, so different partners have different rhythms.
+              Most Donor and Volunteer records never show anything to track — that's by design,
+              not a gap. "Needs additional touchpoint" is for the relationships that genuinely
+              need a specific, dated item, mainly Community Partners.
             </p>
           </section>
 
@@ -73,11 +74,8 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
           {/* ── Relationship stages ── */}
           <section>
             <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
-              Relationship stages — all partner types
+              Relationship stages
             </h3>
-            <p className="mb-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              Stages describe where the relationship stands — not whether you have a task. You can have a lapsed partner who is <em>not</em> on your to-do list because you've already sent the check-in.
-            </p>
             <div className="space-y-3">
               {STAGES.map((s) => (
                 <div key={s}>
@@ -89,9 +87,10 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
               ))}
             </div>
             <p className="mt-3 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              You'll also see "Lapsed" appear as an orange dot — that's not a stage you set. It's
-              calculated automatically once 12+ months pass with no contact, no matter what stage
-              the partner is officially in. See the color key above for what to do about it.
+              A separate "lapsed" flag (12+ months with no contact) applies to Community Partner
+              and Volunteer records, not Donor — a donor who gave once and went quiet may simply
+              have been a one-time donor, not a stalled relationship. It's not a stage you set;
+              it's calculated automatically.
             </p>
           </section>
 
@@ -103,7 +102,7 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
               Donor tiers — donors only
             </h3>
             <p className="mb-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              Only visible on donor records. Tracks <em>giving history</em> — separate from the relationship stage. A donor can be re-engaging in stage (reconnected relationally) while still lapsed in tier (hasn't given yet).
+              Only visible on donor records. Tracks <em>giving history</em> — separate from the relationship stage.
             </p>
             <div className="space-y-3">
               {TIERS.map((t) => (
@@ -124,24 +123,16 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
             </h3>
             <div className="space-y-4">
               <Rule
-                title="What's worth logging as a touchpoint"
-                body="A donation, an inbound email reply, a returned call, or an in-person meeting. Opening the newsletter alone does not count."
-              />
-              <Rule
-                title="The 60-day rule (re-engaging partners)"
-                body={'After sending a warm check-in, wait. The system will prompt you when it\'s been 60 days. If there\'s still no response, click "archive" from the prompt on their record. This moves them to Inactive — off your active list, though they\'ll still get TSM unless they unsubscribe.'}
+                title="Brevo unsubscribes surface automatically"
+                body={'When someone unsubscribes from TSM, their "Subscribed to TSM" checkbox updates on its own and a dismissible FYI notice appears on Partnerships Home — not a to-do, just a chance to consider whether anything about their touchpoint plan should change.'}
               />
               <Rule
                 title="Active list vs. newsletter list"
-                body="Marking someone inactive drops them off your stewardship list — it does not remove them from TSM. They keep getting the newsletter unless they unsubscribe."
-              />
-              <Rule
-                title="Donors who are re-engaging: no asks yet"
-                body="Get the newsletter and event invites, but no donation asks or year-end giving appeals. Move their stage back to Active manually once they start giving again."
+                body="Marking someone inactive drops them off the active stewardship list — it does not remove them from TSM. They keep getting the newsletter unless they unsubscribe."
               />
               <Rule
                 title="Financial asks are counted, not capped — donors only"
-                body="The Comms tab tracks how many financial asks go out each year (e.g. April TSM/Easter, Giving Tuesday, December TSM/Christmas) so we stay mindful of the relationship — it's not a hard limit, and the count can change year to year. Everything else is relational — no ask."
+                body="The number of asks going out each year is tracked so the relationship stays mindful, not to enforce a hard limit — the count can change year to year."
               />
             </div>
           </section>

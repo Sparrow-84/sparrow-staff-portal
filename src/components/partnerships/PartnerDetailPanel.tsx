@@ -2,29 +2,33 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
-import { deletePartner, deleteTouchpoint, emitFirstTimeDonorTask, emitRevisitTask, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner, updateTouchpoint } from '@/lib/partnerships';
+import { deletePartner, deleteTouchpoint, emitFirstTimeDonorTask, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner, updateTouchpoint } from '@/lib/partnerships';
 import {
   DONOR_TIER,
   DONOR_TIER_DESC,
   MOU_STATUS,
+  PARTNER_PROVIDES_PRESETS,
   PARTNER_STAGE,
   PARTNER_STAGE_DESC,
+  PARTNER_SUB_CATEGORY,
   PARTNER_TYPE,
   PARTNER_TYPES,
   STEWARDSHIP,
+  SUB_CATEGORIES_FOR_TYPE,
   TOUCHPOINT_METHOD,
   TOUCHPOINT_METHODS,
   dueLabel,
   hasPartnershipTerms,
   shortDate,
-  showInactivePrompt,
   stewardshipStatus,
   type Donation,
   type DonorStat,
   type DonorTier,
   type MouStatus,
   type Partner,
+  type PartnerProvidesTag,
   type PartnerStage,
+  type PartnerSubCategory,
   type PartnerType,
   type Touchpoint,
   type TouchpointMethod,
@@ -32,8 +36,6 @@ import {
 import { Drawer } from '../lcp/Drawer';
 import { RichTextView } from '../lcp/RichText';
 import { RichTextEditor } from '../stories/RichTextEditor';
-import { LEAD_TIME_PRESETS } from '@/lib/cadence';
-import { CadenceInput } from './CadenceInput';
 import { GivingMethodEditor } from './GivingMethodEditor';
 import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import { createInterest, setPartnerInterests, type PartnershipInterest } from '@/lib/partnership-interests';
@@ -45,7 +47,7 @@ function plainTextPreview(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-const STAGES: PartnerStage[] = ['prospect', 'active', 'reengaging', 'inactive'];
+const STAGES: PartnerStage[] = ['prospect', 'active', 'inactive'];
 const TIERS: DonorTier[] = ['first_time', 'recurring', 'major', 'lapsed'];
 const MOU_STATUSES: MouStatus[] = ['not_needed', 'needed', 'on_file'];
 
@@ -272,44 +274,7 @@ export function PartnerDetailPanel({
           <span className="text-xs">{dueLabel(partner)}</span>
         </div>
 
-        {/* ── 2. 60-day inactive prompt ── */}
-        {showInactivePrompt(partner) && (
-          <section className="rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 px-4 py-3">
-            <p className="text-sm font-medium text-amber-900 dark:text-amber-200">No response in 60+ days</p>
-            <p className="mt-1 text-xs leading-relaxed text-amber-800 dark:text-amber-300">
-              You reached out to {partner.name} but haven't heard back. The default next step is to
-              archive them — they stay in the database, keep receiving TSM, and you can always find
-              them in the Archived tab if they re-engage later.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                onClick={() => void patch({ active: false, stage: 'inactive' })}
-                disabled={busy}
-                className="rounded-lg bg-amber-800 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-amber-900 disabled:opacity-50"
-              >
-                Archive
-              </button>
-              <button
-                onClick={async () => {
-                  setBusy(true);
-                  await emitRevisitTask(
-                    partner.id,
-                    partner.name,
-                    partner.owner_id ?? currentUserId,
-                  ).catch(() => undefined);
-                  setBusy(false);
-                  onChanged();
-                }}
-                disabled={busy}
-                className="rounded-lg border border-amber-300 dark:border-amber-500/30 bg-white dark:bg-sparrow-dark-surface px-3 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 transition hover:bg-amber-50 dark:hover:bg-amber-500/15 disabled:opacity-50"
-              >
-                Not yet — revisit in 30 days
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* ── 3. Last touchpoint snippet ── */}
+        {/* ── 2. Last touchpoint snippet ── */}
         {lastTouchpoint ? (
           <div className="rounded-xl border border-sparrow-rule/70 bg-sparrow-mist/40 dark:bg-sparrow-dark-surface2 px-3 py-2.5">
             <div className="flex items-center justify-between">
@@ -363,9 +328,10 @@ export function PartnerDetailPanel({
                         // They reached out = relationship alive = Active
                         setStageUpdate('active');
                       } else {
-                        // We reached out to a cold partner = Re-engaging; otherwise no change
-                        const isCold = stewardshipStatus(partner) === 'lapsed' || partner.stage === 'inactive';
-                        setStageUpdate(isCold ? 'reengaging' : partner.stage);
+                        // We reached out -- logging this touchpoint itself clears the
+                        // computed "lapsed" overlay (it's based on time since last touch,
+                        // which this resets); no separate stage change needed.
+                        setStageUpdate(partner.stage);
                       }
                     }}
                     className={`rounded-lg border py-2 text-xs font-medium transition ${
@@ -470,36 +436,48 @@ export function PartnerDetailPanel({
         {/* ── 5. Stewardship fields — always editable (change most often) ── */}
         <section className="space-y-3">
           <span className="field-label block">Stewardship</span>
-          <div>
-            <span className="field-label">Type</span>
-            <select
-              value={partner.type}
-              onChange={(e) => {
-                const nextType = e.target.value as PartnerType;
-                if (nextType === partner.type) return;
-                // Changing the primary type shouldn't lose the old one — fold it into
-                // secondary tags (and drop the new type from there if it was already tagged).
-                const nextSecondary = Array.from(
-                  new Set([...(partner.secondary_types ?? []).filter((t) => t !== nextType), partner.type]),
-                );
-                void patch({ type: nextType, secondary_types: nextSecondary });
-              }}
-              disabled={busy}
-              className="field-input mt-0"
-            >
-              {PARTNER_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {PARTNER_TYPE[t].icon} {PARTNER_TYPE[t].label}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-              Drives cadence defaults and which fields show below. Changing it moves the old
-              type down to "Also involved as" so it isn't lost.
-            </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <span className="field-label">Category</span>
+              <select
+                value={partner.type}
+                onChange={(e) => {
+                  const nextType = e.target.value as PartnerType;
+                  if (nextType === partner.type) return;
+                  // Changing the primary category shouldn't lose the old one — fold it into
+                  // secondary categories (and drop the new one from there if already tagged).
+                  const nextSecondary = Array.from(
+                    new Set([...(partner.secondary_types ?? []).filter((t) => t !== nextType), partner.type]),
+                  );
+                  void patch({ type: nextType, secondary_types: nextSecondary, sub_category: null });
+                }}
+                disabled={busy}
+                className="field-input mt-0"
+              >
+                {PARTNER_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {PARTNER_TYPE[t].icon} {PARTNER_TYPE[t].label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <span className="field-label">Sub-category</span>
+              <select
+                value={partner.sub_category ?? ''}
+                onChange={(e) => void patch({ sub_category: (e.target.value || null) as PartnerSubCategory | null })}
+                disabled={busy}
+                className="field-input mt-0"
+              >
+                <option value="" disabled>— Select —</option>
+                {SUB_CATEGORIES_FOR_TYPE[partner.type].map((sc) => (
+                  <option key={sc} value={sc}>{PARTNER_SUB_CATEGORY[sc]}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div>
-            <span className="field-label">Also involved as</span>
+            <span className="field-label">Also a</span>
             <MultiSelectDropdown
               options={PARTNER_TYPES.filter((t) => t !== partner.type).map((t) => ({
                 value: t,
@@ -512,8 +490,8 @@ export function PartnerDetailPanel({
               placeholder="None"
             />
             <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-              Tags {partner.name} onto those Directory tabs too. The main Type above still
-              drives cadence and which fields show below.
+              Tags {partner.name} onto those Directory tabs too — e.g. a church that's also a
+              Donor. One record, more than one category, not two records.
             </p>
           </div>
           <div>
@@ -532,24 +510,50 @@ export function PartnerDetailPanel({
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className="field-label">Cadence *</span>
-              <CadenceInput
-                value={partner.cadence_days}
-                onCommit={(v) => void patch({ cadence_days: v })}
+          <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={partner.needs_additional_touchpoint}
+                onChange={(e) => void patch({
+                  needs_additional_touchpoint: e.target.checked,
+                  ...(e.target.checked ? {} : { additional_touchpoint_label: null, additional_touchpoint_due: null }),
+                })}
                 disabled={busy}
+                className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border accent-sparrow-green"
               />
-            </div>
-            <div>
-              <span className="field-label">Lead time *</span>
-              <CadenceInput
-                value={partner.lead_time_days}
-                onCommit={(v) => void patch({ lead_time_days: v })}
-                disabled={busy}
-                presets={LEAD_TIME_PRESETS}
-              />
-            </div>
+              <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Needs additional touchpoint</span>
+            </label>
+            {!partner.needs_additional_touchpoint && (
+              <p className="text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
+                TSM subscription plus any fixed thank-yous is the complete plan — nothing else to track.
+              </p>
+            )}
+            {partner.needs_additional_touchpoint && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="field-label">What's due</span>
+                  <input
+                    type="text"
+                    className="field-input mt-0"
+                    value={partner.additional_touchpoint_label ?? ''}
+                    onChange={(e) => void patch({ additional_touchpoint_label: e.target.value || null })}
+                    placeholder="e.g. MOU check-in"
+                    disabled={busy}
+                  />
+                </div>
+                <div>
+                  <span className="field-label">Due</span>
+                  <input
+                    type="date"
+                    className="field-input mt-0"
+                    value={partner.additional_touchpoint_due ?? ''}
+                    onChange={(e) => void patch({ additional_touchpoint_due: e.target.value || null })}
+                    disabled={busy}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <span className="field-label">Custom reminder wording <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span></span>
@@ -809,17 +813,16 @@ export function PartnerDetailPanel({
             </div>
             <div>
               <span className="field-label">What they provide</span>
-              <textarea
-                defaultValue={partner.partner_provides ?? ''}
-                onBlur={(e) => {
-                  const v = e.target.value.trim() || null;
-                  if (v !== (partner.partner_provides ?? null)) void patch({ partner_provides: v });
-                }}
-                rows={2}
-                placeholder="Services, referrals, or resources they offer Sparrow…"
+              <MultiSelectDropdown
+                options={PARTNER_PROVIDES_PRESETS.map((t) => ({ value: t, label: t }))}
+                selected={partner.partner_provides_tags ?? []}
+                onChange={(next) => void patch({ partner_provides_tags: next as PartnerProvidesTag[] })}
                 disabled={busy}
-                className="field-input"
+                placeholder="None"
               />
+              <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
+                For anything not on the list, add "Other" detail directly in Notes below.
+              </p>
             </div>
             <div>
               <span className="field-label">MOU status</span>
