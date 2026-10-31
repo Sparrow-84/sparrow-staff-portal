@@ -10,6 +10,14 @@
 -- real content are removed without their data being preserved first. Verified against live
 -- data before writing this file: 37 donor / 40 church / 11 community / 6 prayer / 1 business,
 -- zero using foundation/advisory/fst/volunteer anywhere.
+--
+-- Also included (steps 8-9, found by auditing every server-side function that reads
+-- `partners` directly in SQL, since those aren't caught by the app's typecheck): the one
+-- live record sitting at the now-retired stage='reengaging' is moved to 'active', and every
+-- Postgres function that referenced cadence_days/lead_time_days/stage='lapsed' on `partners`
+-- is rewritten or dropped so the daily reminder cron (emit_all_partnership_reminders, runs
+-- via pg_cron whether or not anyone has the room open) keeps working instead of erroring the
+-- next time it fires.
 
 -- ── 0. Remove the one explicit test record Susanna asked to clean up ───────────────────
 DELETE FROM partners WHERE name = 'Susanna (Tester)' AND organization = 'Fancy Feet';
@@ -110,3 +118,170 @@ ALTER TABLE partners DROP COLUMN IF EXISTS cadence_days;
 
 -- ── 7. "Done" status for comms production milestones (did not exist before) ─────────────
 ALTER TABLE partnership_comms_milestones ADD COLUMN IF NOT EXISTS completed_at timestamptz;
+
+-- ── 8. Stage: 'lapsed'/'reengaging' retired as stage values (lapsed is now purely computed,
+-- see isLapsed() in partnerships-types.ts) -- the partner_stage enum keeps both values
+-- defined (removing enum values is far riskier than just not using them, same call as
+-- partner_type above), but verified against live data before writing this migration: zero
+-- records at stage='lapsed', exactly one at stage='reengaging' (Jenna Wenger, Volunteer/
+-- Prayer, active and touched as recently as 2026-09-22 -- i.e. actually being stewarded
+-- right now). 'Active' is the one real equivalent left in the new 3-stage model, and
+-- nothing about her record needs a carried-forward touchpoint (that carry-forward in
+-- step 6 is scoped to Community Partner only, matching the design call that Donors and
+-- Volunteers need no named touchpoint by default).
+UPDATE partners SET stage = 'active' WHERE stage = 'reengaging';
+UPDATE partners SET stage = 'active' WHERE stage = 'lapsed';
+
+-- ── 9. Server-side functions that read the now-dropped cadence_days/lead_time_days or the
+-- now-retired stage='lapsed' directly in SQL -- these would error or silently misbehave the
+-- next time the daily reminder cron runs if left alone, since they're not reachable by the
+-- app-level tsc/build check that caught everything else. Found by searching every migration
+-- for cadence_days/lead_time_days/'lapsed' usage against the `partners` table specifically
+-- (the same columns on partnership_collateral/partnership_recurring_settings/grants are
+-- untouched -- those are separate tables with their own independent cadence model).
+
+-- emit_due_touchpoint_tasks() (final version: migration 0115) -- rewritten to read the new
+-- named-touchpoint fields instead of the generic cadence. No more lead-time warning window
+-- (lead_time_days is gone); a task now appears exactly on additional_touchpoint_due, matching
+-- the exact-date model the rest of this migration establishes.
+CREATE OR REPLACE FUNCTION emit_due_touchpoint_tasks() RETURNS int
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE r record; n int := 0;
+BEGIN
+  IF NOT partnerships_has_access() THEN
+    RETURN 0;
+  END IF;
+  FOR r IN
+    SELECT id, name, owner_id, additional_touchpoint_label, additional_touchpoint_due
+    FROM partners
+    WHERE active
+      AND needs_additional_touchpoint
+      AND additional_touchpoint_due IS NOT NULL
+      AND owner_id IS NOT NULL
+      AND additional_touchpoint_due <= current_date
+  LOOP
+    PERFORM emit_system_task(
+      'crm', 'touchpoint:' || r.id, r.owner_id,
+      COALESCE(r.additional_touchpoint_label, 'Touchpoint due') || ' — ' || r.name,
+      'partnerships'::department, 'p2'::priority, r.additional_touchpoint_due
+    );
+    n := n + 1;
+  END LOOP;
+  RETURN n;
+END $$;
+
+-- create_donor_partner_from_gift() (final version: migration 0115) -- the Givebutter sync
+-- path for a brand-new donor. Drops cadence_days/lead_time_days from the INSERT (columns no
+-- longer exist); a new donor simply starts with needs_additional_touchpoint = false (its
+-- column default), matching every other donor under the new model.
+CREATE OR REPLACE FUNCTION create_donor_partner_from_gift(
+  p_name             text,
+  p_email            text,
+  p_amount_above_10k boolean,
+  p_source           text DEFAULT 'Givebutter',
+  p_gift_date        date DEFAULT NULL
+) RETURNS uuid
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  new_id  uuid;
+  owner   uuid := default_partnerships_owner();
+BEGIN
+  INSERT INTO partners (
+    name, type, stage, owner_id, email, donor_tier,
+    source, giving_method, active, first_gift_date
+  ) VALUES (
+    p_name, 'donor', 'active', owner, p_email, NULL,
+    p_source, 'Givebutter', true, p_gift_date
+  ) RETURNING id INTO new_id;
+
+  IF p_amount_above_10k THEN
+    UPDATE partners SET donor_tier = 'major' WHERE id = new_id;
+  ELSE
+    UPDATE partners SET donor_tier = 'first_time' WHERE id = new_id;
+    IF owner IS NOT NULL THEN
+      PERFORM emit_system_task(
+        'crm',
+        'first_time_donor:' || new_id::text,
+        owner,
+        'First-time donor follow-up — ' || p_name || ' (72-hr window)',
+        'partnerships'::department,
+        'p2'::priority,
+        current_date + 3
+      );
+    END IF;
+  END IF;
+
+  RETURN new_id;
+END $$;
+
+-- emit_lapsed_partner_tasks() + its resolving trigger (migration 0036) are now permanently
+-- dead: nothing in the app can ever set stage='lapsed' again (confirmed by code search --
+-- the stage dropdown only offers prospect/active/inactive), so this function would run
+-- forever finding zero rows. Dropping it outright rather than leaving it as inert dead code,
+-- same call already made for lead_time_days above.
+DROP TRIGGER IF EXISTS partner_stage_changed ON partners;
+DROP FUNCTION IF EXISTS on_partner_stage_changed();
+DROP FUNCTION IF EXISTS emit_lapsed_partner_tasks();
+
+-- Dispatcher (final version: migration 0110) -- drop the now-removed emit_lapsed_partner_tasks
+-- call.
+CREATE OR REPLACE FUNCTION emit_all_partnership_reminders() RETURNS int
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE total int := 0;
+BEGIN
+  total := total + emit_due_touchpoint_tasks();
+  total := total + emit_collateral_review_tasks();
+  total := total + emit_overdue_connection_followups();
+  total := total + emit_social_post_reminder();
+  total := total + emit_newsletter_reminder_tasks();
+  total := total + emit_comms_milestone_tasks();
+  RETURN total;
+END $$;
+
+-- emit_comms_milestone_tasks() (final version: migration 0110) -- the new completed_at column
+-- (step 7 above) didn't exist when this was last written, so it has no way to stop nagging
+-- about a milestone someone's already marked done. Add that one check.
+CREATE OR REPLACE FUNCTION emit_comms_milestone_tasks() RETURNS int
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  r record;
+  n int := 0;
+BEGIN
+  IF NOT partnerships_has_access() THEN
+    RETURN 0;
+  END IF;
+
+  FOR r IN
+    SELECT m.id, m.label, m.due_date, m.owner_id, c.title
+    FROM partnership_comms_milestones m
+    JOIN partnership_comms c ON c.id = m.comm_id
+    WHERE m.due_date <= current_date
+      AND m.owner_id IS NOT NULL
+      AND m.completed_at IS NULL
+  LOOP
+    PERFORM emit_system_task(
+      'crm', 'comms_milestone:' || r.id, r.owner_id,
+      r.label || ' — ' || r.title,
+      'partnerships'::department, 'p3'::priority, r.due_date
+    );
+    n := n + 1;
+  END LOOP;
+  RETURN n;
+END $$;
+
+-- Marking a milestone done (completed_at set) resolves its task the same way logging a
+-- collateral review does (on_collateral_reviewed, migration 0080) -- the future Comms
+-- Production Calendar UI's "Mark done" just needs to set completed_at; no separate RPC.
+CREATE OR REPLACE FUNCTION on_comms_milestone_completed() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NEW.completed_at IS NOT NULL AND OLD.completed_at IS NULL THEN
+    PERFORM resolve_system_task('crm', 'comms_milestone:' || NEW.id);
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS partnership_comms_milestone_completed ON partnership_comms_milestones;
+CREATE TRIGGER partnership_comms_milestone_completed AFTER UPDATE ON partnership_comms_milestones
+  FOR EACH ROW WHEN (OLD.completed_at IS DISTINCT FROM NEW.completed_at)
+  EXECUTE FUNCTION on_comms_milestone_completed();

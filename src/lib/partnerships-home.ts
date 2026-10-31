@@ -66,9 +66,9 @@ interface PartnerRow {
   owner_id: string | null;
   active: boolean;
   stage: string;
-  cadence_days: number | null;
-  last_touchpoint_at: string | null;
-  created_at: string;
+  needs_additional_touchpoint: boolean;
+  additional_touchpoint_label: string | null;
+  additional_touchpoint_due: string | null;
   touchpoint_reminder_note: string | null;
 }
 
@@ -146,7 +146,7 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
       // touchpoint_reminder_note left out of this select until migration 0186 is confirmed
       // applied -- selecting a not-yet-existing column broke the whole Partnerships room
       // 2026-10-15. Add back once confirmed.
-      .select('id, name, owner_id, active, stage, cadence_days, last_touchpoint_at, created_at')
+      .select('id, name, owner_id, active, stage, needs_additional_touchpoint, additional_touchpoint_label, additional_touchpoint_due')
       .eq('active', true),
     supabase
       .from('partnership_collateral')
@@ -177,23 +177,20 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
   const today = localDate();
   const items: HomeItem[] = [];
 
-  // 1. Partner touchpoints coming due — mirrors emit_due_touchpoint_tasks().
-  // A partner who's NEVER been touched is due today, full stop — not
-  // created_at + cadence_days (that treated "never contacted" as if the
-  // stewardship clock had just started, hiding brand-new donors for a full
-  // cadence period instead of surfacing them immediately). Fixed 2026-07-31
-  // (migration 0115) after a real Givebutter test donor sat un-surfaced.
+  // 1. Partner touchpoints coming due — mirrors emit_due_touchpoint_tasks() (migration 0193).
+  // Most relationships need nothing here at all (TSM + fixed thank-yous cover them); this
+  // only fires for the relationships someone explicitly flagged with a named, dated item
+  // via "Needs additional touchpoint" — mainly Community Partners. No more generic recurring
+  // cadence and no more lead-time warning window — the due date itself is exact.
   for (const p of partners) {
-    if (!p.owner_id || p.cadence_days == null) continue;
-    if (p.stage !== 'active' && p.stage !== 'prospect') continue;
-    const due = p.last_touchpoint_at ? addDays(dateOnly(p.last_touchpoint_at), p.cadence_days) : today;
-    if (!inScope(due, today)) continue;
+    if (!p.owner_id || !p.needs_additional_touchpoint || !p.additional_touchpoint_due) continue;
+    if (!inScope(p.additional_touchpoint_due, today)) continue;
     items.push({
       key: `touchpoint:${p.id}`,
       kind: 'touchpoint',
-      title: `Touchpoint due — ${p.name}`,
+      title: `${p.additional_touchpoint_label ?? 'Touchpoint due'} — ${p.name}`,
       detail: p.touchpoint_reminder_note ?? undefined,
-      due_date: due,
+      due_date: p.additional_touchpoint_due,
       owner_id: p.owner_id,
       partnerId: p.id,
     });
