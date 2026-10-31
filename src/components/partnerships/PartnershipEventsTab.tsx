@@ -425,6 +425,8 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
                 <tr className="bg-sparrow-green dark:bg-sparrow-dark-green text-left">
                   <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Name</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Org</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Email</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Phone</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Discussed</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Next action</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Follow-up due</th>
@@ -445,6 +447,8 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
                     >
                       <td className="px-4 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{conn.name}</td>
                       <td className="px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{conn.organization ?? '—'}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-sparrow-gray dark:text-sparrow-dark-gray">{conn.email ?? '—'}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-sparrow-gray dark:text-sparrow-dark-gray">{conn.phone ?? '—'}</td>
                       <td className="px-3 py-2.5 max-w-[180px]">
                         <p className="truncate text-sparrow-gray dark:text-sparrow-dark-gray" title={conn.what_discussed ?? undefined}>
                           {conn.what_discussed ?? '—'}
@@ -470,7 +474,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
                         <select
                           value={conn.owner_id ?? ''}
                           onChange={(e) => handleOwnerChange(conn, e.target.value || null)}
-                          className="field-input mt-0 py-1 text-xs"
+                          className="field-input mt-0 min-w-[140px] py-1 text-xs"
                         >
                           <option value="">Unassigned</option>
                           {ownerProfiles.map((op) => (
@@ -487,7 +491,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
                           className="whitespace-nowrap text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
                           title="Open Add Partner panel with this person's details"
                         >
-                          Become a partner →
+                          Add to Directory
                         </button>
                       </td>
                     </tr>

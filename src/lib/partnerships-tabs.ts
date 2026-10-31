@@ -146,14 +146,20 @@ function buildCommsForYear(year: number): Omit<PartnershipComm, 'id' | 'created_
   const firstTuesdayOffset = (2 - nov1.getDay() + 7) % 7;
   const givingTuesday = new Date(year, 10, 1 + firstTuesdayOffset + 14);
 
+  const januaryTsmDate = toISO(secondThursday(year, 0));
+
   return [
     {
+      // Two weeks after the January TSM edition, so the two never collide and the Annual
+      // Report always has its own clear week -- not a fixed calendar date (was hardcoded
+      // to Jan 15 before, which drifted out of sync with where January TSM actually landed
+      // most years).
       year, comm_type: 'annual_report', title: 'Annual Report',
-      publish_date: `${year}-01-15`, status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: addDaysISO(januaryTsmDate, 14), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'tsm', title: 'TSM — January',
-      publish_date: toISO(secondThursday(year, 0)), status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: januaryTsmDate, status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'tsm', title: 'TSM — February',

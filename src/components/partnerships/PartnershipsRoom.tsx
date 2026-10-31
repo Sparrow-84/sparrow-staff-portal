@@ -128,6 +128,7 @@ export function PartnershipsRoom() {
     phone: string | null;
     email: string | null;
     website: string | null;
+    notes: string | null;
   } | null>(null);
   const [batchOpen, setBatchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -325,6 +326,7 @@ export function PartnershipsRoom() {
           {activeTab === 'events' && (
             <PartnershipEventsTab
               onBecomePartner={(conn) => {
+                const notesParts = [conn.what_discussed, conn.next_action ? `Next action: ${conn.next_action}` : null].filter(Boolean);
                 setAddPrefill({
                   name: conn.name,
                   organization: conn.organization,
@@ -332,6 +334,7 @@ export function PartnershipsRoom() {
                   phone: conn.phone,
                   email: conn.email,
                   website: conn.website,
+                  notes: notesParts.length ? notesParts.join('\n\n') : null,
                 });
                 setAddOpen(true);
               }}
@@ -538,7 +541,7 @@ export function PartnershipsRoom() {
                 name: addPrefill.name,
                 phone: addPrefill.phone ?? '',
                 email: addPrefill.email ?? '',
-                notes: null,
+                notes: addPrefill.notes,
                 organization: addPrefill.organization,
                 role: addPrefill.role,
                 website: addPrefill.website,
