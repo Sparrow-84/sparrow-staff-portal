@@ -454,6 +454,7 @@ export function GridTableShell<K extends string, T>({
   onRowClick,
   toolbar,
   emptyMessage = 'Nothing to show.',
+  renderHeaderExtra,
 }: {
   layout: ReturnType<typeof useColumnLayout<K>>;
   sortKey: K;
@@ -468,6 +469,9 @@ export function GridTableShell<K extends string, T>({
   onRowClick?: (item: T) => void;
   toolbar?: ReactNode;
   emptyMessage?: string;
+  /** Extra content inside a column header, after its label — e.g. a per-column filter
+   *  button. Clicks inside it don't trigger the header's own sort click. */
+  renderHeaderExtra?: (key: K) => ReactNode;
 }) {
   const {
     visibleColumns, gridTemplate, orderedColumns, hiddenCols, toggleColumn,
@@ -510,9 +514,14 @@ export function GridTableShell<K extends string, T>({
                     colIdx === 0 ? 'sticky left-0 z-10 bg-sparrow-green dark:bg-sparrow-dark-green shadow-[2px_0_4px_-2px_rgba(0,0,0,0.25)]' : ''
                   }`}
                 >
-                  <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
-                    {col.label}{' '}
+                  <span className="inline-flex max-w-full items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">{col.label}</span>
                     {sortKey === col.key && <span>{sortDir === 'asc' ? '▲' : '▼'}</span>}
+                    {renderHeaderExtra && (
+                      <span onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+                        {renderHeaderExtra(col.key)}
+                      </span>
+                    )}
                   </span>
                   {/* Resize handle — explicitly non-draggable so it's never picked up
                       as the column-move drag source, only ever the resize gesture. */}

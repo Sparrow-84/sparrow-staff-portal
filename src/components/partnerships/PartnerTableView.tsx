@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Profile } from '@/lib/types';
 import { updatePartner } from '@/lib/partnerships';
 import { assignAvatarColors } from '@/lib/avatarColors';
@@ -87,6 +87,89 @@ const DEFAULT_HIDDEN: ColKey[] = [
 
 const STORAGE_PREFIX = 'sparrow-partnerships-directory-table';
 
+// ── Per-column funnel filters ───────────────────────────────────────────────────────────
+type FilterableKey = 'partner_provides' | 'sub_category' | 'stage' | 'donor_tier' | 'mou_status' | 'newsletter' | 'owner' | 'giving_method';
+const FILTERABLE_KEYS: FilterableKey[] = ['partner_provides', 'sub_category', 'stage', 'donor_tier', 'mou_status', 'newsletter', 'owner', 'giving_method'];
+const NONE = '(none)';
+
+/** The value(s) a partner has for a given filterable column — an array since
+ *  Partner Provides is multi-valued. */
+function filterValuesFor(key: FilterableKey, p: Partner): string[] {
+  switch (key) {
+    case 'partner_provides': return p.partner_provides_tags.length ? p.partner_provides_tags : [NONE];
+    case 'sub_category': return [p.sub_category ?? NONE];
+    case 'stage': return [p.stage];
+    case 'donor_tier': return [p.donor_tier ?? NONE];
+    case 'mou_status': return [p.mou_status ?? NONE];
+    case 'newsletter': return [p.newsletter_subscribed ? 'Yes' : 'No'];
+    case 'owner': return [p.owner_id ?? NONE];
+    case 'giving_method': return [p.giving_method ?? NONE];
+  }
+}
+
+function ColumnFilterButton({
+  options,
+  selected,
+  onChange,
+}: {
+  options: { value: string; label: string }[];
+  selected: Set<string>;
+  onChange: (next: Set<string>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const active = selected.size > 0;
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  function toggle(v: string) {
+    const next = new Set(selected);
+    if (next.has(v)) next.delete(v); else next.add(v);
+    onChange(next);
+  }
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Filter this column"
+        className={`grid h-4 w-4 shrink-0 place-items-center rounded ${active ? 'text-white' : 'text-white/50 hover:text-white/90'}`}
+      >
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18l-7 9v7l-4 2v-9z" /></svg>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1 w-52 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 normal-case shadow-lg">
+          <div className="mb-1.5 flex items-center justify-between">
+            <button type="button" onClick={() => onChange(new Set())} className="text-[11px] font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
+              Clear
+            </button>
+            <button type="button" onClick={() => onChange(new Set(options.map((o) => o.value)))} className="text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:underline">
+              Select all
+            </button>
+          </div>
+          <div className="max-h-56 space-y-0.5 overflow-y-auto">
+            {options.map((o) => (
+              <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs font-normal text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist/60 dark:hover:bg-sparrow-dark-surface2/60">
+                <input type="checkbox" checked={selected.has(o.value)} onChange={() => toggle(o.value)} className="h-3.5 w-3.5 rounded accent-sparrow-green" />
+                {o.label}
+              </label>
+            ))}
+            {options.length === 0 && <p className="px-1.5 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No values yet.</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Interactive fields (free-text inputs, long-text popovers) that don't already
 // stop their own click propagation need wrapping so clicking into them to
 // edit doesn't also bubble up and pop open the partner's detail drawer.
@@ -119,6 +202,46 @@ export function PartnerTableView({
   const ownerColors = useMemo(() => assignAvatarColors(profiles), [profiles]);
 
   const today = useMemo(() => new Date(), []);
+
+  const [columnFilters, setColumnFilters] = useState<Partial<Record<FilterableKey, Set<string>>>>({});
+
+  const givingMethodOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const p of partners) values.add(p.giving_method ?? NONE);
+    return Array.from(values).sort().map((v) => ({ value: v, label: v }));
+  }, [partners]);
+
+  const filterOptions: Record<FilterableKey, { value: string; label: string }[]> = {
+    partner_provides: [...PARTNER_PROVIDES_PRESETS.map((t) => ({ value: t, label: t })), { value: NONE, label: 'None' }],
+    sub_category: [
+      ...(['individual', 'business', 'nonprofit', 'church', 'prayer'] as PartnerSubCategory[]).map((sc) => ({ value: sc, label: PARTNER_SUB_CATEGORY[sc] })),
+      { value: NONE, label: 'None' },
+    ],
+    stage: STAGES.map((s) => ({ value: s, label: PARTNER_STAGE[s].label })),
+    donor_tier: [...TIERS.map((t) => ({ value: t, label: DONOR_TIER[t] })), { value: NONE, label: 'None' }],
+    mou_status: [...MOU_STATUSES.map((s) => ({ value: s, label: MOU_STATUS[s] })), { value: NONE, label: 'None' }],
+    newsletter: [{ value: 'Yes', label: 'Yes' }, { value: 'No', label: 'No' }],
+    owner: [...ownerProfiles.map((op) => ({ value: op.id, label: op.full_name })), { value: NONE, label: 'Unassigned' }],
+    giving_method: givingMethodOptions,
+  };
+
+  function renderHeaderExtra(key: ColKey): ReactNode {
+    if (!FILTERABLE_KEYS.includes(key as FilterableKey)) return null;
+    const fk = key as FilterableKey;
+    return (
+      <ColumnFilterButton
+        options={filterOptions[fk]}
+        selected={columnFilters[fk] ?? new Set()}
+        onChange={(next) => setColumnFilters((prev) => ({ ...prev, [fk]: next }))}
+      />
+    );
+  }
+
+  const filtered = useMemo(() => {
+    const active = (Object.entries(columnFilters) as [FilterableKey, Set<string>][]).filter(([, set]) => set.size > 0);
+    if (active.length === 0) return partners;
+    return partners.filter((p) => active.every(([key, set]) => filterValuesFor(key, p).some((v) => set.has(v))));
+  }, [partners, columnFilters]);
 
   function compare(a: Partner, b: Partner, key: ColKey): number {
     switch (key) {
@@ -174,9 +297,9 @@ export function PartnerTableView({
 
   const sorted = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
-    return [...partners].sort((a, b) => compare(a, b, sortKey) * dir);
+    return [...filtered].sort((a, b) => compare(a, b, sortKey) * dir);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [partners, sortKey, sortDir, donorStatMap]);
+  }, [filtered, sortKey, sortDir, donorStatMap]);
 
   async function patch(id: string, update: Parameters<typeof updatePartner>[1]) {
     await updatePartner(id, update);
@@ -375,9 +498,11 @@ export function PartnerTableView({
     }
   }
 
-  if (sorted.length === 0) {
+  if (partners.length === 0) {
     return <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No partners in this view yet.</p>;
   }
+
+  const filtersActive = Object.values(columnFilters).some((set) => set && set.size > 0);
 
   return (
     <GridTableShell
@@ -391,7 +516,17 @@ export function PartnerTableView({
       renderCell={renderCell}
       onRowClick={(p) => onOpenPartner(p.id)}
       rowClassName={() => 'cursor-pointer hover:bg-sparrow-mist/40 dark:hover:bg-sparrow-dark-surface2'}
-      emptyMessage="No partners in this view yet."
+      renderHeaderExtra={renderHeaderExtra}
+      emptyMessage={filtersActive ? 'No partners match the current column filters.' : 'No partners in this view yet.'}
+      toolbar={filtersActive ? (
+        <button
+          type="button"
+          onClick={() => setColumnFilters({})}
+          className="rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-2.5 py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+        >
+          Clear column filters
+        </button>
+      ) : undefined}
     />
   );
 }
