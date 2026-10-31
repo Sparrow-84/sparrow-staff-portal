@@ -33,7 +33,7 @@ export function RoomSopsButton({ room }: { room: SopRoom }) {
       <button
         onClick={() => setOpen(true)}
         title="Standard operating procedures for this room"
-        className="btn-secondary shrink-0"
+        className="btn-ghost shrink-0 border border-sparrow-rule dark:border-sparrow-dark-border"
       >
         SOPs
       </button>

@@ -537,7 +537,11 @@ export function GridTableShell<K extends string, T>({
 
             {items.map((item) => {
               const rCls = rowClassName?.(item) ?? '';
-              const firstCls = firstColClassName?.(item) ?? 'bg-white dark:bg-sparrow-dark-surface group-hover:bg-sparrow-mist/30 dark:group-hover:bg-sparrow-dark-surface2/60';
+              // Opaque hover background, not a translucent one -- this column sits on top of
+              // scrolled content via `position: sticky`, so a `/NN` opacity suffix here lets
+              // whatever's scrolled underneath bleed through on hover (see
+              // feedback-css-stacking-lessons memory -- hit this exact bug twice before).
+              const firstCls = firstColClassName?.(item) ?? 'bg-white dark:bg-sparrow-dark-surface group-hover:bg-sparrow-mist dark:group-hover:bg-sparrow-dark-surface2';
               return (
                 <div
                   key={rowKey(item)}

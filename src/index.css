@@ -38,6 +38,11 @@
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-sparrow-ink transition hover:bg-sparrow-sage dark:text-sparrow-dark-ink dark:hover:bg-sparrow-dark-surface2;
   }
+  /* Was referenced across 8 files (RoomSopsButton, help modals, panel buttons) with no
+     definition anywhere -- every one of those buttons was rendering with zero styling. */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-sparrow-rule px-4 py-2 text-sm font-medium text-sparrow-ink transition hover:border-sparrow-green hover:text-sparrow-green disabled:opacity-50 dark:border-sparrow-dark-border dark:text-sparrow-dark-ink dark:hover:border-sparrow-dark-green dark:hover:text-sparrow-dark-green;
+  }
   .field-label {
     @apply block text-xs font-medium uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray;
   }
