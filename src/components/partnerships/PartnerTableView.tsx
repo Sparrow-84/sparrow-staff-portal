@@ -16,8 +16,10 @@ import {
   PARTNER_TYPES,
   STEWARDSHIP,
   SUB_CATEGORIES_FOR_TYPE,
+  composePartnerName,
   daysUntilDue,
   derivedDonorTier,
+  displayPartnerName,
   dueLabel,
   hasPartnershipTerms,
   shortDate,
@@ -245,7 +247,7 @@ export function PartnerTableView({
 
   function compare(a: Partner, b: Partner, key: ColKey): number {
     switch (key) {
-      case 'name': return a.name.localeCompare(b.name);
+      case 'name': return displayPartnerName(a).localeCompare(displayPartnerName(b));
       case 'type': return a.type.localeCompare(b.type);
       case 'sub_category': return (a.sub_category ?? '').localeCompare(b.sub_category ?? '');
       case 'organization': return (a.organization ?? '').localeCompare(b.organization ?? '');
@@ -326,7 +328,23 @@ export function PartnerTableView({
         return (
           <Stop>
             <div className="flex flex-nowrap items-center gap-1.5">
-              <InlineText value={p.name} onSave={(v) => { if (v.trim()) void patch(p.id, { name: v.trim() }); }} />
+              {p.sub_category === 'individual' ? (
+                <div className="flex items-center gap-1">
+                  <InlineText
+                    value={p.last_name ?? ''}
+                    placeholder="Last"
+                    onSave={(v) => void patch(p.id, { last_name: v.trim() || null, name: composePartnerName(p.first_name, v.trim()) })}
+                  />
+                  <span className="text-sparrow-gray dark:text-sparrow-dark-gray">,</span>
+                  <InlineText
+                    value={p.first_name ?? ''}
+                    placeholder="First"
+                    onSave={(v) => void patch(p.id, { first_name: v.trim() || null, name: composePartnerName(v.trim(), p.last_name) })}
+                  />
+                </div>
+              ) : (
+                <InlineText value={p.name} onSave={(v) => { if (v.trim()) void patch(p.id, { name: v.trim() }); }} />
+              )}
               {(() => {
                 const tier = derivedDonorTier(p.donor_tier, donorStatMap.get(p.id));
                 if (tier === 'major') return <span className="whitespace-nowrap rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Major</span>;

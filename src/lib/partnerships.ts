@@ -22,7 +22,7 @@ import type {
 // (confirmed: "column partners.touchpoint_reminder_note does not exist"). Add it back once
 // 0186 is confirmed applied -- see byron-pending-items.
 const PARTNER_COLS =
-  'id, name, type, secondary_types, sub_category, stage, owner_id, organization, contact_name, role, website, email, phone, address, donor_tier, needs_additional_touchpoint, additional_touchpoint_label, additional_touchpoint_due, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, newsletter_unsubscribed_at, newsletter_unsubscribe_dismissed_at, sparrow_provides, partner_provides, partner_provides_tags, mou_status, business_card_front_path, business_card_back_path';
+  'id, name, type, secondary_types, sub_category, first_name, last_name, stage, owner_id, organization, contact_name, role, website, email, phone, address, donor_tier, needs_additional_touchpoint, additional_touchpoint_label, additional_touchpoint_due, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, newsletter_unsubscribed_at, newsletter_unsubscribe_dismissed_at, sparrow_provides, partner_provides, partner_provides_tags, mou_status, business_card_front_path, business_card_back_path';
 
 // ── Partners ─────────────────────────────────────────────────────────
 export async function fetchPartners(): Promise<Partner[]> {
@@ -50,6 +50,8 @@ export interface PartnerInput {
   type: PartnerType;
   secondary_types: PartnerType[];
   sub_category: PartnerSubCategory | null;
+  first_name: string | null;
+  last_name: string | null;
   stage: PartnerStage;
   owner_id: string | null;
   organization: string | null;
@@ -108,6 +110,8 @@ export async function updatePartner(
       | 'type'
       | 'secondary_types'
       | 'sub_category'
+      | 'first_name'
+      | 'last_name'
       | 'stage'
       | 'owner_id'
       | 'organization'
@@ -214,16 +218,6 @@ export async function syncDueTouchpointTasks(): Promise<number> {
   return (data as number | null) ?? 0;
 }
 
-/**
- * Push a "Re-engage" task for every lapsed partner with an owner (dedup-safe).
- * Requires migration 0036. The task resolves automatically when the partner's stage
- * is changed off 'lapsed' via the on_partner_stage_changed DB trigger.
- */
-export async function syncLapsedPartnerTasks(): Promise<number> {
-  const { data, error } = await supabase.rpc('emit_lapsed_partner_tasks');
-  if (error) throw new Error(error.message);
-  return (data as number | null) ?? 0;
-}
 
 // ── Donations ────────────────────────────────────────────────────────
 

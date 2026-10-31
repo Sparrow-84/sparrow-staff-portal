@@ -6,6 +6,7 @@ import {
   PARTNER_TYPE,
   STEWARDSHIP,
   derivedDonorTier,
+  displayPartnerName,
   dueLabel,
   hasPartnershipTerms,
   shortDate,
@@ -57,7 +58,7 @@ export function PartnerTileView({
               title={st.label}
             />
 
-            <p className="pr-8 font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{p.name}</p>
+            <p className="pr-8 font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{displayPartnerName(p)}</p>
             <div className="mt-1 flex flex-col gap-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               {[type, ...p.secondary_types.map((t) => PARTNER_TYPE[t])].map((t) => (
                 <span key={t.label}>{t.icon} {t.label}</span>

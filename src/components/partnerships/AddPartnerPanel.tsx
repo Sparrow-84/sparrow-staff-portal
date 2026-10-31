@@ -7,10 +7,21 @@ import {
   PARTNER_TYPE,
   PARTNER_TYPES,
   SUB_CATEGORIES_FOR_TYPE,
+  composePartnerName,
   type PartnerStage,
   type PartnerSubCategory,
   type PartnerType,
 } from '@/lib/partnerships-types';
+
+/** Naive client-side mirror of migration 0194's split (last word = last name) — just a
+ *  starting guess when someone switches an existing Name entry over to Individual;
+ *  freely editable from there. */
+function guessNameSplit(full: string): { first: string; last: string } {
+  const trimmed = full.trim();
+  const idx = trimmed.lastIndexOf(' ');
+  if (idx === -1) return { first: '', last: trimmed };
+  return { first: trimmed.slice(0, idx).trim(), last: trimmed.slice(idx + 1).trim() };
+}
 import { Drawer } from '../lcp/Drawer';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
@@ -48,6 +59,8 @@ export function AddPartnerPanel({
   onCreatedFromContact?: (partnerId: string) => void;
 }) {
   const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   // No default -- staff must actively pick a category (previously defaulted to 'donor', which
   // silently mistyped anyone added via "Add to Directory" from a non-donor context).
   const [type, setType] = useState<PartnerType | ''>('');
@@ -72,6 +85,8 @@ export function AddPartnerPanel({
   useEffect(() => {
     if (open) {
       setName(initialValues?.name ?? '');
+      setFirstName('');
+      setLastName('');
       setType('');
       setSubCategory('');
       setSecondaryTypes([]);
@@ -106,6 +121,8 @@ export function AddPartnerPanel({
     // (e.g. Volunteer only offers Prayer), so a stale pick from the old category shouldn't
     // silently carry over.
     setSubCategory('');
+    setFirstName('');
+    setLastName('');
     clear('pa-type');
     setSecondaryTypes((prev) => prev.filter((s) => s !== t)); // can't tag the same category twice
   }
@@ -139,6 +156,8 @@ export function AddPartnerPanel({
         type,
         secondary_types: secondaryTypes,
         sub_category: subCategory,
+        first_name: subCategory === 'individual' ? (firstName.trim() || null) : null,
+        last_name: subCategory === 'individual' ? (lastName.trim() || null) : null,
         stage,
         owner_id: ownerId || null,
         organization: organization.trim() || null,
@@ -194,17 +213,51 @@ export function AddPartnerPanel({
             Prefilled from {initialValues.name}'s {initialValues.originLabel ?? 'My Contacts entry'}. Pick a category and sub-category to add them to the Directory.
           </p>
         )}
-        <div>
-          <label className="field-label field-label-required" htmlFor="pa-name">Name</label>
-          <input
-            id="pa-name"
-            className={fieldClass('pa-name')}
-            value={name}
-            onChange={(e) => { setName(e.target.value); clear('pa-name'); setDuplicateWarning(null); }}
-            placeholder="Person, church, or organization"
-          />
-          {fieldError('pa-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-name')}</p>}
-        </div>
+        {subCategory === 'individual' ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label field-label-required" htmlFor="pa-first-name">First name</label>
+              <input
+                id="pa-first-name"
+                className={fieldClass('pa-name')}
+                value={firstName}
+                onChange={(e) => {
+                  setFirstName(e.target.value);
+                  setName(composePartnerName(e.target.value, lastName));
+                  clear('pa-name');
+                  setDuplicateWarning(null);
+                }}
+              />
+            </div>
+            <div>
+              <label className="field-label field-label-required" htmlFor="pa-last-name">Last name</label>
+              <input
+                id="pa-last-name"
+                className={fieldClass('pa-name')}
+                value={lastName}
+                onChange={(e) => {
+                  setLastName(e.target.value);
+                  setName(composePartnerName(firstName, e.target.value));
+                  clear('pa-name');
+                  setDuplicateWarning(null);
+                }}
+              />
+            </div>
+            {fieldError('pa-name') && <p className="col-span-2 mt-1 text-xs text-priority-p1">{fieldError('pa-name')}</p>}
+          </div>
+        ) : (
+          <div>
+            <label className="field-label field-label-required" htmlFor="pa-name">Name</label>
+            <input
+              id="pa-name"
+              className={fieldClass('pa-name')}
+              value={name}
+              onChange={(e) => { setName(e.target.value); clear('pa-name'); setDuplicateWarning(null); }}
+              placeholder="Person, church, or organization"
+            />
+            {fieldError('pa-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-name')}</p>}
+          </div>
+        )}
 
         <div>
           <label className="field-label" htmlFor="pa-organization">Organization (optional)</label>
@@ -240,7 +293,18 @@ export function AddPartnerPanel({
               className={fieldClass('pa-subcategory')}
               value={subCategory}
               disabled={!type}
-              onChange={(e) => { setSubCategory(e.target.value as PartnerSubCategory); clear('pa-subcategory'); }}
+              onChange={(e) => {
+                const next = e.target.value as PartnerSubCategory;
+                setSubCategory(next);
+                clear('pa-subcategory');
+                // Switching into Individual for the first time: seed First/Last from
+                // whatever's already in Name so nothing typed so far is lost.
+                if (next === 'individual' && subCategory !== 'individual' && !firstName && !lastName && name.trim()) {
+                  const guess = guessNameSplit(name);
+                  setFirstName(guess.first);
+                  setLastName(guess.last);
+                }
+              }}
             >
               <option value="" disabled>{type ? '— Select —' : 'Pick a category first'}</option>
               {subCategoryOptions.map((sc) => (

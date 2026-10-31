@@ -81,6 +81,11 @@ export interface Partner {
    *  (individual/business/nonprofit/church) and Volunteer (prayer is the only option
    *  today). Null only for records predating this field that haven't been touched since. */
   sub_category: PartnerSubCategory | null;
+  /** Individuals only (migration 0194) — kept in sync with `name` by the app whenever
+   *  either is edited. Null for organizations, and for an individual not yet split
+   *  (a genuinely ambiguous record a human hasn't set by hand). */
+  first_name: string | null;
+  last_name: string | null;
   stage: PartnerStage;
   owner_id: string | null;
   organization: string | null;
@@ -309,6 +314,21 @@ export function shortDate(value: string | null): string {
   if (!value) return '—';
   const normalized = value.length === 10 ? `${value}T12:00:00` : value;
   return new Date(normalized).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+/** Recomposes `name` from first/last — called whenever either is edited so `name` (what
+ *  every other lookup, dedup check, and task title keys off) stays in sync. */
+export function composePartnerName(firstName: string | null, lastName: string | null): string {
+  return [firstName?.trim(), lastName?.trim()].filter(Boolean).join(' ').trim();
+}
+
+/** "Last, First" for an individual with a last name on file; otherwise just `name` —
+ *  organizations and not-yet-split individuals display exactly as before. */
+export function displayPartnerName(p: Pick<Partner, 'name' | 'sub_category' | 'first_name' | 'last_name'>): string {
+  if (p.sub_category === 'individual' && p.last_name) {
+    return p.first_name ? `${p.last_name}, ${p.first_name}` : p.last_name;
+  }
+  return p.name;
 }
 
 // ── Reference descriptions — shown in the help modal and inline in the detail panel ──

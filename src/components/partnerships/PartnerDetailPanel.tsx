@@ -17,6 +17,8 @@ import {
   SUB_CATEGORIES_FOR_TYPE,
   TOUCHPOINT_METHOD,
   TOUCHPOINT_METHODS,
+  composePartnerName,
+  displayPartnerName,
   dueLabel,
   hasPartnershipTerms,
   shortDate,
@@ -631,7 +633,7 @@ export function PartnerDetailPanel({
           {!editingInfo ? (
             // View mode — clean readable rows
             <div className="space-y-1.5 rounded-xl border border-sparrow-rule/70 px-3 py-3">
-              <InfoRow label="Name" value={partner.name} />
+              <InfoRow label="Name" value={displayPartnerName(partner)} />
               <InfoRow label="Contact" value={partner.contact_name} />
               <InfoRow label="Role" value={partner.role} />
               <InfoRow label="Org" value={partner.organization} />
@@ -644,13 +646,32 @@ export function PartnerDetailPanel({
           ) : (
             // Edit mode — same fields as before
             <div className="space-y-3">
-              <EditField
-                label="Name"
-                value={partner.name}
-                required
-                disabled={busy}
-                onSave={(v) => { if (v) void patch({ name: v }); }}
-              />
+              {partner.sub_category === 'individual' ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <EditField
+                    label="First name"
+                    value={partner.first_name ?? ''}
+                    required
+                    disabled={busy}
+                    onSave={(v) => void patch({ first_name: v, name: composePartnerName(v, partner.last_name) })}
+                  />
+                  <EditField
+                    label="Last name"
+                    value={partner.last_name ?? ''}
+                    required
+                    disabled={busy}
+                    onSave={(v) => void patch({ last_name: v, name: composePartnerName(partner.first_name, v) })}
+                  />
+                </div>
+              ) : (
+                <EditField
+                  label="Name"
+                  value={partner.name}
+                  required
+                  disabled={busy}
+                  onSave={(v) => { if (v) void patch({ name: v }); }}
+                />
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <EditField label="Primary contact" value={partner.contact_name ?? ''} disabled={busy} onSave={(v) => void patch({ contact_name: v })} />
                 <EditField label="Role / title" value={partner.role ?? ''} disabled={busy} onSave={(v) => void patch({ role: v })} />

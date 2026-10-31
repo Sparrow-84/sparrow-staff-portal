@@ -3,8 +3,9 @@ import { useAuth } from '@/auth/AuthContext';
 import { RoomSopsButton } from '@/components/documents/RoomSops';
 import { fetchProfiles } from '@/lib/data';
 import type { Profile } from '@/lib/types';
-import { fetchArchivedPartners, fetchDonorStats, fetchPartners, syncDueTouchpointTasks, syncLapsedDonorTiers, syncLapsedPartnerTasks } from '@/lib/partnerships';
+import { fetchArchivedPartners, fetchDonorStats, fetchPartners, syncDueTouchpointTasks, syncLapsedDonorTiers } from '@/lib/partnerships';
 import {
+  displayPartnerName,
   partnerMatchesType,
   stewardshipStatus,
   type DonorStat,
@@ -153,9 +154,10 @@ export function PartnershipsRoom() {
       setDonorStatMap(new Map(stats.map((s) => [s.partner_id, s])));
       setInterests(interestList);
       setInterestMap(partnerInterests);
-      // Best-effort background syncs — overdue tasks, lapsed stages, lapsed donor tiers.
+      // Best-effort background syncs — overdue touchpoints, lapsed donor tiers. (The old
+      // lapsed-partner-stage sync was dropped in migration 0193 along with its DB function —
+      // stage='lapsed' is retired; lapsed is now purely computed, see isLapsed().)
       void syncDueTouchpointTasks().catch(() => undefined);
-      void syncLapsedPartnerTasks().catch(() => undefined);
       void syncLapsedDonorTiers(pp, stats).catch(() => undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load partnerships.');
@@ -196,7 +198,7 @@ export function PartnershipsRoom() {
       const list = search.trim()
         ? archivedPartners.filter((p) => matchesSearch(p, search.trim().toLowerCase()))
         : archivedPartners;
-      return [...list].sort((a, b) => a.name.localeCompare(b.name));
+      return [...list].sort((a, b) => displayPartnerName(a).localeCompare(displayPartnerName(b)));
     }
     let list = filter === 'all' ? partners : partners.filter((p) => partnerMatchesType(p, filter));
     if (search.trim()) {
@@ -207,7 +209,7 @@ export function PartnershipsRoom() {
       const ra = STATUS_RANK[stewardshipStatus(a)];
       const rb = STATUS_RANK[stewardshipStatus(b)];
       if (ra !== rb) return ra - rb;
-      return a.name.localeCompare(b.name);
+      return displayPartnerName(a).localeCompare(displayPartnerName(b));
     });
   }, [partners, archivedPartners, filter, search, interestMap]);
 
