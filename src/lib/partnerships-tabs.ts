@@ -7,6 +7,7 @@ export type CommType =
   | 'tsm_easter'
   | 'tsm_midyear'
   | 'tsm_christmas'
+  | 'sparrow_spotlight'
   | 'annual_report'
   | 'giving_tuesday'
   | 'christmas_cards';
@@ -141,6 +142,11 @@ function toISO(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 function buildCommsForYear(year: number): Omit<PartnershipComm, 'id' | 'created_at' | 'updated_at'>[] {
   const nov1 = new Date(year, 10, 1);
   const firstTuesdayOffset = (2 - nov1.getDay() + 7) % 7;
@@ -148,7 +154,23 @@ function buildCommsForYear(year: number): Omit<PartnershipComm, 'id' | 'created_
 
   const januaryTsmDate = toISO(secondThursday(year, 0));
 
+  // The Sparrow Spotlight: every month, ~2 weeks after that month's TSM edition (lands on
+  // the 4th Thursday in a normal month, since the 2nd + 14 days is always the 4th Thursday).
+  // November is the one standing exception Susanna called out: the 4th Thursday of November
+  // is Thanksgiving every year, so Spotlight moves a week earlier there (3rd Thursday / TSM +
+  // 7 days) instead of landing on the holiday itself. Any other month-specific collision is a
+  // one-off a human moves by hand when it comes up -- not something to hardcode here.
+  const spotlightComms: Omit<PartnershipComm, 'id' | 'created_at' | 'updated_at'>[] = MONTH_NAMES.map((name, m) => {
+    const tsmDate = toISO(secondThursday(year, m));
+    const offset = m === 10 ? 7 : 14; // November
+    return {
+      year, comm_type: 'sparrow_spotlight' as const, title: `The Sparrow Spotlight — ${name}`,
+      publish_date: addDaysISO(tsmDate, offset), status: 'not_started' as const, is_financial_ask: false, notes: null,
+    };
+  });
+
   return [
+    ...spotlightComms,
     {
       // Two weeks after the January TSM edition, so the two never collide and the Annual
       // Report always has its own clear week -- not a fixed calendar date (was hardcoded
@@ -256,6 +278,7 @@ export interface PartnershipCommsMilestone {
   due_date: string;
   owner_id: string | null;
   sort_order: number;
+  completed_at: string | null;
   created_at: string;
 }
 
@@ -266,6 +289,14 @@ const MILESTONE_TEMPLATE: { label: string; offsetDays: number }[] = [
   { label: 'Draft 2 → Susanna', offsetDays: -3 },
   { label: 'Susanna notes back', offsetDays: -1 },
   { label: 'Final draft → Publish', offsetDays: 0 },
+];
+
+// The Sparrow Spotlight's own, shorter production rhythm (a single featured story,
+// not a full multi-contributor issue) — 3 steps instead of TSM's 6.
+const SPOTLIGHT_MILESTONE_TEMPLATE: { label: string; offsetDays: number }[] = [
+  { label: 'Pick story', offsetDays: -8 },
+  { label: 'Draft → Susanna', offsetDays: -3 },
+  { label: 'Publish', offsetDays: 0 },
 ];
 
 function addDaysISO(iso: string, days: number): string {
@@ -285,25 +316,35 @@ export async function fetchMilestones(commIds: string[]): Promise<PartnershipCom
   return (data ?? []) as PartnershipCommsMilestone[];
 }
 
+/** Does this comm type get a production milestone checklist at all? */
+export function hasMilestoneTemplate(commType: CommType): boolean {
+  return commType.startsWith('tsm') || commType === 'sparrow_spotlight';
+}
+
+function templateFor(commType: CommType): { label: string; offsetDays: number }[] {
+  return commType === 'sparrow_spotlight' ? SPOTLIGHT_MILESTONE_TEMPLATE : MILESTONE_TEMPLATE;
+}
+
 /**
- * Seeds the 6 default production milestones for any TSM comm that doesn't have them yet,
- * defaulting every one to defaultOwnerId (Bethany) — she reassigns individual ones (e.g. to
- * Susanna, or back to Unassigned for "Contributor content due") afterward.
+ * Seeds the default production milestones for any TSM or Sparrow Spotlight comm that
+ * doesn't have them yet, defaulting every one to defaultOwnerId (Bethany) — she reassigns
+ * individual ones (e.g. to Susanna, or back to Unassigned for "Contributor content due")
+ * afterward.
  */
 export async function seedMilestonesForComms(comms: PartnershipComm[], defaultOwnerId: string | null): Promise<void> {
-  const tsmComms = comms.filter((c) => c.comm_type.startsWith('tsm'));
-  if (tsmComms.length === 0) return;
+  const milestoneComms = comms.filter((c) => hasMilestoneTemplate(c.comm_type));
+  if (milestoneComms.length === 0) return;
   const { data: existing, error } = await supabase
     .from('partnership_comms_milestones')
     .select('comm_id')
-    .in('comm_id', tsmComms.map((c) => c.id));
+    .in('comm_id', milestoneComms.map((c) => c.id));
   if (error) throw new Error(error.message);
   const seededCommIds = new Set((existing ?? []).map((r) => r.comm_id as string));
 
-  const rows: Omit<PartnershipCommsMilestone, 'id' | 'created_at'>[] = [];
-  for (const comm of tsmComms) {
+  const rows: Omit<PartnershipCommsMilestone, 'id' | 'created_at' | 'completed_at'>[] = [];
+  for (const comm of milestoneComms) {
     if (seededCommIds.has(comm.id)) continue;
-    MILESTONE_TEMPLATE.forEach((m, i) => {
+    templateFor(comm.comm_type).forEach((m, i) => {
       rows.push({
         comm_id: comm.id,
         label: m.label,
@@ -320,7 +361,7 @@ export async function seedMilestonesForComms(comms: PartnershipComm[], defaultOw
 
 export async function updateMilestone(
   id: string,
-  patch: Partial<Pick<PartnershipCommsMilestone, 'due_date' | 'owner_id'>>,
+  patch: Partial<Pick<PartnershipCommsMilestone, 'due_date' | 'owner_id' | 'completed_at'>>,
 ): Promise<void> {
   const { error } = await supabase.from('partnership_comms_milestones').update(patch).eq('id', id);
   if (error) throw new Error(error.message);

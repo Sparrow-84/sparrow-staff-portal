@@ -29,7 +29,7 @@ import { PartnershipSocialTab } from './PartnershipSocialTab';
 import { PartnershipEventsTab } from './PartnershipEventsTab';
 import { PrayerMeetingTab } from './PrayerMeetingTab';
 import { PartnershipContactsTab } from './PartnershipContactsTab';
-import { DeptCalendar } from '@/components/calendar/DeptCalendar';
+import { CommsProductionCalendar } from './CommsProductionCalendar';
 
 const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
   {
@@ -344,7 +344,7 @@ export function PartnershipsRoom() {
           {activeTab === 'contacts' && <PartnershipContactsTab profiles={profiles} />}
           {activeTab === 'calendar' && (
             <div>
-              <DeptCalendar department="partnerships" />
+              <CommsProductionCalendar profiles={profiles} />
             </div>
           )}
         </div>

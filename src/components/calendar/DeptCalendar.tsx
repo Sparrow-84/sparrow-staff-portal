@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import {
   fetchCalendar,
@@ -48,15 +48,35 @@ type MultiDayBar = {
 
 interface Props {
   department: Department;
+  /** Hides department events entirely (bars + day-cell pills) when false. Default true —
+   *  every existing caller is unaffected. Lets a caller like Partnerships offer an "Events"
+   *  on/off toggle of its own without duplicating this component's event-fetching logic. */
+  showEvents?: boolean;
+  /** Extra controls rendered in the toolbar, after the "Today" button — e.g. a department-
+   *  specific layer toggle. Purely additive; omitted by every other caller. */
+  extraToolbar?: ReactNode;
+  /** Notified whenever the visible month changes (including on mount), so a caller whose
+   *  own overlay needs to know which month is showing (e.g. Comms Production bars) can stay
+   *  in sync without this component exposing its internal nav state directly. */
+  onMonthChange?: (year: number, month: number) => void;
+  /** Renders into the same reserved area as this calendar's own multi-day event bars, one
+   *  week at a time — e.g. Comms Production's bars + milestones. Stacked above the event
+   *  bars (which shift down to make room). Return null for a week with nothing to show. */
+  weekOverlay?: (week: Date[]) => ReactNode | null;
+  /** How tall (px) to reserve for `weekOverlay`'s content for the given week. 0/undefined
+   *  reserves nothing (the normal, every-other-caller case). */
+  weekOverlayHeight?: (week: Date[]) => number;
 }
 
-export function DeptCalendar({ department }: Props) {
+export function DeptCalendar({ department, showEvents = true, extraToolbar, onMonthChange, weekOverlay, weekOverlayHeight }: Props) {
   const { profile } = useAuth();
   const today = new Date();
   const todayStr = localISO(today);
 
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+
+  useEffect(() => { onMonthChange?.(year, month); }, [year, month, onMonthChange]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [notedEventIds, setNotedEventIds] = useState<Set<string>>(new Set());
@@ -85,8 +105,8 @@ export function DeptCalendar({ department }: Props) {
   // entries are real calendar_events rows (synced via DB trigger) by this
   // point, so they need no special-casing here.
   const deptEvents = useMemo(
-    () => events.filter((ev) => ev.department === department && !ev.is_personal),
-    [events, department],
+    () => (showEvents ? events.filter((ev) => ev.department === department && !ev.is_personal) : []),
+    [events, department, showEvents],
   );
 
   // Build grid days — includes real leading/trailing days from the adjacent
@@ -186,6 +206,7 @@ export function DeptCalendar({ department }: Props) {
           >
             Today
           </button>
+          {extraToolbar}
         </div>
         <button onClick={() => openAdd(todayStr)} className="btn-primary text-sm">
           + Add event
@@ -211,10 +232,18 @@ export function DeptCalendar({ department }: Props) {
             {weeks.map((week, wi) => {
               const bars = getBarsForWeek(week);
               const numLanes = bars.length > 0 ? Math.max(...bars.map((b) => b.lane)) + 1 : 0;
-              const barAreaPx = numLanes > 0 ? 4 + numLanes * 22 : 0;
+              const overlayH = weekOverlayHeight ? weekOverlayHeight(week) : 0;
+              const barAreaPx = (numLanes > 0 ? 4 + numLanes * 22 : 0) + overlayH;
 
               return (
                 <div key={wi} className="relative">
+                  {/* Caller-supplied overlay (e.g. Comms Production bars) — reserved above this calendar's own event bars */}
+                  {weekOverlay && overlayH > 0 && (
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: overlayH }}>
+                      {weekOverlay(week)}
+                    </div>
+                  )}
+
                   {/* Multi-day bars */}
                   {bars.map((bar, bi) => (
                     <button
@@ -224,7 +253,7 @@ export function DeptCalendar({ department }: Props) {
                       onMouseLeave={() => setTooltip(null)}
                       style={{
                         position: 'absolute',
-                        top: 4 + bar.lane * 22,
+                        top: overlayH + 4 + bar.lane * 22,
                         left: `calc(${bar.startCol / 7 * 100}% + 2px)`,
                         width: `calc(${bar.span / 7 * 100}% - 4px)`,
                         height: 20,

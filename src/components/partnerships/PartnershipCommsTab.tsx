@@ -5,6 +5,7 @@ import {
   fetchComms,
   fetchMilestones,
   fetchRecurringSetting,
+  hasMilestoneTemplate,
   seedCommsForYear,
   seedMilestonesForComms,
   syncCommsMilestoneTasks,
@@ -43,9 +44,6 @@ function shortDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function isTsm(comm: PartnershipComm): boolean {
-  return comm.comm_type.startsWith('tsm');
-}
 
 // December's Christmas greeting (Andrew + Shelly, together) and January's leadership
 // letters (Andrew as ED, Shelly as LCP Director, separately) need writers assigned and
@@ -124,12 +122,16 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
     }
   }
 
-  function handleMilestoneChange(commId: string, milestoneId: string, patch: Partial<Pick<PartnershipCommsMilestone, 'due_date' | 'owner_id'>>) {
+  function handleMilestoneChange(commId: string, milestoneId: string, patch: Partial<Pick<PartnershipCommsMilestone, 'due_date' | 'owner_id' | 'completed_at'>>) {
     setMilestonesByComm((prev) => ({
       ...prev,
       [commId]: (prev[commId] ?? []).map((m) => (m.id === milestoneId ? { ...m, ...patch } : m)),
     }));
     updateMilestone(milestoneId, patch).catch(console.error);
+  }
+
+  function toggleMilestoneDone(commId: string, m: PartnershipCommsMilestone) {
+    handleMilestoneChange(commId, m.id, { completed_at: m.completed_at ? null : new Date().toISOString() });
   }
 
   // Deliberately not a hardcoded cap (was fixed at 3) — the count of asks the org actually
@@ -278,29 +280,43 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                       />
                     </div>
 
-                    {/* TSM milestones — date + owner editable; label/order are fixed */}
-                    {isTsm(comm) && (
+                    {/* Production milestones — date + owner editable; label/order are fixed */}
+                    {hasMilestoneTemplate(comm.comm_type) && (
                       <div>
                         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
                           Production milestones
                         </p>
                         <ul className="space-y-1.5">
                           {(milestonesByComm[comm.id] ?? []).map((m) => {
+                            const done = !!m.completed_at;
                             const isPastMilestone = m.due_date < todayISO;
                             return (
                               <li
                                 key={m.id}
-                                className={`flex flex-wrap items-center gap-2 text-sm ${isPastMilestone ? 'text-sparrow-gray/60' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}
+                                className={`flex flex-wrap items-center gap-2 text-sm ${done ? 'text-sparrow-gray/50' : isPastMilestone ? 'text-sparrow-gray/60' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isPastMilestone ? 'bg-sparrow-rule dark:bg-sparrow-dark-border' : 'bg-sparrow-green'}`} />
+                                <button
+                                  type="button"
+                                  onClick={() => toggleMilestoneDone(comm.id, m)}
+                                  aria-label={done ? `Mark "${m.label}" not done` : `Mark "${m.label}" done`}
+                                  className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border text-[9px] leading-none ${
+                                    done
+                                      ? 'border-sparrow-green bg-sparrow-green text-white'
+                                      : isPastMilestone
+                                        ? 'border-sparrow-rule dark:border-sparrow-dark-border'
+                                        : 'border-sparrow-green'
+                                  }`}
+                                >
+                                  {done ? '✓' : ''}
+                                </button>
                                 <input
                                   type="date"
                                   value={m.due_date}
                                   onChange={(e) => handleMilestoneChange(comm.id, m.id, { due_date: e.target.value })}
                                   className="field-input mt-0 w-36 py-1 text-xs"
                                 />
-                                <span className="flex-1">{m.label}</span>
+                                <span className={`flex-1 ${done ? 'line-through' : ''}`}>{m.label}</span>
                                 <select
                                   value={m.owner_id ?? ''}
                                   onChange={(e) => handleMilestoneChange(comm.id, m.id, { owner_id: e.target.value || null })}
