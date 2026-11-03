@@ -478,6 +478,11 @@ export function GridTableShell<K extends string, T>({
     draggingKey, setDraggingKey, dragOverKey, setDragOverKey, handleColumnDrop,
   } = layout;
 
+  // Row numbers: a structural column, not part of `visibleColumns` (not togglable/resizable/
+  // sortable) -- pinned at the very left, with the table's normal first column pinned right
+  // after it so both stay put together while every other column scrolls underneath.
+  const ROW_NUM_WIDTH = 34;
+
   return (
     <div className="space-y-2">
       <div className="flex justify-end gap-2">
@@ -491,51 +496,59 @@ export function GridTableShell<K extends string, T>({
       <div className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface overflow-hidden" style={{ width: 'fit-content', maxWidth: '100%' }}>
         <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
           <div role="table" style={{ minWidth: 'max-content' }}>
-            <div
-              role="row"
-              className="grid bg-sparrow-green dark:bg-sparrow-dark-green sticky top-0 z-20"
-              style={{ gridTemplateColumns: gridTemplate }}
-            >
-              {visibleColumns.map((col, colIdx) => (
-                <div
-                  key={col.key}
-                  role="columnheader"
-                  draggable
-                  onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDraggingKey(col.key); }}
-                  onDragEnd={() => { setDraggingKey(null); setDragOverKey(null); }}
-                  onDragOver={(e) => { e.preventDefault(); if (draggingKey && draggingKey !== col.key) setDragOverKey(col.key); }}
-                  onDragLeave={() => setDragOverKey((k) => (k === col.key ? null : k))}
-                  onDrop={(e) => { e.preventDefault(); handleColumnDrop(col.key); }}
-                  onClick={() => onHeaderClick(col.key)}
-                  title={col.label}
-                  className={`relative border-r border-white/20 px-3 py-2 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-white/90 cursor-grab active:cursor-grabbing select-none hover:text-white transition ${col.align === 'right' ? 'text-right' : 'text-left'} ${
-                    draggingKey === col.key ? 'opacity-40' : ''
-                  } ${dragOverKey === col.key ? 'bg-white/15' : ''} ${
-                    colIdx === 0 ? 'sticky left-0 z-10 bg-sparrow-green dark:bg-sparrow-dark-green shadow-[2px_0_4px_-2px_rgba(0,0,0,0.25)]' : ''
-                  }`}
-                >
-                  <span className="inline-flex max-w-full items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">{col.label}</span>
-                    {sortKey === col.key && <span>{sortDir === 'asc' ? '▲' : '▼'}</span>}
-                    {renderHeaderExtra && (
-                      <span onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
-                        {renderHeaderExtra(col.key)}
-                      </span>
-                    )}
-                  </span>
-                  {/* Resize handle — explicitly non-draggable so it's never picked up
-                      as the column-move drag source, only ever the resize gesture. */}
-                  <span
-                    draggable={false}
-                    onPointerDown={(e) => startResize(col.key, e)}
-                    style={{ touchAction: 'none' }}
-                    className="absolute top-0 right-0 h-full w-3 cursor-col-resize hover:bg-white/20 active:bg-white/30"
-                  />
-                </div>
-              ))}
+            <div className="flex sticky top-0 z-20">
+              <div
+                aria-hidden
+                style={{ width: ROW_NUM_WIDTH }}
+                className="sticky left-0 z-10 shrink-0 border-r border-white/20 bg-sparrow-green dark:bg-sparrow-dark-green"
+              />
+              <div
+                role="row"
+                className="grid flex-1 bg-sparrow-green dark:bg-sparrow-dark-green"
+                style={{ gridTemplateColumns: gridTemplate }}
+              >
+                {visibleColumns.map((col, colIdx) => (
+                  <div
+                    key={col.key}
+                    role="columnheader"
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDraggingKey(col.key); }}
+                    onDragEnd={() => { setDraggingKey(null); setDragOverKey(null); }}
+                    onDragOver={(e) => { e.preventDefault(); if (draggingKey && draggingKey !== col.key) setDragOverKey(col.key); }}
+                    onDragLeave={() => setDragOverKey((k) => (k === col.key ? null : k))}
+                    onDrop={(e) => { e.preventDefault(); handleColumnDrop(col.key); }}
+                    onClick={() => onHeaderClick(col.key)}
+                    title={col.label}
+                    style={colIdx === 0 ? { left: ROW_NUM_WIDTH } : undefined}
+                    className={`relative border-r border-white/20 px-3 py-2 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-white/90 cursor-grab active:cursor-grabbing select-none hover:text-white transition ${col.align === 'right' ? 'text-right' : 'text-left'} ${
+                      draggingKey === col.key ? 'opacity-40' : ''
+                    } ${dragOverKey === col.key ? 'bg-white/15' : ''} ${
+                      colIdx === 0 ? 'sticky z-10 bg-sparrow-green dark:bg-sparrow-dark-green shadow-[2px_0_4px_-2px_rgba(0,0,0,0.25)]' : ''
+                    }`}
+                  >
+                    <span className="inline-flex max-w-full items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                      <span className="overflow-hidden text-ellipsis whitespace-nowrap">{col.label}</span>
+                      {sortKey === col.key && <span>{sortDir === 'asc' ? '▲' : '▼'}</span>}
+                      {renderHeaderExtra && (
+                        <span onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+                          {renderHeaderExtra(col.key)}
+                        </span>
+                      )}
+                    </span>
+                    {/* Resize handle — explicitly non-draggable so it's never picked up
+                        as the column-move drag source, only ever the resize gesture. */}
+                    <span
+                      draggable={false}
+                      onPointerDown={(e) => startResize(col.key, e)}
+                      style={{ touchAction: 'none' }}
+                      className="absolute top-0 right-0 h-full w-3 cursor-col-resize hover:bg-white/20 active:bg-white/30"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {items.map((item) => {
+            {items.map((item, rowIdx) => {
               const rCls = rowClassName?.(item) ?? '';
               // Opaque hover background, not a translucent one -- this column sits on top of
               // scrolled content via `position: sticky`, so a `/NN` opacity suffix here lets
@@ -545,24 +558,32 @@ export function GridTableShell<K extends string, T>({
               return (
                 <div
                   key={rowKey(item)}
-                  role="row"
                   onClick={() => onRowClick?.(item)}
-                  className={`group grid border-t border-sparrow-rule dark:border-sparrow-dark-border transition ${rCls}`}
-                  style={{ gridTemplateColumns: gridTemplate }}
+                  className={`group flex border-t border-sparrow-rule dark:border-sparrow-dark-border transition ${rCls}`}
                 >
-                  {visibleColumns.map((col, colIdx) => {
-                    const stickyClass = colIdx === 0 ? `sticky left-0 z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)] ${firstCls}` : '';
-                    const alignClass = col.align === 'right' ? 'text-right' : '';
-                    return (
-                      <div
-                        key={col.key}
-                        role="cell"
-                        className={`border-r border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 overflow-hidden ${alignClass} ${stickyClass} flex items-center`}
-                      >
-                        {renderCell(item, col.key)}
-                      </div>
-                    );
-                  })}
+                  <div
+                    aria-hidden
+                    style={{ width: ROW_NUM_WIDTH }}
+                    className={`sticky left-0 z-10 shrink-0 flex items-center justify-end border-r border-sparrow-rule px-1.5 text-[11px] text-sparrow-gray dark:border-sparrow-dark-border dark:text-sparrow-dark-gray ${firstCls}`}
+                  >
+                    {rowIdx + 1}
+                  </div>
+                  <div role="row" className="grid flex-1" style={{ gridTemplateColumns: gridTemplate }}>
+                    {visibleColumns.map((col, colIdx) => {
+                      const stickyClass = colIdx === 0 ? `sticky z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)] ${firstCls}` : '';
+                      const alignClass = col.align === 'right' ? 'text-right' : '';
+                      return (
+                        <div
+                          key={col.key}
+                          role="cell"
+                          style={colIdx === 0 ? { left: ROW_NUM_WIDTH } : undefined}
+                          className={`border-r border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 overflow-hidden ${alignClass} ${stickyClass} flex items-center`}
+                        >
+                          {renderCell(item, col.key)}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}
