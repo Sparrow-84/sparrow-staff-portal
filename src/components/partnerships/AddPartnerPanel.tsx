@@ -259,7 +259,7 @@ export function AddPartnerPanel({
           </div>
         )}
 
-        <div>
+        <div className={subCategory === 'individual' ? 'opacity-50' : ''}>
           <label className="field-label" htmlFor="pa-organization">Organization (optional)</label>
           <input
             id="pa-organization"
@@ -363,7 +363,7 @@ export function AddPartnerPanel({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid grid-cols-2 gap-3 ${subCategory === 'individual' ? 'opacity-50' : ''}`}>
           <div>
             <label className="field-label" htmlFor="pa-contact">Primary contact</label>
             <input id="pa-contact" className="field-input" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="optional" />
@@ -385,7 +385,7 @@ export function AddPartnerPanel({
           </div>
         </div>
 
-        <div>
+        <div className={subCategory === 'individual' ? 'opacity-50' : ''}>
           <label className="field-label" htmlFor="pa-website">Website</label>
           <input id="pa-website" className="field-input" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="optional" />
         </div>

@@ -590,7 +590,7 @@ export function PartnerDetailPanel({
             </select>
             <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">{PARTNER_STAGE_DESC[partner.stage]}</p>
           </div>
-          <div>
+          <div className={isDonor ? '' : 'opacity-50'}>
             <span className="field-label">Donor tier</span>
             <select
               value={partner.donor_tier ?? ''}
@@ -634,12 +634,16 @@ export function PartnerDetailPanel({
             // View mode — clean readable rows
             <div className="space-y-1.5 rounded-xl border border-sparrow-rule/70 px-3 py-3">
               <InfoRow label="Name" value={displayPartnerName(partner)} />
-              <InfoRow label="Contact" value={partner.contact_name} />
-              <InfoRow label="Role" value={partner.role} />
-              <InfoRow label="Org" value={partner.organization} />
+              <div className={partner.sub_category === 'individual' ? 'space-y-1.5 opacity-50' : 'space-y-1.5'}>
+                <InfoRow label="Contact" value={partner.contact_name} />
+                <InfoRow label="Role" value={partner.role} />
+                <InfoRow label="Org" value={partner.organization} />
+              </div>
               <InfoRow label="Email" value={partner.email} href={partner.email ? `mailto:${partner.email}` : undefined} />
               <InfoRow label="Phone" value={partner.phone} href={partner.phone ? `tel:${partner.phone}` : undefined} />
-              <InfoRow label="Website" value={partner.website} href={partner.website ? withScheme(partner.website) : undefined} />
+              <div className={partner.sub_category === 'individual' ? 'opacity-50' : ''}>
+                <InfoRow label="Website" value={partner.website} href={partner.website ? withScheme(partner.website) : undefined} />
+              </div>
               <InfoRow label="Address" value={partner.address} />
               <InfoRow label="Source" value={partner.source} />
             </div>
@@ -672,11 +676,13 @@ export function PartnerDetailPanel({
                   onSave={(v) => { if (v) void patch({ name: v }); }}
                 />
               )}
-              <div className="grid grid-cols-2 gap-3">
-                <EditField label="Primary contact" value={partner.contact_name ?? ''} disabled={busy} onSave={(v) => void patch({ contact_name: v })} />
-                <EditField label="Role / title" value={partner.role ?? ''} disabled={busy} onSave={(v) => void patch({ role: v })} />
+              <div className={`space-y-3 ${partner.sub_category === 'individual' ? 'opacity-50' : ''}`}>
+                <div className="grid grid-cols-2 gap-3">
+                  <EditField label="Primary contact" value={partner.contact_name ?? ''} disabled={busy} onSave={(v) => void patch({ contact_name: v })} />
+                  <EditField label="Role / title" value={partner.role ?? ''} disabled={busy} onSave={(v) => void patch({ role: v })} />
+                </div>
+                <EditField label="Organization" value={partner.organization ?? ''} disabled={busy} onSave={(v) => void patch({ organization: v })} />
               </div>
-              <EditField label="Organization" value={partner.organization ?? ''} disabled={busy} onSave={(v) => void patch({ organization: v })} />
               <div className="grid grid-cols-2 gap-3">
                 <EditField
                   label="Email"
@@ -694,13 +700,15 @@ export function PartnerDetailPanel({
                   action={partner.phone ? <a className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={`tel:${partner.phone}`}>Call</a> : undefined}
                 />
               </div>
-              <EditField
-                label="Website"
-                value={partner.website ?? ''}
-                disabled={busy}
-                onSave={(v) => void patch({ website: v })}
-                action={partner.website ? <a className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={withScheme(partner.website)} target="_blank" rel="noreferrer">Visit</a> : undefined}
-              />
+              <div className={partner.sub_category === 'individual' ? 'opacity-50' : ''}>
+                <EditField
+                  label="Website"
+                  value={partner.website ?? ''}
+                  disabled={busy}
+                  onSave={(v) => void patch({ website: v })}
+                  action={partner.website ? <a className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={withScheme(partner.website)} target="_blank" rel="noreferrer">Visit</a> : undefined}
+                />
+              </div>
               <div>
                 <span className="field-label">Mailing address</span>
                 <textarea
