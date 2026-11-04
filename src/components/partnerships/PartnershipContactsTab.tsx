@@ -16,6 +16,7 @@ function toForm(c: PersonalContactWithOwner): PersonalContactInput {
     name: c.name,
     organization: c.organization,
     relationship: c.relationship,
+    role: c.role ?? '',
     phone: c.phone ?? '',
     email: c.email ?? '',
     notes: c.notes,
@@ -49,7 +50,7 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
     setEditSaving(true);
     setEditError(null);
     try {
-      await updateContact(editingFor.id, editForm);
+      await updateContact(editingFor.id, editForm, editingFor.role);
       setEditingFor(null);
       load();
     } catch (err) {
@@ -96,6 +97,9 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
             phone: addingFor.phone ?? '',
             email: addingFor.email ?? '',
             notes: addingFor.notes || null,
+            organization: addingFor.organization || null,
+            role: addingFor.role || null,
+            originLabel: 'My Contacts entry',
             source: `Connected by ${addingFor.owner?.full_name ?? 'a staff member'} (My Contacts)`,
           }
         : null,
@@ -137,6 +141,7 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
             <thead>
               <tr className="bg-sparrow-green dark:bg-sparrow-dark-green text-left">
                 <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Name</th>
+                <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Role</th>
                 <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Organization / context</th>
                 <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Connection</th>
                 <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Contact info</th>
@@ -151,11 +156,12 @@ export function PartnershipContactsTab({ profiles }: { profiles: Profile[] }) {
                 <Fragment key={c.id}>
                   {staffHeader && (
                     <tr key={`hdr-${c.id}`} className="bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2">
-                      <td colSpan={8} className="px-3 py-1.5 text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{staffHeader}</td>
+                      <td colSpan={9} className="px-3 py-1.5 text-xs font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{staffHeader}</td>
                     </tr>
                   )}
                   <tr key={c.id}>
                     <td className="px-3 py-2 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{c.name}</td>
+                    <td className="px-3 py-2 text-sparrow-gray dark:text-sparrow-dark-gray">{c.role || '—'}</td>
                     <td className="px-3 py-2 text-sparrow-gray dark:text-sparrow-dark-gray">{c.organization || '—'}</td>
                     <td className="px-3 py-2 text-sparrow-gray dark:text-sparrow-dark-gray">{c.relationship || '—'}</td>
                     <td className="px-3 py-2 text-sparrow-gray dark:text-sparrow-dark-gray">

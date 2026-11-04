@@ -70,7 +70,6 @@ export function AddPartnerPanel({
   const [stage, setStage] = useState<PartnerStage>('prospect');
   const [ownerId, setOwnerId] = useState<string>('');
   const [contactName, setContactName] = useState('');
-  const [organization, setOrganization] = useState('');
   const [role, setRole] = useState('');
   const [website, setWebsite] = useState('');
   const [email, setEmail] = useState('');
@@ -81,10 +80,33 @@ export function AddPartnerPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  // Only offered when prefilled from a connection/contact that names an organization: is the
+  // Directory record for the organization (person becomes its contact) or the person themself?
+  const [recordFor, setRecordFor] = useState<'org' | 'person'>('org');
+
+  const prefillPerson = initialValues?.name?.trim() ?? '';
+  const prefillOrg = initialValues?.organization?.trim() ?? '';
+  const prefillRole = initialValues?.role?.trim() ?? '';
+
+  function applyRecordFor(mode: 'org' | 'person') {
+    setRecordFor(mode);
+    if (mode === 'org') {
+      setName(prefillOrg);
+      setContactName(prefillPerson);
+      setRole(prefillRole);
+    } else {
+      setName(prefillPerson);
+      setContactName('');
+      setRole('');
+    }
+    setFirstName('');
+    setLastName('');
+    setSubCategory('');
+    setDuplicateWarning(null);
+  }
 
   useEffect(() => {
     if (open) {
-      setName(initialValues?.name ?? '');
       setFirstName('');
       setLastName('');
       setType('');
@@ -93,9 +115,18 @@ export function AddPartnerPanel({
       setInterestIds([]);
       setStage('prospect');
       setOwnerId(defaultOwnerId ?? '');
-      setContactName('');
-      setOrganization(initialValues?.organization ?? '');
-      setRole(initialValues?.role ?? '');
+      if (prefillOrg) {
+        // Default: the organization is the relationship, the person is its contact.
+        setRecordFor('org');
+        setName(prefillOrg);
+        setContactName(prefillPerson);
+        setRole(prefillRole);
+      } else {
+        setRecordFor('person');
+        setName(initialValues?.name ?? '');
+        setContactName('');
+        setRole(initialValues?.role ?? '');
+      }
       setWebsite(initialValues?.website ?? '');
       setEmail(initialValues?.email ?? '');
       setPhone(initialValues?.phone ?? '');
@@ -158,6 +189,13 @@ export function AddPartnerPanel({
       setBusy(false);
     }
 
+    // Added as the person, not their organization: the Directory has no Organization field,
+    // so keep where they're connected from in the notes rather than dropping it.
+    const affiliation = recordFor === 'person' && prefillOrg
+      ? `Connected through ${prefillOrg}${prefillRole ? ` (${prefillRole})` : ''}.`
+      : null;
+    const finalNotes = [affiliation, notes.trim()].filter(Boolean).join('\n\n');
+
     setBusy(true);
     setError(null);
     try {
@@ -170,7 +208,7 @@ export function AddPartnerPanel({
         last_name: isPerson ? (lastName.trim() || null) : null,
         stage,
         owner_id: ownerId || null,
-        organization: organization.trim() || null,
+        organization: null,
         contact_name: contactName.trim() || null,
         role: role.trim() || null,
         website: website.trim() || null,
@@ -179,7 +217,7 @@ export function AddPartnerPanel({
         address: address.trim() || null,
         donor_tier: type === 'donor' ? 'first_time' : null,
         source: source.trim() || null,
-        notes: notes.trim() || null,
+        notes: finalNotes || null,
       });
       if (type === 'donor' && ownerId) {
         void emitFirstTimeDonorTask(newPartnerId, trimmedName, ownerId).catch(() => undefined);
@@ -226,6 +264,29 @@ export function AddPartnerPanel({
             Prefilled from {initialValues.name}'s {initialValues.originLabel ?? 'My Contacts entry'}. Pick a category and sub-category to add them to the Directory.
           </p>
         )}
+        {initialValues && prefillOrg && (
+          <fieldset className="space-y-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2.5">
+            <legend className="field-label px-1">Who is this Directory record for?</legend>
+            <label className="flex cursor-pointer items-start gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+              <input type="radio" name="pa-record-for" className="mt-1 accent-sparrow-green" checked={recordFor === 'org'} onChange={() => applyRecordFor('org')} />
+              <span>
+                <span className="font-medium">{prefillOrg}</span>
+                <span className="block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                  The organization — {prefillPerson}{prefillRole ? ` (${prefillRole})` : ''} is listed as its contact person
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+              <input type="radio" name="pa-record-for" className="mt-1 accent-sparrow-green" checked={recordFor === 'person'} onChange={() => applyRecordFor('person')} />
+              <span>
+                <span className="font-medium">{prefillPerson}</span>
+                <span className="block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                  The individual, personally — not on behalf of {prefillOrg}
+                </span>
+              </span>
+            </label>
+          </fieldset>
+        )}
         {isPerson ? (
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -271,17 +332,6 @@ export function AddPartnerPanel({
             {fieldError('pa-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-name')}</p>}
           </div>
         )}
-
-        <div className={isPerson ? 'opacity-50' : ''}>
-          <label className="field-label" htmlFor="pa-organization">Organization (optional)</label>
-          <input
-            id="pa-organization"
-            className="field-input"
-            value={organization}
-            onChange={(e) => setOrganization(e.target.value)}
-            placeholder="Who they're with, if separate from the name above"
-          />
-        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>

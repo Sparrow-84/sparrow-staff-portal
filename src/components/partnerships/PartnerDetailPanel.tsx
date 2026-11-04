@@ -19,6 +19,7 @@ import {
   TOUCHPOINT_METHODS,
   composePartnerName,
   displayPartnerName,
+  stagePatch,
   dueLabel,
   hasPartnershipTerms,
   isPersonRecord,
@@ -173,12 +174,12 @@ export function PartnerDetailPanel({
       currentUserId,
     );
     const patches: Parameters<typeof updatePartner>[1] = {};
-    if (stageUpdate !== partner.stage) patches.stage = stageUpdate;
+    if (stageUpdate !== partner.stage) Object.assign(patches, stagePatch(stageUpdate));
     if (donorTierUpdate !== (partner.donor_tier ?? '')) {
       patches.donor_tier = (donorTierUpdate || null) as DonorTier | null;
     }
     // Restore archived partner when they reach out
-    if (direction === 'inbound' && !partner.active) patches.active = true;
+    if (direction === 'inbound' && !partner.active && patches.stage === undefined) Object.assign(patches, stagePatch('active'));
     if (Object.keys(patches).length > 0) await updatePartner(partner.id, patches);
     setSummary('');
     setLogOpen(false);
@@ -579,7 +580,7 @@ export function PartnerDetailPanel({
             <span className="field-label">Stage</span>
             <select
               value={partner.stage}
-              onChange={(e) => void patch({ stage: e.target.value as PartnerStage })}
+              onChange={(e) => void patch(stagePatch(e.target.value as PartnerStage))}
               disabled={busy}
               className="field-input mt-0"
             >
@@ -638,7 +639,6 @@ export function PartnerDetailPanel({
               <div className={isPersonRecord(partner) ? 'space-y-1.5 opacity-50' : 'space-y-1.5'}>
                 <InfoRow label="Contact" value={partner.contact_name} />
                 <InfoRow label="Role" value={partner.role} />
-                <InfoRow label="Org" value={partner.organization} />
               </div>
               <InfoRow label="Email" value={partner.email} href={partner.email ? `mailto:${partner.email}` : undefined} />
               <InfoRow label="Phone" value={partner.phone} href={partner.phone ? `tel:${partner.phone}` : undefined} />
@@ -685,7 +685,6 @@ export function PartnerDetailPanel({
                   <EditField label="Primary contact" value={partner.contact_name ?? ''} disabled={busy} onSave={(v) => void patch({ contact_name: v })} />
                   <EditField label="Role / title" value={partner.role ?? ''} disabled={busy} onSave={(v) => void patch({ role: v })} />
                 </div>
-                <EditField label="Organization" value={partner.organization ?? ''} disabled={busy} onSave={(v) => void patch({ organization: v })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <EditField

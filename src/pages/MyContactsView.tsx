@@ -11,7 +11,7 @@ import {
 } from '@/lib/personalContacts';
 
 function emptyForm(): PersonalContactInput {
-  return { name: '', organization: '', relationship: '', phone: '', email: '', notes: '' };
+  return { name: '', organization: '', relationship: '', role: '', phone: '', email: '', notes: '' };
 }
 
 function toForm(c: PersonalContact): PersonalContactInput {
@@ -19,6 +19,7 @@ function toForm(c: PersonalContact): PersonalContactInput {
     name: c.name,
     organization: c.organization,
     relationship: c.relationship,
+    role: c.role ?? '',
     phone: c.phone ?? '',
     email: c.email ?? '',
     notes: c.notes,
@@ -76,7 +77,7 @@ function ContactCard({ contact, onSave, onDelete }: {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{contact.name}</p>
-          {contact.organization && <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{contact.organization}</p>}
+          {(contact.role || contact.organization) && <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{[contact.role, contact.organization].filter(Boolean).join(', ')}</p>}
           {contact.relationship && <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Connection: {contact.relationship}</p>}
           <div className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
             {contact.phone && <span>{contact.phone}</span>}
@@ -138,7 +139,7 @@ export function MyContactsView() {
   }
 
   async function handleSaveEdit(id: string, input: PersonalContactInput) {
-    await updateContact(id, input);
+    await updateContact(id, input, contacts.find((c) => c.id === id)?.role);
     setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...input } : c)));
   }
 

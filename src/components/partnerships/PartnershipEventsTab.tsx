@@ -424,6 +424,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
               <thead>
                 <tr className="bg-sparrow-green dark:bg-sparrow-dark-green text-left">
                   <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Name</th>
+                  <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Role</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Org</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Email</th>
                   <th className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90">Phone</th>
@@ -446,6 +447,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
                       className={`cursor-pointer hover:bg-sparrow-mist/40 dark:hover:bg-sparrow-dark-surface2 ${overdue ? 'border-l-4 border-l-priority-p1' : ''}`}
                     >
                       <td className="px-4 py-2.5 font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{conn.name}</td>
+                      <td className="px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{conn.role || '—'}</td>
                       <td className="px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{conn.organization ?? '—'}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap text-sparrow-gray dark:text-sparrow-dark-gray">{conn.email ?? '—'}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap text-sparrow-gray dark:text-sparrow-dark-gray">{conn.phone ?? '—'}</td>

@@ -61,7 +61,7 @@ export function BatchTouchpointModal({
       if (!q) return true;
       return (
         p.name.toLowerCase().includes(q) ||
-        (p.organization ?? '').toLowerCase().includes(q) ||
+        (p.contact_name ?? '').toLowerCase().includes(q) ||
         PARTNER_TYPE[p.type].label.toLowerCase().includes(q)
       );
     });
@@ -137,7 +137,7 @@ export function BatchTouchpointModal({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, organization, or type…"
+              placeholder="Search by name, contact person, or type…"
               className="field-input mt-0"
             />
             <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">

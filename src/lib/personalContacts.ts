@@ -6,6 +6,8 @@ export interface PersonalContact {
   name: string;
   organization: string;
   relationship: string;
+  /** Added in migration 0197 -- undefined until that runs. */
+  role?: string | null;
   phone: string | null;
   email: string | null;
   notes: string;
@@ -23,6 +25,7 @@ export interface PersonalContactInput {
   name: string;
   organization: string;
   relationship: string;
+  role: string;
   phone: string;
   email: string;
   notes: string;
@@ -46,6 +49,7 @@ export async function createContact(userId: string, input: PersonalContactInput)
       name: input.name,
       organization: input.organization,
       relationship: input.relationship,
+      ...roleField(input.role),
       phone: input.phone || null,
       email: input.email || null,
       notes: input.notes,
@@ -56,13 +60,14 @@ export async function createContact(userId: string, input: PersonalContactInput)
   return data as PersonalContact;
 }
 
-export async function updateContact(id: string, input: PersonalContactInput): Promise<void> {
+export async function updateContact(id: string, input: PersonalContactInput, previousRole?: string | null): Promise<void> {
   const { error } = await supabase
     .from('personal_contacts')
     .update({
       name: input.name,
       organization: input.organization,
       relationship: input.relationship,
+      ...roleField(input.role, previousRole),
       phone: input.phone || null,
       email: input.email || null,
       notes: input.notes,
@@ -94,4 +99,11 @@ export async function markContactConverted(contactId: string, partnerId: string)
     p_partner_id: partnerId,
   });
   if (error) throw new Error(error.message);
+}
+
+/** `role` only goes in the write when there's something to save (or clear), so saving a
+ *  contact without a role keeps working even before migration 0197 adds the column. */
+function roleField(role: string, previous?: string | null): { role?: string | null } {
+  const r = role.trim();
+  return r || previous ? { role: r || null } : {};
 }

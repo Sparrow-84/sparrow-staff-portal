@@ -131,6 +131,23 @@ export function PartnershipsRoom() {
     website: string | null;
     notes: string | null;
   } | null>(null);
+  // Memoized: AddPartnerPanel resets its form whenever this reference changes, so a fresh
+  // literal on every render would wipe in-progress edits (incl. the org/person choice).
+  const addInitialValues = useMemo(
+    () => addPrefill
+      ? {
+          name: addPrefill.name,
+          phone: addPrefill.phone ?? '',
+          email: addPrefill.email ?? '',
+          notes: addPrefill.notes,
+          organization: addPrefill.organization,
+          role: addPrefill.role,
+          website: addPrefill.website,
+          originLabel: 'meaningful connection',
+        }
+      : undefined,
+    [addPrefill],
+  );
   const [batchOpen, setBatchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -537,20 +554,7 @@ export function PartnershipsRoom() {
         onCreated={async (id) => { await load(); openPartner(id); }}
         interests={interests}
         onInterestsCreated={load}
-        initialValues={
-          addPrefill
-            ? {
-                name: addPrefill.name,
-                phone: addPrefill.phone ?? '',
-                email: addPrefill.email ?? '',
-                notes: addPrefill.notes,
-                organization: addPrefill.organization,
-                role: addPrefill.role,
-                website: addPrefill.website,
-                originLabel: 'meaningful connection',
-              }
-            : undefined
-        }
+        initialValues={addInitialValues}
       />
       <BatchTouchpointModal
         open={batchOpen}

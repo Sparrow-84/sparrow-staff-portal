@@ -335,8 +335,15 @@ export function displayPartnerName(p: Pick<Partner, 'name' | 'type' | 'sub_categ
 export const PARTNER_STAGE_DESC: Record<PartnerStage, string> = {
   prospect: 'An early, unconfirmed relationship — not yet subscribed to TSM. Move to Active once the relationship warrants ongoing stewardship.',
   active:   'A current, healthy relationship that warrants ongoing stewardship. Subscribed to TSM automatically.',
-  inactive: 'Off the active list. Still receives TSM unless they\'ve unsubscribed.',
+  inactive: 'Archived — moves to the Archived tab. Still receives TSM unless they\'ve unsubscribed. Pick Prospect or Active to restore.',
 };
+
+/** Stage is the one control for archiving: Inactive archives the record (moves it to the
+ *  Archived tab) and Prospect/Active restores it, so `active` can never disagree with `stage`.
+ *  Every stage change in the app goes through this. */
+export function stagePatch(stage: PartnerStage): { stage: PartnerStage; active: boolean } {
+  return { stage, active: stage !== 'inactive' };
+}
 
 export const DONOR_TIER_DESC: Record<DonorTier, string> = {
   first_time: 'Gave for the first time. 72-hr personal follow-up email required.',

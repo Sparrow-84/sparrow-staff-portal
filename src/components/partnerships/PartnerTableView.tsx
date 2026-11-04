@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { Profile } from '@/lib/types';
 import { updatePartner } from '@/lib/partnerships';
 import { assignAvatarColors } from '@/lib/avatarColors';
@@ -17,13 +18,12 @@ import {
   STEWARDSHIP,
   SUB_CATEGORIES_FOR_TYPE,
   composePartnerName,
-  daysUntilDue,
   derivedDonorTier,
   displayPartnerName,
-  dueLabel,
   hasPartnershipTerms,
   isPersonRecord,
   shortDate,
+  stagePatch,
   stewardshipStatus,
   type DonorStat,
   type DonorTier,
@@ -41,10 +41,10 @@ import {
 } from '@/components/gridtable/GridTable';
 
 type ColKey =
-  | 'status' | 'name' | 'type' | 'sub_category' | 'organization' | 'contact_name'
+  | 'status' | 'name' | 'type' | 'sub_category' | 'contact_name'
   | 'email' | 'phone' | 'address' | 'donor_tier' | 'interests' | 'stage' | 'owner'
-  | 'last_touch' | 'due' | 'needs_touchpoint' | 'gift_count' | 'last_gift'
-  | 'source' | 'active' | 'mou_status' | 'giving_method' | 'newsletter' | 'first_gift_date'
+  | 'needs_touchpoint' | 'gift_count' | 'last_gift'
+  | 'source' | 'mou_status' | 'giving_method' | 'newsletter' | 'first_gift_date'
   | 'sparrow_provides' | 'partner_provides';
 type SortDir = 'asc' | 'desc';
 
@@ -57,7 +57,6 @@ const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'name', label: 'Name', defaultWidth: 200 },
   { key: 'type', label: 'Category', defaultWidth: 150 },
   { key: 'sub_category', label: 'Sub-category', defaultWidth: 130 },
-  { key: 'organization', label: 'Organization', defaultWidth: 170 },
   { key: 'contact_name', label: 'Contact Person', defaultWidth: 150 },
   { key: 'email', label: 'Email', defaultWidth: 190 },
   { key: 'phone', label: 'Phone', defaultWidth: 130 },
@@ -66,13 +65,10 @@ const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'interests', label: 'Interests', defaultWidth: 170 },
   { key: 'stage', label: 'Stage', defaultWidth: 130 },
   { key: 'owner', label: 'Owner', defaultWidth: 170 },
-  { key: 'last_touch', label: 'Last touch', defaultWidth: 100 },
-  { key: 'due', label: 'Next Touchpoint Due', defaultWidth: 150 },
   { key: 'needs_touchpoint', label: 'Needs additional touchpoint', defaultWidth: 220 },
   { key: 'gift_count', label: 'Total Gifts', align: 'right', defaultWidth: 90 },
   { key: 'last_gift', label: 'Last gift', defaultWidth: 100 },
   { key: 'source', label: 'Source', defaultWidth: 170 },
-  { key: 'active', label: 'Active', defaultWidth: 70 },
   { key: 'mou_status', label: 'MOU status', defaultWidth: 140 },
   { key: 'giving_method', label: 'Giving method', defaultWidth: 130 },
   { key: 'newsletter', label: 'Subscribed to TSM', defaultWidth: 130 },
@@ -84,7 +80,7 @@ const COLUMNS: GridColumn<ColKey>[] = [
 // Admin/back-office fields start hidden so the directory doesn't open
 // overwhelming — everything's still there and editable via Columns ▾.
 const DEFAULT_HIDDEN: ColKey[] = [
-  'organization', 'contact_name', 'address', 'source', 'mou_status',
+  'contact_name', 'address', 'source', 'mou_status',
   'giving_method', 'newsletter', 'first_gift_date', 'sparrow_provides', 'partner_provides',
 ];
 
@@ -125,17 +121,39 @@ function ColumnFilterButton({
   onChange: (next: Set<string>) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const active = selected.size > 0;
 
   useEffect(() => {
     if (!open) return;
     function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (popoverRef.current?.contains(t) || triggerRef.current?.contains(t)) return;
+      setOpen(false);
     }
+    function onScroll(e: Event) {
+      if (popoverRef.current && e.target instanceof Node && popoverRef.current.contains(e.target)) return;
+      setOpen(false);
+    }
+    function onResize() { setOpen(false); }
     document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+    };
   }, [open]);
+
+  function toggleOpen() {
+    if (open) { setOpen(false); return; }
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) setPos({ top: r.bottom + 6, left: Math.min(r.left, window.innerWidth - 216) });
+    setOpen(true);
+  }
 
   function toggle(v: string) {
     const next = new Set(selected);
@@ -143,18 +161,27 @@ function ColumnFilterButton({
     onChange(next);
   }
 
+  // The dropdown is portaled to <body> with fixed positioning -- rendered inside the header
+  // cell it was clipped invisible by the header's (and table's) overflow:hidden, which is why
+  // clicking a funnel looked like it did nothing.
   return (
-    <div ref={ref} className="relative inline-block">
+    <>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         aria-label="Filter this column"
-        className={`grid h-4 w-4 shrink-0 place-items-center rounded ${active ? 'text-white' : 'text-white/50 hover:text-white/90'}`}
+        className={`grid h-4 w-4 shrink-0 place-items-center rounded ${active ? 'bg-sparrow-gold text-sparrow-ink' : 'text-white/50 hover:text-white/90'}`}
       >
         <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18l-7 9v7l-4 2v-9z" /></svg>
       </button>
-      {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 w-52 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 normal-case shadow-lg">
+      {open && pos && createPortal(
+        <div
+          ref={popoverRef}
+          // Portals still bubble clicks up the React tree -- stop them reaching the header's sort click.
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: 'fixed', top: pos.top, left: pos.left }}
+          className="z-50 w-52 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 normal-case tracking-normal shadow-lg">
           <div className="mb-1.5 flex items-center justify-between">
             <button type="button" onClick={() => onChange(new Set())} className="text-[11px] font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
               Clear
@@ -172,9 +199,10 @@ function ColumnFilterButton({
             ))}
             {options.length === 0 && <p className="px-1.5 py-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No values yet.</p>}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
 
@@ -183,6 +211,109 @@ function ColumnFilterButton({
 // edit doesn't also bubble up and pop open the partner's detail drawer.
 function Stop({ children }: { children: ReactNode }) {
   return <div className="w-full" onClick={(e) => e.stopPropagation()}>{children}</div>;
+}
+
+/** A cell that reads as one plain line of text (e.g. "Caswell, Jennifer") but stores two
+ *  separate fields -- clicking it opens a small popover with one labeled box per field.
+ *  Portaled so the table's overflow:hidden can't clip it (same as ExpandableText). */
+function SplitFieldCell<K extends string>({
+  display,
+  placeholder,
+  fields,
+  onSave,
+}: {
+  display: string;
+  placeholder?: string;
+  fields: { key: K; label: string; value: string }[];
+  onSave: (values: Record<K, string>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<{ top: number; left: number } | null>(null);
+  const [draft, setDraft] = useState<Record<K, string>>({} as Record<K, string>);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  function current(): Record<K, string> {
+    return Object.fromEntries(fields.map((f) => [f.key, f.value])) as Record<K, string>;
+  }
+
+  function openPopover() {
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) setRect({ top: r.bottom + 4, left: Math.min(r.left, window.innerWidth - 300) });
+    setDraft(current());
+    setOpen(true);
+  }
+
+  function save() {
+    setOpen(false);
+    if (fields.some((f) => (draft[f.key] ?? '') !== f.value)) onSave(draft);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) save();
+    }
+    function onScroll(e: Event) {
+      if (popoverRef.current && e.target instanceof Node && popoverRef.current.contains(e.target)) return;
+      save();
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', save);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', save);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draft]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={(e) => { e.stopPropagation(); openPopover(); }}
+        className={`${editableBase} block truncate text-left text-sm ${display ? 'text-sparrow-ink dark:text-sparrow-dark-ink' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}
+      >
+        {display || placeholder || '—'}
+      </button>
+      {open && rect && createPortal(
+        <div
+          ref={popoverRef}
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: 'fixed', top: rect.top, left: rect.left, width: 280 }}
+          className="z-50 space-y-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3 shadow-lg"
+        >
+          {fields.map((f, i) => (
+            <div key={f.key}>
+              <label className="field-label">{f.label}</label>
+              <input
+                autoFocus={i === 0}
+                className="field-input w-full"
+                value={draft[f.key] ?? ''}
+                onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') save();
+                  if (e.key === 'Escape') setOpen(false);
+                }}
+              />
+            </div>
+          ))}
+          <div className="flex justify-end gap-3 pt-1">
+            <button type="button" onClick={() => setOpen(false)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
+              Cancel
+            </button>
+            <button type="button" onClick={save} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+              Save
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
 }
 
 export function PartnerTableView({
@@ -208,8 +339,6 @@ export function PartnerTableView({
 
   // Same palette + assignment as the Team page, so a given person's color matches everywhere.
   const ownerColors = useMemo(() => assignAvatarColors(profiles), [profiles]);
-
-  const today = useMemo(() => new Date(), []);
 
   const [columnFilters, setColumnFilters] = useState<Partial<Record<FilterableKey, Set<string>>>>({});
 
@@ -269,7 +398,6 @@ export function PartnerTableView({
       case 'name': return displayPartnerName(a).localeCompare(displayPartnerName(b));
       case 'type': return a.type.localeCompare(b.type);
       case 'sub_category': return (a.sub_category ?? '').localeCompare(b.sub_category ?? '');
-      case 'organization': return (a.organization ?? '').localeCompare(b.organization ?? '');
       case 'contact_name': return (a.contact_name ?? '').localeCompare(b.contact_name ?? '');
       case 'email': return (a.email ?? '').localeCompare(b.email ?? '');
       case 'phone': return (a.phone ?? '').localeCompare(b.phone ?? '');
@@ -277,21 +405,10 @@ export function PartnerTableView({
       case 'donor_tier': return (a.donor_tier ?? '').localeCompare(b.donor_tier ?? '');
       case 'stage': return a.stage.localeCompare(b.stage);
       case 'owner': return (a.owner_id ?? '').localeCompare(b.owner_id ?? '');
-      case 'last_touch': {
-        const da = a.last_touchpoint_at ? new Date(a.last_touchpoint_at).getTime() : 0;
-        const db = b.last_touchpoint_at ? new Date(b.last_touchpoint_at).getTime() : 0;
-        return da - db;
-      }
-      case 'due': {
-        const da = daysUntilDue(a, today) ?? 9999;
-        const db = daysUntilDue(b, today) ?? 9999;
-        return da - db;
-      }
       case 'needs_touchpoint': return Number(a.needs_additional_touchpoint) - Number(b.needs_additional_touchpoint);
       case 'gift_count': return (donorStatMap.get(a.id)?.gift_count ?? 0) - (donorStatMap.get(b.id)?.gift_count ?? 0);
       case 'last_gift': return (donorStatMap.get(a.id)?.last_gift_date ?? '').localeCompare(donorStatMap.get(b.id)?.last_gift_date ?? '');
       case 'source': return (a.source ?? '').localeCompare(b.source ?? '');
-      case 'active': return Number(a.active) - Number(b.active);
       case 'mou_status': return (a.mou_status ?? '').localeCompare(b.mou_status ?? '');
       case 'giving_method': return (a.giving_method ?? '').localeCompare(b.giving_method ?? '');
       case 'newsletter': return Number(a.newsletter_subscribed) - Number(b.newsletter_subscribed);
@@ -302,9 +419,9 @@ export function PartnerTableView({
 
   const layout = useColumnLayout(COLUMNS, STORAGE_PREFIX, DEFAULT_HIDDEN);
   const sortableKeys: ColKey[] = [
-    'name', 'type', 'sub_category', 'organization', 'contact_name', 'email', 'phone', 'address', 'donor_tier',
-    'stage', 'owner', 'last_touch', 'due', 'needs_touchpoint', 'gift_count', 'last_gift',
-    'source', 'active', 'mou_status', 'giving_method', 'newsletter', 'first_gift_date',
+    'name', 'type', 'sub_category', 'contact_name', 'email', 'phone', 'address', 'donor_tier',
+    'stage', 'owner', 'needs_touchpoint', 'gift_count', 'last_gift',
+    'source', 'mou_status', 'giving_method', 'newsletter', 'first_gift_date',
   ];
   const layoutState = useSortState<ColKey>('name');
   const { sortKey, sortDir, setSortKey, setSortDir } = layoutState;
@@ -348,19 +465,22 @@ export function PartnerTableView({
           <Stop>
             <div className="flex flex-nowrap items-center gap-1.5">
               {isPersonRecord(p) && (p.first_name || p.last_name) ? (
-                <div className="flex items-center gap-1">
-                  <InlineText
-                    value={p.last_name ?? ''}
-                    placeholder="Last"
-                    onSave={(v) => void patch(p.id, { last_name: v.trim() || null, name: composePartnerName(p.first_name, v.trim()) })}
-                  />
-                  <span className="text-sparrow-gray dark:text-sparrow-dark-gray">,</span>
-                  <InlineText
-                    value={p.first_name ?? ''}
-                    placeholder="First"
-                    onSave={(v) => void patch(p.id, { first_name: v.trim() || null, name: composePartnerName(v.trim(), p.last_name) })}
-                  />
-                </div>
+                // Plain "Last, First" text at rest (no gap between two fixed-width boxes);
+                // clicking opens separate Last / First boxes, so nobody has to remember a
+                // comma convention for it to save correctly.
+                <SplitFieldCell
+                  display={displayPartnerName(p)}
+                  fields={[
+                    { key: 'last', label: 'Last name', value: p.last_name ?? '' },
+                    { key: 'first', label: 'First name', value: p.first_name ?? '' },
+                  ]}
+                  onSave={(v) => {
+                    const last = v.last.trim() || null;
+                    const first = v.first.trim() || null;
+                    if (!last && !first) return; // never blank out a name
+                    void patch(p.id, { last_name: last, first_name: first, name: composePartnerName(first, last) });
+                  }}
+                />
               ) : (
                 // Also covers an individual record with no first/last split yet (e.g. a
                 // genuinely ambiguous name a human hasn't set by hand) -- shows and edits
@@ -397,10 +517,22 @@ export function PartnerTableView({
             options={[{ value: '', label: '—' }, ...SUB_CATEGORIES_FOR_TYPE[p.type].map((sc) => ({ value: sc, label: PARTNER_SUB_CATEGORY[sc] }))]}
           />
         );
-      case 'organization':
-        return <Stop><InlineText value={p.organization ?? ''} placeholder="—" onSave={(v) => void patch(p.id, { organization: v.trim() || null })} /></Stop>;
       case 'contact_name':
-        return <Stop><InlineText value={p.contact_name ?? ''} placeholder="—" onSave={(v) => void patch(p.id, { contact_name: v.trim() || null })} /></Stop>;
+        // Contact person and their role stay separate fields; shown together ("Kari Kingsolver,
+        // Executive Director") and edited in two labeled boxes so neither can bleed into the other.
+        return (
+          <Stop>
+            <SplitFieldCell
+              display={[p.contact_name, p.role].filter(Boolean).join(', ')}
+              placeholder="—"
+              fields={[
+                { key: 'contact_name', label: 'Contact person', value: p.contact_name ?? '' },
+                { key: 'role', label: 'Role / title', value: p.role ?? '' },
+              ]}
+              onSave={(v) => void patch(p.id, { contact_name: v.contact_name.trim() || null, role: v.role.trim() || null })}
+            />
+          </Stop>
+        );
       case 'email':
         return <Stop><InlineText type="email" value={p.email ?? ''} placeholder="—" onSave={(v) => void patch(p.id, { email: v.trim() || null })} /></Stop>;
       case 'phone':
@@ -427,7 +559,7 @@ export function PartnerTableView({
         return (
           <InlineSelect
             value={p.stage}
-            onSave={(v) => void patch(p.id, { stage: v as PartnerStage })}
+            onSave={(v) => void patch(p.id, stagePatch(v as PartnerStage))}
             options={STAGES.map((s) => ({ value: s, label: PARTNER_STAGE[s].label }))}
           />
         );
@@ -444,17 +576,6 @@ export function PartnerTableView({
             </div>
           </Stop>
         );
-      case 'last_touch':
-        return <span className="whitespace-nowrap text-sparrow-gray dark:text-sparrow-dark-gray">{shortDate(p.last_touchpoint_at)}</span>;
-      case 'due': {
-        const label = dueLabel(p, today);
-        if (!label) return <span className="text-sparrow-gray/50 dark:text-sparrow-dark-gray/50">—</span>;
-        return (
-          <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium ${st.chip}`}>
-            {label}
-          </span>
-        );
-      }
       case 'needs_touchpoint':
         return (
           <Stop>
@@ -492,13 +613,6 @@ export function PartnerTableView({
       }
       case 'source':
         return <Stop><InlineText value={p.source ?? ''} placeholder="—" onSave={(v) => void patch(p.id, { source: v.trim() || null })} /></Stop>;
-      case 'active':
-        return (
-          <InlineCheckbox
-            checked={p.active}
-            onSave={(v) => void patch(p.id, v ? { active: true, stage: 'active' } : { active: false, stage: 'inactive' })}
-          />
-        );
       case 'mou_status':
         return (
           <InlineSelect
@@ -539,6 +653,26 @@ export function PartnerTableView({
     }
   }
 
+  // Same grey-out rules as AddPartnerPanel/PartnerDetailPanel: a field that doesn't apply to
+  // this record's category is dimmed and not editable inline (clicking it just opens the record).
+  function fieldApplies(p: Partner, key: ColKey): boolean {
+    switch (key) {
+      case 'donor_tier': case 'giving_method': case 'first_gift_date':
+        return p.type === 'donor';
+      case 'mou_status': case 'sparrow_provides': case 'partner_provides':
+        return p.type === 'community';
+      case 'contact_name':
+        return !isPersonRecord(p);
+      default:
+        return true;
+    }
+  }
+
+  function renderCellWithGreyOut(p: Partner, key: ColKey) {
+    if (fieldApplies(p, key)) return renderCell(p, key);
+    return <div className="pointer-events-none w-full opacity-30" aria-disabled>{renderCell(p, key)}</div>;
+  }
+
   if (partners.length === 0) {
     return <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No partners in this view yet.</p>;
   }
@@ -554,7 +688,7 @@ export function PartnerTableView({
       startResize={startResize}
       items={sorted}
       rowKey={(p) => p.id}
-      renderCell={renderCell}
+      renderCell={renderCellWithGreyOut}
       onRowClick={(p) => onOpenPartner(p.id)}
       rowClassName={() => 'cursor-pointer hover:bg-sparrow-mist/40 dark:hover:bg-sparrow-dark-surface2'}
       renderHeaderExtra={renderHeaderExtra}

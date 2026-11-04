@@ -22,6 +22,15 @@ export function ContactFields({ form, onChange }: { form: PersonalContactInput; 
         />
       </div>
       <div className="col-span-2">
+        <label className="field-label">Role</label>
+        <input
+          className="field-input w-full"
+          placeholder="Their title there, e.g. Pastor, Executive Director"
+          value={form.role}
+          onChange={(e) => onChange({ ...form, role: e.target.value })}
+        />
+      </div>
+      <div className="col-span-2">
         <label className="field-label">How you're connected</label>
         <input
           className="field-input w-full"
