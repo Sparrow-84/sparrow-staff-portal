@@ -224,7 +224,7 @@ function SplitFieldCell<K extends string>({
 }: {
   display: string;
   placeholder?: string;
-  fields: { key: K; label: string; value: string }[];
+  fields: { key: K; label: string; value: string; type?: string; placeholder?: string; hint?: string }[];
   onSave: (values: Record<K, string>) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -275,7 +275,7 @@ function SplitFieldCell<K extends string>({
         ref={triggerRef}
         type="button"
         onClick={(e) => { e.stopPropagation(); openPopover(); }}
-        className={`${editableBase} block truncate text-left text-sm ${display ? 'text-sparrow-ink dark:text-sparrow-dark-ink' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}
+        className={`${editableBase} block truncate text-left text-sm ${display ? 'text-sparrow-ink dark:text-sparrow-dark-ink' : 'italic text-sparrow-gray dark:text-sparrow-dark-gray'}`}
       >
         {display || placeholder || '—'}
       </button>
@@ -291,6 +291,8 @@ function SplitFieldCell<K extends string>({
               <label className="field-label">{f.label}</label>
               <input
                 autoFocus={i === 0}
+                type={f.type ?? 'text'}
+                placeholder={f.placeholder}
                 className="field-input w-full"
                 value={draft[f.key] ?? ''}
                 onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
@@ -299,6 +301,7 @@ function SplitFieldCell<K extends string>({
                   if (e.key === 'Escape') setOpen(false);
                 }}
               />
+              {f.hint && <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">{f.hint}</p>}
             </div>
           ))}
           <div className="flex justify-end gap-3 pt-1">
@@ -587,18 +590,27 @@ export function PartnerTableView({
                   : { needs_additional_touchpoint: false, additional_touchpoint_label: null, additional_touchpoint_due: null })}
               />
               {p.needs_additional_touchpoint && (
-                <>
-                  <InlineText
-                    value={p.additional_touchpoint_label ?? ''}
-                    placeholder="What's due"
-                    onSave={(v) => void patch(p.id, { additional_touchpoint_label: v.trim() || null })}
-                  />
-                  <InlineText
-                    type="date"
-                    value={p.additional_touchpoint_due ?? ''}
-                    onSave={(v) => void patch(p.id, { additional_touchpoint_due: v || null })}
-                  />
-                </>
+                // One readable line ("Review MOU · due Sep 21, 2027"); clicking opens labeled
+                // boxes with instructions, instead of two cramped inline boxes where only the
+                // first word of the placeholder fit.
+                <SplitFieldCell
+                  display={[
+                    p.additional_touchpoint_label,
+                    p.additional_touchpoint_due ? `due ${new Date(`${p.additional_touchpoint_due}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : null,
+                  ].filter(Boolean).join(' · ')}
+                  placeholder="Click to say what's needed and when"
+                  fields={[
+                    {
+                      key: 'label',
+                      label: 'What needs to happen',
+                      value: p.additional_touchpoint_label ?? '',
+                      placeholder: 'e.g. Review MOU, Call about spring volunteer day',
+                      hint: 'The touchpoint this record needs beyond TSM. It becomes a task for the owner when it comes due.',
+                    },
+                    { key: 'due', label: 'Due date', value: p.additional_touchpoint_due ?? '', type: 'date' },
+                  ]}
+                  onSave={(v) => void patch(p.id, { additional_touchpoint_label: v.label.trim() || null, additional_touchpoint_due: v.due || null })}
+                />
               )}
             </div>
           </Stop>
