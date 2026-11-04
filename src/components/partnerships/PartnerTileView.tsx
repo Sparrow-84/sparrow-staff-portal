@@ -60,7 +60,11 @@ export function PartnerTileView({
 
             <p className="pr-8 font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{displayPartnerName(p)}</p>
             <div className="mt-1 flex flex-col gap-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              {[type, ...p.secondary_types.map((t) => PARTNER_TYPE[t])].map((t) => (
+              {/* Filters out any secondary_types value from before the taxonomy rebuild
+                  (migration 0193) that no longer has an entry here -- PARTNER_TYPE[t] would
+                  be undefined for a retired value like the old 'prayer' category and crash
+                  this whole view otherwise. */}
+              {[type, ...p.secondary_types.map((t) => PARTNER_TYPE[t]).filter(Boolean)].map((t) => (
                 <span key={t.label}>{t.icon} {t.label}</span>
               ))}
             </div>
