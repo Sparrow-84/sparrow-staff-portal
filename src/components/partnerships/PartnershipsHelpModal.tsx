@@ -87,10 +87,10 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
               ))}
             </div>
             <p className="mt-3 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              A separate "lapsed" flag (12+ months with no contact) applies to Community Partner
-              and Volunteer records, not Donor — a donor who gave once and went quiet may simply
-              have been a one-time donor, not a stalled relationship. It's not a stage you set;
-              it's calculated automatically.
+              There's no background clock tracking how long it's been since contact — a record
+              never flags itself just because time has passed. The only things that ever need
+              attention are a named touchpoint you set yourself going overdue, or an
+              unacknowledged Brevo unsubscribe.
             </p>
           </section>
 

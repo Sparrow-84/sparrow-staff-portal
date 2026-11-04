@@ -269,29 +269,18 @@ export function daysUntilDue(p: Partner, today: Date = new Date()): number | nul
   return Math.floor((due - today.getTime()) / DAY_MS);
 }
 
-/** Days since the most recent logged touchpoint (or since record creation if none). */
-export function daysSinceTouch(p: Partner, today: Date = new Date()): number {
-  const anchor = p.last_touchpoint_at ?? p.created_at;
-  return Math.floor((today.getTime() - new Date(anchor).getTime()) / DAY_MS);
-}
-
-/** The computed "lapsed" overlay (12+ months no contact) applies to Community Partner and
- *  Volunteer only — a Donor who gave once and went quiet may just have been a one-time
- *  donor, not a stalled relationship, so it's deliberately not flagged for them. */
-const LAPSED_DAYS = 365;
-export function isLapsed(p: Partner, today: Date = new Date()): boolean {
-  if (p.type === 'donor' && p.secondary_types.length === 0) return false;
-  if (p.stage !== 'active') return false;
-  return daysSinceTouch(p, today) >= LAPSED_DAYS;
-}
-
+// No computed "time since last contact" overlay — deliberate. A record carries zero
+// touchpoint expectation unless needs_additional_touchpoint is explicitly set, so nothing
+// should quietly flag it just because logging hasn't happened. Logging a touchpoint ad hoc
+// (a call, bumping into someone) is always available but never starts or resets a clock —
+// there is no clock. The only things that can mark a record "needs attention" are a named,
+// overdue touchpoint someone actually scheduled, or an unacknowledged Brevo unsubscribe.
 export function stewardshipStatus(p: Partner, today: Date = new Date()): StewardshipStatus {
   if (!p.active || p.stage === 'inactive') return 'inactive';
   if (p.newsletter_unsubscribed_at
     && (!p.newsletter_unsubscribe_dismissed_at || p.newsletter_unsubscribe_dismissed_at < p.newsletter_unsubscribed_at)) {
     return 'needs_attention';
   }
-  if (isLapsed(p, today)) return 'needs_attention';
   const days = daysUntilDue(p, today);
   if (days != null && days < 0) return 'needs_attention';
   return 'ok';
