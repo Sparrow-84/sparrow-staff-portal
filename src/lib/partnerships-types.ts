@@ -20,6 +20,7 @@ export type PartnerProvidesTag =
   | 'Professional services'
   | 'Event sponsorship'
   | 'Speaking or presentation opportunities'
+  | 'Prayer Coverage'
   | 'Other';
 
 export interface Donation {
@@ -215,6 +216,7 @@ export const PARTNER_PROVIDES_TAGS: PartnerProvidesTag[] = [
   'Professional services',
   'Event sponsorship',
   'Speaking or presentation opportunities',
+  'Prayer Coverage',
   'Other',
 ];
 
