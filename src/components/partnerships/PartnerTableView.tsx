@@ -90,13 +90,14 @@ const DEFAULT_HIDDEN: ColKey[] = [
 const STORAGE_PREFIX = 'sparrow-partnerships-directory-table';
 
 // ── Per-column funnel filters ───────────────────────────────────────────────────────────
-type FilterableKey = 'partner_provides' | 'sub_category' | 'stage' | 'donor_tier' | 'mou_status' | 'newsletter' | 'owner' | 'giving_method';
-const FILTERABLE_KEYS: FilterableKey[] = ['partner_provides', 'sub_category', 'stage', 'donor_tier', 'mou_status', 'newsletter', 'owner', 'giving_method'];
+type FilterableKey = 'partner_provides' | 'sub_category' | 'stage' | 'donor_tier' | 'mou_status' | 'newsletter' | 'owner' | 'giving_method' | 'interests';
+const FILTERABLE_KEYS: FilterableKey[] = ['partner_provides', 'sub_category', 'stage', 'donor_tier', 'mou_status', 'newsletter', 'owner', 'giving_method', 'interests'];
 const NONE = '(none)';
 
 /** The value(s) a partner has for a given filterable column — an array since
- *  Partner Provides is multi-valued. */
-function filterValuesFor(key: FilterableKey, p: Partner): string[] {
+ *  Partner Provides/Interests are multi-valued. `interestMap` is only needed for the
+ *  'interests' case (Interests aren't a field on `Partner` itself). */
+function filterValuesFor(key: FilterableKey, p: Partner, interestMap: Map<string, PartnershipInterest[]>): string[] {
   switch (key) {
     case 'partner_provides': return p.partner_provides_tags.length ? p.partner_provides_tags : [NONE];
     case 'sub_category': return [p.sub_category ?? NONE];
@@ -106,6 +107,10 @@ function filterValuesFor(key: FilterableKey, p: Partner): string[] {
     case 'newsletter': return [p.newsletter_subscribed ? 'Yes' : 'No'];
     case 'owner': return [p.owner_id ?? NONE];
     case 'giving_method': return [p.giving_method ?? NONE];
+    case 'interests': {
+      const list = interestMap.get(p.id) ?? [];
+      return list.length ? list.map((i) => i.label) : [NONE];
+    }
   }
 }
 
@@ -213,6 +218,18 @@ export function PartnerTableView({
     return Array.from(values).sort().map((v) => ({ value: v, label: v }));
   }, [partners]);
 
+  // Interest tags are open-ended (staff can create new ones), so -- same approach as Giving
+  // Method above -- the filter lists whatever labels are actually in use right now rather
+  // than a fixed preset list.
+  const interestOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const list of interestMap.values()) {
+      for (const i of list) values.add(i.label);
+    }
+    if (values.size === 0) return [{ value: NONE, label: 'None' }];
+    return [...Array.from(values).sort().map((v) => ({ value: v, label: v })), { value: NONE, label: 'None' }];
+  }, [interestMap]);
+
   const filterOptions: Record<FilterableKey, { value: string; label: string }[]> = {
     partner_provides: [...PARTNER_PROVIDES_PRESETS.map((t) => ({ value: t, label: t })), { value: NONE, label: 'None' }],
     sub_category: [
@@ -225,6 +242,7 @@ export function PartnerTableView({
     newsletter: [{ value: 'Yes', label: 'Yes' }, { value: 'No', label: 'No' }],
     owner: [...ownerProfiles.map((op) => ({ value: op.id, label: op.full_name })), { value: NONE, label: 'Unassigned' }],
     giving_method: givingMethodOptions,
+    interests: interestOptions,
   };
 
   function renderHeaderExtra(key: ColKey): ReactNode {
@@ -242,8 +260,8 @@ export function PartnerTableView({
   const filtered = useMemo(() => {
     const active = (Object.entries(columnFilters) as [FilterableKey, Set<string>][]).filter(([, set]) => set.size > 0);
     if (active.length === 0) return partners;
-    return partners.filter((p) => active.every(([key, set]) => filterValuesFor(key, p).some((v) => set.has(v))));
-  }, [partners, columnFilters]);
+    return partners.filter((p) => active.every(([key, set]) => filterValuesFor(key, p, interestMap).some((v) => set.has(v))));
+  }, [partners, columnFilters, interestMap]);
 
   function compare(a: Partner, b: Partner, key: ColKey): number {
     switch (key) {
