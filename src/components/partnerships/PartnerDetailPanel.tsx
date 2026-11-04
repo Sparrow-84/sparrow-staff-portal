@@ -650,7 +650,7 @@ export function PartnerDetailPanel({
           ) : (
             // Edit mode — same fields as before
             <div className="space-y-3">
-              {partner.sub_category === 'individual' ? (
+              {partner.sub_category === 'individual' && (partner.first_name || partner.last_name) ? (
                 <div className="grid grid-cols-2 gap-3">
                   <EditField
                     label="First name"
@@ -668,6 +668,9 @@ export function PartnerDetailPanel({
                   />
                 </div>
               ) : (
+                // Also covers an individual record with no first/last split yet (e.g. a
+                // genuinely ambiguous name a human hasn't set by hand) -- edits the plain
+                // name exactly like an organization would, never a blank pair of fields.
                 <EditField
                   label="Name"
                   value={partner.name}

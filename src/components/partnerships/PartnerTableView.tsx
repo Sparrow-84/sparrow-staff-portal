@@ -346,7 +346,7 @@ export function PartnerTableView({
         return (
           <Stop>
             <div className="flex flex-nowrap items-center gap-1.5">
-              {p.sub_category === 'individual' ? (
+              {p.sub_category === 'individual' && (p.first_name || p.last_name) ? (
                 <div className="flex items-center gap-1">
                   <InlineText
                     value={p.last_name ?? ''}
@@ -361,6 +361,10 @@ export function PartnerTableView({
                   />
                 </div>
               ) : (
+                // Also covers an individual record with no first/last split yet (e.g. a
+                // genuinely ambiguous name a human hasn't set by hand) -- shows and edits
+                // the plain name exactly like an organization would, never a blank pair of
+                // boxes.
                 <InlineText value={p.name} onSave={(v) => { if (v.trim()) void patch(p.id, { name: v.trim() }); }} />
               )}
               {(() => {
