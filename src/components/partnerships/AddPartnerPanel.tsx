@@ -121,8 +121,18 @@ export function AddPartnerPanel({
     // (e.g. Volunteer only offers Prayer), so a stale pick from the old category shouldn't
     // silently carry over.
     setSubCategory('');
-    setFirstName('');
-    setLastName('');
+    // Volunteer is always a person (its one sub-category, Prayer, describes a kind of
+    // volunteering, not an entity type) -- seed First/Last from whatever's already in Name
+    // right away, same as switching a Donor/Community sub-category to Individual does,
+    // rather than waiting on a sub-category pick that's about to be forced anyway.
+    if (t === 'volunteer' && !firstName && !lastName && name.trim()) {
+      const guess = guessNameSplit(name);
+      setFirstName(guess.first);
+      setLastName(guess.last);
+    } else {
+      setFirstName('');
+      setLastName('');
+    }
     clear('pa-type');
     setSecondaryTypes((prev) => prev.filter((s) => s !== t)); // can't tag the same category twice
   }
@@ -156,8 +166,8 @@ export function AddPartnerPanel({
         type,
         secondary_types: secondaryTypes,
         sub_category: subCategory,
-        first_name: subCategory === 'individual' ? (firstName.trim() || null) : null,
-        last_name: subCategory === 'individual' ? (lastName.trim() || null) : null,
+        first_name: isPerson ? (firstName.trim() || null) : null,
+        last_name: isPerson ? (lastName.trim() || null) : null,
         stage,
         owner_id: ownerId || null,
         organization: organization.trim() || null,
@@ -190,6 +200,9 @@ export function AddPartnerPanel({
   }
 
   const subCategoryOptions = type ? SUB_CATEGORIES_FOR_TYPE[type] : [];
+  // Volunteer has no organization sub-category at all today -- its only option, 'prayer',
+  // describes a kind of volunteering, not an entity type -- so every Volunteer is a person.
+  const isPerson = subCategory === 'individual' || type === 'volunteer';
 
   return (
     <Drawer
@@ -213,7 +226,7 @@ export function AddPartnerPanel({
             Prefilled from {initialValues.name}'s {initialValues.originLabel ?? 'My Contacts entry'}. Pick a category and sub-category to add them to the Directory.
           </p>
         )}
-        {subCategory === 'individual' ? (
+        {isPerson ? (
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label field-label-required" htmlFor="pa-first-name">First name</label>
@@ -259,7 +272,7 @@ export function AddPartnerPanel({
           </div>
         )}
 
-        <div className={subCategory === 'individual' ? 'opacity-50' : ''}>
+        <div className={isPerson ? 'opacity-50' : ''}>
           <label className="field-label" htmlFor="pa-organization">Organization (optional)</label>
           <input
             id="pa-organization"
@@ -363,7 +376,7 @@ export function AddPartnerPanel({
           </p>
         </div>
 
-        <div className={`grid grid-cols-2 gap-3 ${subCategory === 'individual' ? 'opacity-50' : ''}`}>
+        <div className={`grid grid-cols-2 gap-3 ${isPerson ? 'opacity-50' : ''}`}>
           <div>
             <label className="field-label" htmlFor="pa-contact">Primary contact</label>
             <input id="pa-contact" className="field-input" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="optional" />
@@ -385,7 +398,7 @@ export function AddPartnerPanel({
           </div>
         </div>
 
-        <div className={subCategory === 'individual' ? 'opacity-50' : ''}>
+        <div className={isPerson ? 'opacity-50' : ''}>
           <label className="field-label" htmlFor="pa-website">Website</label>
           <input id="pa-website" className="field-input" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="optional" />
         </div>

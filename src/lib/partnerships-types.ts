@@ -313,10 +313,18 @@ export function composePartnerName(firstName: string | null, lastName: string | 
   return [firstName?.trim(), lastName?.trim()].filter(Boolean).join(' ').trim();
 }
 
-/** "Last, First" for an individual with a last name on file; otherwise just `name` —
- *  organizations and not-yet-split individuals display exactly as before. */
-export function displayPartnerName(p: Pick<Partner, 'name' | 'sub_category' | 'first_name' | 'last_name'>): string {
-  if (p.sub_category === 'individual' && p.last_name) {
+/** Whether a record is a person rather than an organization -- sub_category 'individual'
+ *  covers Donor/Community Partner; Volunteer has no organization sub-category at all today
+ *  (its only option, 'prayer', describes a kind of volunteering, not an entity type), so
+ *  every Volunteer record is a person too. */
+export function isPersonRecord(p: Pick<Partner, 'type' | 'sub_category'>): boolean {
+  return p.sub_category === 'individual' || p.type === 'volunteer';
+}
+
+/** "Last, First" for a person with a last name on file; otherwise just `name` —
+ *  organizations and not-yet-split people display exactly as before. */
+export function displayPartnerName(p: Pick<Partner, 'name' | 'type' | 'sub_category' | 'first_name' | 'last_name'>): string {
+  if (isPersonRecord(p) && p.last_name) {
     return p.first_name ? `${p.last_name}, ${p.first_name}` : p.last_name;
   }
   return p.name;

@@ -22,6 +22,7 @@ import {
   displayPartnerName,
   dueLabel,
   hasPartnershipTerms,
+  isPersonRecord,
   shortDate,
   stewardshipStatus,
   type DonorStat,
@@ -346,7 +347,7 @@ export function PartnerTableView({
         return (
           <Stop>
             <div className="flex flex-nowrap items-center gap-1.5">
-              {p.sub_category === 'individual' && (p.first_name || p.last_name) ? (
+              {isPersonRecord(p) && (p.first_name || p.last_name) ? (
                 <div className="flex items-center gap-1">
                   <InlineText
                     value={p.last_name ?? ''}

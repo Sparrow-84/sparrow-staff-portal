@@ -21,6 +21,7 @@ import {
   displayPartnerName,
   dueLabel,
   hasPartnershipTerms,
+  isPersonRecord,
   shortDate,
   stewardshipStatus,
   type Donation,
@@ -634,14 +635,14 @@ export function PartnerDetailPanel({
             // View mode — clean readable rows
             <div className="space-y-1.5 rounded-xl border border-sparrow-rule/70 px-3 py-3">
               <InfoRow label="Name" value={displayPartnerName(partner)} />
-              <div className={partner.sub_category === 'individual' ? 'space-y-1.5 opacity-50' : 'space-y-1.5'}>
+              <div className={isPersonRecord(partner) ? 'space-y-1.5 opacity-50' : 'space-y-1.5'}>
                 <InfoRow label="Contact" value={partner.contact_name} />
                 <InfoRow label="Role" value={partner.role} />
                 <InfoRow label="Org" value={partner.organization} />
               </div>
               <InfoRow label="Email" value={partner.email} href={partner.email ? `mailto:${partner.email}` : undefined} />
               <InfoRow label="Phone" value={partner.phone} href={partner.phone ? `tel:${partner.phone}` : undefined} />
-              <div className={partner.sub_category === 'individual' ? 'opacity-50' : ''}>
+              <div className={isPersonRecord(partner) ? 'opacity-50' : ''}>
                 <InfoRow label="Website" value={partner.website} href={partner.website ? withScheme(partner.website) : undefined} />
               </div>
               <InfoRow label="Address" value={partner.address} />
@@ -650,7 +651,7 @@ export function PartnerDetailPanel({
           ) : (
             // Edit mode — same fields as before
             <div className="space-y-3">
-              {partner.sub_category === 'individual' && (partner.first_name || partner.last_name) ? (
+              {isPersonRecord(partner) && (partner.first_name || partner.last_name) ? (
                 <div className="grid grid-cols-2 gap-3">
                   <EditField
                     label="First name"
@@ -679,7 +680,7 @@ export function PartnerDetailPanel({
                   onSave={(v) => { if (v) void patch({ name: v }); }}
                 />
               )}
-              <div className={`space-y-3 ${partner.sub_category === 'individual' ? 'opacity-50' : ''}`}>
+              <div className={`space-y-3 ${isPersonRecord(partner) ? 'opacity-50' : ''}`}>
                 <div className="grid grid-cols-2 gap-3">
                   <EditField label="Primary contact" value={partner.contact_name ?? ''} disabled={busy} onSave={(v) => void patch({ contact_name: v })} />
                   <EditField label="Role / title" value={partner.role ?? ''} disabled={busy} onSave={(v) => void patch({ role: v })} />
@@ -703,7 +704,7 @@ export function PartnerDetailPanel({
                   action={partner.phone ? <a className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={`tel:${partner.phone}`}>Call</a> : undefined}
                 />
               </div>
-              <div className={partner.sub_category === 'individual' ? 'opacity-50' : ''}>
+              <div className={isPersonRecord(partner) ? 'opacity-50' : ''}>
                 <EditField
                   label="Website"
                   value={partner.website ?? ''}
