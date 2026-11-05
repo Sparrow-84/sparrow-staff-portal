@@ -55,6 +55,8 @@ export interface Profile {
   toc_access: boolean;
   /** Stories & Media Room access. */
   stories_access: boolean;
+  /** Resident Services room (migration 0199) -- undefined until that runs. */
+  resident_services_access?: boolean;
   /** Rooms where this person is a Room admin (SOPs) — can add/edit/link that room's SOPs. Undefined until migration 0189 runs. */
   sop_admin_rooms?: SopRoom[];
   /** Active but kept off the Team page, staff pickers and chat (e.g. a subcontractor). Undefined until migration 0191 runs. */

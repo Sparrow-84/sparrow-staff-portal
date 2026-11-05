@@ -44,6 +44,16 @@ import { GivingMethodEditor } from './GivingMethodEditor';
 import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import { createInterest, setPartnerInterests, type PartnershipInterest } from '@/lib/partnership-interests';
 import { BusinessCardPhotos } from './BusinessCardPhotos';
+import {
+  fetchPartnerInfoChecked,
+  fetchServicesForPartner,
+  markPartnerInfoChecked,
+  markServiceChecked,
+  type PartnerInfoChecked,
+  type ResidentService,
+} from '@/lib/resident-services';
+import { FreshnessStamp, StillCorrectButton } from '../resident-services/Freshness';
+import { ServiceFormPanel } from '../resident-services/ServiceFormPanel';
 
 // For the collapsed "last touchpoint" preview only -- the full note (with
 // formatting) renders in the Touchpoint history list below via RichTextView.
@@ -106,6 +116,11 @@ export function PartnerDetailPanel({
   const [direction, setDirection] = useState<'outbound' | 'inbound'>('outbound');
   const [stageUpdate, setStageUpdate] = useState<PartnerStage>('active');
   const [donorTierUpdate, setDonorTierUpdate] = useState<DonorTier | ''>('');
+  // Resident Services links (migration 0199) -- both quietly empty until it runs.
+  const [services, setServices] = useState<ResidentService[]>([]);
+  const [infoChecked, setInfoChecked] = useState<PartnerInfoChecked | null>(null);
+  const [serviceFormOpen, setServiceFormOpen] = useState(false);
+  const [editingService, setEditingService] = useState<ResidentService | null>(null);
 
   const { fieldClass: logFieldClass, fieldError: logFieldError, clear: clearLogField, validate: validateLog } = useRequiredFields([
     { key: 'pdp-occurred-on', label: 'Date', valid: !!occurredOn },
@@ -115,10 +130,14 @@ export function PartnerDetailPanel({
 
   const reload = useCallback(async () => {
     if (!partnerId) return;
-    const [all, gifts] = await Promise.all([
+    const [all, gifts, svc, checked] = await Promise.all([
       fetchTouchpoints(partnerId),
       partner?.type === 'donor' ? fetchDonations(partnerId) : Promise.resolve([]),
+      fetchServicesForPartner(partnerId),
+      fetchPartnerInfoChecked(partnerId),
     ]);
+    setServices(svc);
+    setInfoChecked(checked);
     setTouchpoints([...all].sort((a, b) =>
       new Date(b.occurred_on).getTime() - new Date(a.occurred_on).getTime()
     ));
@@ -146,6 +165,14 @@ export function PartnerDetailPanel({
   const type = PARTNER_TYPE[partner.type];
   const status = stewardshipStatus(partner);
   const loggerName = (id: string | null) => (id ? profiles.find((p) => p.id === id)?.full_name ?? '—' : '—');
+  const nameFor = (id: string | null) => (id ? profiles.find((p) => p.id === id)?.full_name ?? null : null);
+  const me = profiles.find((p) => p.id === currentUserId);
+  const isAdmin = me?.role === 'admin';
+  // Only Partnerships staff change an MOU; Resident Services staff see it (DB enforces this too).
+  const isPartnershipsStaff = isAdmin || me?.department === 'partnerships';
+  // Everyone reads every note; each person edits/deletes only their own (older notes with no
+  // logger recorded stay editable). Matches the 0199 touchpoint policies.
+  const canEditTouchpoint = (t: Touchpoint) => isAdmin || !t.logged_by || t.logged_by === currentUserId;
   // Standing ownership map: Bethany (dept=partnerships) + anyone explicitly granted room
   // access. Exec is excluded even if flagged with partnerships_access — Andrew's only role
   // here is the one-time major-donor call task; he should never appear as a selectable
@@ -264,6 +291,7 @@ export function PartnerDetailPanel({
   }
 
   return (
+    <>
     <Drawer
       open={open}
       onClose={onClose}
@@ -513,6 +541,9 @@ export function PartnerDetailPanel({
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
+              Gets this record's follow-up tasks. Change it to hand the relationship off; the new owner gets a notification.
+            </p>
           </div>
           <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
             <label className="flex cursor-pointer items-center gap-2">
@@ -730,6 +761,14 @@ export function PartnerDetailPanel({
           )}
         </section>
 
+        {/* ── 6.2. Last checked: is this contact info from 6 years ago or 2 weeks? ── */}
+        {infoChecked && !isPersonRecord(partner) && (
+          <div className="-mt-2 flex flex-wrap items-center gap-2">
+            <FreshnessStamp checkedAt={infoChecked.info_checked_at} checkedBy={infoChecked.info_checked_by} how={infoChecked.info_checked_how} nameFor={nameFor} />
+            <StillCorrectButton onConfirm={async (how) => { await markPartnerInfoChecked(partner.id, how, currentUserId); await reload(); }} />
+          </div>
+        )}
+
         {/* ── 6.4. Business card photo ── */}
         <section>
           <BusinessCardPhotos
@@ -861,8 +900,9 @@ export function PartnerDetailPanel({
               <select
                 value={partner.mou_status ?? ''}
                 onChange={(e) => void patch({ mou_status: (e.target.value || null) as MouStatus | null })}
-                disabled={busy}
-                className="field-input mt-0"
+                disabled={busy || !isPartnershipsStaff}
+                title={isPartnershipsStaff ? undefined : 'Partnerships staff edit the MOU'}
+                className="field-input mt-0 disabled:cursor-not-allowed"
               >
                 <option value="">—</option>
                 {MOU_STATUSES.map((s) => (
@@ -883,6 +923,51 @@ export function PartnerDetailPanel({
                 An MOU is needed when both organizations are formally committing to something — sharing client information, a set referral process, ongoing services, or access to participants. Just passing along Sparrow's contact info doesn't need one. If you're not sure, ask Susanna.
               </p>
             </div>
+          </section>
+        )}
+
+        {/* ── 9.5. Services they offer -- the same records as the Resident Services room ── */}
+        {infoChecked && !isPersonRecord(partner) && (
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="field-label">Services they offer</span>
+              <button
+                onClick={() => { setEditingService(null); setServiceFormOpen(true); }}
+                className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
+              >
+                + Add a service
+              </button>
+            </div>
+            {services.length === 0 ? (
+              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                None recorded. Add what residents can get from them (shelter, food, legal help…) so Resident Services staff can refer people.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {services.map((s) => (
+                  <div key={s.id} className="space-y-1.5 rounded-xl border border-sparrow-rule/70 dark:border-sparrow-dark-border px-3 py-2.5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="text-sm font-medium">{s.name}</span>
+                      <span className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+                        {s.service_type}{s.published_at ? ' · on website' : ''}
+                      </span>
+                    </div>
+                    <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{s.serves.join(' · ')}{s.hours ? ` · ${s.hours}` : ''}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <FreshnessStamp checkedAt={s.last_checked_at} checkedBy={s.last_checked_by} how={s.last_checked_how} nameFor={nameFor} />
+                      <StillCorrectButton onConfirm={async (how) => { await markServiceChecked(s.id, how, currentUserId); await reload(); }} />
+                      <button
+                        onClick={() => { setEditingService(s); setServiceFormOpen(true); }}
+                        className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">Publishing to the website happens in the Resident Services room.</p>
           </section>
         )}
 
@@ -932,6 +1017,7 @@ export function PartnerDetailPanel({
                       <span>{TOUCHPOINT_METHOD[t.method]} · {shortDate(t.occurred_on)}</span>
                       <div className="flex items-center gap-2">
                         <span>{loggerName(t.logged_by)}</span>
+                        {canEditTouchpoint(t) && (<>
                         <button
                           onClick={() => startEditTouchpoint(t)}
                           title="Edit"
@@ -955,6 +1041,7 @@ export function PartnerDetailPanel({
                             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
                           </svg>
                         </button>
+                        </>)}
                       </div>
                     </div>
                     {t.summary && <RichTextView html={t.summary} />}
@@ -1198,6 +1285,16 @@ export function PartnerDetailPanel({
 
       </div>
     </Drawer>
+    {/* Sibling, not nested: the drawer slides in with a transform, which would trap a nested fixed panel. */}
+    <ServiceFormPanel
+      open={serviceFormOpen}
+      service={editingService}
+      partners={[partner]}
+      presetPartnerId={partner.id}
+      onClose={() => setServiceFormOpen(false)}
+      onSaved={() => void reload()}
+    />
+    </>
   );
 }
 

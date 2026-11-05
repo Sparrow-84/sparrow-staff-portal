@@ -14,6 +14,7 @@ export interface StaffInput {
   ops_access: boolean;
   toc_access: boolean;
   stories_access?: boolean;
+  resident_services_access?: boolean;
   role_description?: string | null;
   sop_admin_rooms?: SopRoom[];
   hidden_from_lists?: boolean;

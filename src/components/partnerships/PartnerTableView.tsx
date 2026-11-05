@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useAuth } from '@/auth/AuthContext';
 import type { Profile } from '@/lib/types';
 import { updatePartner } from '@/lib/partnerships';
 import { assignAvatarColors } from '@/lib/avatarColors';
@@ -342,6 +343,9 @@ export function PartnerTableView({
 
   // Same palette + assignment as the Team page, so a given person's color matches everywhere.
   const ownerColors = useMemo(() => assignAvatarColors(profiles), [profiles]);
+  // Only Partnerships staff change an MOU (Resident Services staff see it); the DB enforces it too.
+  const { profile: me } = useAuth();
+  const isPartnershipsStaff = me?.role === 'admin' || me?.department === 'partnerships';
 
   const [columnFilters, setColumnFilters] = useState<Partial<Record<FilterableKey, Set<string>>>>({});
 
@@ -629,6 +633,7 @@ export function PartnerTableView({
         return (
           <InlineSelect
             value={p.mou_status ?? ''}
+            disabled={!isPartnershipsStaff}
             onSave={(v) => void patch(p.id, { mou_status: (v || null) as MouStatus | null })}
             options={[{ value: '', label: '—' }, ...MOU_STATUSES.map((s) => ({ value: s, label: MOU_STATUS[s] }))]}
           />

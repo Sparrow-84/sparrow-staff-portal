@@ -5,7 +5,7 @@ import { fetchMyOpenInvTaskCount } from '@/lib/inventory';
 
 const COLLAPSED_STORAGE_KEY = 'sparrow-sidebar-collapsed';
 
-export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'stories' | 'tasks' | 'calendar' | 'notes' | 'contacts' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents' | 'team' | 'inventory';
+export type View = 'home' | 'twin-oaks' | 'lcp' | 'partnerships' | 'resident-services' | 'operations' | 'stories' | 'tasks' | 'calendar' | 'notes' | 'contacts' | 'messages' | 'settings' | 'staff' | 'onboarding' | 'documents' | 'team' | 'inventory';
 
 interface Props {
   view: View;
@@ -38,6 +38,18 @@ function LockIcon() {
 }
 
 const SOON_ROOMS: string[] = [];
+
+/** Resident Services room: its own flag (migration 0199), and Partnerships staff always have
+ *  it. Falls back to Partnerships access until 0199 runs, which mirrors what 0199 grants. */
+export function hasResidentServicesAccess(
+  profile: { resident_services_access?: boolean; department?: string } | null | undefined,
+  isAdmin: boolean,
+  partnershipsAccess: boolean,
+): boolean {
+  if (isAdmin || profile?.department === 'partnerships') return true;
+  if (profile?.resident_services_access === undefined) return partnershipsAccess;
+  return profile.resident_services_access;
+}
 
 function NavContent({
   view,
@@ -172,6 +184,18 @@ function NavContent({
           ) : (
             <span className={`${itemBase} cursor-default text-sparrow-gray/50`}>
               Partnerships <LockIcon />
+            </span>
+          )}
+          {hasResidentServicesAccess(profile, isAdmin, partnershipsAccess) ? (
+            <button
+              onClick={() => onNavigate('resident-services')}
+              className={`${itemBase} ${view === 'resident-services' ? active : idle}`}
+            >
+              Resident Services
+            </button>
+          ) : (
+            <span className={`${itemBase} cursor-default text-sparrow-gray/50`}>
+              Resident Services <LockIcon />
             </span>
           )}
           {opsAccess ? (

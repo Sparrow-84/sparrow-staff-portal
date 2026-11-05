@@ -5,7 +5,7 @@ import { NotificationsProvider } from '@/chat/NotificationsContext';
 import { TabBadge } from './TabBadge';
 import { fetchMyOnboardingChecklist } from '@/lib/ops';
 import { Header } from './Header';
-import { Sidebar, type View } from './Sidebar';
+import { Sidebar, hasResidentServicesAccess, type View } from './Sidebar';
 import { WidgetHome } from './home/WidgetHome';
 import { TasksView } from '@/pages/TasksView';
 import { CalendarView } from '@/pages/CalendarView';
@@ -16,6 +16,7 @@ import { SettingsView } from '@/pages/SettingsView';
 import { TwinOaksRoom } from './twinoaks/TwinOaksRoom';
 import { LcpRoom } from './lcp/LcpRoom';
 import { PartnershipsRoom } from './partnerships/PartnershipsRoom';
+import { ResidentServicesRoom } from './resident-services/ResidentServicesRoom';
 import { OperationsRoom } from './ops/OperationsRoom';
 import { StaffAdmin } from './admin/StaffAdmin';
 import { OnboardingView } from './onboarding/OnboardingView';
@@ -97,6 +98,7 @@ export function AppShell() {
             {view === 'twin-oaks' && <TwinOaksRoom />}
             {view === 'lcp' && <LcpRoom />}
             {view === 'partnerships' && <PartnershipsRoom />}
+            {view === 'resident-services' && hasResidentServicesAccess(profile, isAdmin, partnershipsAccess) && <ResidentServicesRoom />}
             {view === 'operations' && <OperationsRoom />}
             {view === 'documents' && <DocumentsRoom />}
             {view === 'team' && <TeamView />}

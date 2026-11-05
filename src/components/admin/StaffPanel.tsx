@@ -35,6 +35,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
   const [partnershipsAccess, setPartnershipsAccess] = useState(false);
   const [opsAccess, setOpsAccess] = useState(false);
   const [storiesAccess, setStoriesAccess] = useState(false);
+  const [residentServicesAccess, setResidentServicesAccess] = useState(false);
   const [sopAdminRooms, setSopAdminRooms] = useState<SopRoom[]>([]);
   const [hiddenFromLists, setHiddenFromLists] = useState(false);
 
@@ -55,6 +56,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setPartnershipsAccess(staff.partnerships_access);
       setOpsAccess(staff.ops_access);
       setStoriesAccess(staff.stories_access);
+      setResidentServicesAccess(staff.resident_services_access ?? false);
       setSopAdminRooms(staff.sop_admin_rooms ?? []);
       setHiddenFromLists(staff.hidden_from_lists ?? false);
     } else {
@@ -71,6 +73,7 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
       setPartnershipsAccess(false);
       setOpsAccess(false);
       setStoriesAccess(false);
+      setResidentServicesAccess(false);
       setSopAdminRooms([]);
       setHiddenFromLists(false);
     }
@@ -108,6 +111,8 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
     if (roomsChanged) base.sop_admin_rooms = sopAdminRooms;
     // Same reason: column arrives with migration 0191.
     if (hiddenFromLists !== (staff?.hidden_from_lists ?? false)) base.hidden_from_lists = hiddenFromLists;
+    // Same reason: column arrives with migration 0199.
+    if (residentServicesAccess !== (staff?.resident_services_access ?? false)) base.resident_services_access = residentServicesAccess;
     startTransition(async () => {
       try {
         if (staff) await updateStaff(staff.id, { ...base, active });
@@ -363,6 +368,26 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
                   Opens the Stories &amp; Media Room — story drafts, photo release tracking (all
                   three consent layers), and community event log. Grant to communications staff and
                   anyone who gathers or publishes participant stories.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-3">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={residentServicesAccess}
+                onChange={(e) => setResidentServicesAccess(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-sparrow-green"
+              />
+              <span>
+                <span className="font-medium">Resident Services Room access</span>
+                <span className="mt-0.5 block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                  Opens the Resident Services Room — the list of outside services residents can be
+                  referred to, and publishing them to the website. Partnerships staff always have
+                  it. Resident Services staff also need Partnerships access to edit an
+                  organization's contact info.
                 </span>
               </span>
             </label>
