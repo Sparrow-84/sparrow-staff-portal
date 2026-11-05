@@ -79,12 +79,12 @@ type Filter = 'all' | 'archived' | PartnerType;
 const TABS: { key: Tab; label: string }[] = [
   { key: 'home', label: 'Home' },
   { key: 'directory', label: 'Directory' },
+  { key: 'calendar', label: 'Calendar' },
   { key: 'comms', label: 'Comms' },
   { key: 'collateral', label: 'Collateral' },
-  { key: 'social', label: 'Social' },
+  { key: 'social', label: 'Social Media' },
   { key: 'events', label: 'Events' },
-  { key: 'prayer', label: 'Prayer' },
-  { key: 'calendar', label: 'Calendar' },
+  { key: 'prayer', label: 'Prayer Team' },
   { key: 'contacts', label: 'All Staff Contacts' },
 ];
 
