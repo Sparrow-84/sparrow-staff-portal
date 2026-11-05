@@ -8,6 +8,7 @@
 
 export type PartnerType = 'donor' | 'community' | 'volunteer';
 export type PartnerSubCategory = 'individual' | 'business' | 'nonprofit' | 'church' | 'prayer';
+export type VolunteerSubCategory = 'prayer' | 'lcp' | 'general';
 export type PartnerStage = 'prospect' | 'active' | 'inactive';
 export type DonorTier = 'first_time' | 'recurring' | 'major' | 'lapsed';
 export type TouchpointMethod = 'email' | 'phone' | 'in_person' | 'text' | 'letter' | 'event' | 'other';
@@ -78,10 +79,14 @@ export interface Partner {
    *  Partner and a Donor. Purely additive: affects tag display + which Directory filter
    *  tabs a partner shows up under. */
   secondary_types: PartnerType[];
-  /** What kind of entity this record is. Shared across Donor/Community Partner
-   *  (individual/business/nonprofit/church) and Volunteer (prayer is the only option
-   *  today). Null only for records predating this field that haven't been touched since. */
+  /** What kind of entity this record is (individual/business/nonprofit/church). A
+   *  Volunteer is always 'individual' -- the kind of volunteering is in
+   *  volunteer_sub_categories. ('prayer' is retired, migration 0207.) Null only for records
+   *  predating this field that haven't been touched since. */
   sub_category: PartnerSubCategory | null;
+  /** Migration 0207: Prayer / LCP / General, as many as apply, for anyone whose main or
+   *  second category is Volunteer. Empty until 0207 runs. */
+  volunteer_sub_categories: VolunteerSubCategory[];
   /** Individuals only (migration 0194) — kept in sync with `name` by the app whenever
    *  either is edited. Null for organizations, and for an individual not yet split
    *  (a genuinely ambiguous record a human hasn't set by hand). */
@@ -162,12 +167,37 @@ export const PARTNER_SUB_CATEGORY: Record<PartnerSubCategory, string> = {
   prayer: 'Prayer',
 };
 
-/** Which sub-categories are offered under each top-level category. */
+/** Which sub-categories are offered under each top-level category. Volunteer's real
+ *  choices are VOLUNTEER_SUB_CATEGORIES (pick several); its own sub_category is always
+ *  'individual'. */
 export const SUB_CATEGORIES_FOR_TYPE: Record<PartnerType, PartnerSubCategory[]> = {
   donor: ['individual', 'business', 'nonprofit', 'church'],
   community: ['individual', 'business', 'nonprofit', 'church'],
-  volunteer: ['prayer'],
+  volunteer: ['individual'],
 };
+
+export const VOLUNTEER_SUB_CATEGORIES: VolunteerSubCategory[] = ['prayer', 'lcp', 'general'];
+export const VOLUNTEER_SUB_CATEGORY: Record<VolunteerSubCategory, string> = {
+  prayer: 'Prayer',
+  lcp: 'LCP',
+  general: 'General',
+};
+
+/** Every category a record has, main one first, each with its sub-categories -- what the
+ *  Directory stacks line by line. Donor/Community share the record's own sub_category
+ *  (a person is Individual whichever category they're in); Volunteer has its own list. */
+export function categoryLines(p: Pick<Partner, 'type' | 'secondary_types' | 'sub_category' | 'volunteer_sub_categories'>): { type: PartnerType; subs: string[] }[] {
+  const types = [p.type, ...(p.secondary_types ?? []).filter((t) => t !== p.type && PARTNER_TYPE[t])];
+  return types.map((t) => {
+    if (t === 'volunteer') {
+      // Before 0207 runs, a Volunteer → Prayer record still has sub_category 'prayer'.
+      const vol = p.volunteer_sub_categories?.length ? p.volunteer_sub_categories : p.sub_category === 'prayer' ? ['prayer' as const] : [];
+      return { type: t, subs: vol.filter((v) => VOLUNTEER_SUB_CATEGORY[v]).map((v) => VOLUNTEER_SUB_CATEGORY[v]) };
+    }
+    const own = p.type === 'volunteer' ? 'individual' : p.sub_category;
+    return { type: t, subs: own && own !== 'prayer' ? [PARTNER_SUB_CATEGORY[own]] : [] };
+  });
+}
 
 export const PARTNER_STAGE: Record<PartnerStage, { label: string; chip: string }> = {
   prospect: { label: 'Prospect', chip: 'bg-priority-p3/15 text-priority-p3' },
@@ -314,9 +344,8 @@ export function composePartnerName(firstName: string | null, lastName: string | 
 }
 
 /** Whether a record is a person rather than an organization -- sub_category 'individual'
- *  covers Donor/Community Partner; Volunteer has no organization sub-category at all today
- *  (its only option, 'prayer', describes a kind of volunteering, not an entity type), so
- *  every Volunteer record is a person too. */
+ *  covers Donor/Community Partner; a Volunteer is always a person (the kind of volunteering
+ *  lives in volunteer_sub_categories, migration 0207). */
 export function isPersonRecord(p: Pick<Partner, 'type' | 'sub_category'>): boolean {
   return p.sub_category === 'individual' || p.type === 'volunteer';
 }

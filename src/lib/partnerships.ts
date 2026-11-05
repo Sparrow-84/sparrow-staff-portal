@@ -11,6 +11,7 @@ import type {
   PartnerType,
   Touchpoint,
   TouchpointMethod,
+  VolunteerSubCategory,
 } from './partnerships-types';
 
 // All reads/writes are gated by RLS (0008_partnerships.sql): partnerships staff + admins
@@ -25,24 +26,31 @@ const PARTNER_COLS =
   'id, name, type, secondary_types, sub_category, first_name, last_name, stage, owner_id, organization, contact_name, role, website, email, phone, address, donor_tier, needs_additional_touchpoint, additional_touchpoint_label, additional_touchpoint_due, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, newsletter_unsubscribed_at, newsletter_unsubscribe_dismissed_at, sparrow_provides, partner_provides, partner_provides_tags, mou_status, business_card_front_path, business_card_back_path';
 
 // ── Partners ─────────────────────────────────────────────────────────
-export async function fetchPartners(): Promise<Partner[]> {
+// volunteer_sub_categories only exists once migration 0207 runs. Same lesson as 0186
+// above: never let a not-yet-run column take the whole Directory down -- if it's missing,
+// fetch without it and treat everyone as having none.
+async function fetchPartnersWhere(active: boolean): Promise<Partner[]> {
+  const withVolunteer = await supabase
+    .from('partners')
+    .select(`${PARTNER_COLS}, volunteer_sub_categories`)
+    .eq('active', active)
+    .order('name');
+  if (!withVolunteer.error) return (withVolunteer.data ?? []) as unknown as Partner[];
   const { data, error } = await supabase
     .from('partners')
     .select(PARTNER_COLS)
-    .eq('active', true)
+    .eq('active', active)
     .order('name');
   if (error) throw new Error(error.message);
-  return (data ?? []) as Partner[];
+  return ((data ?? []) as unknown as Partner[]).map((p) => ({ ...p, volunteer_sub_categories: [] }));
+}
+
+export async function fetchPartners(): Promise<Partner[]> {
+  return fetchPartnersWhere(true);
 }
 
 export async function fetchArchivedPartners(): Promise<Partner[]> {
-  const { data, error } = await supabase
-    .from('partners')
-    .select(PARTNER_COLS)
-    .eq('active', false)
-    .order('name');
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Partner[];
+  return fetchPartnersWhere(false);
 }
 
 export interface PartnerInput {
@@ -64,6 +72,8 @@ export interface PartnerInput {
   donor_tier: DonorTier | null;
   source: string | null;
   notes: string | null;
+  /** Only sent when the record is a Volunteer (needs migration 0207). */
+  volunteer_sub_categories?: VolunteerSubCategory[];
 }
 
 export async function createPartner(input: PartnerInput): Promise<string> {
@@ -110,6 +120,7 @@ export async function updatePartner(
       | 'type'
       | 'secondary_types'
       | 'sub_category'
+      | 'volunteer_sub_categories'
       | 'first_name'
       | 'last_name'
       | 'stage'

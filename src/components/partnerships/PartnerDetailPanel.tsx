@@ -15,6 +15,9 @@ import {
   PARTNER_TYPES,
   STEWARDSHIP,
   SUB_CATEGORIES_FOR_TYPE,
+  VOLUNTEER_SUB_CATEGORIES,
+  VOLUNTEER_SUB_CATEGORY,
+  type VolunteerSubCategory,
   TOUCHPOINT_METHOD,
   TOUCHPOINT_METHODS,
   composePartnerName,
@@ -494,7 +497,8 @@ export function PartnerDetailPanel({
                   const nextSecondary = Array.from(
                     new Set([...(partner.secondary_types ?? []).filter((t) => t !== nextType), partner.type]),
                   );
-                  void patch({ type: nextType, secondary_types: nextSecondary, sub_category: null });
+                  // A Volunteer is always a person.
+                  void patch({ type: nextType, secondary_types: nextSecondary, sub_category: nextType === 'volunteer' ? 'individual' : null });
                 }}
                 disabled={busy}
                 className="field-input mt-0"
@@ -506,6 +510,21 @@ export function PartnerDetailPanel({
                 ))}
               </select>
             </div>
+            {partner.type === 'volunteer' ? (
+            <div>
+              <span className="field-label">Volunteer sub-categories</span>
+              <MultiSelectDropdown
+                options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
+                selected={partner.volunteer_sub_categories ?? []}
+                onChange={(next) => void patch({ volunteer_sub_categories: next as VolunteerSubCategory[] })}
+                disabled={busy}
+                placeholder="Pick at least one"
+              />
+              <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
+                Pick every kind of volunteering they do. Prayer puts them on the Prayer roster.
+              </p>
+            </div>
+            ) : (
             <div>
               <span className="field-label">Sub-category</span>
               <select
@@ -520,6 +539,7 @@ export function PartnerDetailPanel({
                 ))}
               </select>
             </div>
+            )}
           </div>
           <div>
             <span className="field-label">Also a</span>
@@ -539,6 +559,21 @@ export function PartnerDetailPanel({
               Donor. One record, more than one category, not two records.
             </p>
           </div>
+          {partner.type !== 'volunteer' && (partner.secondary_types ?? []).includes('volunteer') && (
+            <div>
+              <span className="field-label">Volunteer sub-categories</span>
+              <MultiSelectDropdown
+                options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
+                selected={partner.volunteer_sub_categories ?? []}
+                onChange={(next) => void patch({ volunteer_sub_categories: next as VolunteerSubCategory[] })}
+                disabled={busy}
+                placeholder="Pick at least one"
+              />
+              <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
+                Pick every kind of volunteering they do. Prayer puts them on the Prayer roster.
+              </p>
+            </div>
+          )}
           <div>
             <span className="field-label">Owner</span>
             <select

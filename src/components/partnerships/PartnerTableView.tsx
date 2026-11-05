@@ -18,6 +18,9 @@ import {
   PARTNER_TYPES,
   STEWARDSHIP,
   SUB_CATEGORIES_FOR_TYPE,
+  VOLUNTEER_SUB_CATEGORIES,
+  VOLUNTEER_SUB_CATEGORY,
+  categoryLines,
   composePartnerName,
   derivedDonorTier,
   displayPartnerName,
@@ -34,6 +37,7 @@ import {
   type PartnerStage,
   type PartnerSubCategory,
   type PartnerType,
+  type VolunteerSubCategory,
 } from '@/lib/partnerships-types';
 import {
   useColumnLayout, useHeaderInteractions, GridTableShell,
@@ -88,6 +92,10 @@ const DEFAULT_HIDDEN: ColKey[] = [
 
 const STORAGE_PREFIX = 'sparrow-partnerships-directory-table';
 
+/** One category per line in the Category and Sub-category cells, same fixed height in both
+ *  so each sub-category sits level with its category. */
+const CATEGORY_LINE = 'flex h-8 items-center';
+
 // ── Per-column funnel filters ───────────────────────────────────────────────────────────
 type FilterableKey = 'partner_provides' | 'sub_category' | 'stage' | 'donor_tier' | 'mou_status' | 'newsletter' | 'owner' | 'giving_method' | 'interests';
 const FILTERABLE_KEYS: FilterableKey[] = ['partner_provides', 'sub_category', 'stage', 'donor_tier', 'mou_status', 'newsletter', 'owner', 'giving_method', 'interests'];
@@ -99,7 +107,14 @@ const NONE = '(none)';
 function filterValuesFor(key: FilterableKey, p: Partner, interestMap: Map<string, PartnershipInterest[]>): string[] {
   switch (key) {
     case 'partner_provides': return p.partner_provides_tags.length ? p.partner_provides_tags : [NONE];
-    case 'sub_category': return [p.sub_category ?? NONE];
+    case 'sub_category': {
+      // The record's own sub-category plus any Volunteer ones ("vol:prayer"), so filtering
+      // for LCP volunteers also finds people whose Volunteer category is their second one.
+      // A pre-0207 Volunteer → Prayer record still filters as a prayer volunteer.
+      const own = p.sub_category === 'prayer' ? null : p.sub_category;
+      const vol = p.sub_category === 'prayer' ? ['prayer'] : (p.volunteer_sub_categories ?? []);
+      return [own ?? NONE, ...vol.map((v) => `vol:${v}`)];
+    }
     case 'stage': return [p.stage];
     case 'donor_tier': return [p.donor_tier ?? NONE];
     case 'mou_status': return [p.mou_status ?? NONE];
@@ -371,7 +386,8 @@ export function PartnerTableView({
   const filterOptions: Record<FilterableKey, { value: string; label: string }[]> = {
     partner_provides: [...PARTNER_PROVIDES_PRESETS.map((t) => ({ value: t, label: t })), { value: NONE, label: 'None' }],
     sub_category: [
-      ...(['individual', 'business', 'nonprofit', 'church', 'prayer'] as PartnerSubCategory[]).map((sc) => ({ value: sc, label: PARTNER_SUB_CATEGORY[sc] })),
+      ...(['individual', 'business', 'nonprofit', 'church'] as PartnerSubCategory[]).map((sc) => ({ value: sc, label: PARTNER_SUB_CATEGORY[sc] })),
+      ...VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: `vol:${v}`, label: `Volunteer: ${VOLUNTEER_SUB_CATEGORY[v]}` })),
       { value: NONE, label: 'None' },
     ],
     stage: STAGES.map((s) => ({ value: s, label: PARTNER_STAGE[s].label })),
@@ -458,8 +474,10 @@ export function PartnerTableView({
     // secondary tags (and drop the new type from there if it was already tagged).
     const nextSecondary = Array.from(new Set([...(p.secondary_types ?? []).filter((t) => t !== nextType), p.type]));
     // Sub-category options differ per category — carry it forward only if still valid.
+    // A Volunteer is always a person.
     const subStillValid = p.sub_category && SUB_CATEGORIES_FOR_TYPE[nextType].includes(p.sub_category);
-    void patch(p.id, { type: nextType, secondary_types: nextSecondary, sub_category: subStillValid ? p.sub_category : null });
+    const nextSub = nextType === 'volunteer' ? 'individual' : subStillValid ? p.sub_category : null;
+    void patch(p.id, { type: nextType, secondary_types: nextSecondary, sub_category: nextSub });
   }
 
   function renderCell(p: Partner, key: ColKey) {
@@ -510,21 +528,61 @@ export function PartnerTableView({
           </Stop>
         );
       case 'type':
+        // Every category stacked, main one first (editable here; second ones are set in the
+        // record's "Also a"). Each line is the same height as its Sub-category line.
         return (
-          <InlineSelect
-            value={p.type}
-            onSave={(v) => changeType(p, v as PartnerType)}
-            options={PARTNER_TYPES.map((t) => ({ value: t, label: `${PARTNER_TYPE[t].icon} ${PARTNER_TYPE[t].label}` }))}
-          />
+          <div className="flex flex-col">
+            {categoryLines(p).map((line, i) => (
+              <div key={line.type} className={CATEGORY_LINE}>
+                {i === 0 ? (
+                  <InlineSelect
+                    value={p.type}
+                    onSave={(v) => changeType(p, v as PartnerType)}
+                    options={PARTNER_TYPES.map((t) => ({ value: t, label: `${PARTNER_TYPE[t].icon} ${PARTNER_TYPE[t].label}` }))}
+                  />
+                ) : (
+                  <span className="px-1.5 text-sm">{PARTNER_TYPE[line.type].icon} {PARTNER_TYPE[line.type].label}</span>
+                )}
+              </div>
+            ))}
+          </div>
         );
-      case 'sub_category':
+      case 'sub_category': {
+        // Lined up with the Category lines. Volunteer picks several (Prayer, LCP, General);
+        // Donor/Community share the record's one sub-category, editable on its first line.
+        let ownShown = false;
         return (
-          <InlineSelect
-            value={p.sub_category ?? ''}
-            onSave={(v) => void patch(p.id, { sub_category: (v || null) as PartnerSubCategory | null })}
-            options={[{ value: '', label: '—' }, ...SUB_CATEGORIES_FOR_TYPE[p.type].map((sc) => ({ value: sc, label: PARTNER_SUB_CATEGORY[sc] }))]}
-          />
+          <Stop>
+            <div className="flex flex-col">
+              {categoryLines(p).map((line) => {
+                let cell: ReactNode;
+                if (line.type === 'volunteer') {
+                  cell = (
+                    <MultiSelectDropdown
+                      options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
+                      selected={p.volunteer_sub_categories ?? []}
+                      onChange={(next) => void patch(p.id, { volunteer_sub_categories: next as VolunteerSubCategory[] })}
+                      placeholder="—"
+                    />
+                  );
+                } else if (p.type === 'volunteer' || ownShown) {
+                  cell = <span className="px-1.5 text-sm">{line.subs.join(', ') || '—'}</span>;
+                } else {
+                  ownShown = true;
+                  cell = (
+                    <InlineSelect
+                      value={p.sub_category ?? ''}
+                      onSave={(v) => void patch(p.id, { sub_category: (v || null) as PartnerSubCategory | null })}
+                      options={[{ value: '', label: '—' }, ...SUB_CATEGORIES_FOR_TYPE[p.type].map((sc) => ({ value: sc, label: PARTNER_SUB_CATEGORY[sc] }))]}
+                    />
+                  );
+                }
+                return <div key={line.type} className={CATEGORY_LINE}>{cell}</div>;
+              })}
+            </div>
+          </Stop>
         );
+      }
       case 'contact_name':
         // Contact person and their role stay separate fields; shown together ("Kari Kingsolver,
         // Executive Director") and edited in two labeled boxes so neither can bleed into the other.

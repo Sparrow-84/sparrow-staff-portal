@@ -469,14 +469,14 @@ export function PrayerMeetingTab() {
             </p>
           )}
           <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            This roster follows Directory automatically — tag someone as "Prayer volunteer"
-            there (Type or "Also involved as") to add them here; remove the tag to take them
-            off the active roster. Nothing to add or archive from this screen.
+            This roster follows the Directory automatically. Anyone who's a Volunteer with the
+            Prayer sub-category shows here; take Prayer off their record to move them off the
+            active roster. Nothing to add or archive from this screen.
           </p>
 
           {activeVolunteers.length === 0 && (
             <p className="py-6 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-              No active prayer volunteers yet — tag someone in Directory to see them here.
+              No active prayer volunteers yet. Give someone the Volunteer → Prayer sub-category in the Directory to see them here.
             </p>
           )}
 
