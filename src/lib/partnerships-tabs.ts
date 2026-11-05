@@ -117,6 +117,11 @@ export interface PartnershipConnection {
   // Business card photos (migration 0111) — storage paths, not URLs (private bucket).
   business_card_front_path: string | null;
   business_card_back_path: string | null;
+  // Migration 0200 -- undefined until it runs.
+  archived_at?: string | null;
+  archived_by?: string | null;
+  /** The Directory record this connection was moved to, if any. */
+  converted_to_partner_id?: string | null;
 }
 
 // ─── Comms ────────────────────────────────────────────────────────────
@@ -625,4 +630,32 @@ export async function syncNewsletterReminderTasks(): Promise<number> {
   const { data, error } = await supabase.rpc('emit_newsletter_reminder_tasks');
   if (error) throw new Error(error.message);
   return (data as number | null) ?? 0;
+}
+
+// ─── Connection archive (migration 0200) ──────────────────────────────
+// Archiving means "logged it, did any follow-up, done with it" -- so it also marks the
+// follow-up done, which keeps it off the home screen and closes any follow-up task.
+export async function archiveConnection(id: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('partnership_connections')
+    .update({ archived_at: new Date().toISOString(), archived_by: userId, followup_done: true })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function restoreConnection(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('partnership_connections')
+    .update({ archived_at: null, archived_by: null })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/** After "Add to Directory": point the connection at its new record and archive it.
+ *  Quietly does nothing before 0200 runs (the columns don't exist yet). */
+export async function markConnectionMoved(id: string, partnerId: string, userId: string): Promise<void> {
+  await supabase
+    .from('partnership_connections')
+    .update({ converted_to_partner_id: partnerId, archived_at: new Date().toISOString(), archived_by: userId, followup_done: true })
+    .eq('id', id);
 }

@@ -68,6 +68,10 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
 
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedConnId, setSelectedConnId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  // Archived = done with it (or moved to the Directory). Off the main list, one click away.
+  const archivedCount = connections.filter((c) => c.archived_at).length;
+  const visibleConnections = connections.filter((c) => (showArchived ? !!c.archived_at : !c.archived_at));
 
   const eventFields = useRequiredFields([
     { key: 'pet-event-name', label: 'Event name', valid: eventForm.event_name.trim().length > 0 },
@@ -287,10 +291,21 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
       {/* ── Meaningful Connections ── */}
       <section id="conn-form">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Meaningful connections</h3>
-          <button onClick={toggleConnForm} className="btn-primary text-xs">
-            {showConnForm ? 'Cancel' : '+ Add connection'}
-          </button>
+          <h3 className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
+            {showArchived ? 'Archived connections' : 'Meaningful connections'}
+          </h3>
+          <div className="flex items-center gap-2">
+            {(archivedCount > 0 || showArchived) && (
+              <button onClick={() => setShowArchived((v) => !v)} className="btn-secondary text-xs">
+                {showArchived ? '← Back to current' : `Archived (${archivedCount})`}
+              </button>
+            )}
+            {!showArchived && (
+              <button onClick={toggleConnForm} className="btn-primary text-xs">
+                {showConnForm ? 'Cancel' : '+ Add connection'}
+              </button>
+            )}
+          </div>
         </div>
 
         {showConnForm && (
@@ -412,13 +427,13 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
           </form>
         )}
 
-        {!loading && connections.length === 0 && (
+        {!loading && visibleConnections.length === 0 && (
           <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-            No connections logged yet.
+            {showArchived ? 'No archived connections.' : 'No connections logged yet.'}
           </p>
         )}
 
-        {!loading && connections.length > 0 && (
+        {!loading && visibleConnections.length > 0 && (
           <div className="overflow-x-auto rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
             <table className="w-full text-sm">
               <thead>
@@ -438,7 +453,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
                 </tr>
               </thead>
               <tbody className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border">
-                {connections.map((conn) => {
+                {visibleConnections.map((conn) => {
                   const overdue = isOverdue(conn);
                   return (
                     <tr
@@ -488,13 +503,17 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
                         {eventName(conn.event_id)}
                       </td>
                       <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => onBecomePartner(conn)}
-                          className="whitespace-nowrap text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
-                          title="Open Add Partner panel with this person's details"
-                        >
-                          Add to Directory
-                        </button>
+                        {conn.converted_to_partner_id ? (
+                          <span className="whitespace-nowrap text-xs text-sparrow-gray dark:text-sparrow-dark-gray">In Directory</span>
+                        ) : (
+                          <button
+                            onClick={() => onBecomePartner(conn)}
+                            className="whitespace-nowrap text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
+                            title="Open Add Partner panel with this person's details"
+                          >
+                            Add to Directory
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

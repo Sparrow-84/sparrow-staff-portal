@@ -5,6 +5,8 @@ import { localDate } from '@/lib/date';
 import { Drawer } from '../lcp/Drawer';
 import {
   addConnectionNote,
+  archiveConnection,
+  restoreConnection,
   deleteConnection,
   fetchConnectionNotes,
   updateConnection,
@@ -137,6 +139,23 @@ export function ConnectionDetailPanel({
     }
   }
 
+  async function toggleArchive() {
+    if (!connection) return;
+    setBusy(true);
+    try {
+      if (connection.archived_at) await restoreConnection(connection.id);
+      else await archiveConnection(connection.id, currentUserId);
+      onChanged();
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const event = connection.event_id ? events.find((e) => e.id === connection.event_id) : undefined;
+  // archived_at is undefined (not null) until migration 0200 runs -- hide Archive until then.
+  const archiveAvailable = connection.archived_at !== undefined;
+
   return (
     <Drawer
       open={open}
@@ -176,6 +195,11 @@ export function ConnectionDetailPanel({
             <button onClick={() => setEditing(true)} className="btn-primary flex-1">
               Edit
             </button>
+            {archiveAvailable && (
+              <button onClick={() => void toggleArchive()} disabled={busy} className="btn-secondary">
+                {connection.archived_at ? 'Restore' : 'Archive'}
+              </button>
+            )}
             <button onClick={() => void remove()} disabled={deleting} className="btn-ghost text-priority-p1">
               {deleting ? 'Deleting…' : 'Delete'}
             </button>
@@ -185,6 +209,17 @@ export function ConnectionDetailPanel({
     >
       {!editing ? (
         <div className="space-y-4">
+          <div className="rounded-xl bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2 px-3 py-2 text-sm">
+            {event
+              ? <>Met at <strong>{event.event_name}</strong> on {shortDate(event.event_date)}</>
+              : <>Logged {shortDate(connection.created_at.slice(0, 10))} (no event)</>}
+          </div>
+          {connection.archived_at && (
+            <p className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              {connection.converted_to_partner_id ? 'Moved to the Directory' : 'Archived'} on {shortDate(connection.archived_at.slice(0, 10))}.
+              {connection.converted_to_partner_id ? ' Its notes and next steps are on the Directory record.' : ' Restore it if it needs attention again.'}
+            </p>
+          )}
           <div>
             <p className="field-label">Organization</p>
             <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{connection.organization ?? '—'}</p>

@@ -28,6 +28,7 @@ import { PartnershipCommsTab } from './PartnershipCommsTab';
 import { PartnershipCollateralTab } from './PartnershipCollateralTab';
 import { PartnershipSocialTab } from './PartnershipSocialTab';
 import { PartnershipEventsTab } from './PartnershipEventsTab';
+import { markConnectionMoved } from '@/lib/partnerships-tabs';
 import { PrayerMeetingTab } from './PrayerMeetingTab';
 import { PartnershipContactsTab } from './PartnershipContactsTab';
 import { CommsProductionCalendar } from './CommsProductionCalendar';
@@ -122,6 +123,8 @@ export function PartnershipsRoom() {
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  // Bumped after a connection moves to the Directory, so the Events tab reloads its list.
+  const [eventsTabKey, setEventsTabKey] = useState(0);
   const [addPrefill, setAddPrefill] = useState<{
     name: string;
     organization: string | null;
@@ -130,6 +133,8 @@ export function PartnershipsRoom() {
     email: string | null;
     website: string | null;
     notes: string | null;
+    connectionId?: string;
+    ownerId?: string | null;
   } | null>(null);
   // Memoized: AddPartnerPanel resets its form whenever this reference changes, so a fresh
   // literal on every render would wipe in-progress edits (incl. the org/person choice).
@@ -344,6 +349,7 @@ export function PartnershipsRoom() {
           {activeTab === 'social' && <PartnershipSocialTab profiles={profiles} />}
           {activeTab === 'events' && (
             <PartnershipEventsTab
+              key={eventsTabKey}
               onBecomePartner={(conn) => {
                 const notesParts = [conn.what_discussed, conn.next_action ? `Next action: ${conn.next_action}` : null].filter(Boolean);
                 setAddPrefill({
@@ -354,6 +360,8 @@ export function PartnershipsRoom() {
                   email: conn.email,
                   website: conn.website,
                   notes: notesParts.length ? notesParts.join('\n\n') : null,
+                  connectionId: conn.id,
+                  ownerId: conn.owner_id,
                 });
                 setAddOpen(true);
               }}
@@ -549,9 +557,18 @@ export function PartnershipsRoom() {
       <AddPartnerPanel
         open={addOpen}
         profiles={profiles}
-        defaultOwnerId={profile?.id ?? null}
+        // From a connection: keep whoever logged it as owner (e.g. Resident Services staff), not whoever clicks.
+        defaultOwnerId={addPrefill?.connectionId ? (addPrefill.ownerId ?? profile?.id ?? null) : (profile?.id ?? null)}
         onClose={() => { setAddOpen(false); setAddPrefill(null); }}
-        onCreated={async (id) => { await load(); openPartner(id); }}
+        onCreated={async (id) => {
+          // Moving a connection into the Directory archives it, with a pointer to the new record.
+          if (addPrefill?.connectionId && profile) {
+            await markConnectionMoved(addPrefill.connectionId, id, profile.id);
+            setEventsTabKey((k) => k + 1);
+          }
+          await load();
+          openPartner(id);
+        }}
         interests={interests}
         onInterestsCreated={load}
         initialValues={addInitialValues}

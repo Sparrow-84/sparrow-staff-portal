@@ -16,6 +16,7 @@ import {
   type ResidentService,
 } from '@/lib/resident-services';
 import { FreshnessStamp, StillCorrectButton } from './Freshness';
+import { OrgContacts } from '../partnerships/OrgContacts';
 
 function plainText(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -73,7 +74,6 @@ export function ServiceDetailPanel({
   onChanged: () => void;
 }) {
   const [latestNote, setLatestNote] = useState<Awaited<ReturnType<typeof fetchLatestTouchpoint>>>(null);
-  const [hasOwnPhone, setHasOwnPhone] = useState(false);
   const [officeElsewhere, setOfficeElsewhere] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +85,6 @@ export function ServiceDetailPanel({
     if (!open || !service) return;
     setConfirmRemove(false);
     setError(null);
-    setHasOwnPhone(!!service.partner?.phone);
     setOfficeElsewhere(!!service.partner?.address);
     setLatestNote(null);
     if (service.partner_id) void fetchLatestTouchpoint(service.partner_id).then(setLatestNote);
@@ -190,17 +189,8 @@ export function ServiceDetailPanel({
             <div className="space-y-3 rounded-xl bg-sparrow-green/5 dark:bg-sparrow-dark-surface2 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">From the Directory record · {partner.name}</p>
               <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Stored once. Changes here show in Partnerships too.</p>
-              <div className="grid grid-cols-2 gap-3">
-                <BlurField id="rs-contact" label="Our contact person" value={partner.contact_name ?? ''} onSave={(v) => run(() => updatePartnerContact(partner.id, { contact_name: v || null }))} />
-                <BlurField id="rs-role" label="Their role" value={partner.role ?? ''} onSave={(v) => run(() => updatePartnerContact(partner.id, { role: v || null }))} />
-              </div>
-              <label className="flex items-start gap-2 text-xs">
-                <input type="checkbox" checked={hasOwnPhone} onChange={(e) => setHasOwnPhone(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-sparrow-green" />
-                Our contact person has a direct number (not the help line people call)
-              </label>
-              {hasOwnPhone && (
-                <BlurField id="rs-contact-phone" label="Contact person's direct number" value={partner.phone ?? ''} onSave={(v) => run(() => updatePartnerContact(partner.id, { phone: v || null }))} />
-              )}
+              {/* Each person's own phone/email lives on their contact, separate from the help line people call. */}
+              <OrgContacts partnerId={partner.id} onChanged={onChanged} />
               <label className="flex items-start gap-2 text-xs">
                 <input type="checkbox" checked={officeElsewhere} onChange={(e) => setOfficeElsewhere(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-sparrow-green" />
                 Their office is somewhere else (not where people go for help)

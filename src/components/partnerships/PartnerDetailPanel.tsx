@@ -54,6 +54,7 @@ import {
 } from '@/lib/resident-services';
 import { FreshnessStamp, StillCorrectButton } from '../resident-services/Freshness';
 import { ServiceFormPanel } from '../resident-services/ServiceFormPanel';
+import { OrgContacts } from './OrgContacts';
 
 // For the collapsed "last touchpoint" preview only -- the full note (with
 // formatting) renders in the Touchpoint history list below via RichTextView.
@@ -768,6 +769,9 @@ export function PartnerDetailPanel({
             <StillCorrectButton onConfirm={async (how) => { await markPartnerInfoChecked(partner.id, how, currentUserId); await reload(); }} />
           </div>
         )}
+
+        {/* ── 6.3. Everyone we know there, with roles; ★ = primary contact ── */}
+        {!isPersonRecord(partner) && <OrgContacts partnerId={partner.id} onChanged={onChanged} />}
 
         {/* ── 6.4. Business card photo ── */}
         <section>
