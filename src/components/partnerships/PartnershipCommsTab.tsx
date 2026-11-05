@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
 import {
+  createMilestone,
+  deleteMilestone,
   fetchComms,
   fetchMilestones,
   fetchRecurringSetting,
-  hasMilestoneTemplate,
   seedCommsForYear,
   seedMilestonesForComms,
   syncCommsMilestoneTasks,
@@ -45,8 +46,8 @@ function shortDate(iso: string): string {
 }
 
 
-// December's Christmas greeting (Andrew + Shelly, together) and January's leadership
-// letters (Andrew as ED, Shelly as LCP Director, separately) need writers assigned and
+// December's Christmas greeting (Executive Director + Director of LCP, together) and
+// January's leadership letters (same two, separately) need writers assigned and
 // coordinated months ahead — not just flagged 2 weeks out like a normal TSM issue.
 function needsAdvanceNotice(comm: PartnershipComm): boolean {
   return comm.comm_type === 'tsm_christmas' || comm.comm_type === 'christmas_cards' || comm.comm_type === 'annual_report';
@@ -71,6 +72,8 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notesById, setNotesById] = useState<Record<string, string>>({});
   const [setting, setSetting] = useState<PartnershipRecurringSetting | null>(null);
+  const [newMilestoneLabel, setNewMilestoneLabel] = useState<Record<string, string>>({});
+  const [newMilestoneDate, setNewMilestoneDate] = useState<Record<string, string>>({});
 
   // Same standing-owner exclusion used everywhere else in the room — Andrew is never a
   // selectable milestone owner beyond his one-time major-donor call.
@@ -90,7 +93,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
         for (const r of rows) notes[r.id] = r.notes ?? '';
         setNotesById(notes);
         // Every milestone defaults to Bethany — she reassigns individual ones (e.g. to
-        // Susanna, or back to Unassigned) from the row below afterward.
+        // the Partnerships Manager, or back to Unassigned) from the row below afterward.
         await seedMilestonesForComms(rows, bethanyId);
         const milestones = await fetchMilestones(rows.map((r) => r.id));
         const grouped: Record<string, PartnershipCommsMilestone[]> = {};
@@ -132,6 +135,28 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
 
   function toggleMilestoneDone(commId: string, m: PartnershipCommsMilestone) {
     handleMilestoneChange(commId, m.id, { completed_at: m.completed_at ? null : new Date().toISOString() });
+  }
+
+  function handleDeleteMilestone(commId: string, milestoneId: string) {
+    setMilestonesByComm((prev) => ({
+      ...prev,
+      [commId]: (prev[commId] ?? []).filter((m) => m.id !== milestoneId),
+    }));
+    deleteMilestone(milestoneId).catch(console.error);
+  }
+
+  function handleAddMilestone(commId: string) {
+    const label = (newMilestoneLabel[commId] ?? '').trim();
+    const dueDate = newMilestoneDate[commId];
+    if (!label || !dueDate) return;
+    const sortOrder = (milestonesByComm[commId] ?? []).length;
+    createMilestone(commId, label, dueDate, null, sortOrder)
+      .then((created) => {
+        setMilestonesByComm((prev) => ({ ...prev, [commId]: [...(prev[commId] ?? []), created] }));
+        setNewMilestoneLabel((prev) => ({ ...prev, [commId]: '' }));
+        setNewMilestoneDate((prev) => ({ ...prev, [commId]: '' }));
+      })
+      .catch(console.error);
   }
 
   // Deliberately not a hardcoded cap (was fixed at 3) — the count of asks the org actually
@@ -280,12 +305,18 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                       />
                     </div>
 
-                    {/* Production milestones — date + owner editable; label/order are fixed */}
-                    {hasMilestoneTemplate(comm.comm_type) && (
-                      <div>
-                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
-                          Production milestones
+                    {/* Production milestones — TSM/Spotlight start with a 6-step checklist;
+                        everything else starts empty. Add/remove freely either way. */}
+                    <div>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">
+                        Production milestones
+                      </p>
+                      {(milestonesByComm[comm.id] ?? []).length === 0 && (
+                        <p className="mb-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                          No milestones yet — add the steps this piece needs below.
                         </p>
+                      )}
+                      {(milestonesByComm[comm.id] ?? []).length > 0 && (
                         <ul className="space-y-1.5">
                           {(milestonesByComm[comm.id] ?? []).map((m) => {
                             const done = !!m.completed_at;
@@ -327,17 +358,47 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                                     <option key={op.id} value={op.id}>{op.full_name}</option>
                                   ))}
                                 </select>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteMilestone(comm.id, m.id)}
+                                  aria-label={`Remove "${m.label}"`}
+                                  className="shrink-0 text-sparrow-gray hover:text-priority-p1 dark:text-sparrow-dark-gray"
+                                >
+                                  ✕
+                                </button>
                               </li>
                             );
                           })}
                         </ul>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          placeholder="New milestone…"
+                          value={newMilestoneLabel[comm.id] ?? ''}
+                          onChange={(e) => setNewMilestoneLabel((prev) => ({ ...prev, [comm.id]: e.target.value }))}
+                          className="field-input mt-0 min-w-[160px] flex-1 py-1 text-xs"
+                        />
+                        <input
+                          type="date"
+                          value={newMilestoneDate[comm.id] ?? ''}
+                          onChange={(e) => setNewMilestoneDate((prev) => ({ ...prev, [comm.id]: e.target.value }))}
+                          className="field-input mt-0 w-36 py-1 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddMilestone(comm.id)}
+                          className="btn-secondary py-1 text-xs"
+                        >
+                          + Add
+                        </button>
                       </div>
-                    )}
+                    </div>
 
                     {/* December note */}
                     {(comm.comm_type === 'tsm_christmas' || comm.comm_type === 'christmas_cards') && (
                       <p className="rounded-lg border border-sparrow-gold/30 bg-sparrow-gold/5 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
-                        Andrew &amp; Shelly write the founders' Christmas greeting this month.
+                        The Executive Director &amp; Director of LCP write the founders' Christmas greeting this month.
                         Give minimum 2 weeks notice — ideally calendared months in advance.
                       </p>
                     )}
@@ -345,7 +406,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                     {/* January note */}
                     {comm.comm_type === 'annual_report' && (
                       <p className="rounded-lg border border-sparrow-gold/30 bg-sparrow-gold/5 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
-                        Andrew and Shelly each write a leadership letter in January (separately —
+                        The Executive Director and Director of LCP each write a leadership letter in January (separately —
                         professional/forward-looking tone, distinct from December's warm personal greeting).
                         Give minimum 2 weeks notice — ideally calendared months in advance.
                       </p>

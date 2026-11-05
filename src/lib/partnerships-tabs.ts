@@ -136,11 +136,39 @@ export async function fetchComms(year: number): Promise<PartnershipComm[]> {
   return (data ?? []) as PartnershipComm[];
 }
 
-/** Returns the 2nd Thursday of the given month (0-indexed). */
-function secondThursday(year: number, month: number): Date {
+/** Returns the Nth Thursday of the given month (0-indexed month, 1-indexed n). */
+function nthThursday(year: number, month: number, n: number): Date {
   const d = new Date(year, month, 1);
   const firstThursday = 1 + ((4 - d.getDay() + 7) % 7);
-  return new Date(year, month, firstThursday + 7);
+  return new Date(year, month, firstThursday + (n - 1) * 7);
+}
+
+// Fixed-date federal holidays that could ever land on a Thursday in these calculations.
+// Floating "Nth Monday" holidays (MLK, Presidents, Memorial, Labor, Columbus) can never
+// fall on a Thursday, so they're deliberately left out.
+const FIXED_HOLIDAYS: [month: number, day: number][] = [
+  [0, 1],   // New Year's Day
+  [5, 19],  // Juneteenth
+  [6, 4],   // Independence Day
+  [10, 11], // Veterans Day
+  [11, 25], // Christmas Day
+];
+
+/** Thanksgiving is defined as the 4th Thursday of November, so any date that IS the 4th
+ *  Thursday of November is Thanksgiving by definition -- no separate lookup needed. */
+function isHoliday(d: Date): boolean {
+  if (d.getDay() === 4 && d.getMonth() === 10 && d.getDate() >= 22 && d.getDate() <= 28) return true;
+  return FIXED_HOLIDAYS.some(([m, day]) => d.getMonth() === m && d.getDate() === day);
+}
+
+/** The Nth Thursday of the month, moved 2 days earlier (to the Tuesday of that week) if it
+ *  lands on a recognized holiday -- TSM and Sparrow Spotlight both follow this rule. */
+function holidayAdjustedNthThursday(year: number, month: number, n: number): Date {
+  const thursday = nthThursday(year, month, n);
+  if (!isHoliday(thursday)) return thursday;
+  const shifted = new Date(thursday);
+  shifted.setDate(shifted.getDate() - 2);
+  return shifted;
 }
 
 function toISO(d: Date): string {
@@ -154,29 +182,22 @@ const MONTH_NAMES = [
 
 function buildCommsForYear(year: number): Omit<PartnershipComm, 'id' | 'created_at' | 'updated_at'>[] {
   // Giving Tuesday is always the Tuesday right after the 4th Thursday of November
-  // (Thanksgiving), not a fixed Tuesday-of-the-month count -- was previously computed as
-  // "1st Tuesday + 14 days" (the 3rd Tuesday), which landed 1-2 weeks early every year.
-  const fourthNovThursday = new Date(secondThursday(year, 10));
-  fourthNovThursday.setDate(fourthNovThursday.getDate() + 14);
-  const givingTuesday = new Date(fourthNovThursday);
+  // (Thanksgiving) -- not holiday-shifted itself, since it's defined relative to the
+  // holiday, not independently colliding with it.
+  const thanksgiving = nthThursday(year, 10, 4);
+  const givingTuesday = new Date(thanksgiving);
   givingTuesday.setDate(givingTuesday.getDate() + 5);
 
-  const januaryTsmDate = toISO(secondThursday(year, 0));
+  const januaryTsmDate = toISO(holidayAdjustedNthThursday(year, 0, 2));
 
-  // The Sparrow Spotlight: every month, ~2 weeks after that month's TSM edition (lands on
-  // the 4th Thursday in a normal month, since the 2nd + 14 days is always the 4th Thursday).
-  // November is the one standing exception Susanna called out: the 4th Thursday of November
-  // is Thanksgiving every year, so Spotlight moves a week earlier there (3rd Thursday / TSM +
-  // 7 days) instead of landing on the holiday itself. Any other month-specific collision is a
-  // one-off a human moves by hand when it comes up -- not something to hardcode here.
-  const spotlightComms: Omit<PartnershipComm, 'id' | 'created_at' | 'updated_at'>[] = MONTH_NAMES.map((name, m) => {
-    const tsmDate = toISO(secondThursday(year, m));
-    const offset = m === 10 ? 7 : 14; // November
-    return {
-      year, comm_type: 'sparrow_spotlight' as const, title: `The Sparrow Spotlight — ${name}`,
-      publish_date: addDaysISO(tsmDate, offset), status: 'not_started' as const, is_financial_ask: false, notes: null,
-    };
-  });
+  // TSM: always the 2nd Thursday of the month. Sparrow Spotlight: always the 4th Thursday.
+  // Both move 2 days earlier (to that week's Tuesday) if they'd otherwise land on a
+  // recognized holiday -- Susanna's rule, so November Spotlight (which would always hit
+  // Thanksgiving, by definition the 4th Thursday of November) lands 2 days before it instead.
+  const spotlightComms: Omit<PartnershipComm, 'id' | 'created_at' | 'updated_at'>[] = MONTH_NAMES.map((name, m) => ({
+    year, comm_type: 'sparrow_spotlight' as const, title: `The Sparrow Spotlight — ${name}`,
+    publish_date: toISO(holidayAdjustedNthThursday(year, m, 4)), status: 'not_started' as const, is_financial_ask: false, notes: null,
+  }));
 
   return [
     ...spotlightComms,
@@ -194,43 +215,43 @@ function buildCommsForYear(year: number): Omit<PartnershipComm, 'id' | 'created_
     },
     {
       year, comm_type: 'tsm', title: 'TSM — February',
-      publish_date: toISO(secondThursday(year, 1)), status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 1, 2)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'tsm', title: 'TSM — March',
-      publish_date: toISO(secondThursday(year, 2)), status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 2, 2)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'tsm_easter', title: 'TSM — Easter Edition',
-      publish_date: toISO(secondThursday(year, 3)), status: 'not_started', is_financial_ask: true, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 3, 2)), status: 'not_started', is_financial_ask: true, notes: null,
     },
     {
       year, comm_type: 'tsm', title: 'TSM — May',
-      publish_date: toISO(secondThursday(year, 4)), status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 4, 2)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'tsm_midyear', title: 'TSM — Mid-Year Edition',
-      publish_date: toISO(secondThursday(year, 5)), status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 5, 2)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'tsm', title: 'TSM — July',
-      publish_date: toISO(secondThursday(year, 6)), status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 6, 2)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'tsm', title: 'TSM — August',
-      publish_date: toISO(secondThursday(year, 7)), status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 7, 2)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'tsm', title: 'TSM — September',
-      publish_date: toISO(secondThursday(year, 8)), status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 8, 2)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'tsm', title: 'TSM — October',
-      publish_date: toISO(secondThursday(year, 9)), status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 9, 2)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'tsm', title: 'TSM — November',
-      publish_date: toISO(secondThursday(year, 10)), status: 'not_started', is_financial_ask: false, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 10, 2)), status: 'not_started', is_financial_ask: false, notes: null,
     },
     {
       year, comm_type: 'giving_tuesday', title: 'Giving Tuesday',
@@ -238,7 +259,7 @@ function buildCommsForYear(year: number): Omit<PartnershipComm, 'id' | 'created_
     },
     {
       year, comm_type: 'tsm_christmas', title: 'TSM — Christmas/EOY Edition',
-      publish_date: toISO(secondThursday(year, 11)), status: 'not_started', is_financial_ask: true, notes: null,
+      publish_date: toISO(holidayAdjustedNthThursday(year, 11, 2)), status: 'not_started', is_financial_ask: true, notes: null,
     },
     {
       year, comm_type: 'christmas_cards', title: 'Physical Christmas Cards',
@@ -278,7 +299,11 @@ export async function updateCommNotes(id: string, notes: string): Promise<void> 
 }
 
 // ─── TSM production milestones (migration 0110) ────────────────────────
-// Bethany can only move dates and reassign owners on these 6 — not rename, add, or remove.
+// Partnerships staff can add, remove, and reassign milestones freely -- the fixed template
+// below just auto-fills a sensible starting checklist for TSM and Spotlight issues, since
+// those repeat every month. One-off pieces (Annual Report, Giving Tuesday, Christmas Cards,
+// or anything new) start with no milestones at all; staff build their own checklist for
+// those using the same Add/Delete controls, as far in advance as the piece needs.
 
 export interface PartnershipCommsMilestone {
   id: string;
@@ -291,21 +316,18 @@ export interface PartnershipCommsMilestone {
   created_at: string;
 }
 
+// Sparrow Spotlight runs on the same 6-step cadence as that month's TSM issue, submitted
+// to and returned from the Partnerships Manager on the same days -- its milestones are
+// seeded against that month's TSM publish date (see referenceDateForMilestones), not its
+// own later publish date, even though the Spotlight piece itself goes out roughly two
+// weeks after.
 const MILESTONE_TEMPLATE: { label: string; offsetDays: number }[] = [
-  { label: 'Contributor content due (Audrey/Shelly)', offsetDays: -10 },
-  { label: 'Draft 1 → Susanna', offsetDays: -7 },
-  { label: 'Susanna notes back', offsetDays: -5 },
-  { label: 'Draft 2 → Susanna', offsetDays: -3 },
-  { label: 'Susanna notes back', offsetDays: -1 },
+  { label: 'Contributor content due (LCP staff)', offsetDays: -10 },
+  { label: 'Draft 1 → Partnerships Manager', offsetDays: -7 },
+  { label: 'Partnerships Manager notes back', offsetDays: -5 },
+  { label: 'Draft 2 → Partnerships Manager', offsetDays: -3 },
+  { label: 'Partnerships Manager notes back', offsetDays: -1 },
   { label: 'Final draft → Publish', offsetDays: 0 },
-];
-
-// The Sparrow Spotlight's own, shorter production rhythm (a single featured story,
-// not a full multi-contributor issue) — 3 steps instead of TSM's 6.
-const SPOTLIGHT_MILESTONE_TEMPLATE: { label: string; offsetDays: number }[] = [
-  { label: 'Pick story', offsetDays: -8 },
-  { label: 'Draft → Susanna', offsetDays: -3 },
-  { label: 'Publish', offsetDays: 0 },
 ];
 
 function addDaysISO(iso: string, days: number): string {
@@ -325,20 +347,30 @@ export async function fetchMilestones(commIds: string[]): Promise<PartnershipCom
   return (data ?? []) as PartnershipCommsMilestone[];
 }
 
-/** Does this comm type get a production milestone checklist at all? */
+/** Does this comm type get an auto-filled starting checklist? (TSM/Spotlight only -- every
+ *  other comm type starts with zero milestones; staff add their own as needed.) */
 export function hasMilestoneTemplate(commType: CommType): boolean {
   return commType.startsWith('tsm') || commType === 'sparrow_spotlight';
 }
 
-function templateFor(commType: CommType): { label: string; offsetDays: number }[] {
-  return commType === 'sparrow_spotlight' ? SPOTLIGHT_MILESTONE_TEMPLATE : MILESTONE_TEMPLATE;
+/** Sparrow Spotlight's milestones are seeded against that same month's TSM publish date
+ *  (not Spotlight's own, later publish date), so both land on the Partnerships Manager's
+ *  desk the same day. Spotlight's publish_date month never crosses a month boundary from its
+ *  holiday shift (the 4th Thursday is always day 22-28, -2 days keeps it day 20+), so
+ *  reading the month back off its own publish_date is safe. */
+function referenceDateForMilestones(comm: PartnershipComm): string {
+  if (comm.comm_type !== 'sparrow_spotlight') return comm.publish_date;
+  const month = new Date(comm.publish_date + 'T00:00:00').getMonth();
+  return toISO(holidayAdjustedNthThursday(comm.year, month, 2));
 }
 
 /**
  * Seeds the default production milestones for any TSM or Sparrow Spotlight comm that
  * doesn't have them yet, defaulting every one to defaultOwnerId (Bethany) — she reassigns
- * individual ones (e.g. to Susanna, or back to Unassigned for "Contributor content due")
- * afterward.
+ * individual ones (e.g. to the Partnerships Manager, or back to Unassigned for "Contributor
+ * content due") afterward, or adds/removes milestones entirely via createMilestone/
+ * deleteMilestone. Comm types with no template (Annual Report, Giving Tuesday, Christmas
+ * Cards, anything new) are left alone here -- staff build their checklist from scratch.
  */
 export async function seedMilestonesForComms(comms: PartnershipComm[], defaultOwnerId: string | null): Promise<void> {
   const milestoneComms = comms.filter((c) => hasMilestoneTemplate(c.comm_type));
@@ -353,11 +385,12 @@ export async function seedMilestonesForComms(comms: PartnershipComm[], defaultOw
   const rows: Omit<PartnershipCommsMilestone, 'id' | 'created_at' | 'completed_at'>[] = [];
   for (const comm of milestoneComms) {
     if (seededCommIds.has(comm.id)) continue;
-    templateFor(comm.comm_type).forEach((m, i) => {
+    const referenceDate = referenceDateForMilestones(comm);
+    MILESTONE_TEMPLATE.forEach((m, i) => {
       rows.push({
         comm_id: comm.id,
         label: m.label,
-        due_date: addDaysISO(comm.publish_date, m.offsetDays),
+        due_date: addDaysISO(referenceDate, m.offsetDays),
         owner_id: defaultOwnerId,
         sort_order: i,
       });
@@ -366,6 +399,30 @@ export async function seedMilestonesForComms(comms: PartnershipComm[], defaultOw
   if (rows.length === 0) return;
   const { error: insErr } = await supabase.from('partnership_comms_milestones').insert(rows);
   if (insErr) throw new Error(insErr.message);
+}
+
+/** Adds a staff-created milestone to any comm's checklist -- used both to build a from-
+ *  scratch checklist for one-off pieces (Annual Report, Giving Tuesday, etc.) and to add
+ *  an extra step to a TSM/Spotlight issue that needs one. */
+export async function createMilestone(
+  commId: string,
+  label: string,
+  dueDate: string,
+  ownerId: string | null,
+  sortOrder: number,
+): Promise<PartnershipCommsMilestone> {
+  const { data, error } = await supabase
+    .from('partnership_comms_milestones')
+    .insert({ comm_id: commId, label, due_date: dueDate, owner_id: ownerId, sort_order: sortOrder })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as PartnershipCommsMilestone;
+}
+
+export async function deleteMilestone(id: string): Promise<void> {
+  const { error } = await supabase.from('partnership_comms_milestones').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export async function updateMilestone(
