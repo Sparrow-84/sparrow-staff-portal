@@ -4,7 +4,7 @@
 // home_room set  = a room's SOP (that room's staff read, its room admins manage).
 // A document can also be linked into other rooms (org_document_room_links, migration 0189).
 
-export type SopRoom = 'twin-oaks' | 'lcp' | 'partnerships' | 'operations' | 'stories';
+export type SopRoom = 'twin-oaks' | 'lcp' | 'partnerships' | 'resident-services' | 'operations' | 'stories';
 
 export interface OrgDocument {
   id: string;
@@ -31,6 +31,7 @@ export const SOP_ROOMS: { value: SopRoom; label: string }[] = [
   { value: 'twin-oaks', label: 'Twin Oaks' },
   { value: 'lcp', label: 'LifeChange' },
   { value: 'partnerships', label: 'Partnerships' },
+  { value: 'resident-services', label: 'Resident Services' },
   { value: 'operations', label: 'Operations' },
   { value: 'stories', label: 'Stories & Media' },
 ];

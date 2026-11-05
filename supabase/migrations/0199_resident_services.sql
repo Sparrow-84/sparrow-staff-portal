@@ -361,3 +361,29 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION get_public_resources() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION get_public_resources() TO anon, authenticated;
+
+-- ─── 8. Room SOPs for the new room (same as every other room, migration 0189) ─
+ALTER TABLE org_documents DROP CONSTRAINT IF EXISTS org_documents_home_room_chk;
+ALTER TABLE org_documents ADD CONSTRAINT org_documents_home_room_chk
+  CHECK (home_room IS NULL OR home_room IN ('twin-oaks', 'lcp', 'partnerships', 'resident-services', 'operations', 'stories'));
+
+ALTER TABLE org_document_room_links DROP CONSTRAINT IF EXISTS org_document_room_links_room_check;
+ALTER TABLE org_document_room_links ADD CONSTRAINT org_document_room_links_room_check
+  CHECK (room IN ('twin-oaks', 'lcp', 'partnerships', 'resident-services', 'operations', 'stories'));
+
+CREATE OR REPLACE FUNCTION has_room_access(p_room text) RETURNS boolean
+  LANGUAGE sql SECURITY DEFINER SET search_path = public STABLE AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid()
+      AND (
+        role = 'admin'
+        OR (p_room = 'twin-oaks'         AND (department = 'toc' OR toc_access))
+        OR (p_room = 'lcp'               AND lcp_role IN ('full', 'extended'))
+        OR (p_room = 'partnerships'      AND (department = 'partnerships' OR partnerships_access))
+        OR (p_room = 'resident-services' AND (department = 'partnerships' OR resident_services_access))
+        OR (p_room = 'operations'        AND ops_access)
+        OR (p_room = 'stories'           AND stories_access)
+      )
+  );
+$$;

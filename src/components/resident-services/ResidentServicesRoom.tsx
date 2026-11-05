@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { RoomSopsButton } from '@/components/documents/RoomSops';
 import { fetchProfiles } from '@/lib/data';
 import { fetchPartners } from '@/lib/partnerships';
 import type { Partner } from '@/lib/partnerships-types';
@@ -101,9 +102,12 @@ export function ResidentServicesRoom() {
             {services.length} services near us · {publishedCount} on the website · {needsCheckCount} need re-checking
           </p>
         </div>
-        <button onClick={() => { setEditing(null); setFormOpen(true); }} className="btn-primary" disabled={missing}>
-          + Add a service
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <RoomSopsButton room="resident-services" />
+          <button onClick={() => { setEditing(null); setFormOpen(true); }} className="btn-primary" disabled={missing}>
+            + Add a service
+          </button>
+        </div>
       </div>
 
       {missing && !loading && (
