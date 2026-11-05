@@ -46,7 +46,7 @@ type ColKey =
   | 'email' | 'phone' | 'address' | 'donor_tier' | 'interests' | 'stage' | 'owner'
   | 'needs_touchpoint' | 'gift_count' | 'last_gift'
   | 'source' | 'mou_status' | 'giving_method' | 'newsletter' | 'first_gift_date'
-  | 'sparrow_provides' | 'partner_provides';
+  | 'sparrow_provides' | 'partner_provides' | 'notes';
 type SortDir = 'asc' | 'desc';
 
 const STAGES: PartnerStage[] = ['prospect', 'active', 'inactive'];
@@ -76,6 +76,7 @@ const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'first_gift_date', label: 'First gift date', defaultWidth: 140 },
   { key: 'sparrow_provides', label: 'Sparrow provides', defaultWidth: 200 },
   { key: 'partner_provides', label: 'Partner provides', defaultWidth: 220 },
+  { key: 'notes', label: 'Notes', defaultWidth: 260 },
 ];
 
 // Admin/back-office fields start hidden so the directory doesn't open
@@ -665,6 +666,12 @@ export function PartnerTableView({
             />
           </Stop>
         );
+      case 'notes':
+        // Read-only preview: notes run several paragraphs, so they're edited in the drawer
+        // (clicking the cell opens it) rather than in a cramped inline popover.
+        return p.notes
+          ? <span className="block truncate text-sparrow-gray dark:text-sparrow-dark-gray" title={p.notes}>{p.notes}</span>
+          : <span className="text-sparrow-gray dark:text-sparrow-dark-gray">—</span>;
       default:
         return null;
     }
