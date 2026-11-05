@@ -153,9 +153,13 @@ const MONTH_NAMES = [
 ];
 
 function buildCommsForYear(year: number): Omit<PartnershipComm, 'id' | 'created_at' | 'updated_at'>[] {
-  const nov1 = new Date(year, 10, 1);
-  const firstTuesdayOffset = (2 - nov1.getDay() + 7) % 7;
-  const givingTuesday = new Date(year, 10, 1 + firstTuesdayOffset + 14);
+  // Giving Tuesday is always the Tuesday right after the 4th Thursday of November
+  // (Thanksgiving), not a fixed Tuesday-of-the-month count -- was previously computed as
+  // "1st Tuesday + 14 days" (the 3rd Tuesday), which landed 1-2 weeks early every year.
+  const fourthNovThursday = new Date(secondThursday(year, 10));
+  fourthNovThursday.setDate(fourthNovThursday.getDate() + 14);
+  const givingTuesday = new Date(fourthNovThursday);
+  givingTuesday.setDate(givingTuesday.getDate() + 5);
 
   const januaryTsmDate = toISO(secondThursday(year, 0));
 
