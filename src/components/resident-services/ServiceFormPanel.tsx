@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Drawer } from '../lcp/Drawer';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { isPersonRecord, type Partner } from '@/lib/partnerships-types';
+import { fetchPartnerContacts, type PartnerContact } from '@/lib/partner-contacts';
 import {
   SERVES_ALL,
   SERVES_OPTIONS,
@@ -43,6 +44,8 @@ export function ServiceFormPanel({
   const [howTo, setHowTo] = useState('');
   const [website, setWebsite] = useState('');
   const [internalNotes, setInternalNotes] = useState('');
+  const [goToContactId, setGoToContactId] = useState('');
+  const [orgContacts, setOrgContacts] = useState<PartnerContact[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,15 +69,24 @@ export function ServiceFormPanel({
     setHowTo(service?.how_to_access ?? '');
     setWebsite(service?.website ?? '');
     setInternalNotes(service?.internal_notes ?? '');
+    setGoToContactId(service?.go_to_contact_id ?? '');
     setError(null);
     setBusy(false);
     resetValidation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, service, presetPartnerId]);
 
+  // The go-to contact is picked from the chosen organization's contacts list.
+  useEffect(() => {
+    if (!open || !partnerChoice || partnerChoice === NO_RECORD) { setOrgContacts([]); return; }
+    let cancelled = false;
+    void fetchPartnerContacts(partnerChoice).then((res) => { if (!cancelled) setOrgContacts(res.contacts); });
+    return () => { cancelled = true; };
+  }, [open, partnerChoice]);
+
   const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'rs-org', label: 'Organization', valid: partnerChoice !== '' && (partnerChoice !== NO_RECORD || providerName.trim().length > 0) },
-    { key: 'rs-name', label: 'Service', valid: name.trim().length > 0 },
+    { key: 'rs-name', label: 'Program or service', valid: name.trim().length > 0 },
     { key: 'rs-type', label: 'Type', valid: serviceType !== '' },
     { key: 'rs-serves', label: 'Who it serves', valid: serves.length > 0 },
   ]);
@@ -104,6 +116,8 @@ export function ServiceFormPanel({
       how_to_access: howTo.trim() || null,
       website: website.trim() || null,
       internal_notes: internalNotes.trim() || null,
+      // Only sent when there's something to save or clear, so saving works even before 0200 adds the column.
+      ...(goToContactId || service?.go_to_contact_id ? { go_to_contact_id: goToContactId || null } : {}),
     };
     setBusy(true);
     setError(null);
@@ -126,14 +140,14 @@ export function ServiceFormPanel({
     <Drawer
       open={open}
       onClose={onClose}
-      title={service ? 'Edit service' : 'Add a service'}
+      title={service ? 'Edit program or service' : 'Add a program or service'}
       subtitle="What a resident can get, and how"
       footer={
         <div className="space-y-2">
           {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
           {error && <p className="text-sm text-priority-p1">{error}</p>}
           <button onClick={() => void save()} disabled={busy} className="btn-primary w-full">
-            {busy ? 'Saving…' : service ? 'Save changes' : 'Add service'}
+            {busy ? 'Saving…' : service ? 'Save changes' : 'Add program or service'}
           </button>
         </div>
       }
@@ -145,7 +159,7 @@ export function ServiceFormPanel({
             id="rs-org"
             className={fieldClass('rs-org')}
             value={partnerChoice}
-            onChange={(e) => { setPartnerChoice(e.target.value); clear('rs-org'); }}
+            onChange={(e) => { setPartnerChoice(e.target.value); setGoToContactId(''); clear('rs-org'); }}
           >
             <option value="" disabled>— Pick from the Directory —</option>
             {orgOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -168,8 +182,8 @@ export function ServiceFormPanel({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="field-label field-label-required" htmlFor="rs-name">Service</label>
-            <input id="rs-name" className={fieldClass('rs-name')} value={name} onChange={(e) => { setName(e.target.value); clear('rs-name'); }} placeholder="e.g. Men's shelter" />
+            <label className="field-label field-label-required" htmlFor="rs-name">Program or service</label>
+            <input id="rs-name" className={fieldClass('rs-name')} value={name} onChange={(e) => { setName(e.target.value); clear('rs-name'); }} placeholder="e.g. Vocational Rehabilitation, Men's shelter" />
             {fieldError('rs-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('rs-name')}</p>}
           </div>
           <div>
@@ -237,10 +251,24 @@ export function ServiceFormPanel({
 
         <section className="space-y-2 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Internal only · never published</p>
-          <textarea rows={2} className="field-input" value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} placeholder="Notes for staff, e.g. who to ask for, what worked last time" />
-          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            The organization's contact person, their direct number and its office address live on the Directory record. You can edit them from the service once it's saved.
-          </p>
+          {partnerChoice && partnerChoice !== NO_RECORD && (
+            <div>
+              <label className="field-label" htmlFor="rs-goto">Go-to contact for this program or service</label>
+              <select id="rs-goto" className="field-input" value={goToContactId} onChange={(e) => setGoToContactId(e.target.value)}>
+                <option value="">— None picked —</option>
+                {orgContacts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}{c.role ? `, ${c.role}` : ''}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                {orgContacts.length === 0
+                  ? "This organization has no contacts yet. Add people under Contacts once it's saved, then pick one here."
+                  : 'The person we call about this program, which may not be the main partnership contact. Choose from the organization\'s contacts.'}
+              </p>
+            </div>
+          )}
+          <label className="field-label" htmlFor="rs-notes">Staff notes</label>
+          <textarea id="rs-notes" rows={2} className="field-input" value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} placeholder="Notes for staff, e.g. what worked last time" />
         </section>
       </div>
     </Drawer>

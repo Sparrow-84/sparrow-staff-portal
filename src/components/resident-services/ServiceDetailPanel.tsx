@@ -17,6 +17,7 @@ import {
 } from '@/lib/resident-services';
 import { FreshnessStamp, StillCorrectButton } from './Freshness';
 import { OrgContacts } from '../partnerships/OrgContacts';
+import { fetchPartnerContacts, type PartnerContact } from '@/lib/partner-contacts';
 
 function plainText(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -74,6 +75,7 @@ export function ServiceDetailPanel({
   onChanged: () => void;
 }) {
   const [latestNote, setLatestNote] = useState<Awaited<ReturnType<typeof fetchLatestTouchpoint>>>(null);
+  const [goTo, setGoTo] = useState<PartnerContact | null>(null);
   const [officeElsewhere, setOfficeElsewhere] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +90,11 @@ export function ServiceDetailPanel({
     setOfficeElsewhere(!!service.partner?.address);
     setLatestNote(null);
     if (service.partner_id) void fetchLatestTouchpoint(service.partner_id).then(setLatestNote);
-  }, [open, service?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    setGoTo(null);
+    if (service.partner_id && service.go_to_contact_id) {
+      void fetchPartnerContacts(service.partner_id).then((res) => setGoTo(res.contacts.find((c) => c.id === service.go_to_contact_id) ?? null));
+    }
+  }, [open, service?.id, service?.go_to_contact_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!service) return null;
 
@@ -168,6 +174,22 @@ export function ServiceDetailPanel({
         {/* Internal */}
         <section className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Internal only · never published</p>
+          {partner && (
+            <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-2 text-sm">
+              <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Go-to contact</span>
+              {goTo ? (
+                <span>
+                  <span className="font-medium">{goTo.name}</span>
+                  {goTo.role && <span className="text-sparrow-gray dark:text-sparrow-dark-gray">, {goTo.role}</span>}
+                  <span className="block select-text text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                    {[goTo.phone, goTo.email].filter(Boolean).join(' · ') || 'No phone or email on file'}
+                  </span>
+                </span>
+              ) : (
+                <span className="text-sparrow-gray/70 dark:text-sparrow-dark-gray/70">None picked. Choose one with Edit, below.</span>
+              )}
+            </div>
+          )}
           <Row label="Staff notes" value={service.internal_notes} />
           <div className="grid grid-cols-[120px_minmax(0,1fr)] items-center gap-2 text-sm">
             <label className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray" htmlFor="rs-owner">Owner</label>

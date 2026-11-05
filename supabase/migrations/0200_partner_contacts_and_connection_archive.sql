@@ -170,3 +170,10 @@ BEGIN
 
   RETURN n;
 END $$;
+
+-- ─── 3. Go-to contact per Resident Services program/service ─────────
+-- Which of the organization's contacts to call about this specific program (e.g. the Voc
+-- Rehab counselor at DHS, not the DHS partnership contact). Internal only: never returned
+-- by get_public_resources(). Removing the contact just clears it.
+ALTER TABLE resident_services ADD COLUMN IF NOT EXISTS go_to_contact_id uuid
+  REFERENCES partner_contacts(id) ON DELETE SET NULL;

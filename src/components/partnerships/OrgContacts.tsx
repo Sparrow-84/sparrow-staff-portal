@@ -8,6 +8,7 @@ import {
   type PartnerContact,
   type PartnerContactInput,
 } from '@/lib/partner-contacts';
+import { fetchServicesForPartner } from '@/lib/resident-services';
 
 const EMPTY: PartnerContactInput = { name: '', role: '', phone: '', email: '', notes: '' };
 
@@ -75,10 +76,20 @@ export function OrgContacts({ partnerId, onChanged }: { partnerId: string; onCha
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // contact id -> the programs/services they're the go-to for (shown under their name, so
+  // Partnerships staff see who Resident Services calls about what).
+  const [goToFor, setGoToFor] = useState<Map<string, string[]>>(new Map());
+
   const load = useCallback(async () => {
-    const res = await fetchPartnerContacts(partnerId);
+    const [res, services] = await Promise.all([fetchPartnerContacts(partnerId), fetchServicesForPartner(partnerId)]);
     setContacts(res.contacts);
     setAvailable(res.available);
+    const map = new Map<string, string[]>();
+    for (const s of services) {
+      if (!s.go_to_contact_id) continue;
+      map.set(s.go_to_contact_id, [...(map.get(s.go_to_contact_id) ?? []), s.name]);
+    }
+    setGoToFor(map);
   }, [partnerId]);
 
   useEffect(() => {
@@ -144,9 +155,13 @@ export function OrgContacts({ partnerId, onChanged }: { partnerId: string; onCha
                 {[c.phone, c.email].filter(Boolean).join(' · ') || 'No phone or email yet'}
               </p>
               {c.notes && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{c.notes}</p>}
+              {goToFor.get(c.id) && (
+                <p className="text-xs text-sparrow-green dark:text-sparrow-dark-green">Go-to for: {goToFor.get(c.id)!.join(', ')}</p>
+              )}
             </div>
             {confirmDeleteId === c.id ? (
-              <span className="flex shrink-0 items-center gap-2 text-xs">
+              <span className="flex shrink-0 flex-wrap items-center justify-end gap-2 text-xs">
+                {goToFor.get(c.id) && <span className="text-priority-p1">Clears them as go-to for {goToFor.get(c.id)!.join(', ')}.</span>}
                 <button onClick={() => setConfirmDeleteId(null)} className="text-sparrow-gray">Keep</button>
                 <button onClick={() => void run(() => deletePartnerContact(c.id))} className="font-medium text-priority-p1">Remove</button>
               </span>

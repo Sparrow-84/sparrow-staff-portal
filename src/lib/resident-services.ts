@@ -54,6 +54,8 @@ export interface ResidentService {
   how_to_access: string | null;
   website: string | null;
   internal_notes: string | null;
+  /** Migration 0200: which of the organization's contacts to call about this program. */
+  go_to_contact_id?: string | null;
   owner_id: string | null;
   created_by: string | null;
   last_checked_at: string | null;
@@ -68,7 +70,7 @@ export interface ResidentService {
 
 export type ServiceInput = Pick<ResidentService,
   'partner_id' | 'provider_name' | 'name' | 'service_type' | 'serves' | 'address' | 'address_confidential'
-  | 'help_phone' | 'hours' | 'how_to_access' | 'website' | 'internal_notes'>;
+  | 'help_phone' | 'hours' | 'how_to_access' | 'website' | 'internal_notes'> & { go_to_contact_id?: string | null };
 
 const SELECT = '*, partner:partners(id, name, contact_name, role, phone, address, website, mou_status, info_checked_at, info_checked_by, info_checked_how)';
 
