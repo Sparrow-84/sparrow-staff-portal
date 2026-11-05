@@ -22,6 +22,7 @@ export function ServiceFormPanel({
   service,
   partners,
   presetPartnerId,
+  forReview = false,
   onClose,
   onSaved,
 }: {
@@ -29,6 +30,8 @@ export function ServiceFormPanel({
   service: ResidentService | null;
   partners: Pick<Partner, 'id' | 'name' | 'type' | 'sub_category'>[];
   presetPartnerId?: string | null;
+  /** Adding from a "To review" item: saved as waiting for review, not checked. */
+  forReview?: boolean;
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
@@ -118,6 +121,7 @@ export function ServiceFormPanel({
       internal_notes: internalNotes.trim() || null,
       // Only sent when there's something to save or clear, so saving works even before 0200 adds the column.
       ...(goToContactId || service?.go_to_contact_id ? { go_to_contact_id: goToContactId || null } : {}),
+      ...(forReview && !service ? { needs_review: true } : {}),
     };
     setBusy(true);
     setError(null);
@@ -141,7 +145,9 @@ export function ServiceFormPanel({
       open={open}
       onClose={onClose}
       title={service ? 'Edit program or service' : 'Add a program or service'}
-      subtitle="What a resident can get, and how"
+      subtitle={forReview && !service
+        ? 'Stays in "To review" until you mark the organization reviewed'
+        : 'What a resident can get, and how'}
       footer={
         <div className="space-y-2">
           {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}

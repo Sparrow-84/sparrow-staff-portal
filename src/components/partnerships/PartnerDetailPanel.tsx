@@ -45,12 +45,15 @@ import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import { createInterest, setPartnerInterests, type PartnershipInterest } from '@/lib/partnership-interests';
 import { BusinessCardPhotos } from './BusinessCardPhotos';
 import {
+  fetchOpenReviewForPartner,
   fetchPartnerInfoChecked,
   fetchServicesForPartner,
   markPartnerInfoChecked,
   markServiceChecked,
+  sendToResidentServices,
   type PartnerInfoChecked,
   type ResidentService,
+  type ServiceReview,
 } from '@/lib/resident-services';
 import { FreshnessStamp, StillCorrectButton } from '../resident-services/Freshness';
 import { ServiceFormPanel } from '../resident-services/ServiceFormPanel';
@@ -122,6 +125,10 @@ export function PartnerDetailPanel({
   const [infoChecked, setInfoChecked] = useState<PartnerInfoChecked | null>(null);
   const [serviceFormOpen, setServiceFormOpen] = useState(false);
   const [editingService, setEditingService] = useState<ResidentService | null>(null);
+  // Migration 0206: the open "To review" item in Resident Services, if any.
+  const [rsReview, setRsReview] = useState<{ review: ServiceReview | null; available: boolean }>({ review: null, available: false });
+  const [sendingToRs, setSendingToRs] = useState(false);
+  const [sendRsError, setSendRsError] = useState<string | null>(null);
 
   const { fieldClass: logFieldClass, fieldError: logFieldError, clear: clearLogField, validate: validateLog } = useRequiredFields([
     { key: 'pdp-occurred-on', label: 'Date', valid: !!occurredOn },
@@ -131,13 +138,15 @@ export function PartnerDetailPanel({
 
   const reload = useCallback(async () => {
     if (!partnerId) return;
-    const [all, gifts, svc, checked] = await Promise.all([
+    const [all, gifts, svc, checked, review] = await Promise.all([
       fetchTouchpoints(partnerId),
       partner?.type === 'donor' ? fetchDonations(partnerId) : Promise.resolve([]),
       fetchServicesForPartner(partnerId),
       fetchPartnerInfoChecked(partnerId),
+      fetchOpenReviewForPartner(partnerId),
     ]);
     setServices(svc);
+    setRsReview(review);
     setInfoChecked(checked);
     setTouchpoints([...all].sort((a, b) =>
       new Date(b.occurred_on).getTime() - new Date(a.occurred_on).getTime()
@@ -157,6 +166,7 @@ export function PartnerDetailPanel({
       setMergeTargetId('');
       setConfirmMerge(false);
       setConfirmDelete(false);
+      setSendRsError(null);
       void reload();
     }
   }, [open, partnerId, reload]);
@@ -171,6 +181,8 @@ export function PartnerDetailPanel({
   const isAdmin = me?.role === 'admin';
   // Only Partnerships staff change an MOU; Resident Services staff see it (DB enforces this too).
   const isPartnershipsStaff = isAdmin || me?.department === 'partnerships';
+  // Anyone with Partnerships access can send a record to Resident Services for review.
+  const canSendToRs = isPartnershipsStaff || !!me?.partnerships_access;
   // Everyone reads every note; each person edits/deletes only their own (older notes with no
   // logger recorded stay editable). Matches the 0199 touchpoint policies.
   const canEditTouchpoint = (t: Touchpoint) => isAdmin || !t.logged_by || t.logged_by === currentUserId;
@@ -935,17 +947,40 @@ export function PartnerDetailPanel({
           <section className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="field-label">Services they offer</span>
-              <button
-                onClick={() => { setEditingService(null); setServiceFormOpen(true); }}
-                className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
-              >
-                + Add a service
-              </button>
+              {rsReview.available && !rsReview.review && canSendToRs && (
+                <button
+                  disabled={sendingToRs}
+                  onClick={async () => {
+                    setSendingToRs(true);
+                    setSendRsError(null);
+                    try {
+                      await sendToResidentServices(partner.id);
+                      await reload();
+                    } catch (e) {
+                      setSendRsError(e instanceof Error ? e.message : 'Could not send it.');
+                    } finally {
+                      setSendingToRs(false);
+                    }
+                  }}
+                  className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline disabled:opacity-50"
+                >
+                  {sendingToRs ? 'Sending…' : 'Send to Resident Services'}
+                </button>
+              )}
             </div>
-            {services.length === 0 ? (
-              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-                None recorded. Add what residents can get from them (shelter, food, legal help…) so Resident Services staff can refer people.
+            {sendRsError && <p className="text-xs text-priority-p1">{sendRsError}</p>}
+            {rsReview.review && (
+              <p className="rounded-lg bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                Sent to Resident Services {new Date(rsReview.review.sent_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                {nameFor(rsReview.review.sent_by) ? ` by ${nameFor(rsReview.review.sent_by)}` : ''}. Waiting for them to review it and add the programs.
               </p>
+            )}
+            {services.length === 0 ? (
+              !rsReview.review && (
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                  None recorded. If residents could use anything they offer (shelter, food, legal help…), click Send to Resident Services. Everything on this record goes with it, and Resident Services staff fill in the programs.
+                </p>
+              )
             ) : (
               <div className="space-y-2">
                 {services.map((s) => (
@@ -958,8 +993,14 @@ export function PartnerDetailPanel({
                     </div>
                     <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{s.serves.join(' · ')}{s.hours ? ` · ${s.hours}` : ''}</p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <FreshnessStamp checkedAt={s.last_checked_at} checkedBy={s.last_checked_by} how={s.last_checked_how} nameFor={nameFor} />
-                      <StillCorrectButton onConfirm={async (how) => { await markServiceChecked(s.id, how, currentUserId); await reload(); }} />
+                      {s.needs_review ? (
+                        <span className="rounded-full bg-amber-50 dark:bg-amber-500/15 px-2.5 py-0.5 text-xs text-amber-800 dark:text-amber-300">Waiting for review</span>
+                      ) : (
+                        <>
+                          <FreshnessStamp checkedAt={s.last_checked_at} checkedBy={s.last_checked_by} how={s.last_checked_how} nameFor={nameFor} />
+                          <StillCorrectButton onConfirm={async (how) => { await markServiceChecked(s.id, how, currentUserId); await reload(); }} />
+                        </>
+                      )}
                       <button
                         onClick={() => { setEditingService(s); setServiceFormOpen(true); }}
                         className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"

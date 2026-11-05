@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Profile } from '@/lib/types';
 import { createPartner, emitFirstTimeDonorTask, findPossibleDuplicatePartner } from '@/lib/partnerships';
+import { sendToResidentServices } from '@/lib/resident-services';
 import {
   PARTNER_STAGE,
   PARTNER_SUB_CATEGORY,
@@ -77,6 +78,7 @@ export function AddPartnerPanel({
   const [address, setAddress] = useState('');
   const [source, setSource] = useState('');
   const [notes, setNotes] = useState('');
+  const [alsoSendToRs, setAlsoSendToRs] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
@@ -133,6 +135,7 @@ export function AddPartnerPanel({
       setAddress('');
       setSource(initialValues?.source ?? '');
       setNotes(initialValues?.notes ?? '');
+      setAlsoSendToRs(false);
       setError(null);
       setBusy(false);
       setDuplicateWarning(null);
@@ -225,6 +228,11 @@ export function AddPartnerPanel({
       if (interestIds.length > 0) {
         await setPartnerInterests(newPartnerId, interestIds);
       }
+      if (alsoSendToRs && !isPerson) {
+        // The record is already saved; failing to send (e.g. before migration 0206 runs)
+        // shouldn't make the add look failed. It can be sent later from its drawer.
+        await sendToResidentServices(newPartnerId).catch(() => undefined);
+      }
       if (initialValues) {
         onCreatedFromContact?.(newPartnerId);
       }
@@ -252,6 +260,22 @@ export function AddPartnerPanel({
         <div className="space-y-2">
           {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
           {duplicateWarning && <p className="text-sm text-priority-p1">{duplicateWarning}</p>}
+          {type !== '' && !isPerson && (
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={alsoSendToRs}
+                onChange={(e) => setAlsoSendToRs(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-sparrow-green"
+              />
+              <span>
+                Also send to Resident Services
+                <span className="block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                  For organizations residents could get help from. Resident Services staff review it and add the programs.
+                </span>
+              </span>
+            </label>
+          )}
           <button onClick={save} disabled={busy} className="btn-primary w-full">
             {busy ? 'Adding…' : duplicateWarning ? 'Add anyway' : 'Add partner'}
           </button>

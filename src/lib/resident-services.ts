@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { Partner } from './partnerships-types';
 
 // Resident Services room (migration 0199). The Directory (partners) holds the relationship
 // with an organization; a service here is what a resident can actually get from it. A
@@ -65,12 +66,37 @@ export interface ResidentService {
   published_by: string | null;
   archived_at: string | null;
   created_at: string;
+  /** Migration 0206: added while reviewing something sent from the Directory, and not yet
+   *  confirmed. Not "checked", not in the main list, can't be published. */
+  needs_review?: boolean;
   partner: ServicePartner | null;
 }
 
 export type ServiceInput = Pick<ResidentService,
   'partner_id' | 'provider_name' | 'name' | 'service_type' | 'serves' | 'address' | 'address_confidential'
-  | 'help_phone' | 'hours' | 'how_to_access' | 'website' | 'internal_notes'> & { go_to_contact_id?: string | null };
+  | 'help_phone' | 'hours' | 'how_to_access' | 'website' | 'internal_notes'>
+  & { go_to_contact_id?: string | null; needs_review?: boolean };
+
+/** An organization sent over from the Directory, waiting in the room's "To review" inbox. */
+export interface ServiceReview {
+  id: string;
+  partner_id: string;
+  sent_by: string | null;
+  sent_at: string;
+  reviewed_at: string | null;
+  partner: {
+    id: string;
+    name: string;
+    type: Partner['type'];
+    sub_category: Partner['sub_category'];
+    website: string | null;
+    phone: string | null;
+    email: string | null;
+    address: string | null;
+    notes: string | null;
+    source: string | null;
+  } | null;
+}
 
 const SELECT = '*, partner:partners(id, name, contact_name, role, phone, address, website, mou_status, info_checked_at, info_checked_by, info_checked_how)';
 
@@ -84,7 +110,7 @@ export function servesGroup(s: Pick<ResidentService, 'serves'>, group: string): 
 }
 
 // ── Freshness ("last checked") — shared with the Directory record drawer ──────────────
-// Amber at 9 months (that's also when the owner gets a re-check task), red at 18 months.
+// Amber at 9 months (that's also when the room admin gets a re-check task), red at 18 months.
 // The public website separately drops anything not checked in 2 years.
 export type Freshness = 'fresh' | 'aging' | 'stale' | 'never';
 const MONTH_MS = 1000 * 60 * 60 * 24 * 30.44;
@@ -142,7 +168,7 @@ export async function createService(input: ServiceInput): Promise<string> {
   return (data as { id: string }).id;
 }
 
-export async function updateService(id: string, patch: Partial<ServiceInput> & { owner_id?: string | null }): Promise<void> {
+export async function updateService(id: string, patch: Partial<ServiceInput>): Promise<void> {
   const { error } = await supabase.from('resident_services').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 }
@@ -171,6 +197,53 @@ export async function archiveService(id: string): Promise<void> {
     .from('resident_services')
     .update({ archived_at: new Date().toISOString(), published_at: null })
     .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── "To review" inbox (migration 0206) ───────────────────────────────────────────────
+const REVIEW_SELECT = '*, partner:partners(id, name, type, sub_category, website, phone, email, address, notes, source)';
+
+/** Quietly empty before 0206 runs. */
+export async function fetchOpenReviews(): Promise<ServiceReview[]> {
+  const { data, error } = await supabase
+    .from('resident_service_reviews')
+    .select(REVIEW_SELECT)
+    .is('reviewed_at', null)
+    .order('sent_at');
+  if (error) return [];
+  return (data ?? []) as unknown as ServiceReview[];
+}
+
+/** `available` is false until 0206 runs (the Directory hides the Send button then). */
+export async function fetchOpenReviewForPartner(partnerId: string): Promise<{ review: ServiceReview | null; available: boolean }> {
+  const { data, error } = await supabase
+    .from('resident_service_reviews')
+    .select('id, partner_id, sent_by, sent_at, reviewed_at')
+    .eq('partner_id', partnerId)
+    .is('reviewed_at', null)
+    .maybeSingle();
+  if (error) return { review: null, available: false };
+  return { review: data ? ({ ...data, partner: null } as ServiceReview) : null, available: true };
+}
+
+/** One click from the Directory. Sending something already waiting is a no-op. */
+export async function sendToResidentServices(partnerId: string): Promise<void> {
+  const { error } = await supabase.from('resident_service_reviews').insert({ partner_id: partnerId });
+  if (error && error.code !== '23505') throw new Error(error.message);
+}
+
+/** "Reviewed — this is correct": stamps the waiting services checked and closes the review. */
+export async function completeReview(reviewId: string, how: Exclude<CheckedHow, 'edited'>): Promise<void> {
+  const { error } = await supabase.rpc('complete_resident_service_review', { p_review_id: reviewId, p_how: how });
+  if (error) throw new Error(error.message);
+}
+
+/** Nothing residents can use here: close the review without adding anything. */
+export async function closeReviewWithoutServices(reviewId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('resident_service_reviews')
+    .update({ reviewed_at: new Date().toISOString(), reviewed_by: userId })
+    .eq('id', reviewId);
   if (error) throw new Error(error.message);
 }
 

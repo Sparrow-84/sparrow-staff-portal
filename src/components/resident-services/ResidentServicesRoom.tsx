@@ -8,21 +8,26 @@ import type { Profile } from '@/lib/types';
 import {
   SERVES_ALL,
   SERVES_OPTIONS,
+  fetchOpenReviews,
   fetchServices,
   freshness,
   providerName,
   servesGroup,
   type ResidentService,
+  type ServiceReview,
 } from '@/lib/resident-services';
 import { FreshnessStamp } from './Freshness';
 import { ServiceDetailPanel } from './ServiceDetailPanel';
 import { ServiceFormPanel } from './ServiceFormPanel';
+import { ReviewPanel } from './ReviewPanel';
 
 const ALL_TYPES = 'All';
 
 export function ResidentServicesRoom() {
   const { profile } = useAuth();
-  const [services, setServices] = useState<ResidentService[]>([]);
+  const [allServices, setAllServices] = useState<ResidentService[]>([]);
+  const [reviews, setReviews] = useState<ServiceReview[]>([]);
+  const [reviewId, setReviewId] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -36,12 +41,14 @@ export function ResidentServicesRoom() {
   const [editing, setEditing] = useState<ResidentService | null>(null);
 
   const load = useCallback(async () => {
-    const [res, profs, parts] = await Promise.all([
+    const [res, revs, profs, parts] = await Promise.all([
       fetchServices(),
+      fetchOpenReviews(),
       fetchProfiles().catch(() => [] as Profile[]),
       fetchPartners().catch(() => [] as Partner[]),
     ]);
-    setServices(res.services);
+    setAllServices(res.services);
+    setReviews(revs);
     setMissing(res.missing);
     setProfiles(profs);
     setPartners(parts);
@@ -52,13 +59,20 @@ export function ResidentServicesRoom() {
 
   const isPartnershipsStaff = profile?.role === 'admin' || profile?.department === 'partnerships';
 
-  // Anyone with this room's access can own a service. Exec excluded, same as Partnerships owners.
-  const ownerOptions = useMemo(
-    () => profiles.filter((p) =>
-      p.department !== 'exec'
-      && (p.role === 'admin' || p.department === 'partnerships' || p.partnerships_access || p.resident_services_access)),
-    [profiles],
+  // Services added while reviewing something from the Directory stay out of the main list
+  // (and its counts) until the organization is marked reviewed.
+  const services = useMemo(() => allServices.filter((s) => !s.needs_review), [allServices]);
+  const review = reviews.find((r) => r.id === reviewId) ?? null;
+  const pendingForReview = useMemo(
+    () => (review ? allServices.filter((s) => s.needs_review && s.partner_id === review.partner_id) : []),
+    [allServices, review],
   );
+  // The form's organization list needs the review's organization even if it isn't in the
+  // Directory list this person can load.
+  const formPartners = useMemo(() => {
+    if (!review?.partner || partners.some((p) => p.id === review.partner_id)) return partners;
+    return [...partners, review.partner as unknown as Partner];
+  }, [partners, review]);
 
   const typesInUse = useMemo(() => {
     const set = new Set(services.map((s) => s.service_type));
@@ -114,6 +128,34 @@ export function ResidentServicesRoom() {
         <p className="mt-6 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
           This room is waiting on a database update (migration 0199). It will start working as soon as that runs.
         </p>
+      )}
+
+      {reviews.length > 0 && (
+        <section className="mt-6 rounded-xl border border-amber-300 bg-amber-50/70 dark:border-amber-500/30 dark:bg-amber-500/10 p-4">
+          <h2 className="font-serif text-lg font-semibold">To review ({reviews.length})</h2>
+          <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            Sent over from the Partnerships Directory. Nothing here is checked or on the main list until you review it.
+          </p>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {reviews.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => setReviewId(r.id)}
+                className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-white dark:bg-sparrow-dark-surface px-3 py-2.5 text-left transition hover:border-sparrow-green"
+              >
+                <span className="block font-medium">{r.partner?.name ?? 'Organization'}</span>
+                <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                  Sent {new Date(r.sent_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  {nameFor(r.sent_by) ? ` by ${nameFor(r.sent_by)}` : ''}
+                  {(() => {
+                    const n = allServices.filter((s) => s.needs_review && s.partner_id === r.partner_id).length;
+                    return n ? ` · ${n} program${n === 1 ? '' : 's'} added` : '';
+                  })()}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       <div className="mt-6 space-y-3">
@@ -208,19 +250,31 @@ export function ResidentServicesRoom() {
         open={!!selected && !formOpen}
         service={selected}
         profiles={profiles}
-        ownerOptions={ownerOptions}
         currentUserId={profile?.id ?? ''}
         isPartnershipsStaff={isPartnershipsStaff}
         onClose={() => setSelectedId(null)}
         onEdit={() => { setEditing(selected); setFormOpen(true); }}
         onChanged={() => void load()}
       />
+      <ReviewPanel
+        open={!!review && !formOpen}
+        review={review}
+        pendingServices={pendingForReview}
+        profiles={profiles}
+        currentUserId={profile?.id ?? ''}
+        onClose={() => setReviewId(null)}
+        onAddService={() => { setEditing(null); setFormOpen(true); }}
+        onEditService={(s) => { setEditing(s); setFormOpen(true); }}
+        onChanged={() => void load()}
+      />
       <ServiceFormPanel
         open={formOpen}
         service={editing}
-        partners={partners}
+        partners={formPartners}
+        presetPartnerId={review?.partner_id ?? null}
+        forReview={!!review}
         onClose={() => setFormOpen(false)}
-        onSaved={(id) => { void load(); setSelectedId(id); }}
+        onSaved={(id) => { void load(); if (!review) setSelectedId(id); }}
       />
     </div>
   );

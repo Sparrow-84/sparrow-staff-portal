@@ -394,10 +394,11 @@ export function StaffPanel({ open, staff, allStaff, onClose, onChanged }: Props)
           </div>
 
           <div className="mt-4 rounded-lg border border-sparrow-gold/40 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-3">
-            <p className="text-sm font-medium">Room admin (SOPs)</p>
+            <p className="text-sm font-medium">Room admin</p>
             <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               Lets this person add, edit, and remove SOPs in these rooms, and link in docs from elsewhere.
-              It doesn't change anything else they can do. Admins can already do this everywhere.
+              Resident Services' room admin also gets that room's tasks: organizations sent over to review,
+              and 9-month re-checks. If nobody is set, those go to admins.
             </p>
             <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
               {SOP_ROOMS.map((r) => (

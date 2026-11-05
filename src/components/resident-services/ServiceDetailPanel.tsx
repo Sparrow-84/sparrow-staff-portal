@@ -12,7 +12,6 @@ import {
   publishService,
   unpublishService,
   updatePartnerContact,
-  updateService,
   type ResidentService,
 } from '@/lib/resident-services';
 import { FreshnessStamp, StillCorrectButton } from './Freshness';
@@ -57,7 +56,6 @@ export function ServiceDetailPanel({
   open,
   service,
   profiles,
-  ownerOptions,
   currentUserId,
   isPartnershipsStaff,
   onClose,
@@ -67,7 +65,6 @@ export function ServiceDetailPanel({
   open: boolean;
   service: ResidentService | null;
   profiles: Profile[];
-  ownerOptions: Profile[];
   currentUserId: string;
   isPartnershipsStaff: boolean;
   onClose: () => void;
@@ -191,21 +188,6 @@ export function ServiceDetailPanel({
             </div>
           )}
           <Row label="Staff notes" value={service.internal_notes} />
-          <div className="grid grid-cols-[120px_minmax(0,1fr)] items-center gap-2 text-sm">
-            <label className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray" htmlFor="rs-owner">Owner</label>
-            <select
-              id="rs-owner"
-              className="field-input mt-0"
-              value={service.owner_id ?? ''}
-              onChange={(e) => void run(() => updateService(service.id, { owner_id: e.target.value || null }))}
-            >
-              <option value="">Unassigned</option>
-              {ownerOptions.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-            </select>
-          </div>
-          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            The owner gets the re-check task when this hasn't been checked in 9 months. Changing it hands that off, and the new owner gets a notification.
-          </p>
 
           {partner ? (
             <div className="space-y-3 rounded-xl bg-sparrow-green/5 dark:bg-sparrow-dark-surface2 p-3">

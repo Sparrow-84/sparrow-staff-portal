@@ -35,7 +35,17 @@ export function FreshnessStamp({
 }
 
 /** How-did-you-check picker + "Still correct": restamps without changing anything. */
-export function StillCorrectButton({ onConfirm }: { onConfirm: (how: Exclude<CheckedHow, 'edited'>) => Promise<void> }) {
+export function StillCorrectButton({
+  onConfirm,
+  label = '✓ Still correct',
+  disabled = false,
+  primary = false,
+}: {
+  onConfirm: (how: Exclude<CheckedHow, 'edited'>) => Promise<void>;
+  label?: string;
+  disabled?: boolean;
+  primary?: boolean;
+}) {
   const [how, setHow] = useState<Exclude<CheckedHow, 'edited'>>('called');
   const [busy, setBusy] = useState(false);
   return (
@@ -52,11 +62,11 @@ export function StillCorrectButton({ onConfirm }: { onConfirm: (how: Exclude<Che
       </select>
       <button
         type="button"
-        disabled={busy}
+        disabled={busy || disabled}
         onClick={async () => { setBusy(true); try { await onConfirm(how); } finally { setBusy(false); } }}
-        className="btn-secondary px-2.5 py-1 text-xs"
+        className={primary ? 'btn-primary px-3 py-1.5 text-sm' : 'btn-secondary px-2.5 py-1 text-xs'}
       >
-        {busy ? 'Saving…' : '✓ Still correct'}
+        {busy ? 'Saving…' : label}
       </button>
     </span>
   );
