@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { LABEL_COLORS, LabelPill } from '@/components/LabelPill';
 
 export interface MultiSelectOption {
@@ -34,18 +35,50 @@ export function MultiSelectDropdown({
   const [newColor, setNewColor] = useState('blue');
   const [saving, setSaving] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
 
+  // The menu is portaled to <body> with fixed positioning, so a parent with overflow:hidden
+  // (e.g. a Directory table cell) can't clip it invisible. It closes on outside click,
+  // resize, or scrolling anything other than the menu itself.
   useEffect(() => {
     if (!open) return;
+    function close() {
+      setOpen(false);
+      setCreating(false);
+    }
     function onClickOutside(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setCreating(false);
-      }
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      close();
+    }
+    function onScroll(e: Event) {
+      if (menuRef.current && e.target instanceof Node && menuRef.current.contains(e.target)) return;
+      close();
     }
     document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', close);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', close);
+    };
   }, [open]);
+
+  function toggleOpen() {
+    if (disabled) return;
+    if (open) { setOpen(false); return; }
+    const r = wrapRef.current?.getBoundingClientRect();
+    if (r) {
+      const width = Math.max(r.width, 220);
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
+      // Not enough room below (the menu runs up to ~300px tall)? Open upward instead.
+      const openUp = window.innerHeight - r.bottom < 300 && r.top > window.innerHeight - r.bottom;
+      setRect(openUp ? { bottom: window.innerHeight - r.top + 4, left, width } : { top: r.bottom + 4, left, width });
+    }
+    setOpen(true);
+  }
 
   function toggle(value: string) {
     onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
@@ -74,7 +107,7 @@ export function MultiSelectDropdown({
         className={`field-input mt-0 flex min-h-[38px] w-full flex-wrap items-center gap-1 text-left ${
           disabled ? 'opacity-50' : 'cursor-pointer'
         }`}
-        onClick={() => { if (!disabled) setOpen((v) => !v); }}
+        onClick={toggleOpen}
       >
         {selectedOptions.length === 0 ? (
           <span className="text-sparrow-gray dark:text-sparrow-dark-gray">{placeholder}</span>
@@ -103,8 +136,15 @@ export function MultiSelectDropdown({
         )}
       </div>
 
-      {open && (
-        <div className="absolute z-20 mt-1 w-full rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 shadow-lg">
+      {open && rect && createPortal(
+        <div
+          ref={menuRef}
+          // Portals still bubble clicks up the React tree -- keep them from reaching a table
+          // row's click handler (which would open the record drawer).
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: 'fixed', top: rect.top, bottom: rect.bottom, left: rect.left, width: rect.width }}
+          className="z-[60] rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-2 shadow-lg"
+        >
           <div className="max-h-56 space-y-0.5 overflow-y-auto">
             {options.map((o) => (
               <label
@@ -177,7 +217,8 @@ export function MultiSelectDropdown({
               )}
             </div>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
