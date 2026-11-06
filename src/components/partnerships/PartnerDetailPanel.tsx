@@ -3,6 +3,7 @@ import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
 import { deletePartner, deleteTouchpoint, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner, updateTouchpoint } from '@/lib/partnerships';
+import { syncPrayerVolunteersFromDirectory } from '@/lib/prayer';
 import {
   DONOR_TIER,
   MOU_STATUS,
@@ -484,6 +485,7 @@ export function PartnerDetailPanel({
                     options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
                     selected={partner.volunteer_sub_categories ?? []}
                     onChange={(next) => void patch({ volunteer_sub_categories: next as VolunteerSubCategory[] })}
+                    onClose={() => void syncPrayerVolunteersFromDirectory().then(onChanged).catch(() => undefined)}
                     disabled={busy}
                     placeholder="Pick at least one"
                   />

@@ -34,6 +34,9 @@ export interface HomeItem {
   checkin?: { id: string; label: string; legacy?: boolean };
   /** Set on a 'reminder' (any other open Partnerships task): Done closes that task. */
   taskRef?: string;
+  /** Set on a prayer check-in reminder: the roster volunteer it's about, so Home can offer
+   *  the same Snooze / Move off prayer team buttons as the Prayer Team tab. */
+  prayerVolunteerId?: string;
 }
 
 /** Open Partnerships task kinds Home already lists from their own source rows (or, for
@@ -43,9 +46,9 @@ const DERIVED_TASK_PREFIXES = new Set([
 ]);
 
 /** Where a click on an open-task reminder goes, by its source_ref prefix. */
-function reminderTarget(ref: string): Pick<HomeItem, 'partnerId' | 'navigateTab'> {
+function reminderTarget(ref: string): Pick<HomeItem, 'partnerId' | 'navigateTab' | 'prayerVolunteerId'> {
   const [prefix, id] = ref.split(':');
-  if (prefix === 'prayer_miss' || prefix === 'prayer_snooze_check') return { navigateTab: 'prayer' };
+  if (prefix === 'prayer_miss' || prefix === 'prayer_snooze_check') return { navigateTab: 'prayer', prayerVolunteerId: id };
   if (prefix === 'comms_milestone') return { navigateTab: 'comms' };
   if ((prefix === 'first_time_donor' || prefix === 'lapsed') && id) return { partnerId: id };
   return {};

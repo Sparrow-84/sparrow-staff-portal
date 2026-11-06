@@ -22,6 +22,7 @@ export function MultiSelectDropdown({
   disabled = false,
   onCreateNew,
   trigger,
+  onClose,
 }: {
   options: MultiSelectOption[];
   selected: string[];
@@ -31,8 +32,18 @@ export function MultiSelectDropdown({
   onCreateNew?: (label: string, color: string) => Promise<void>;
   /** Replaces the default field-with-pills look (e.g. the Directory's stacked category lines). */
   trigger?: ReactNode;
+  /** Called once when the menu closes, i.e. when the person has finished picking — for
+   *  follow-up work that mustn't run on each in-between click (e.g. Prayer → LCP). */
+  onClose?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const wasOpen = useRef(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (wasOpen.current && !open) onCloseRef.current?.();
+    wasOpen.current = open;
+  }, [open]);
   const [creating, setCreating] = useState(false);
   const [newLabel, setNewLabel] = useState('');
   const [newColor, setNewColor] = useState('blue');

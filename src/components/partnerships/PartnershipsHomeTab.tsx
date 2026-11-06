@@ -21,7 +21,9 @@ import {
 import { fetchAllContacts, type PersonalContactWithOwner } from '@/lib/personalContacts';
 import { WidgetCard } from '@/components/home/widgets';
 import { supabase } from '@/lib/supabase';
+import { fetchPrayerVolunteers, type PrayerVolunteer } from '@/lib/prayer';
 import { CheckinDoneForm } from './Checkins';
+import { PrayerVolunteerActions } from './PrayerVolunteerActions';
 
 const KIND_ICON: Record<HomeItemKind, string> = {
   touchpoint: '🤝',
@@ -45,6 +47,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
   const [newContacts, setNewContacts] = useState<PersonalContactWithOwner[]>([]);
   const [unsubscribes, setUnsubscribes] = useState<RecentUnsubscribe[]>([]);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [prayerVolunteers, setPrayerVolunteers] = useState<Map<string, PrayerVolunteer>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +72,22 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
   const reloadItems = useCallback(() => {
     fetchHomeItems().then(setItems).catch(() => undefined);
   }, []);
+
+  // Prayer reminders carry the same Snooze / Move off prayer team buttons as the Prayer
+  // Team tab, which need the volunteer's current roster row. Only fetched when one is showing.
+  const hasPrayerItems = items.some((i) => i.prayerVolunteerId);
+  const loadPrayerVolunteers = useCallback(() => {
+    fetchPrayerVolunteers()
+      .then((vols) => setPrayerVolunteers(new Map(vols.map((v) => [v.id, v]))))
+      .catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    if (hasPrayerItems) loadPrayerVolunteers();
+  }, [hasPrayerItems, loadPrayerVolunteers]);
+  const onPrayerChanged = useCallback(() => {
+    reloadItems();
+    loadPrayerVolunteers();
+  }, [reloadItems, loadPrayerVolunteers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -249,7 +268,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
         <>
           {overdue.length > 0 && (
             <WidgetCard title={`🔴 Overdue (${overdue.length})`}>
-              <ItemsByOwner items={overdue} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} />
+              <ItemsByOwner items={overdue} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} />
             </WidgetCard>
           )}
           <WidgetCard title={`Due this week (${dueThisWeek.length})`}>
@@ -258,7 +277,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
                 Nothing else coming due this week.
               </p>
             ) : (
-              <ItemsByOwner items={dueThisWeek} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} />
+              <ItemsByOwner items={dueThisWeek} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} />
             )}
           </WidgetCard>
         </>
@@ -273,12 +292,16 @@ function ItemsByOwner({
   today,
   onOpen,
   onDone,
+  prayerVolunteers,
+  onPrayerChanged,
 }: {
   items: HomeItem[];
   ownerName: (id: string) => string;
   today: string;
   onOpen: (item: HomeItem) => void;
   onDone: () => void;
+  prayerVolunteers: Map<string, PrayerVolunteer>;
+  onPrayerChanged: () => void;
 }) {
   const [doneKey, setDoneKey] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -350,6 +373,14 @@ function ItemsByOwner({
                   </button>
                 )}
                 </div>
+                {item.prayerVolunteerId && prayerVolunteers.get(item.prayerVolunteerId)?.active && (
+                  <div className="pb-1 pl-8">
+                    <PrayerVolunteerActions
+                      volunteer={prayerVolunteers.get(item.prayerVolunteerId)!}
+                      onChanged={onPrayerChanged}
+                    />
+                  </div>
+                )}
                 {item.checkin && doneKey === item.key && (
                   <div className="pl-2">
                     <CheckinDoneForm

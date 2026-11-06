@@ -6,6 +6,7 @@ import {
   fetchMeetingsWithAttendance,
   fetchPrayerVolunteers,
   logPrayerMeeting,
+  fetchReturningSince,
   syncPrayerVolunteersFromDirectory,
   updatePrayerVolunteerNotes,
   updatePrayerVolunteerSnooze,
@@ -13,11 +14,16 @@ import {
   type PrayerVolunteer,
 } from '@/lib/prayer';
 import { fetchPartnershipsRoomAdminId } from '@/lib/partnerships';
+import { PrayerVolunteerActions } from './PrayerVolunteerActions';
 import { supabase } from '@/lib/supabase';
 
 // How many months after a snoozed volunteer's stated return date we wait,
 // with still no attendance, before prompting one more check-in.
 const SNOOZE_BUFFER_MONTHS = 2;
+
+// A returning volunteer away longer than this signs the agreement again (Susanna,
+// 2026-11-06) — as does anyone if the form has been updated, which only staff can know.
+const RESIGN_AFTER_MONTHS = 12;
 
 const MISS_SCRIPTS: Record<2 | 3 | 4, (name: string, meetingDate: string) => string> = {
   2: (name, meetingDate) =>
@@ -225,9 +231,8 @@ export function PrayerMeetingTab() {
   const [loggingMeeting, setLoggingMeeting] = useState(false);
   const [editVolunteerId, setEditVolunteerId] = useState<string | null>(null);
   const [editNotes, setEditNotes] = useState('');
-  const [editSnoozeId, setEditSnoozeId] = useState<string | null>(null);
-  const [snoozeDate, setSnoozeDate] = useState('');
   const [missStreaks, setMissStreaks] = useState<Record<string, number>>({});
+  const [returning, setReturning] = useState<Record<string, string>>({});
   const [expandedMeeting, setExpandedMeeting] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -257,6 +262,11 @@ export function PrayerMeetingTab() {
       const streaks = await Promise.all(toCheck.map((v) => consecutiveMissedMonths(v.id).catch(() => 0)));
       if (!mounted.current) return;
       setMissStreaks(Object.fromEntries(toCheck.map((v, i) => [v.id, streaks[i]])));
+
+      // "Returning" badges — anyone back on the roster after time off it.
+      const back = await fetchReturningSince(vols.filter((v) => v.active).map((v) => v.id)).catch(() => ({}));
+      if (!mounted.current) return;
+      setReturning(back);
     } catch (e) {
       if (!mounted.current) return;
       const msg = e instanceof Error ? e.message : '';
@@ -278,18 +288,6 @@ export function PrayerMeetingTab() {
   async function saveVolunteerNotes(id: string) {
     await updatePrayerVolunteerNotes(id, editNotes.trim() || null);
     setEditVolunteerId(null);
-    void load();
-  }
-
-  async function saveSnooze(id: string) {
-    if (!snoozeDate) return;
-    await updatePrayerVolunteerSnooze(id, snoozeDate);
-    setEditSnoozeId(null);
-    void load();
-  }
-
-  async function clearSnooze(id: string) {
-    await updatePrayerVolunteerSnooze(id, null);
     void load();
   }
 
@@ -359,7 +357,8 @@ export function PrayerMeetingTab() {
             <div className="mt-3 space-y-1.5 border-t border-sparrow-gold/30 pt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               <p>
                 <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">If someone reaches out</span> — anytime,
-                prompted or not — go to the Volunteers tab and set <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">"Snooze until."</span>{' '}
+                prompted or not — use <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">"Snooze until…"</span>{' '}
+                on their card in the Volunteers tab (or on their reminder on Partnerships Home).
                 Pick the date they said they'd be back (any date is fine if it's open-ended). This pauses the steps above completely.
               </p>
               <p>
@@ -368,7 +367,10 @@ export function PrayerMeetingTab() {
               </p>
               <p>
                 <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Nothing here removes anyone automatically.</span>{' '}
-                Every step just hands you a task and a message. Taking someone off the roster is always your call: remove Prayer from their Volunteer sub-categories in the Directory (don't set them to Inactive — that archives their whole record, including any Donor side).
+                Every step just hands you a task and a message. Taking someone off the team is always your call: use{' '}
+                <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">"Move off prayer team"</span> on their card
+                (or on their reminder on Partnerships Home). Their prayer history is kept. If prayer was their only role with
+                Sparrow, their Directory record is archived too; otherwise it stays active for their other roles.
               </p>
               <p>
                 <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">These scripts are for silence, not for someone you're already talking to.</span>{' '}
@@ -473,9 +475,10 @@ export function PrayerMeetingTab() {
             </p>
           )}
           <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            This roster follows the Directory automatically. Anyone who's a Volunteer with the
-            Prayer sub-category shows here; take Prayer off their record to move them off the
-            active roster. Nothing to add or archive from this screen.
+            Anyone with the Volunteer → Prayer sub-category in the Directory shows up here on their own.
+            Add Prayer to their record only after they've signed the Prayer Volunteer Agreement and
+            Confidentiality Form in SignWell. To take someone off the team, use "Move off prayer team"
+            on their card.
           </p>
 
           {activeVolunteers.length === 0 && (
@@ -499,6 +502,24 @@ export function PrayerMeetingTab() {
                     </span>
                   ) : null}
                 </div>
+                {(() => {
+                  const since = returning[v.id];
+                  if (!since) return null;
+                  const resign = since < addMonthsISO(todayISO(), -RESIGN_AFTER_MONTHS);
+                  return (
+                    <p className="mt-1 text-xs">
+                      <span className="mr-1.5 rounded-full bg-sparrow-green/10 px-2 py-0.5 font-medium text-sparrow-green dark:text-sparrow-dark-green">
+                        Returning
+                      </span>
+                      <span className="text-sparrow-gray dark:text-sparrow-dark-gray">
+                        Last on the team {shortDate(since)}.{' '}
+                        {resign
+                          ? 'That was over a year ago — send the Prayer Volunteer Agreement again.'
+                          : 'Under a year ago — no new agreement needed unless the form has changed since they signed.'}
+                      </span>
+                    </p>
+                  );
+                })()}
                 <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                   {v.phone && <span>{v.phone}</span>}
                   {v.email && <span>{v.email}</span>}
@@ -534,39 +555,9 @@ export function PrayerMeetingTab() {
                   </div>
                 )}
 
-                {/* Snooze — pause the missed-month ladder when someone's given a heads-up */}
-                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-3">
-                  {editSnoozeId === v.id ? (
-                    <>
-                      <input
-                        type="date"
-                        className="field-input mt-0 w-auto"
-                        value={snoozeDate}
-                        onChange={(e) => setSnoozeDate(e.target.value)}
-                      />
-                      <button onClick={() => void saveSnooze(v.id)} className="btn-primary py-1 text-xs">Save</button>
-                      <button onClick={() => setEditSnoozeId(null)} className="btn-secondary py-1 text-xs">Cancel</button>
-                    </>
-                  ) : v.snoozed_until ? (
-                    <>
-                      <button
-                        onClick={() => { setEditSnoozeId(v.id); setSnoozeDate(v.snoozed_until ?? todayISO()); }}
-                        className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline"
-                      >
-                        Change snooze date
-                      </button>
-                      <button onClick={() => void clearSnooze(v.id)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:underline">
-                        Clear snooze
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => { setEditSnoozeId(v.id); setSnoozeDate(todayISO()); }}
-                      className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline"
-                    >
-                      Snooze until…
-                    </button>
-                  )}
+                {/* Snooze / Move off prayer team — same buttons as the prayer reminders on Home */}
+                <div className="mt-3 border-t border-sparrow-rule dark:border-sparrow-dark-border pt-3">
+                  <PrayerVolunteerActions volunteer={v} onChanged={() => void load()} />
                 </div>
               </div>
             ))}
@@ -581,7 +572,7 @@ export function PrayerMeetingTab() {
                 {inactiveVolunteers.map((v) => (
                   <div key={v.id} className="flex items-center justify-between rounded-xl border border-sparrow-rule/60 bg-sparrow-mist/40 dark:bg-black/20 px-4 py-2.5">
                     <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{v.full_name}</span>
-                    <span className="text-xs text-sparrow-gray/70">No longer tagged in Directory</span>
+                    <span className="text-xs text-sparrow-gray/70">Off the prayer team</span>
                   </div>
                 ))}
               </div>

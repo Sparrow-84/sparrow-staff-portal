@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '@/auth/AuthContext';
 import type { Profile } from '@/lib/types';
 import { updatePartner } from '@/lib/partnerships';
+import { syncPrayerVolunteersFromDirectory } from '@/lib/prayer';
 import { assignAvatarColors } from '@/lib/avatarColors';
 import { GivingMethodEditor } from './GivingMethodEditor';
 import { LabelPill } from '@/components/LabelPill';
@@ -544,6 +545,7 @@ export function PartnerTableView({
                       options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
                       selected={p.volunteer_sub_categories ?? []}
                       onChange={(next) => void patch(p.id, { volunteer_sub_categories: next as VolunteerSubCategory[] })}
+                      onClose={() => void syncPrayerVolunteersFromDirectory().then(onChanged).catch(() => undefined)}
                       placeholder="—"
                     />
                   );
