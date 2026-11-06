@@ -3,6 +3,11 @@ import { useAuth } from '@/auth/AuthContext';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import {
   consecutiveMissedMonths,
+  fetchOpenPrayerRefs,
+  missedStreak,
+  prayerMissRef,
+  prayerSnoozeCheckRef,
+  resolvePrayerTasks,
   fetchMeetingsWithAttendance,
   fetchPrayerVolunteers,
   logPrayerMeeting,
@@ -100,6 +105,8 @@ function LogMeetingPanel({
       // Check-in tasks go to the Partnerships room admin, else whoever logged the meeting.
       const assignee = (await fetchPartnershipsRoomAdminId()) ?? profile.id;
 
+      const openRefs = await fetchOpenPrayerRefs();
+
       // Missed-month ladder — runs per volunteer off this meeting's attendance.
       // See the instructions box at the top of the tab for the full policy.
       for (const v of volunteers) {
@@ -108,8 +115,7 @@ function LogMeetingPanel({
         if (didAttend) {
           // Attendance always wins — clears any snooze and closes any open check-in task.
           if (v.snoozed_until) await updatePrayerVolunteerSnooze(v.id, null);
-          await supabase.rpc('resolve_system_task', { p_system: 'crm', p_ref: `prayer_miss:${v.id}` });
-          await supabase.rpc('resolve_system_task', { p_system: 'crm', p_ref: `prayer_snooze_check:${v.id}` });
+          await resolvePrayerTasks(v.id, undefined, openRefs);
           continue;
         }
 
@@ -118,9 +124,11 @@ function LogMeetingPanel({
           // the buffer past their stated return date, at which point it's one
           // single check-in, not a resumption of the normal 2/3/4 sequence.
           if (date >= addMonthsISO(v.snoozed_until, SNOOZE_BUFFER_MONTHS)) {
+            const ref = prayerSnoozeCheckRef(v.id, v.snoozed_until);
+            await resolvePrayerTasks(v.id, ref, openRefs);
             await supabase.rpc('emit_system_task', {
               p_system: 'crm',
-              p_ref: `prayer_snooze_check:${v.id}`,
+              p_ref: ref,
               p_assignee: assignee,
               p_title: `Prayer volunteer check-in — ${v.full_name} (snoozed, still no-show)`,
               p_department: 'partnerships',
@@ -132,12 +140,15 @@ function LogMeetingPanel({
           continue;
         }
 
-        const streak = await consecutiveMissedMonths(v.id);
-        if (streak >= 2) {
+        const { count: streak, firstMissedMonth } = await missedStreak(v.id);
+        if (streak >= 2 && firstMissedMonth) {
           const rung = (streak >= 4 ? 4 : streak) as 2 | 3 | 4;
+          // A new step closes the previous step's task, so only the latest shows.
+          const ref = prayerMissRef(v.id, firstMissedMonth, rung);
+          await resolvePrayerTasks(v.id, ref, openRefs);
           await supabase.rpc('emit_system_task', {
             p_system: 'crm',
-            p_ref: `prayer_miss:${v.id}`,
+            p_ref: ref,
             p_assignee: assignee,
             p_title: `Prayer volunteer check-in — ${v.full_name} (${streak} month${streak === 1 ? '' : 's'} missed)`,
             p_department: 'partnerships',

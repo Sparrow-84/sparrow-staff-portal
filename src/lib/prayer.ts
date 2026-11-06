@@ -67,10 +67,46 @@ export async function updatePrayerVolunteerSnooze(id: string, snoozedUntil: stri
   if (error) throw new Error(error.message);
 }
 
-/** Closes any open check-in task for this volunteer (missed-month or post-snooze). */
-async function resolvePrayerTasks(volunteerId: string): Promise<void> {
-  await supabase.rpc('resolve_system_task', { p_system: 'crm', p_ref: `prayer_miss:${volunteerId}` });
-  await supabase.rpc('resolve_system_task', { p_system: 'crm', p_ref: `prayer_snooze_check:${volunteerId}` });
+// ── Check-in task refs ─────────────────────────────────────────────────
+// emit_system_task updates a task with the same ref in place and never reopens a done one.
+// So each check-in gets its own ref: one per missed-month step within a run of missed
+// months (keyed by the run's first missed month), and one per snooze date. Logging the
+// next meeting at the same step updates the same task (no weekly nagging once it's Done),
+// while the next step, or a new run of missed months later on, gets a fresh task.
+
+export function prayerMissRef(volunteerId: string, firstMissedMonth: string, step: number): string {
+  return `prayer_miss:${volunteerId}:${firstMissedMonth}:${step}`;
+}
+
+export function prayerSnoozeCheckRef(volunteerId: string, snoozedUntil: string): string {
+  return `prayer_snooze_check:${volunteerId}:${snoozedUntil}`;
+}
+
+function isPrayerRefFor(ref: string, volunteerId: string): boolean {
+  return ['prayer_miss', 'prayer_snooze_check'].some(
+    (prefix) => ref === `${prefix}:${volunteerId}` || ref.startsWith(`${prefix}:${volunteerId}:`),
+  );
+}
+
+/** Refs of every open prayer check-in task (any volunteer). Uses the room-wide reminders
+ *  list (0209), since tasks' own RLS only shows the assignee their tasks. */
+export async function fetchOpenPrayerRefs(): Promise<string[]> {
+  const { data, error } = await supabase.rpc('partnerships_open_reminders');
+  if (error) return [];
+  return ((data ?? []) as { source_ref: string }[])
+    .map((r) => r.source_ref)
+    .filter((ref) => ref.startsWith('prayer_miss:') || ref.startsWith('prayer_snooze_check:'));
+}
+
+/** Closes this volunteer's open check-in tasks, except `keepRef` if given. Pass `openRefs`
+ *  when already fetched (e.g. once per meeting save). */
+export async function resolvePrayerTasks(volunteerId: string, keepRef?: string, openRefs?: string[]): Promise<void> {
+  const refs = (openRefs ?? (await fetchOpenPrayerRefs())).filter(
+    (ref) => isPrayerRefFor(ref, volunteerId) && ref !== keepRef,
+  );
+  for (const ref of refs) {
+    await supabase.rpc('resolve_system_task', { p_system: 'crm', p_ref: ref });
+  }
 }
 
 /** Snooze from a button (Prayer Team tab or a Home reminder): sets the date and closes any
@@ -269,6 +305,12 @@ export async function logPrayerMeeting(
 // inheriting the missed months from before they left.
 
 export async function consecutiveMissedMonths(volunteerId: string): Promise<number> {
+  return (await missedStreak(volunteerId)).count;
+}
+
+/** The run of missed months: how many, and the first missed month (YYYY-MM) — which
+ *  names the run in its check-in task refs. */
+export async function missedStreak(volunteerId: string): Promise<{ count: number; firstMissedMonth: string | null }> {
   const [{ data, error }, { data: meetings, error: me }] = await Promise.all([
     supabase
       .from('prayer_attendance')
@@ -298,12 +340,14 @@ export async function consecutiveMissedMonths(volunteerId: string): Promise<numb
     .sort()
     .reverse();
   let count = 0;
+  let firstMissedMonth: string | null = null;
   for (const key of meetingMonths) {
     if (!months.has(key)) break; // not on the roster that month
     if (months.get(key)) break;
     count++;
+    firstMissedMonth = key;
   }
-  return count;
+  return { count, firstMissedMonth };
 }
 
 /** For volunteers back on the active roster after time off it: volunteer id → the date of
