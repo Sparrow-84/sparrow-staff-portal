@@ -12,6 +12,7 @@ import {
   type MeetingWithAttendance,
   type PrayerVolunteer,
 } from '@/lib/prayer';
+import { fetchPartnershipsRoomAdminId } from '@/lib/partnerships';
 import { supabase } from '@/lib/supabase';
 
 // How many months after a snoozed volunteer's stated return date we wait,
@@ -89,6 +90,9 @@ function LogMeetingPanel({
       const attendanceRows = volunteers.map((v) => ({ volunteer_id: v.id, attended: attended[v.id] ?? false }));
       await logPrayerMeeting(date, notes.trim() || null, profile.id, attendanceRows);
 
+      // Check-in tasks go to the Partnerships room admin, else whoever logged the meeting.
+      const assignee = (await fetchPartnershipsRoomAdminId()) ?? profile.id;
+
       // Missed-month ladder — runs per volunteer off this meeting's attendance.
       // See the instructions box at the top of the tab for the full policy.
       for (const v of volunteers) {
@@ -110,7 +114,7 @@ function LogMeetingPanel({
             await supabase.rpc('emit_system_task', {
               p_system: 'crm',
               p_ref: `prayer_snooze_check:${v.id}`,
-              p_assignee: profile.id,
+              p_assignee: assignee,
               p_title: `Prayer volunteer check-in — ${v.full_name} (snoozed, still no-show)`,
               p_department: 'partnerships',
               p_priority: 'p3',
@@ -127,7 +131,7 @@ function LogMeetingPanel({
           await supabase.rpc('emit_system_task', {
             p_system: 'crm',
             p_ref: `prayer_miss:${v.id}`,
-            p_assignee: profile.id,
+            p_assignee: assignee,
             p_title: `Prayer volunteer check-in — ${v.full_name} (${streak} month${streak === 1 ? '' : 's'} missed)`,
             p_department: 'partnerships',
             p_priority: rung === 4 ? 'p2' : 'p3',
@@ -230,7 +234,7 @@ export function PrayerMeetingTab() {
 
   const load = useCallback(async () => {
     try {
-      // One door: Directory (Prayer type/tag) decides who's on the roster — refresh it
+      // One door: Directory (Volunteer → Prayer) decides who's on the roster — refresh it
       // here before reading, same opportunistic-sync pattern the rest of the room uses.
       // Swallowed (not re-thrown) so a sync hiccup can't crash the whole tab -- but surfaced
       // as a visible banner below, not silently discarded. A past version of this silently
@@ -327,8 +331,8 @@ export function PrayerMeetingTab() {
           <div className="rounded-xl border border-sparrow-gold/30 bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-4 py-3 text-sm">
             <p className="font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">How we handle missed meetings</p>
             <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              This runs automatically off the attendance log below — a task lands on Partnerships Home
-              with a ready-to-send message at each step. Everything here is{' '}
+              This runs automatically off the attendance log below — a task goes to the Partnerships room admin
+              with a ready-to-send message at each step, and shows on Partnerships Home. Everything here is{' '}
               <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">strongly recommended, not required</span>
               {' '}— use your judgment on any individual volunteer.
             </p>
@@ -364,7 +368,7 @@ export function PrayerMeetingTab() {
               </p>
               <p>
                 <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Nothing here removes anyone automatically.</span>{' '}
-                Every step just hands you a task and a message — marking someone inactive in Directory is always something you decide and do yourself.
+                Every step just hands you a task and a message. Taking someone off the roster is always your call: remove Prayer from their Volunteer sub-categories in the Directory (don't set them to Inactive — that archives their whole record, including any Donor side).
               </p>
               <p>
                 <span className="font-medium text-sparrow-ink dark:text-sparrow-dark-ink">These scripts are for silence, not for someone you're already talking to.</span>{' '}

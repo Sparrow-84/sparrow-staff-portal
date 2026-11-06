@@ -11,19 +11,18 @@
 import { supabase } from './supabase';
 import { localDate } from './date';
 import { bucketFor } from './tasks';
+import { attachCheckins, fetchOpenCheckins, fetchPartnershipsRoomAdminId } from './partnerships';
 
-export type HomeItemKind = 'touchpoint' | 'collateral' | 'connection' | 'social_post' | 'newsletter';
+export type HomeItemKind = 'touchpoint' | 'collateral' | 'connection' | 'social_post' | 'newsletter' | 'reminder';
 
 /** Which existing Partnerships tab a "view" click on this item should jump to. */
-export type HomeNavTarget = 'collateral' | 'events' | 'social' | 'comms' | 'contacts';
+export type HomeNavTarget = 'collateral' | 'events' | 'social' | 'comms' | 'contacts' | 'prayer';
 
 export interface HomeItem {
   key: string;
   kind: HomeItemKind;
   title: string;
-  /** Optional second line -- e.g. a partner's custom touchpoint_reminder_note,
-   *  for a relationship where the generic "touchpoint due" wording doesn't say
-   *  enough (see The Hive, inbound-message-triage-2026-10 Batch 2 item 1). */
+  /** Optional second line. */
   detail?: string;
   due_date: string; // YYYY-MM-DD
   owner_id: string;
@@ -31,6 +30,25 @@ export interface HomeItem {
   partnerId?: string;
   /** Set on every other kind — lets the caller switch to the tab that manages this item. */
   navigateTab?: HomeNavTarget;
+  /** Set on a check-in: Done closes just this one and asks when the next is due. */
+  checkin?: { id: string; label: string; legacy?: boolean };
+  /** Set on a 'reminder' (any other open Partnerships task): Done closes that task. */
+  taskRef?: string;
+}
+
+/** Open Partnerships task kinds Home already lists from their own source rows (or, for
+ *  possible duplicate donors, in the Needs review card) -- skipped so nothing shows twice. */
+const DERIVED_TASK_PREFIXES = new Set([
+  'touchpoint', 'checkin', 'collateral_review', 'connection_followup', 'social_post', 'comms', 'possible_duplicate_donor',
+]);
+
+/** Where a click on an open-task reminder goes, by its source_ref prefix. */
+function reminderTarget(ref: string): Pick<HomeItem, 'partnerId' | 'navigateTab'> {
+  const [prefix, id] = ref.split(':');
+  if (prefix === 'prayer_miss' || prefix === 'prayer_snooze_check') return { navigateTab: 'prayer' };
+  if (prefix === 'comms_milestone') return { navigateTab: 'comms' };
+  if ((prefix === 'first_time_donor' || prefix === 'lapsed') && id) return { partnerId: id };
+  return {};
 }
 
 const DAY_MS = 86_400_000;
@@ -69,7 +87,14 @@ interface PartnerRow {
   needs_additional_touchpoint: boolean;
   additional_touchpoint_label: string | null;
   additional_touchpoint_due: string | null;
-  touchpoint_reminder_note: string | null;
+}
+
+interface OpenReminderRow {
+  id: string;
+  title: string;
+  due_date: string | null;
+  source_ref: string;
+  assignee_id: string | null;
 }
 
 interface CollateralRow {
@@ -140,12 +165,11 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
     settingsRes,
     socialRes,
     commsRes,
+    checkins,
+    remindersRes,
   ] = await Promise.all([
     supabase
       .from('partners')
-      // touchpoint_reminder_note left out of this select until migration 0186 is confirmed
-      // applied -- selecting a not-yet-existing column broke the whole Partnerships room
-      // 2026-10-15. Add back once confirmed.
       .select('id, name, owner_id, active, stage, needs_additional_touchpoint, additional_touchpoint_label, additional_touchpoint_due')
       .eq('active', true),
     supabase
@@ -160,13 +184,19 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
     supabase.from('partnership_recurring_settings').select('kind, cadence_days, lead_time_days, owner_id'),
     supabase.from('partnership_social_posts').select('planned_date, status'),
     supabase.from('partnership_comms').select('id, title, publish_date, status').eq('status', 'not_started'),
+    fetchOpenCheckins(),
+    // Every other open Partnerships reminder (migration 0209); empty until it runs.
+    supabase.rpc('partnerships_open_reminders'),
   ]);
+  // A check-in on a record with no owner goes to the room admin, same as its task (0209).
+  const roomAdminId = await fetchPartnershipsRoomAdminId();
 
   for (const res of [partnersRes, collateralRes, connectionsRes, eventsRes, settingsRes, socialRes, commsRes]) {
     if (res.error) throw new Error(res.error.message);
   }
 
-  const partners = (partnersRes.data ?? []) as PartnerRow[];
+  const partners = attachCheckins((partnersRes.data ?? []) as PartnerRow[], checkins);
+  const reminders = remindersRes.error ? [] : ((remindersRes.data ?? []) as OpenReminderRow[]);
   const collateral = (collateralRes.data ?? []) as CollateralRow[];
   const connections = (connectionsRes.data ?? []) as ConnectionRow[];
   const events = (eventsRes.data ?? []) as EventRow[];
@@ -177,23 +207,25 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
   const today = localDate();
   const items: HomeItem[] = [];
 
-  // 1. Partner touchpoints coming due — mirrors emit_due_touchpoint_tasks() (migration 0193).
-  // Most relationships need nothing here at all (TSM + fixed thank-yous cover them); this
-  // only fires for the relationships someone explicitly flagged with a named, dated item
-  // via "Needs additional touchpoint" — mainly Community Partners. No more generic recurring
-  // cadence and no more lead-time warning window — the due date itself is exact.
+  // 1. Check-ins coming due — mirrors emit_due_touchpoint_tasks() (migration 0209). Most
+  // relationships need nothing here at all (TSM + fixed thank-yous cover them); this only
+  // fires for named, dated check-ins someone added to a record — mainly Community Partners.
+  // Each check-in is its own item, so a record with two shows twice.
   for (const p of partners) {
-    if (!p.owner_id || !p.needs_additional_touchpoint || !p.additional_touchpoint_due) continue;
-    if (!inScope(p.additional_touchpoint_due, today)) continue;
-    items.push({
-      key: `touchpoint:${p.id}`,
-      kind: 'touchpoint',
-      title: `${p.additional_touchpoint_label ?? 'Touchpoint due'} — ${p.name}`,
-      detail: p.touchpoint_reminder_note ?? undefined,
-      due_date: p.additional_touchpoint_due,
-      owner_id: p.owner_id,
-      partnerId: p.id,
-    });
+    const ownerId = p.owner_id ?? roomAdminId;
+    if (!ownerId) continue;
+    for (const c of p.checkins) {
+      if (!c.due_date || !inScope(c.due_date, today)) continue;
+      items.push({
+        key: `checkin:${c.id}`,
+        kind: 'touchpoint',
+        title: `${p.name} needs ${c.label}`,
+        due_date: c.due_date,
+        owner_id: ownerId,
+        partnerId: p.id,
+        checkin: { id: c.id, label: c.label, legacy: c.legacy },
+      });
+    }
   }
 
   // 2. Collateral needing review — mirrors emit_collateral_review_tasks().
@@ -269,6 +301,23 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
         navigateTab: 'comms',
       });
     }
+  }
+
+  // 6. Every other open Partnerships reminder (prayer check-ins, comms milestones, donor
+  // follow-ups...), straight from the task list. One with no due date counts as due today.
+  for (const r of reminders) {
+    if (DERIVED_TASK_PREFIXES.has(r.source_ref.split(':')[0])) continue;
+    const due = r.due_date ? dateOnly(r.due_date) : today;
+    if (!inScope(due, today)) continue;
+    items.push({
+      key: `task:${r.id}`,
+      kind: 'reminder',
+      title: r.title,
+      due_date: due,
+      owner_id: r.assignee_id ?? roomAdminId ?? '',
+      taskRef: r.source_ref,
+      ...reminderTarget(r.source_ref),
+    });
   }
 
   return items.sort((a, b) => a.due_date.localeCompare(b.due_date));

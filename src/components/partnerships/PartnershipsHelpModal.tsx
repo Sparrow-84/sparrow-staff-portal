@@ -53,19 +53,19 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
 
             <p className="mb-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Yes — when the dot is:</p>
             <div className="space-y-2 pl-1">
-              <DotRow dot="bg-priority-p1" label="Red — needs attention" desc="An overdue named touchpoint, or an unacknowledged Brevo-unsubscribe notice. Worth a look." />
+              <DotRow dot="bg-priority-p1" label="Red — needs attention" desc="An overdue check-in (a to-do), or a TSM unsubscribe you haven't dismissed yet (just an FYI)." />
             </div>
 
             <p className="mb-2 mt-4 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Not right now:</p>
             <div className="space-y-2 pl-1">
-              <DotRow dot="bg-sparrow-green" label="Green — all good" desc="Covered — either nothing additional is needed beyond TSM, or the named touchpoint isn't due yet." />
+              <DotRow dot="bg-sparrow-green" label="Green — all good" desc="Covered — either nothing extra is needed beyond TSM, or no check-in is due yet." />
               <DotRow dot="bg-sparrow-rule dark:bg-sparrow-dark-border" label="No dot — inactive" desc="Off the active list entirely. No action needed. They still receive TSM unless they unsubscribe." />
             </div>
 
             <p className="mt-4 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               Most Donor and Volunteer records never show anything to track — that's by design,
-              not a gap. "Needs additional touchpoint" is for the relationships that genuinely
-              need a specific, dated item, mainly Community Partners.
+              not a gap. Check-ins are for the relationships that genuinely need a specific,
+              dated item, mainly Community Partners.
             </p>
           </section>
 
@@ -89,8 +89,8 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
             <p className="mt-3 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-3 py-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               There's no background clock tracking how long it's been since contact — a record
               never flags itself just because time has passed. The only things that ever need
-              attention are a named touchpoint you set yourself going overdue, or an
-              unacknowledged Brevo unsubscribe.
+              attention are a named touchpoint you set yourself going overdue, or an FYI about an
+              unsubscribe from TSM.
             </p>
           </section>
 
@@ -124,7 +124,7 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
             <div className="space-y-4">
               <Rule
                 title="Brevo unsubscribes surface automatically"
-                body={'When someone unsubscribes from TSM, their "Subscribed to TSM" checkbox updates on its own and a dismissible FYI notice appears on Partnerships Home — not a to-do, just a chance to consider whether anything about their touchpoint plan should change.'}
+                body={'When someone unsubscribes from TSM, their "Subscribed to TSM" checkbox updates on its own and a dismissible FYI notice appears on Partnerships Home. This is not a to-do: unsubscribing is their choice, and we leave them alone. Dismiss it once you have seen it.'}
               />
               <Rule
                 title="Active list vs. newsletter list"

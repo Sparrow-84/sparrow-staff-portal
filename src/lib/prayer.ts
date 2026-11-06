@@ -68,7 +68,7 @@ export async function updatePrayerVolunteerSnooze(id: string, snoozedUntil: stri
 }
 
 /**
- * One door: Directory (partners typed or tagged "Prayer volunteer") is the only place
+ * One door: Directory (partners with the Volunteer → Prayer sub-category) is the only place
  * Bethany manages who's a prayer volunteer. This mirrors that into the roster the meeting
  * attendance log actually points at (migration 0043's prayer_volunteers.partner_id link,
  * previously optional and unused) — every active, Prayer-tagged partner gets a roster row
@@ -78,24 +78,16 @@ export async function updatePrayerVolunteerSnooze(id: string, snoozedUntil: stri
  * calls (e.g. syncDueTouchpointTasks) — no cron needed for something this small.
  */
 export async function syncPrayerVolunteersFromDirectory(): Promise<void> {
-  // "Prayer" is a Volunteer sub-category (migration 0207). It used to be its own category,
-  // and this query kept looking for that retired category after 0193, which is why everyone
-  // dropped to "No longer active". Before 0207 runs, fall back to the main-category
-  // Volunteer → Prayer records rather than emptying the roster.
-  let { data: partners, error: pe } = await supabase
+  // "Prayer" is a Volunteer sub-category (migration 0207), on any record that's a Volunteer.
+  // The kinds stay on a record when Volunteer is removed (0209), so check the category too.
+  const { data: partners, error: pe } = await supabase
     .from('partners')
-    .select('id, name, email, phone, active')
+    .select('id, name, email, phone, active, type, secondary_types')
     .contains('volunteer_sub_categories', ['prayer']);
-  if (pe) {
-    ({ data: partners, error: pe } = await supabase
-      .from('partners')
-      .select('id, name, email, phone, active')
-      .eq('type', 'volunteer')
-      .eq('sub_category', 'prayer'));
-  }
   if (pe) throw new Error(pe.message);
 
-  const qualifying = (partners ?? []).filter((p) => p.active);
+  const qualifying = (partners ?? []).filter((p) =>
+    p.active && (p.type === 'volunteer' || (p.secondary_types ?? []).includes('volunteer')));
   if (qualifying.length > 0) {
     const { error: ue } = await supabase.from('prayer_volunteers').upsert(
       qualifying.map((p) => ({

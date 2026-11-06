@@ -2,14 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
 import type { Profile } from '@/lib/types';
-import { deletePartner, deleteTouchpoint, emitFirstTimeDonorTask, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner, updateTouchpoint } from '@/lib/partnerships';
+import { deletePartner, deleteTouchpoint, fetchDonations, fetchTouchpoints, logTouchpoint, mergePartners, updatePartner, updateTouchpoint } from '@/lib/partnerships';
 import {
   DONOR_TIER,
-  DONOR_TIER_DESC,
   MOU_STATUS,
   PARTNER_PROVIDES_PRESETS,
   PARTNER_STAGE,
-  PARTNER_STAGE_DESC,
   PARTNER_SUB_CATEGORY,
   PARTNER_TYPE,
   PARTNER_TYPES,
@@ -20,11 +18,14 @@ import {
   type VolunteerSubCategory,
   TOUCHPOINT_METHOD,
   TOUCHPOINT_METHODS,
+  categoriesPatch,
   composePartnerName,
+  partnerCategories,
   displayPartnerName,
   stagePatch,
   dueLabel,
   hasPartnershipTerms,
+  partnerMatchesType,
   isPersonRecord,
   shortDate,
   stewardshipStatus,
@@ -61,6 +62,7 @@ import {
 import { FreshnessStamp, StillCorrectButton } from '../resident-services/Freshness';
 import { ServiceFormPanel } from '../resident-services/ServiceFormPanel';
 import { OrgContacts } from './OrgContacts';
+import { CheckinList } from './Checkins';
 
 // For the collapsed "last touchpoint" preview only -- the full note (with
 // formatting) renders in the Touchpoint history list below via RichTextView.
@@ -120,7 +122,6 @@ export function PartnerDetailPanel({
   const [method, setMethod] = useState<TouchpointMethod>('email');
   const [occurredOn, setOccurredOn] = useState('');
   const [summary, setSummary] = useState('');
-  const [direction, setDirection] = useState<'outbound' | 'inbound'>('outbound');
   const [stageUpdate, setStageUpdate] = useState<PartnerStage>('active');
   const [donorTierUpdate, setDonorTierUpdate] = useState<DonorTier | ''>('');
   // Resident Services links (migration 0199) -- both quietly empty until it runs.
@@ -143,7 +144,7 @@ export function PartnerDetailPanel({
     if (!partnerId) return;
     const [all, gifts, svc, checked, review] = await Promise.all([
       fetchTouchpoints(partnerId),
-      partner?.type === 'donor' ? fetchDonations(partnerId) : Promise.resolve([]),
+      partner && partnerMatchesType(partner, 'donor') ? fetchDonations(partnerId) : Promise.resolve([]),
       fetchServicesForPartner(partnerId),
       fetchPartnerInfoChecked(partnerId),
       fetchOpenReviewForPartner(partnerId),
@@ -176,7 +177,7 @@ export function PartnerDetailPanel({
 
   if (!partner) return null;
 
-  const type = PARTNER_TYPE[partner.type];
+  const categories = partnerCategories(partner);
   const status = stewardshipStatus(partner);
   const loggerName = (id: string | null) => (id ? profiles.find((p) => p.id === id)?.full_name ?? '—' : '—');
   const nameFor = (id: string | null) => (id ? profiles.find((p) => p.id === id)?.full_name ?? null : null);
@@ -197,7 +198,7 @@ export function PartnerDetailPanel({
     (p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec',
   );
 
-  const isDonor = partner.type === 'donor';
+  const isDonor = partnerMatchesType(partner, 'donor');
   const showPartnershipTerms = hasPartnershipTerms(partner);
   const lastTouchpoint = touchpoints[0] ?? null;
 
@@ -221,8 +222,6 @@ export function PartnerDetailPanel({
     if (donorTierUpdate !== (partner.donor_tier ?? '')) {
       patches.donor_tier = (donorTierUpdate || null) as DonorTier | null;
     }
-    // Restore archived partner when they reach out
-    if (direction === 'inbound' && !partner.active && patches.stage === undefined) Object.assign(patches, stagePatch('active'));
     if (Object.keys(patches).length > 0) await updatePartner(partner.id, patches);
     setSummary('');
     setLogOpen(false);
@@ -312,7 +311,7 @@ export function PartnerDetailPanel({
       open={open}
       onClose={onClose}
       title={partner.name}
-      subtitle={`${type.icon} ${type.label}`}
+      subtitle={categories.map((t) => `${PARTNER_TYPE[t].icon} ${PARTNER_TYPE[t].label}`).join(' · ')}
     >
       <div className="space-y-5" key={partner.id}>
 
@@ -344,7 +343,6 @@ export function PartnerDetailPanel({
           <button
             onClick={() => {
               if (!logOpen) {
-                setDirection('outbound');
                 setStageUpdate(partner.stage);
                 setDonorTierUpdate(partner.donor_tier ?? '');
                 setOccurredOn(localDate());
@@ -363,40 +361,6 @@ export function PartnerDetailPanel({
 
           {logOpen && (
             <div className="mt-3 space-y-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
-
-              {/* Direction toggle */}
-              <div className="grid grid-cols-2 gap-2">
-                {(['outbound', 'inbound'] as const).map((dir) => (
-                  <button
-                    key={dir}
-                    type="button"
-                    onClick={() => {
-                      setDirection(dir);
-                      if (dir === 'inbound') {
-                        // They reached out = relationship alive = Active
-                        setStageUpdate('active');
-                      } else {
-                        // We reached out -- logging this touchpoint itself clears the
-                        // computed "lapsed" overlay (it's based on time since last touch,
-                        // which this resets); no separate stage change needed.
-                        setStageUpdate(partner.stage);
-                      }
-                    }}
-                    className={`rounded-lg border py-2 text-xs font-medium transition ${
-                      direction === dir
-                        ? 'border-sparrow-green dark:border-sparrow-dark-green bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green'
-                        : 'border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/40'
-                    }`}
-                  >
-                    {dir === 'outbound' ? 'We reached out' : 'They reached out'}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-                {direction === 'outbound'
-                  ? 'Record your outreach. Stage and donor tier updates below if needed.'
-                  : 'Record what they shared. Stage auto-set to Active — override below if needed.'}
-              </p>
 
               {/* Method + Date */}
               <div className="grid grid-cols-2 gap-2">
@@ -484,94 +448,47 @@ export function PartnerDetailPanel({
         {/* ── 5. Stewardship fields — always editable (change most often) ── */}
         <section className="space-y-3">
           <span className="field-label block">Stewardship</span>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className="field-label">Category</span>
-              <select
-                value={partner.type}
-                onChange={(e) => {
-                  const nextType = e.target.value as PartnerType;
-                  if (nextType === partner.type) return;
-                  // Changing the primary category shouldn't lose the old one — fold it into
-                  // secondary categories (and drop the new one from there if already tagged).
-                  const nextSecondary = Array.from(
-                    new Set([...(partner.secondary_types ?? []).filter((t) => t !== nextType), partner.type]),
-                  );
-                  // A Volunteer is always a person.
-                  void patch({ type: nextType, secondary_types: nextSecondary, sub_category: nextType === 'volunteer' ? 'individual' : null });
-                }}
-                disabled={busy}
-                className="field-input mt-0"
-              >
-                {PARTNER_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {PARTNER_TYPE[t].icon} {PARTNER_TYPE[t].label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {partner.type === 'volunteer' ? (
-            <div>
-              <span className="field-label">Volunteer sub-categories</span>
-              <MultiSelectDropdown
-                options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
-                selected={partner.volunteer_sub_categories ?? []}
-                onChange={(next) => void patch({ volunteer_sub_categories: next as VolunteerSubCategory[] })}
-                disabled={busy}
-                placeholder="Pick at least one"
-              />
-              <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-                Pick every kind of volunteering they do. Prayer puts them on the Prayer roster.
-              </p>
-            </div>
-            ) : (
-            <div>
-              <span className="field-label">Sub-category</span>
-              <select
-                value={partner.sub_category ?? ''}
-                onChange={(e) => void patch({ sub_category: (e.target.value || null) as PartnerSubCategory | null })}
-                disabled={busy}
-                className="field-input mt-0"
-              >
-                <option value="" disabled>— Select —</option>
-                {SUB_CATEGORIES_FOR_TYPE[partner.type].map((sc) => (
-                  <option key={sc} value={sc}>{PARTNER_SUB_CATEGORY[sc]}</option>
-                ))}
-              </select>
-            </div>
-            )}
-          </div>
           <div>
-            <span className="field-label">Also a</span>
+            <span className="field-label">Categories</span>
+            {/* All equal, no "main" one. Removing one keeps everything else on the record. */}
             <MultiSelectDropdown
-              options={PARTNER_TYPES.filter((t) => t !== partner.type).map((t) => ({
-                value: t,
-                label: PARTNER_TYPE[t].label,
-                icon: PARTNER_TYPE[t].icon,
-              }))}
-              selected={partner.secondary_types ?? []}
-              onChange={(next) => void patch({ secondary_types: next as PartnerType[] })}
+              options={PARTNER_TYPES.map((t) => ({ value: t, label: PARTNER_TYPE[t].label, icon: PARTNER_TYPE[t].icon }))}
+              selected={categories}
+              onChange={(next) => { if (next.length > 0) void patch(categoriesPatch(partner, next as PartnerType[])); }}
               disabled={busy}
-              placeholder="None"
+              placeholder="Pick at least one"
             />
-            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-              Tags {partner.name} onto those Directory tabs too — e.g. a church that's also a
-              Donor. One record, more than one category, not two records.
-            </p>
           </div>
-          {partner.type !== 'volunteer' && (partner.secondary_types ?? []).includes('volunteer') && (
-            <div>
-              <span className="field-label">Volunteer sub-categories</span>
-              <MultiSelectDropdown
-                options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
-                selected={partner.volunteer_sub_categories ?? []}
-                onChange={(next) => void patch({ volunteer_sub_categories: next as VolunteerSubCategory[] })}
-                disabled={busy}
-                placeholder="Pick at least one"
-              />
-              <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-                Pick every kind of volunteering they do. Prayer puts them on the Prayer roster.
-              </p>
+          {(categories.includes('donor') || categories.includes('community') || categories.includes('volunteer')) && (
+            <div className="grid grid-cols-2 gap-3">
+              {(categories.includes('donor') || categories.includes('community')) && (
+                <div>
+                  <span className="field-label">Sub-category</span>
+                  <select
+                    value={partner.sub_category ?? ''}
+                    onChange={(e) => void patch({ sub_category: (e.target.value || null) as PartnerSubCategory | null })}
+                    disabled={busy}
+                    className="field-input mt-0"
+                  >
+                    <option value="" disabled>— Select —</option>
+                    {SUB_CATEGORIES_FOR_TYPE.donor.map((sc) => (
+                      <option key={sc} value={sc}>{PARTNER_SUB_CATEGORY[sc]}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {categories.includes('volunteer') && (
+                <div>
+                  <span className="field-label">Volunteer sub-categories</span>
+                  <MultiSelectDropdown
+                    options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
+                    selected={partner.volunteer_sub_categories ?? []}
+                    onChange={(next) => void patch({ volunteer_sub_categories: next as VolunteerSubCategory[] })}
+                    disabled={busy}
+                    placeholder="Pick at least one"
+                  />
+                </div>
+              )}
             </div>
           )}
           <div>
@@ -589,72 +506,8 @@ export function PartnerDetailPanel({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-              Gets this record's follow-up tasks. Change it to hand the relationship off; the new owner gets a notification.
-            </p>
           </div>
-          <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={partner.needs_additional_touchpoint}
-                onChange={(e) => void patch({
-                  needs_additional_touchpoint: e.target.checked,
-                  ...(e.target.checked ? {} : { additional_touchpoint_label: null, additional_touchpoint_due: null }),
-                })}
-                disabled={busy}
-                className="h-4 w-4 rounded border-sparrow-rule dark:border-sparrow-dark-border accent-sparrow-green"
-              />
-              <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Needs additional touchpoint</span>
-            </label>
-            {!partner.needs_additional_touchpoint && (
-              <p className="text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-                TSM subscription plus any fixed thank-yous is the complete plan — nothing else to track.
-              </p>
-            )}
-            {partner.needs_additional_touchpoint && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <span className="field-label">What's due</span>
-                  <input
-                    type="text"
-                    className="field-input mt-0"
-                    value={partner.additional_touchpoint_label ?? ''}
-                    onChange={(e) => void patch({ additional_touchpoint_label: e.target.value || null })}
-                    placeholder="e.g. MOU check-in"
-                    disabled={busy}
-                  />
-                </div>
-                <div>
-                  <span className="field-label">Due</span>
-                  <input
-                    type="date"
-                    className="field-input mt-0"
-                    value={partner.additional_touchpoint_due ?? ''}
-                    onChange={(e) => void patch({ additional_touchpoint_due: e.target.value || null })}
-                    disabled={busy}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-          <div>
-            <span className="field-label">Custom reminder wording <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span></span>
-            <textarea
-              className="field-input"
-              rows={2}
-              value={partner.touchpoint_reminder_note ?? ''}
-              onChange={(e) => void patch({ touchpoint_reminder_note: e.target.value.trim() || null })}
-              disabled={busy}
-              placeholder='e.g. "When did you last stand up and give the church a Sparrow update? Do this every 6 months."'
-            />
-            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-              Shows under this partner's touchpoint-due reminder on Home instead of the generic wording —
-              use it when a casual conversation shouldn't count as "caught up" (The Hive's case: talking to
-              people there isn't the same as actually giving the church a real update). Doesn't change the
-              cadence itself, just what the reminder asks.
-            </p>
-          </div>
+          <CheckinList partner={partner} onChanged={() => { onChanged(); void reload(); }} />
           <div>
             <span className="field-label">Stage</span>
             <select
@@ -669,19 +522,12 @@ export function PartnerDetailPanel({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">{PARTNER_STAGE_DESC[partner.stage]}</p>
           </div>
           <div className={isDonor ? '' : 'opacity-50'}>
             <span className="field-label">Donor tier</span>
             <select
               value={partner.donor_tier ?? ''}
-              onChange={async (e) => {
-                const newTier = (e.target.value || null) as DonorTier | null;
-                await patch({ donor_tier: newTier });
-                if (newTier === 'first_time' && partner.owner_id) {
-                  void emitFirstTimeDonorTask(partner.id, partner.name, partner.owner_id).catch(() => undefined);
-                }
-              }}
+              onChange={(e) => void patch({ donor_tier: (e.target.value || null) as DonorTier | null })}
               disabled={busy}
               className="field-input mt-0"
             >
@@ -692,9 +538,6 @@ export function PartnerDetailPanel({
                 </option>
               ))}
             </select>
-            {partner.donor_tier && (
-              <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">{DONOR_TIER_DESC[partner.donor_tier]}</p>
-            )}
           </div>
         </section>
 
@@ -715,10 +558,13 @@ export function PartnerDetailPanel({
             // View mode — clean readable rows
             <div className="space-y-1.5 rounded-xl border border-sparrow-rule/70 px-3 py-3">
               <InfoRow label="Name" value={displayPartnerName(partner)} />
-              <div className={isPersonRecord(partner) ? 'space-y-1.5 opacity-50' : 'space-y-1.5'}>
-                <InfoRow label="Contact" value={partner.contact_name} />
-                <InfoRow label="Role" value={partner.role} />
-              </div>
+              {/* An organization's contacts (and its ★ primary) live in the Contacts list below. */}
+              {isPersonRecord(partner) && (
+                <div className="space-y-1.5 opacity-50">
+                  <InfoRow label="Contact" value={partner.contact_name} />
+                  <InfoRow label="Role" value={partner.role} />
+                </div>
+              )}
               <InfoRow label="Email" value={partner.email} href={partner.email ? `mailto:${partner.email}` : undefined} />
               <InfoRow label="Phone" value={partner.phone} href={partner.phone ? `tel:${partner.phone}` : undefined} />
               <div className={isPersonRecord(partner) ? 'opacity-50' : ''}>
@@ -759,12 +605,14 @@ export function PartnerDetailPanel({
                   onSave={(v) => { if (v) void patch({ name: v }); }}
                 />
               )}
-              <div className={`space-y-3 ${isPersonRecord(partner) ? 'opacity-50' : ''}`}>
-                <div className="grid grid-cols-2 gap-3">
-                  <EditField label="Primary contact" value={partner.contact_name ?? ''} disabled={busy} onSave={(v) => void patch({ contact_name: v })} />
-                  <EditField label="Role / title" value={partner.role ?? ''} disabled={busy} onSave={(v) => void patch({ role: v })} />
+              {isPersonRecord(partner) && (
+                <div className="space-y-3 opacity-50">
+                  <div className="grid grid-cols-2 gap-3">
+                    <EditField label="Primary contact" value={partner.contact_name ?? ''} disabled={busy} onSave={(v) => void patch({ contact_name: v })} />
+                    <EditField label="Role / title" value={partner.role ?? ''} disabled={busy} onSave={(v) => void patch({ role: v })} />
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <EditField
                   label="Email"
@@ -848,9 +696,6 @@ export function PartnerDetailPanel({
               onInterestsCreated?.();
             }}
           />
-          <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-            You can search Directory by an interest's name to pull up everyone tagged with it.
-          </p>
         </section>
 
         {/* ── 7. Notes ── */}
@@ -915,7 +760,7 @@ export function PartnerDetailPanel({
           </section>
         )}
 
-        {/* ── 9. Partnership terms — bottom, community/church/LCP referral only ── */}
+        {/* ── 9. Partnership terms — bottom, records that are a Community Partner ── */}
         {showPartnershipTerms && (
           <section className="space-y-3 rounded-xl border border-sparrow-rule/70 p-3">
             <span className="field-label block">Partnership terms</span>
@@ -964,14 +809,14 @@ export function PartnerDetailPanel({
               </select>
               {partner.mou_status === 'needed' && (
                 <div className="mt-2 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
-                  No MOU on file — needed for this relationship. Coordinate with Susanna to create one.
+                  No MOU on file — needed for this relationship. Coordinate with the Partnerships Manager to create one.
                 </div>
               )}
               {partner.mou_status === 'on_file' && (
                 <p className="mt-1 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">On file ✓</p>
               )}
               <p className="mt-2 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-                An MOU is needed when both organizations are formally committing to something — sharing client information, a set referral process, ongoing services, or access to participants. Just passing along Sparrow's contact info doesn't need one. If you're not sure, ask Susanna.
+                An MOU is needed when both organizations are formally committing to something — sharing client information, a set referral process, ongoing services, or access to participants. Just passing along Sparrow's contact info doesn't need one. If you're not sure, ask the Partnerships Manager.
               </p>
             </div>
           </section>

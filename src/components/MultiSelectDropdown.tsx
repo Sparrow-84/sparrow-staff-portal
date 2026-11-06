@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { LABEL_COLORS, LabelPill } from '@/components/LabelPill';
 
@@ -21,6 +21,7 @@ export function MultiSelectDropdown({
   placeholder = 'None selected',
   disabled = false,
   onCreateNew,
+  trigger,
 }: {
   options: MultiSelectOption[];
   selected: string[];
@@ -28,6 +29,8 @@ export function MultiSelectDropdown({
   placeholder?: string;
   disabled?: boolean;
   onCreateNew?: (label: string, color: string) => Promise<void>;
+  /** Replaces the default field-with-pills look (e.g. the Directory's stacked category lines). */
+  trigger?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -101,8 +104,11 @@ export function MultiSelectDropdown({
 
   return (
     <div ref={wrapRef} className="relative">
-      {/* A plain div, not a button, so each pill below can carry its own remove
-          button without illegally nesting <button> inside <button>. */}
+      {trigger ? (
+        <div className={disabled ? 'opacity-50' : 'cursor-pointer'} onClick={toggleOpen}>{trigger}</div>
+      ) : (
+      /* A plain div, not a button, so each pill below can carry its own remove
+          button without illegally nesting <button> inside <button>. */
       <div
         className={`field-input mt-0 flex min-h-[38px] w-full flex-wrap items-center gap-1 text-left ${
           disabled ? 'opacity-50' : 'cursor-pointer'
@@ -135,6 +141,7 @@ export function MultiSelectDropdown({
           ))
         )}
       </div>
+      )}
 
       {open && rect && createPortal(
         <div

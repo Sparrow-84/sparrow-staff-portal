@@ -15,7 +15,6 @@ import {
 import { fetchInterests, fetchPartnerInterestMap, type PartnershipInterest } from '@/lib/partnership-interests';
 import { PartnerDetailPanel } from './PartnerDetailPanel';
 import { AddPartnerPanel } from './AddPartnerPanel';
-import { BatchTouchpointModal } from './BatchTouchpointModal';
 import { PartnershipsHelpModal } from './PartnershipsHelpModal';
 import { RoomTour, useRoomTour, type TourStep } from '@/components/RoomTour';
 import { PartnerTableView } from './PartnerTableView';
@@ -37,37 +36,37 @@ const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
   {
     icon: '🤝',
     title: 'Partnerships',
-    body: "This room is where Sparrow manages its donor and partner relationships. The goal isn't just data — it's staying genuinely connected to the people who support this work.",
+    body: "This room is where Sparrow manages its donor, community partner, and volunteer relationships. The goal isn't just data — it's staying genuinely connected to the people who support this work.",
     tag: null,
   },
   {
     icon: '📋',
     title: 'Directory',
-    body: "Every donor, church, community partner, volunteer, and foundation lives in the Directory. The list sorts by relationship health — overdue contacts rise to the top so nothing slips through. Switch between table and tile views.",
+    body: "Every Donor, Community Partner, and Volunteer lives in the Directory — one record per person or organization, even when they're more than one category. Switch between table and tile views, and filter any column.",
     tag: { icon: '📋', label: 'Directory' },
   },
   {
     icon: '👤',
-    title: 'Contact detail panel',
-    body: "Click any contact to open their panel: giving history, stewardship cadence, when you last connected, notes, and linked collateral. This is where relationship work actually happens.",
-    tag: { icon: '👤', label: 'Contact Detail' },
+    title: 'Record drawer',
+    body: "Click any record to open its drawer: contacts, giving history, notes, and the touchpoints you've logged. Log a touchpoint for a personal, 1:1 contact — a call, a personal email, a visit.",
+    tag: { icon: '👤', label: 'Record drawer' },
   },
   {
     icon: '💬',
-    title: 'Comms & stewardship',
-    body: "The Comms tab tracks every touchpoint — calls, emails, meetings, notes. The system flags when someone is overdue for contact based on their cadence, so you always know who needs attention.",
-    tag: { icon: '💬', label: 'Comms' },
+    title: 'Stewardship',
+    body: "Most relationships need nothing extra beyond TSM and the regular thank-yous. When one needs a specific, dated check-in (often a Community Partner's MOU), add it under Check-ins in the record. A record can have more than one. Each shows on Home when it's due; click Done and it asks when the next one is.",
+    tag: null,
   },
   {
     icon: '📊',
     title: 'Other tabs',
-    body: "Collateral tracks what materials have been sent to whom. Social keeps social media plans organized. Events ties partners to specific Sparrow gatherings. Prayer keeps your prayer list current.",
+    body: "Calendar and Comms plan the newsletters and other mass sends. Collateral tracks when printed materials are due for review. Social Media plans posts. Events holds events and the Meaningful Connections made at them. Prayer Team keeps the prayer roster and meeting attendance.",
     tag: null,
   },
   {
     icon: '✨',
     title: "You're all set",
-    body: "Start in the Directory. If someone is flagged overdue, open their panel and log a touchpoint. Small, consistent contact is what this room is built to support.",
+    body: "Start on Home to see everything due across the room, then the Directory. A red dot means a check-in is overdue or someone unsubscribed from TSM — open the record to take a look.",
     tag: null,
   },
 ];
@@ -153,7 +152,6 @@ export function PartnershipsRoom() {
       : undefined,
     [addPrefill],
   );
-  const [batchOpen, setBatchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
   // Deep-link: open a partner panel on load via ?partner=<id>
@@ -176,9 +174,7 @@ export function PartnershipsRoom() {
       setDonorStatMap(new Map(stats.map((s) => [s.partner_id, s])));
       setInterests(interestList);
       setInterestMap(partnerInterests);
-      // Best-effort background syncs — overdue touchpoints, lapsed donor tiers. (The old
-      // lapsed-partner-stage sync was dropped in migration 0193 along with its DB function —
-      // stage='lapsed' is retired; lapsed is now purely computed, see isLapsed().)
+      // Best-effort background syncs — overdue named check-ins, "Stopped giving" donor tiers.
       void syncDueTouchpointTasks().catch(() => undefined);
       void syncLapsedDonorTiers(pp, stats).catch(() => undefined);
     } catch (e) {
@@ -308,9 +304,6 @@ export function PartnershipsRoom() {
             ?
           </button>
           <RoomSopsButton room="partnerships" />
-          <button onClick={() => setBatchOpen(true)} className="btn-secondary">
-            Log touchpoint for multiple partners
-          </button>
           <button onClick={() => setAddOpen(true)} className="btn-primary">
             + Add partner
           </button>
@@ -383,8 +376,8 @@ export function PartnershipsRoom() {
           {stats.overdue > 0 && firstOverdue && (
             <div className="mt-4 flex items-center justify-between rounded-xl border border-priority-p1/30 bg-priority-p1/5 px-4 py-3 text-sm">
               <span>
-                🔴 {stats.overdue} relationship{stats.overdue > 1 ? 's are' : ' is'} overdue for a touchpoint.
-                They've been added to each owner's Incoming Tasks.
+                🔴 {stats.overdue} record{stats.overdue > 1 ? 's need' : ' needs'} attention: an overdue
+                check-in, or a TSM unsubscribe to look at.
               </span>
               <button onClick={() => openPartner(firstOverdue.id)} className="shrink-0 font-medium text-sparrow-green dark:text-sparrow-dark-green">
                 Open {firstOverdue.name} →
@@ -572,13 +565,6 @@ export function PartnershipsRoom() {
         interests={interests}
         onInterestsCreated={load}
         initialValues={addInitialValues}
-      />
-      <BatchTouchpointModal
-        open={batchOpen}
-        partners={partners}
-        currentUserId={profile?.id ?? ''}
-        onClose={() => setBatchOpen(false)}
-        onLogged={load}
       />
       <PartnershipsHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>

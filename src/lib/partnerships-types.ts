@@ -7,7 +7,7 @@
 // category at once via `secondary_types`, same mechanism as before.
 
 export type PartnerType = 'donor' | 'community' | 'volunteer';
-export type PartnerSubCategory = 'individual' | 'business' | 'nonprofit' | 'church' | 'prayer';
+export type PartnerSubCategory = 'individual' | 'business' | 'nonprofit' | 'church';
 export type VolunteerSubCategory = 'prayer' | 'lcp' | 'general';
 export type PartnerStage = 'prospect' | 'active' | 'inactive';
 export type DonorTier = 'first_time' | 'recurring' | 'major' | 'lapsed';
@@ -81,7 +81,7 @@ export interface Partner {
   secondary_types: PartnerType[];
   /** What kind of entity this record is (individual/business/nonprofit/church). A
    *  Volunteer is always 'individual' -- the kind of volunteering is in
-   *  volunteer_sub_categories. ('prayer' is retired, migration 0207.) Null only for records
+   *  volunteer_sub_categories (migration 0207). Null only for records
    *  predating this field that haven't been touched since. */
   sub_category: PartnerSubCategory | null;
   /** Migration 0207: Prayer / LCP / General, as many as apply, for anyone whose main or
@@ -94,7 +94,6 @@ export interface Partner {
   last_name: string | null;
   stage: PartnerStage;
   owner_id: string | null;
-  organization: string | null;
   contact_name: string | null;
   // Business-card fields (migration 0181) -- the contact's title/role and org website.
   role: string | null;
@@ -103,14 +102,14 @@ export interface Partner {
   phone: string | null;
   address: string | null;
   donor_tier: DonorTier | null;
-  /** The one-off, named, dated item a relationship needs beyond its default coverage —
-   *  e.g. "MOU check-in", due 2028-10-01. Mainly relevant to Community Partners; most
-   *  Donor/Volunteer records never need this at all. Replaces the old recurring
-   *  cadence_days model (migration 0193) — this is a specific real deadline, not a rhythm. */
+  /** Legacy single check-in (0193). Migration 0209 moves these into partner_checkins and
+   *  clears them; only read as a fallback until 0209 has run. */
   needs_additional_touchpoint: boolean;
   additional_touchpoint_label: string | null;
   additional_touchpoint_due: string | null;
   last_touchpoint_at: string | null;
+  /** Open (not done) check-ins, soonest first. Attached on fetch, not a column. */
+  checkins: PartnerCheckin[];
   source: string | null;
   notes: string | null;
   active: boolean;
@@ -135,12 +134,18 @@ export interface Partner {
   // Business card photos (migration 0111) — storage paths, not URLs (private bucket).
   business_card_front_path: string | null;
   business_card_back_path: string | null;
-  // Custom "touchpoint due" wording (migration 0186) -- for a relationship where the
-  // generic reminder doesn't say enough (e.g. The Hive: a casual conversation
-  // shouldn't read as "caught up," only an actual stood-up-front-of-church update
-  // should). Shown as a second line under the Home due-reminder when set; the
-  // due-date math itself is unchanged -- this only changes the wording.
-  touchpoint_reminder_note: string | null;
+}
+
+/** A named, dated item a relationship needs beyond its default coverage, e.g. "MOU
+ *  check-in" due 2028-10-01 (migration 0209). A record can have several, each with its own
+ *  task. Mainly Community Partners; most Donor/Volunteer records have none. */
+export interface PartnerCheckin {
+  id: string;
+  partner_id: string;
+  label: string;
+  due_date: string | null;
+  /** True for one read from the legacy partner columns before 0209 has run (read-only). */
+  legacy?: boolean;
 }
 
 export interface Touchpoint {
@@ -164,7 +169,6 @@ export const PARTNER_SUB_CATEGORY: Record<PartnerSubCategory, string> = {
   business: 'Business',
   nonprofit: 'Nonprofit',
   church: 'Church',
-  prayer: 'Prayer',
 };
 
 /** Which sub-categories are offered under each top-level category. Volunteer's real
@@ -183,19 +187,45 @@ export const VOLUNTEER_SUB_CATEGORY: Record<VolunteerSubCategory, string> = {
   general: 'General',
 };
 
-/** Every category a record has, main one first, each with its sub-categories -- what the
+/** Every category a record has, all equal, always in the same order: Donor, Community
+ *  Partner, Volunteer. The database still stores one as `type` and the rest as
+ *  `secondary_types`; staff never see or pick a "main" one (Susanna, 2026-11-05). */
+export function partnerCategories(p: Pick<Partner, 'type' | 'secondary_types'>): PartnerType[] {
+  const all = new Set<PartnerType>([p.type, ...(p.secondary_types ?? [])]);
+  return (['donor', 'community', 'volunteer'] as PartnerType[]).filter((t) => all.has(t));
+}
+
+/** The record update for a new set of categories (at least one). The first in the fixed order
+ *  is stored as `type`. Nothing else is ever cleared: the sub-category and the volunteer
+ *  kinds stay on the record (just hidden while they don't apply), as do gifts, touchpoints,
+ *  MOU and notes, so adding a category back restores them. A Volunteer-only record with no
+ *  sub-category yet gets Individual. */
+export function categoriesPatch(
+  p: Pick<Partner, 'sub_category'>,
+  next: PartnerType[],
+): Pick<Partner, 'type' | 'secondary_types' | 'sub_category'> {
+  const ordered = (['donor', 'community', 'volunteer'] as PartnerType[]).filter((t) => next.includes(t));
+  const [type, ...secondary_types] = ordered;
+  const volunteerOnly = ordered.length === 1 && type === 'volunteer';
+  return {
+    type,
+    secondary_types,
+    sub_category: p.sub_category ?? (volunteerOnly ? 'individual' : null),
+  };
+}
+
+/** Every category a record has (fixed order), each with its sub-categories -- what the
  *  Directory stacks line by line. Donor/Community share the record's own sub_category
  *  (a person is Individual whichever category they're in); Volunteer has its own list. */
 export function categoryLines(p: Pick<Partner, 'type' | 'secondary_types' | 'sub_category' | 'volunteer_sub_categories'>): { type: PartnerType; subs: string[] }[] {
-  const types = [p.type, ...(p.secondary_types ?? []).filter((t) => t !== p.type && PARTNER_TYPE[t])];
+  const types = partnerCategories(p);
   return types.map((t) => {
     if (t === 'volunteer') {
-      // Before 0207 runs, a Volunteer → Prayer record still has sub_category 'prayer'.
-      const vol = p.volunteer_sub_categories?.length ? p.volunteer_sub_categories : p.sub_category === 'prayer' ? ['prayer' as const] : [];
+      const vol = p.volunteer_sub_categories ?? [];
       return { type: t, subs: vol.filter((v) => VOLUNTEER_SUB_CATEGORY[v]).map((v) => VOLUNTEER_SUB_CATEGORY[v]) };
     }
-    const own = p.type === 'volunteer' ? 'individual' : p.sub_category;
-    return { type: t, subs: own && own !== 'prayer' ? [PARTNER_SUB_CATEGORY[own]] : [] };
+    const own = p.sub_category;
+    return { type: t, subs: own ? [PARTNER_SUB_CATEGORY[own]] : [] };
   });
 }
 
@@ -253,7 +283,6 @@ export const PARTNER_PROVIDES_TAGS: PartnerProvidesTag[] = [
 export const PARTNER_PROVIDES_PRESETS = PARTNER_PROVIDES_TAGS.filter((t) => t !== 'Other');
 
 export const PARTNER_TYPES: PartnerType[] = ['donor', 'community', 'volunteer'];
-export const PARTNER_STAGES: PartnerStage[] = ['prospect', 'active', 'inactive'];
 export const TOUCHPOINT_METHODS: TouchpointMethod[] = [
   'email',
   'phone',
@@ -292,11 +321,23 @@ export function hasPartnershipTerms(p: Partner): boolean {
 
 const DAY_MS = 86_400_000;
 
-/** Days until the named additional touchpoint is due. null when the record doesn't need one. */
-export function daysUntilDue(p: Partner, today: Date = new Date()): number | null {
-  if (!p.needs_additional_touchpoint || !p.additional_touchpoint_due) return null;
-  const due = new Date(`${p.additional_touchpoint_due}T12:00:00`).getTime();
+/** The record's soonest dated open check-in, or null when it has none. */
+export function nextCheckin(p: Partner): PartnerCheckin | null {
+  return (p.checkins ?? [])
+    .filter((c) => c.due_date)
+    .sort((a, b) => (a.due_date as string).localeCompare(b.due_date as string))[0] ?? null;
+}
+
+/** Days until a due date (negative = overdue). */
+export function daysUntil(dueDate: string, today: Date = new Date()): number {
+  const due = new Date(`${dueDate}T12:00:00`).getTime();
   return Math.floor((due - today.getTime()) / DAY_MS);
+}
+
+/** Days until the soonest check-in is due. null when the record has none. */
+export function daysUntilDue(p: Partner, today: Date = new Date()): number | null {
+  const next = nextCheckin(p);
+  return next?.due_date ? daysUntil(next.due_date, today) : null;
 }
 
 // No computed "time since last contact" overlay — deliberate. A record carries zero
@@ -316,16 +357,21 @@ export function stewardshipStatus(p: Partner, today: Date = new Date()): Steward
   return 'ok';
 }
 
-/** Short human label for when a record's additional touchpoint is next due (or how overdue).
- *  null when the record doesn't need one at all — most records, by design. */
-export function dueLabel(p: Partner, today: Date = new Date()): string | null {
-  const days = daysUntilDue(p, today);
-  if (days == null) return null;
+/** Short human label for a check-in due date ("3d overdue", "Due today", "Due Mar 4, 2027"). */
+export function checkinDueLabel(dueDate: string, today: Date = new Date()): string {
+  const days = daysUntil(dueDate, today);
   if (days < 0) return `${Math.abs(days)}d overdue`;
   if (days === 0) return 'Due today';
   if (days <= 7) return `Due in ${days}d`;
-  const due = new Date(`${p.additional_touchpoint_due}T12:00:00`);
+  const due = new Date(`${dueDate}T12:00:00`);
   return `Due ${due.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+}
+
+/** When the record's soonest check-in is due (or how overdue). null when it has none —
+ *  most records, by design. */
+export function dueLabel(p: Partner, today: Date = new Date()): string | null {
+  const next = nextCheckin(p);
+  return next?.due_date ? checkinDueLabel(next.due_date, today) : null;
 }
 
 /** Render a stored date (YYYY-MM-DD or ISO) as e.g. "Apr 12".
@@ -363,7 +409,7 @@ export function displayPartnerName(p: Pick<Partner, 'name' | 'type' | 'sub_categ
 
 export const PARTNER_STAGE_DESC: Record<PartnerStage, string> = {
   prospect: 'An early, unconfirmed relationship — not yet subscribed to TSM. Move to Active once the relationship warrants ongoing stewardship.',
-  active:   'A current, healthy relationship that warrants ongoing stewardship. Subscribed to TSM automatically.',
+  active:   'A current, healthy relationship that warrants ongoing stewardship. Active Donors and Volunteers go on TSM; for Community Partners, use judgment (usually at least one leader).',
   inactive: 'Archived — moves to the Archived tab. Still receives TSM unless they\'ve unsubscribed. Pick Prospect or Active to restore.',
 };
 
@@ -381,8 +427,3 @@ export const DONOR_TIER_DESC: Record<DonorTier, string> = {
   lapsed:     'Previously gave but hasn\'t given in 12+ months. This is about giving history, separate from relationship stage.',
 };
 
-export const STEWARDSHIP_DESC: Record<StewardshipStatus, string> = {
-  needs_attention: 'An overdue touchpoint, or an unacknowledged Brevo-unsubscribe notice. Worth a look.',
-  ok: 'Covered — either nothing additional is needed beyond TSM, or the named touchpoint isn\'t due yet.',
-  inactive: 'Off the active stewardship list. Still receives the newsletter unless unsubscribed.',
-};

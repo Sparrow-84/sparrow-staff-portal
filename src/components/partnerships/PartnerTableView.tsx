@@ -20,11 +20,17 @@ import {
   SUB_CATEGORIES_FOR_TYPE,
   VOLUNTEER_SUB_CATEGORIES,
   VOLUNTEER_SUB_CATEGORY,
+  categoriesPatch,
   categoryLines,
+  checkinDueLabel,
   composePartnerName,
+  daysUntil,
+  nextCheckin,
+  partnerCategories,
   derivedDonorTier,
   displayPartnerName,
   hasPartnershipTerms,
+  partnerMatchesType,
   isPersonRecord,
   shortDate,
   stagePatch,
@@ -70,7 +76,7 @@ const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'interests', label: 'Interests', defaultWidth: 170 },
   { key: 'stage', label: 'Stage', defaultWidth: 130 },
   { key: 'owner', label: 'Owner', defaultWidth: 170 },
-  { key: 'needs_touchpoint', label: 'Needs additional touchpoint', defaultWidth: 220 },
+  { key: 'needs_touchpoint', label: 'Check-ins', defaultWidth: 220 },
   { key: 'gift_count', label: 'Total Gifts', align: 'right', defaultWidth: 90 },
   { key: 'last_gift', label: 'Last gift', defaultWidth: 100 },
   { key: 'source', label: 'Source', defaultWidth: 170 },
@@ -109,11 +115,10 @@ function filterValuesFor(key: FilterableKey, p: Partner, interestMap: Map<string
     case 'partner_provides': return p.partner_provides_tags.length ? p.partner_provides_tags : [NONE];
     case 'sub_category': {
       // The record's own sub-category plus any Volunteer ones ("vol:prayer"), so filtering
-      // for LCP volunteers also finds people whose Volunteer category is their second one.
-      // A pre-0207 Volunteer → Prayer record still filters as a prayer volunteer.
-      const own = p.sub_category === 'prayer' ? null : p.sub_category;
-      const vol = p.sub_category === 'prayer' ? ['prayer'] : (p.volunteer_sub_categories ?? []);
-      return [own ?? NONE, ...vol.map((v) => `vol:${v}`)];
+      // for LCP volunteers finds everyone who's an LCP volunteer. Kinds kept on a record that's
+      // no longer a Volunteer (0209) don't count.
+      const kinds = partnerMatchesType(p, 'volunteer') ? (p.volunteer_sub_categories ?? []) : [];
+      return [p.sub_category ?? NONE, ...kinds.map((v) => `vol:${v}`)];
     }
     case 'stage': return [p.stage];
     case 'donor_tier': return [p.donor_tier ?? NONE];
@@ -429,7 +434,7 @@ export function PartnerTableView({
       case 'donor_tier': return (a.donor_tier ?? '').localeCompare(b.donor_tier ?? '');
       case 'stage': return a.stage.localeCompare(b.stage);
       case 'owner': return (a.owner_id ?? '').localeCompare(b.owner_id ?? '');
-      case 'needs_touchpoint': return Number(a.needs_additional_touchpoint) - Number(b.needs_additional_touchpoint);
+      case 'needs_touchpoint': return (nextCheckin(a)?.due_date ?? '9999').localeCompare(nextCheckin(b)?.due_date ?? '9999');
       case 'gift_count': return (donorStatMap.get(a.id)?.gift_count ?? 0) - (donorStatMap.get(b.id)?.gift_count ?? 0);
       case 'last_gift': return (donorStatMap.get(a.id)?.last_gift_date ?? '').localeCompare(donorStatMap.get(b.id)?.last_gift_date ?? '');
       case 'source': return (a.source ?? '').localeCompare(b.source ?? '');
@@ -468,17 +473,6 @@ export function PartnerTableView({
     onChanged();
   }
 
-  function changeType(p: Partner, nextType: PartnerType) {
-    if (nextType === p.type) return;
-    // Changing the primary type shouldn't lose the old one — fold it into
-    // secondary tags (and drop the new type from there if it was already tagged).
-    const nextSecondary = Array.from(new Set([...(p.secondary_types ?? []).filter((t) => t !== nextType), p.type]));
-    // Sub-category options differ per category — carry it forward only if still valid.
-    // A Volunteer is always a person.
-    const subStillValid = p.sub_category && SUB_CATEGORIES_FOR_TYPE[nextType].includes(p.sub_category);
-    const nextSub = nextType === 'volunteer' ? 'individual' : subStillValid ? p.sub_category : null;
-    void patch(p.id, { type: nextType, secondary_types: nextSecondary, sub_category: nextSub });
-  }
 
   function renderCell(p: Partner, key: ColKey) {
     const status = stewardshipStatus(p);
@@ -517,8 +511,8 @@ export function PartnerTableView({
               {(() => {
                 const tier = derivedDonorTier(p.donor_tier, donorStatMap.get(p.id));
                 if (tier === 'major') return <span className="whitespace-nowrap rounded-full bg-sparrow-gold/20 px-2 py-0.5 text-[10px] font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Major</span>;
-                if (tier === 'lapsed' && p.type === 'donor') return <span className="whitespace-nowrap rounded-full bg-orange-100 dark:bg-orange-500/15 px-2 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-300">Lapsed giving</span>;
-                if (tier === 'first_time' && p.type === 'donor') return <span className="whitespace-nowrap rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">First gift</span>;
+                if (tier === 'lapsed' && partnerMatchesType(p, 'donor')) return <span className="whitespace-nowrap rounded-full bg-orange-100 dark:bg-orange-500/15 px-2 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-300">Stopped giving</span>;
+                if (tier === 'first_time' && partnerMatchesType(p, 'donor')) return <span className="whitespace-nowrap rounded-full bg-priority-p3/15 px-2 py-0.5 text-[10px] font-medium text-priority-p3">First gift</span>;
                 return null;
               })()}
               {hasPartnershipTerms(p) && p.mou_status === 'needed' && (
@@ -528,24 +522,12 @@ export function PartnerTableView({
           </Stop>
         );
       case 'type':
-        // Every category stacked, main one first (editable here; second ones are set in the
-        // record's "Also a"). Each line is the same height as its Sub-category line.
+        // Every category stacked, all equal (Donor, Community, Volunteer order), each line the
+        // same height as its Sub-category line. Click to add or remove one.
         return (
-          <div className="flex flex-col">
-            {categoryLines(p).map((line, i) => (
-              <div key={line.type} className={CATEGORY_LINE}>
-                {i === 0 ? (
-                  <InlineSelect
-                    value={p.type}
-                    onSave={(v) => changeType(p, v as PartnerType)}
-                    options={PARTNER_TYPES.map((t) => ({ value: t, label: `${PARTNER_TYPE[t].icon} ${PARTNER_TYPE[t].label}` }))}
-                  />
-                ) : (
-                  <span className="px-1.5 text-sm">{PARTNER_TYPE[line.type].icon} {PARTNER_TYPE[line.type].label}</span>
-                )}
-              </div>
-            ))}
-          </div>
+          <Stop>
+            <CategoryCell p={p} onChange={(next) => void patch(p.id, categoriesPatch(p, next))} />
+          </Stop>
         );
       case 'sub_category': {
         // Lined up with the Category lines. Volunteer picks several (Prayer, LCP, General);
@@ -565,7 +547,7 @@ export function PartnerTableView({
                       placeholder="—"
                     />
                   );
-                } else if (p.type === 'volunteer' || ownShown) {
+                } else if (ownShown) {
                   cell = <span className="px-1.5 text-sm">{line.subs.join(', ') || '—'}</span>;
                 } else {
                   ownShown = true;
@@ -573,7 +555,7 @@ export function PartnerTableView({
                     <InlineSelect
                       value={p.sub_category ?? ''}
                       onSave={(v) => void patch(p.id, { sub_category: (v || null) as PartnerSubCategory | null })}
-                      options={[{ value: '', label: '—' }, ...SUB_CATEGORIES_FOR_TYPE[p.type].map((sc) => ({ value: sc, label: PARTNER_SUB_CATEGORY[sc] }))]}
+                      options={[{ value: '', label: '—' }, ...SUB_CATEGORIES_FOR_TYPE.donor.map((sc) => ({ value: sc, label: PARTNER_SUB_CATEGORY[sc] }))]}
                     />
                   );
                 }
@@ -643,40 +625,15 @@ export function PartnerTableView({
           </Stop>
         );
       case 'needs_touchpoint':
+        // Read-only here: each check-in is done, moved or added from the record itself.
         return (
-          <Stop>
-            <div className="flex items-center gap-1.5">
-              <InlineCheckbox
-                checked={p.needs_additional_touchpoint}
-                onSave={(v) => void patch(p.id, v
-                  ? { needs_additional_touchpoint: true }
-                  : { needs_additional_touchpoint: false, additional_touchpoint_label: null, additional_touchpoint_due: null })}
-              />
-              {p.needs_additional_touchpoint && (
-                // One readable line ("Review MOU · due Sep 21, 2027"); clicking opens labeled
-                // boxes with instructions, instead of two cramped inline boxes where only the
-                // first word of the placeholder fit.
-                <SplitFieldCell
-                  display={[
-                    p.additional_touchpoint_label,
-                    p.additional_touchpoint_due ? `due ${new Date(`${p.additional_touchpoint_due}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : null,
-                  ].filter(Boolean).join(' · ')}
-                  placeholder="Click to say what's needed and when"
-                  fields={[
-                    {
-                      key: 'label',
-                      label: 'What needs to happen',
-                      value: p.additional_touchpoint_label ?? '',
-                      placeholder: 'e.g. Review MOU, Call about spring volunteer day',
-                      hint: 'The touchpoint this record needs beyond TSM. It becomes a task for the owner when it comes due.',
-                    },
-                    { key: 'due', label: 'Due date', value: p.additional_touchpoint_due ?? '', type: 'date' },
-                  ]}
-                  onSave={(v) => void patch(p.id, { additional_touchpoint_label: v.label.trim() || null, additional_touchpoint_due: v.due || null })}
-                />
-              )}
-            </div>
-          </Stop>
+          <div className="flex flex-col gap-0.5">
+            {(p.checkins ?? []).map((c) => (
+              <span key={c.id} className={`truncate text-xs ${c.due_date && daysUntil(c.due_date) < 0 ? 'font-medium text-priority-p1' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
+                {c.label}{c.due_date ? ` · ${checkinDueLabel(c.due_date)}` : ''}
+              </span>
+            ))}
+          </div>
         );
       case 'gift_count': {
         const stat = donorStatMap.get(p.id);
@@ -740,9 +697,9 @@ export function PartnerTableView({
   function fieldApplies(p: Partner, key: ColKey): boolean {
     switch (key) {
       case 'donor_tier': case 'giving_method': case 'first_gift_date':
-        return p.type === 'donor';
+        return partnerMatchesType(p, 'donor');
       case 'mou_status': case 'sparrow_provides': case 'partner_provides':
-        return p.type === 'community';
+        return partnerMatchesType(p, 'community');
       case 'contact_name':
         return !isPersonRecord(p);
       default:
@@ -794,4 +751,26 @@ function useSortState<K extends string>(initial: K) {
   const [sortKey, setSortKey] = useState<K>(initial);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   return { sortKey, sortDir, setSortKey, setSortDir };
+}
+
+/** The Directory's Category cell: every category stacked, all equal. Click to add or remove
+ *  one (a record keeps at least one). */
+function CategoryCell({ p, onChange }: { p: Partner; onChange: (next: PartnerType[]) => void }) {
+  const cats = partnerCategories(p);
+  return (
+    <MultiSelectDropdown
+      options={PARTNER_TYPES.map((t) => ({ value: t, label: PARTNER_TYPE[t].label, icon: PARTNER_TYPE[t].icon }))}
+      selected={cats}
+      onChange={(next) => { if (next.length > 0) onChange(next as PartnerType[]); }}
+      trigger={
+        <div className="flex flex-col">
+          {cats.map((t) => (
+            <div key={t} className={`${CATEGORY_LINE} rounded px-1.5 text-sm hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2`}>
+              {PARTNER_TYPE[t].icon} {PARTNER_TYPE[t].label}
+            </div>
+          ))}
+        </div>
+      }
+    />
+  );
 }

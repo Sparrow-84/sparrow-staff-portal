@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Profile } from '@/lib/types';
-import { createPartner, emitFirstTimeDonorTask, findPossibleDuplicatePartner } from '@/lib/partnerships';
+import { createPartner, findPossibleDuplicatePartner } from '@/lib/partnerships';
 import { sendToResidentServices } from '@/lib/resident-services';
 import {
   PARTNER_STAGE,
@@ -8,6 +8,7 @@ import {
   PARTNER_TYPE,
   PARTNER_TYPES,
   SUB_CATEGORIES_FOR_TYPE,
+  categoriesPatch,
   VOLUNTEER_SUB_CATEGORIES,
   VOLUNTEER_SUB_CATEGORY,
   type VolunteerSubCategory,
@@ -65,13 +66,17 @@ export function AddPartnerPanel({
   const [name, setName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  // No default -- staff must actively pick a category (previously defaulted to 'donor', which
-  // silently mistyped anyone added via "Add to Directory" from a non-donor context).
-  const [type, setType] = useState<PartnerType | ''>('');
+  // No default -- staff must actively pick at least one category (previously defaulted to
+  // 'donor', which silently mistyped anyone added via "Add to Directory" from a non-donor
+  // context). All categories are equal; there's no "main" one (Susanna, 2026-11-05).
+  const [categories, setCategories] = useState<PartnerType[]>([]);
   const [subCategory, setSubCategory] = useState<PartnerSubCategory | ''>('');
-  const [secondaryTypes, setSecondaryTypes] = useState<PartnerType[]>([]);
   const [volunteerSubs, setVolunteerSubs] = useState<VolunteerSubCategory[]>([]);
-  const isVolunteerAnywhere = type === 'volunteer' || secondaryTypes.includes('volunteer');
+  const isVolunteerAnywhere = categories.includes('volunteer');
+  // Donor/Community records say what they are (Individual, Church...); a Volunteer-only
+  // record is always a person.
+  const needsSubCategory = categories.includes('donor') || categories.includes('community');
+  const volunteerOnly = categories.length === 1 && categories[0] === 'volunteer';
   const [interestIds, setInterestIds] = useState<string[]>([]);
   const [stage, setStage] = useState<PartnerStage>('prospect');
   const [ownerId, setOwnerId] = useState<string>('');
@@ -116,9 +121,8 @@ export function AddPartnerPanel({
     if (open) {
       setFirstName('');
       setLastName('');
-      setType('');
+      setCategories([]);
       setSubCategory('');
-      setSecondaryTypes([]);
       setVolunteerSubs([]);
       setInterestIds([]);
       setStage('prospect');
@@ -151,35 +155,29 @@ export function AddPartnerPanel({
 
   const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'pa-name', label: 'Name', valid: name.trim().length > 0 },
-    { key: 'pa-type', label: 'Category', valid: type !== '' },
-    { key: 'pa-subcategory', label: 'Sub-category', valid: subCategory !== '' },
+    { key: 'pa-type', label: 'Categories', valid: categories.length > 0 },
+    { key: 'pa-subcategory', label: 'Sub-category', valid: !needsSubCategory || subCategory !== '' },
     { key: 'pa-volsubs', label: 'Volunteer sub-categories', valid: !isVolunteerAnywhere || volunteerSubs.length > 0 },
   ]);
 
-  function pickType(t: PartnerType) {
-    setType(t);
-    // Reset sub-category when the category changes -- the options differ per category, so a
-    // stale pick from the old category shouldn't silently carry over. A Volunteer is always
-    // a person; what kind of volunteering goes in the Volunteer sub-categories.
-    setSubCategory(t === 'volunteer' ? 'individual' : '');
-    // Volunteer is always a person (its one sub-category, Prayer, describes a kind of
-    // volunteering, not an entity type) -- seed First/Last from whatever's already in Name
-    // right away, same as switching a Donor/Community sub-category to Individual does,
-    // rather than waiting on a sub-category pick that's about to be forced anyway.
-    if (t === 'volunteer' && !firstName && !lastName && name.trim()) {
-      const guess = guessNameSplit(name);
-      setFirstName(guess.first);
-      setLastName(guess.last);
-    } else {
-      setFirstName('');
-      setLastName('');
-    }
+  function pickCategories(next: PartnerType[]) {
+    setCategories(next);
     clear('pa-type');
-    setSecondaryTypes((prev) => prev.filter((s) => s !== t)); // can't tag the same category twice
+    // A Volunteer-only record is always a person (the Volunteer sub-categories are kinds of
+    // volunteering, not an entity type) -- seed First/Last from whatever's already in Name
+    // right away, same as picking Individual does.
+    if (next.length === 1 && next[0] === 'volunteer') {
+      setSubCategory('individual');
+      if (!firstName && !lastName && name.trim()) {
+        const guess = guessNameSplit(name);
+        setFirstName(guess.first);
+        setLastName(guess.last);
+      }
+    }
   }
 
   async function save() {
-    if (!validate() || type === '' || subCategory === '') return;
+    if (!validate() || categories.length === 0) return;
     const trimmedName = name.trim();
 
     // First pass: warn on a likely duplicate rather than silently creating a second record.
@@ -211,28 +209,22 @@ export function AddPartnerPanel({
     try {
       const newPartnerId = await createPartner({
         name: trimmedName,
-        type,
-        secondary_types: secondaryTypes,
-        sub_category: subCategory,
+        ...categoriesPatch({ sub_category: subCategory || null }, categories),
         ...(isVolunteerAnywhere ? { volunteer_sub_categories: volunteerSubs } : {}),
         first_name: isPerson ? (firstName.trim() || null) : null,
         last_name: isPerson ? (lastName.trim() || null) : null,
         stage,
         owner_id: ownerId || null,
-        organization: null,
         contact_name: contactName.trim() || null,
         role: role.trim() || null,
         website: website.trim() || null,
         email: email.trim() || null,
         phone: phone.trim() || null,
         address: address.trim() || null,
-        donor_tier: type === 'donor' ? 'first_time' : null,
+        donor_tier: null,
         source: source.trim() || null,
         notes: finalNotes || null,
       });
-      if (type === 'donor' && ownerId) {
-        void emitFirstTimeDonorTask(newPartnerId, trimmedName, ownerId).catch(() => undefined);
-      }
       if (interestIds.length > 0) {
         await setPartnerInterests(newPartnerId, interestIds);
       }
@@ -253,22 +245,19 @@ export function AddPartnerPanel({
     }
   }
 
-  const subCategoryOptions = type ? SUB_CATEGORIES_FOR_TYPE[type] : [];
-  // A Volunteer is always a person (Prayer/LCP/General are kinds of volunteering, not entity
-  // types).
-  const isPerson = subCategory === 'individual' || type === 'volunteer';
+  const isPerson = subCategory === 'individual' || volunteerOnly;
 
   return (
     <Drawer
       open={open}
       onClose={onClose}
       title="Add partner"
-      subtitle="Name a category and sub-category — stage starts at Prospect"
+      subtitle="Stage starts at Prospect"
       footer={
         <div className="space-y-2">
           {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
           {duplicateWarning && <p className="text-sm text-priority-p1">{duplicateWarning}</p>}
-          {type !== '' && !isPerson && (
+          {categories.length > 0 && !isPerson && (
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
@@ -365,61 +354,61 @@ export function AddPartnerPanel({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="field-label field-label-required" htmlFor="pa-type">Category</label>
-            <select
-              id="pa-type"
-              className={fieldClass('pa-type')}
-              value={type}
-              onChange={(e) => pickType(e.target.value as PartnerType)}
-            >
-              <option value="" disabled>— Select category —</option>
-              {PARTNER_TYPES.map((t) => (
-                <option key={t} value={t}>{PARTNER_TYPE[t].label}</option>
-              ))}
-            </select>
-            {fieldError('pa-type') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-type')}</p>}
-          </div>
-          {type === 'volunteer' ? <div id="pa-volsubs" tabIndex={-1}>
-            <label className="field-label field-label-required">Volunteer sub-categories</label>
-            <MultiSelectDropdown
-              options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
-              selected={volunteerSubs}
-              onChange={(next) => { setVolunteerSubs(next as VolunteerSubCategory[]); clear('pa-volsubs'); }}
-              placeholder="Pick at least one"
-            />
-            {fieldError('pa-volsubs') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-volsubs')}</p>}
-          </div> : (
-          <div>
-            <label className="field-label field-label-required" htmlFor="pa-subcategory">Sub-category</label>
-            <select
-              id="pa-subcategory"
-              className={fieldClass('pa-subcategory')}
-              value={subCategory}
-              disabled={!type}
-              onChange={(e) => {
-                const next = e.target.value as PartnerSubCategory;
-                setSubCategory(next);
-                clear('pa-subcategory');
-                // Switching into Individual for the first time: seed First/Last from
-                // whatever's already in Name so nothing typed so far is lost.
-                if (next === 'individual' && subCategory !== 'individual' && !firstName && !lastName && name.trim()) {
-                  const guess = guessNameSplit(name);
-                  setFirstName(guess.first);
-                  setLastName(guess.last);
-                }
-              }}
-            >
-              <option value="" disabled>{type ? '— Select —' : 'Pick a category first'}</option>
-              {subCategoryOptions.map((sc) => (
-                <option key={sc} value={sc}>{PARTNER_SUB_CATEGORY[sc]}</option>
-              ))}
-            </select>
-            {fieldError('pa-subcategory') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-subcategory')}</p>}
-          </div>
-          )}
+        <div id="pa-type" tabIndex={-1}>
+          <label className="field-label field-label-required">Categories</label>
+          <MultiSelectDropdown
+            options={PARTNER_TYPES.map((t) => ({ value: t, label: PARTNER_TYPE[t].label, icon: PARTNER_TYPE[t].icon }))}
+            selected={categories}
+            onChange={(next) => pickCategories(next as PartnerType[])}
+            placeholder="Pick one or more"
+          />
+          {fieldError('pa-type') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-type')}</p>}
         </div>
+
+        {(needsSubCategory || isVolunteerAnywhere) && (
+          <div className="grid grid-cols-2 gap-3">
+            {needsSubCategory && (
+              <div>
+                <label className="field-label field-label-required" htmlFor="pa-subcategory">Sub-category</label>
+                <select
+                  id="pa-subcategory"
+                  className={fieldClass('pa-subcategory')}
+                  value={subCategory}
+                  onChange={(e) => {
+                    const next = e.target.value as PartnerSubCategory;
+                    setSubCategory(next);
+                    clear('pa-subcategory');
+                    // Switching into Individual for the first time: seed First/Last from
+                    // whatever's already in Name so nothing typed so far is lost.
+                    if (next === 'individual' && subCategory !== 'individual' && !firstName && !lastName && name.trim()) {
+                      const guess = guessNameSplit(name);
+                      setFirstName(guess.first);
+                      setLastName(guess.last);
+                    }
+                  }}
+                >
+                  <option value="" disabled>— Select —</option>
+                  {SUB_CATEGORIES_FOR_TYPE.donor.map((sc) => (
+                    <option key={sc} value={sc}>{PARTNER_SUB_CATEGORY[sc]}</option>
+                  ))}
+                </select>
+                {fieldError('pa-subcategory') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-subcategory')}</p>}
+              </div>
+            )}
+            {isVolunteerAnywhere && (
+              <div id="pa-volsubs" tabIndex={-1}>
+                <label className="field-label field-label-required">Volunteer sub-categories</label>
+                <MultiSelectDropdown
+                  options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
+                  selected={volunteerSubs}
+                  onChange={(next) => { setVolunteerSubs(next as VolunteerSubCategory[]); clear('pa-volsubs'); }}
+                  placeholder="Pick at least one"
+                />
+                {fieldError('pa-volsubs') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-volsubs')}</p>}
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           <label className="field-label" htmlFor="pa-stage">Stage</label>
@@ -429,41 +418,9 @@ export function AddPartnerPanel({
             ))}
           </select>
           <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            Prospects aren't subscribed to TSM automatically — only Active relationships are.
+            Add Active Donors and Volunteers to TSM in Brevo. For Community Partners, use judgment — usually at least one leader. Prospects aren't added yet.
           </p>
         </div>
-
-        <div>
-          <label className="field-label">Also a (optional)</label>
-          <MultiSelectDropdown
-            options={PARTNER_TYPES.filter((t) => t !== type).map((t) => ({
-              value: t,
-              label: PARTNER_TYPE[t].label,
-              icon: PARTNER_TYPE[t].icon,
-            }))}
-            selected={secondaryTypes}
-            onChange={(next) => setSecondaryTypes(next as PartnerType[])}
-            placeholder="None"
-          />
-          <p className="mt-1 text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
-            Someone who's more than one kind of relationship to Sparrow — e.g. a church that's
-            also a Donor. Tag the other categories here so they also show up under those
-            Directory tabs; it's one record, not two.
-          </p>
-        </div>
-
-        {type !== 'volunteer' && secondaryTypes.includes('volunteer') && (
-          <div id="pa-volsubs" tabIndex={-1}>
-            <label className="field-label field-label-required">Volunteer sub-categories</label>
-            <MultiSelectDropdown
-              options={VOLUNTEER_SUB_CATEGORIES.map((v) => ({ value: v, label: VOLUNTEER_SUB_CATEGORY[v] }))}
-              selected={volunteerSubs}
-              onChange={(next) => { setVolunteerSubs(next as VolunteerSubCategory[]); clear('pa-volsubs'); }}
-              placeholder="Pick at least one"
-            />
-            {fieldError('pa-volsubs') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pa-volsubs')}</p>}
-          </div>
-        )}
 
         <div>
           <label className="field-label" htmlFor="pa-owner">Owner</label>
@@ -477,9 +434,6 @@ export function AddPartnerPanel({
                 <option key={p.id} value={p.id}>{p.full_name}</option>
               ))}
           </select>
-          <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            The staff member responsible for this relationship.
-          </p>
         </div>
 
         <div className={`grid grid-cols-2 gap-3 ${isPerson ? 'opacity-50' : ''}`}>

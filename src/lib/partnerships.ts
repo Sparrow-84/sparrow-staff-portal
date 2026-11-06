@@ -6,6 +6,7 @@ import type {
   GivingMethod,
   MouStatus,
   Partner,
+  PartnerCheckin,
   PartnerStage,
   PartnerSubCategory,
   PartnerType,
@@ -13,36 +14,114 @@ import type {
   TouchpointMethod,
   VolunteerSubCategory,
 } from './partnerships-types';
+import { partnerMatchesType } from './partnerships-types';
 
 // All reads/writes are gated by RLS (0008_partnerships.sql): partnerships staff + admins
 // manage everything; a partner's named owner sees/stewards their own.
 
-// touchpoint_reminder_note (migration 0186) deliberately left OUT of this select for now --
-// Byron hasn't run 0186 yet, and selecting a column that doesn't exist live breaks this
-// query for EVERY partner fetch, which took down the entire Partnerships room 2026-10-15
-// (confirmed: "column partners.touchpoint_reminder_note does not exist"). Add it back once
-// 0186 is confirmed applied -- see byron-pending-items.
 const PARTNER_COLS =
-  'id, name, type, secondary_types, sub_category, first_name, last_name, stage, owner_id, organization, contact_name, role, website, email, phone, address, donor_tier, needs_additional_touchpoint, additional_touchpoint_label, additional_touchpoint_due, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, newsletter_unsubscribed_at, newsletter_unsubscribe_dismissed_at, sparrow_provides, partner_provides, partner_provides_tags, mou_status, business_card_front_path, business_card_back_path';
+  'id, name, type, secondary_types, sub_category, first_name, last_name, stage, owner_id, contact_name, role, website, email, phone, address, donor_tier, needs_additional_touchpoint, additional_touchpoint_label, additional_touchpoint_due, last_touchpoint_at, source, notes, active, created_at, giving_method, newsletter_subscribed, first_gift_date, newsletter_unsubscribed_at, newsletter_unsubscribe_dismissed_at, sparrow_provides, partner_provides, partner_provides_tags, mou_status, business_card_front_path, business_card_back_path';
+
+/** The Partnerships room admin (Staff page → room admin), who gets the room's unowned work:
+ *  prayer check-ins and check-ins on records with no owner. Null when nobody is set, so the
+ *  caller can fall back. Same lookup as emit_due_touchpoint_tasks() in migration 0209. */
+export async function fetchPartnershipsRoomAdminId(): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('active', true)
+    .contains('sop_admin_rooms', ['partnerships'])
+    .order('full_name')
+    .limit(1);
+  if (error) return null;
+  return data?.[0]?.id ?? null;
+}
 
 // ── Partners ─────────────────────────────────────────────────────────
-// volunteer_sub_categories only exists once migration 0207 runs. Same lesson as 0186
-// above: never let a not-yet-run column take the whole Directory down -- if it's missing,
-// fetch without it and treat everyone as having none.
 async function fetchPartnersWhere(active: boolean): Promise<Partner[]> {
-  const withVolunteer = await supabase
-    .from('partners')
-    .select(`${PARTNER_COLS}, volunteer_sub_categories`)
-    .eq('active', active)
-    .order('name');
-  if (!withVolunteer.error) return (withVolunteer.data ?? []) as unknown as Partner[];
-  const { data, error } = await supabase
-    .from('partners')
-    .select(PARTNER_COLS)
-    .eq('active', active)
-    .order('name');
+  const [{ data, error }, checkins] = await Promise.all([
+    supabase
+      .from('partners')
+      .select(`${PARTNER_COLS}, volunteer_sub_categories`)
+      .eq('active', active)
+      .order('name'),
+    fetchOpenCheckins(),
+  ]);
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as Partner[]).map((p) => ({ ...p, volunteer_sub_categories: [] }));
+  return attachCheckins((data ?? []) as unknown as Partner[], checkins);
+}
+
+// ── Check-ins (migration 0209) ───────────────────────────────────────
+
+const CHECKINS_NOT_READY = "Check-ins need tonight's database update (migration 0209) first.";
+
+function isMissingTable(message: string): boolean {
+  return /partner_checkins|complete_partner_checkin|does not exist|schema cache/i.test(message);
+}
+
+/** Every open check-in, soonest first. null when migration 0209 hasn't run yet, so callers
+ *  fall back to the old one-per-record columns instead of breaking the room. */
+export async function fetchOpenCheckins(): Promise<PartnerCheckin[] | null> {
+  const { data, error } = await supabase
+    .from('partner_checkins')
+    .select('id, partner_id, label, due_date')
+    .is('done_at', null)
+    .order('due_date', { ascending: true, nullsFirst: false });
+  if (error) {
+    if (isMissingTable(error.message)) return null;
+    throw new Error(error.message);
+  }
+  return (data ?? []) as PartnerCheckin[];
+}
+
+/** Puts each record's open check-ins on it. Before 0209 has run (checkins = null), reads the
+ *  old single check-in off the record instead, read-only. */
+export function attachCheckins<T extends Pick<Partner, 'id' | 'needs_additional_touchpoint' | 'additional_touchpoint_label' | 'additional_touchpoint_due'>>(
+  partners: T[],
+  checkins: PartnerCheckin[] | null,
+): (T & { checkins: PartnerCheckin[] })[] {
+  if (checkins == null) {
+    return partners.map((p) => ({
+      ...p,
+      checkins: p.needs_additional_touchpoint && (p.additional_touchpoint_label || p.additional_touchpoint_due)
+        ? [{ id: `legacy:${p.id}`, partner_id: p.id, label: p.additional_touchpoint_label || 'Check-in', due_date: p.additional_touchpoint_due, legacy: true }]
+        : [],
+    }));
+  }
+  const byPartner = new Map<string, PartnerCheckin[]>();
+  for (const c of checkins) {
+    const list = byPartner.get(c.partner_id) ?? [];
+    list.push(c);
+    byPartner.set(c.partner_id, list);
+  }
+  return partners.map((p) => ({ ...p, checkins: byPartner.get(p.id) ?? [] }));
+}
+
+function checkinError(message: string): Error {
+  return new Error(isMissingTable(message) ? CHECKINS_NOT_READY : message);
+}
+
+export async function addCheckin(partnerId: string, label: string, dueDate: string): Promise<void> {
+  const { error } = await supabase.from('partner_checkins').insert({ partner_id: partnerId, label, due_date: dueDate });
+  if (error) throw checkinError(error.message);
+}
+
+/** Changing the date closes the old date's task; the new date gets its own when it's due. */
+export async function updateCheckin(id: string, patch: { label?: string; due_date?: string }): Promise<void> {
+  const { error } = await supabase.from('partner_checkins').update(patch).eq('id', id);
+  if (error) throw checkinError(error.message);
+}
+
+export async function deleteCheckin(id: string): Promise<void> {
+  const { error } = await supabase.from('partner_checkins').delete().eq('id', id);
+  if (error) throw checkinError(error.message);
+}
+
+/** Done: closes only this check-in and its task, logs it in the record's touchpoint history,
+ *  and schedules the next one of the same kind when nextDue is given. */
+export async function completeCheckin(id: string, nextDue: string | null): Promise<void> {
+  const { error } = await supabase.rpc('complete_partner_checkin', { p_checkin: id, p_next_due: nextDue });
+  if (error) throw checkinError(error.message);
 }
 
 export async function fetchPartners(): Promise<Partner[]> {
@@ -62,7 +141,6 @@ export interface PartnerInput {
   last_name: string | null;
   stage: PartnerStage;
   owner_id: string | null;
-  organization: string | null;
   contact_name: string | null;
   role: string | null;
   website: string | null;
@@ -125,7 +203,6 @@ export async function updatePartner(
       | 'last_name'
       | 'stage'
       | 'owner_id'
-      | 'organization'
       | 'contact_name'
       | 'role'
       | 'website'
@@ -133,9 +210,6 @@ export async function updatePartner(
       | 'phone'
       | 'address'
       | 'donor_tier'
-      | 'needs_additional_touchpoint'
-      | 'additional_touchpoint_label'
-      | 'additional_touchpoint_due'
       | 'source'
       | 'notes'
       | 'active'
@@ -147,7 +221,6 @@ export async function updatePartner(
       | 'partner_provides'
       | 'partner_provides_tags'
       | 'mou_status'
-      | 'touchpoint_reminder_note'
     >
   >,
 ): Promise<void> {
@@ -174,32 +247,13 @@ export interface TouchpointInput {
 }
 
 /**
- * Log a contact with a partner. A DB trigger advances the partner's last_touchpoint_at and
- * resolves any open "touchpoint due" task the spine had raised for them — keeping the rhythm
- * is what clears the nudge.
+ * Log a contact with a partner. A DB trigger advances the partner's last_touchpoint_at. It
+ * doesn't close any check-in (migration 0209) — only that check-in's Done does.
  */
 export async function logTouchpoint(input: TouchpointInput, loggedBy: string): Promise<void> {
   const { error } = await supabase
     .from('partner_touchpoints')
     .insert({ ...input, logged_by: loggedBy });
-  if (error) throw new Error(error.message);
-}
-
-/**
- * Log the same touchpoint (method, date, summary) against many partners at once — e.g. a
- * year-end thank-you sent to 30 donors. One bulk insert; the same DB trigger that fires on
- * single-touchpoint inserts advances last_touchpoint_at and resolves due tasks per row.
- */
-export async function logTouchpointBatch(
-  partnerIds: string[],
-  method: TouchpointMethod,
-  occurredOn: string,
-  summary: string | null,
-  loggedBy: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from('partner_touchpoints')
-    .insert(partnerIds.map((partner_id) => ({ partner_id, method, occurred_on: occurredOn, summary, logged_by: loggedBy })));
   if (error) throw new Error(error.message);
 }
 
@@ -296,7 +350,7 @@ export async function syncLapsedDonorTiers(
   const statMap = new Map(stats.map((s) => [s.partner_id, s]));
   const patches: Promise<void>[] = [];
   for (const p of partners) {
-    if (p.type !== 'donor' || p.donor_tier === 'major') continue;
+    if (!partnerMatchesType(p, 'donor') || p.donor_tier === 'major') continue;
     const stat = statMap.get(p.id);
     if (!stat || stat.gift_count === 0) continue;
     if (!stat.last_gift_date) continue;
@@ -308,54 +362,6 @@ export async function syncLapsedDonorTiers(
   await Promise.all(patches);
 }
 
-/**
- * Emit a 72-hour follow-up task when a donor gives for the first time.
- * Andrew's rule: the owner calls or writes within 72 hours (3 days).
- * Dedup-safe via source_ref = 'first_time_donor:<partner_id>' — re-running
- * updates the due date in place rather than creating duplicates.
- * Only called when owner_id is set; silent no-op if owner is unassigned.
- */
-export async function emitFirstTimeDonorTask(
-  partnerId: string,
-  partnerName: string,
-  ownerId: string,
-): Promise<void> {
-  const due = new Date();
-  due.setDate(due.getDate() + 3);
-  const { error } = await supabase.rpc('emit_system_task', {
-    p_system: 'crm',
-    p_ref: `first_time_donor:${partnerId}`,
-    p_assignee: ownerId,
-    p_title: `First-time donor follow-up — ${partnerName} (72-hr window)`,
-    p_department: 'partnerships',
-    p_priority: 'p2',
-    p_due: due.toLocaleDateString('en-CA'),
-  });
-  if (error) throw new Error(error.message);
-}
-
-/**
- * Emit a 30-day revisit task when Bethany defers action on a non-responsive partner.
- * Creates a real calendar task instead of logging a fake touchpoint.
- */
-export async function emitRevisitTask(
-  partnerId: string,
-  partnerName: string,
-  assigneeId: string,
-): Promise<void> {
-  const due = new Date();
-  due.setDate(due.getDate() + 30);
-  const { error } = await supabase.rpc('emit_system_task', {
-    p_system: 'crm',
-    p_ref: `revisit_reengaging:${partnerId}`,
-    p_assignee: assigneeId,
-    p_title: `Revisit ${partnerName} — follow up or archive`,
-    p_department: 'partnerships',
-    p_priority: 'p3',
-    p_due: due.toLocaleDateString('en-CA'),
-  });
-  if (error) throw new Error(error.message);
-}
 
 // ── Givebutter sync: needs-review donations ─────────────────────────────
 

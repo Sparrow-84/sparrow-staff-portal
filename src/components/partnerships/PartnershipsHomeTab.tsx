@@ -20,6 +20,8 @@ import {
 } from '@/lib/partnerships';
 import { fetchAllContacts, type PersonalContactWithOwner } from '@/lib/personalContacts';
 import { WidgetCard } from '@/components/home/widgets';
+import { supabase } from '@/lib/supabase';
+import { CheckinDoneForm } from './Checkins';
 
 const KIND_ICON: Record<HomeItemKind, string> = {
   touchpoint: '🤝',
@@ -27,6 +29,7 @@ const KIND_ICON: Record<HomeItemKind, string> = {
   connection: '🔗',
   social_post: '📱',
   newsletter: '📰',
+  reminder: '🔔',
 };
 
 interface Props {
@@ -61,6 +64,10 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
 
   const loadNeedsReview = useCallback(() => {
     fetchNeedsReviewDonations().then(setNeedsReview).catch(() => undefined);
+  }, []);
+
+  const reloadItems = useCallback(() => {
+    fetchHomeItems().then(setItems).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -129,7 +136,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
   }
 
   function open(item: HomeItem) {
-    if (item.kind === 'touchpoint' && item.partnerId) {
+    if (item.partnerId) {
       onOpenPartner(item.partnerId);
     } else if (item.navigateTab) {
       onNavigateTab(item.navigateTab);
@@ -142,9 +149,8 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
   return (
     <div className="space-y-6">
       <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-        Everything due or overdue across the room this week — touchpoints, collateral
-        reviews, connection follow-ups, social posting, and the newsletter calendar. This
-        is a shared view: everyone with Partnerships access sees the same list.
+        Everything due or overdue across the Partnerships room this week. Everyone with
+        Partnerships access sees the same list.
       </p>
 
       {needsReview.length > 0 && (
@@ -227,7 +233,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
             ))}
           </ul>
           <p className="mt-2 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
-            Not a to-do — their "newsletter subscribed" checkbox already updated on its own. Just so you know.
+            Not a to-do — their "Subscribed to TSM" checkbox already updated on its own, and we leave them alone. Just so you know.
           </p>
         </WidgetCard>
       )}
@@ -236,14 +242,14 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
         <div className="rounded-2xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-8 text-center shadow-card">
           <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">Nothing due or overdue this week. 🎉</p>
           <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-            The room is fully caught up on its stewardship rhythm.
+            Nothing in the room needs attention right now.
           </p>
         </div>
       ) : items.length === 0 ? null : (
         <>
           {overdue.length > 0 && (
             <WidgetCard title={`🔴 Overdue (${overdue.length})`}>
-              <ItemsByOwner items={overdue} ownerName={ownerName} today={today} onOpen={open} />
+              <ItemsByOwner items={overdue} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} />
             </WidgetCard>
           )}
           <WidgetCard title={`Due this week (${dueThisWeek.length})`}>
@@ -252,7 +258,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
                 Nothing else coming due this week.
               </p>
             ) : (
-              <ItemsByOwner items={dueThisWeek} ownerName={ownerName} today={today} onOpen={open} />
+              <ItemsByOwner items={dueThisWeek} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} />
             )}
           </WidgetCard>
         </>
@@ -266,12 +272,30 @@ function ItemsByOwner({
   ownerName,
   today,
   onOpen,
+  onDone,
 }: {
   items: HomeItem[];
   ownerName: (id: string) => string;
   today: string;
   onOpen: (item: HomeItem) => void;
+  onDone: () => void;
 }) {
+  const [doneKey, setDoneKey] = useState<string | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  // A reminder that isn't a check-in (prayer check-in, comms milestone...): Done just closes
+  // that one task.
+  async function closeTask(item: HomeItem) {
+    if (!item.taskRef) return;
+    setBusyKey(item.key);
+    try {
+      await supabase.rpc('resolve_system_task', { p_system: 'crm', p_ref: item.taskRef });
+      onDone();
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
   const groups = useMemo(() => {
     const map = new Map<string, HomeItem[]>();
     for (const item of items) {
@@ -292,9 +316,10 @@ function ItemsByOwner({
           <ul className="space-y-1">
             {ownerItems.map((item) => (
               <li key={item.key}>
+                <div className="flex items-start gap-1">
                 <button
                   onClick={() => onOpen(item)}
-                  className="flex w-full flex-col gap-0.5 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2"
+                  className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2"
                 >
                   <span className="flex w-full items-center justify-between gap-2">
                     <span className="flex min-w-0 items-center gap-2">
@@ -315,6 +340,25 @@ function ItemsByOwner({
                     <span className="pl-6 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{item.detail}</span>
                   )}
                 </button>
+                {(item.checkin || item.taskRef) && (
+                  <button
+                    onClick={() => (item.checkin ? setDoneKey(doneKey === item.key ? null : item.key) : void closeTask(item))}
+                    disabled={busyKey === item.key}
+                    className="mt-1 shrink-0 rounded-lg bg-sparrow-green dark:bg-sparrow-dark-green px-2.5 py-1 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                  >
+                    Done
+                  </button>
+                )}
+                </div>
+                {item.checkin && doneKey === item.key && (
+                  <div className="pl-2">
+                    <CheckinDoneForm
+                      checkin={item.checkin}
+                      onDone={() => { setDoneKey(null); onDone(); }}
+                      onCancel={() => setDoneKey(null)}
+                    />
+                  </div>
+                )}
               </li>
             ))}
           </ul>
