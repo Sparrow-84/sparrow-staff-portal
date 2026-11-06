@@ -37,6 +37,9 @@ export interface HomeItem {
   /** Set on a prayer check-in reminder: the roster volunteer it's about, so Home can offer
    *  the same Snooze / Move off prayer team buttons as the Prayer Team tab. */
   prayerVolunteerId?: string;
+  /** A reminder's pre-written, ready-to-send message (prayer check-ins), shown with a Copy
+   *  button. Empty until migration 0210 runs. */
+  message?: string;
 }
 
 /** Open Partnerships task kinds Home already lists from their own source rows (or, for
@@ -191,6 +194,11 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
     // Every other open Partnerships reminder (migration 0209); empty until it runs.
     supabase.rpc('partnerships_open_reminders'),
   ]);
+  // Their pre-written messages (migration 0210); none until it runs.
+  const messagesRes = await supabase.rpc('partnerships_open_reminder_messages');
+  const messageByRef = new Map(
+    messagesRes.error ? [] : ((messagesRes.data ?? []) as { source_ref: string; notes: string }[]).map((m) => [m.source_ref, m.notes]),
+  );
   // A check-in on a record with no owner goes to the room admin, same as its task (0209).
   const roomAdminId = await fetchPartnershipsRoomAdminId();
 
@@ -319,6 +327,7 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
       due_date: due,
       owner_id: r.assignee_id ?? roomAdminId ?? '',
       taskRef: r.source_ref,
+      message: messageByRef.get(r.source_ref),
       ...reminderTarget(r.source_ref),
     });
   }

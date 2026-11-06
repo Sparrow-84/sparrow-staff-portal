@@ -373,6 +373,7 @@ function ItemsByOwner({
                   </button>
                 )}
                 </div>
+                {item.message && <ReminderMessage message={item.message} />}
                 {item.prayerVolunteerId && prayerVolunteers.get(item.prayerVolunteerId)?.active && (
                   <div className="pb-1 pl-8">
                     <PrayerVolunteerActions
@@ -395,6 +396,34 @@ function ItemsByOwner({
           </ul>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** A reminder's ready-to-send message, with a Copy button — so whoever is covering can send
+ *  it straight from Home. */
+function ReminderMessage({ message }: { message: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard blocked: the text is still selectable by hand.
+    }
+  }
+
+  return (
+    <div className="mb-1 ml-8 mr-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 dark:bg-sparrow-dark-surface2 px-3 py-2">
+      <p className="select-text whitespace-pre-wrap text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{message}</p>
+      <button
+        onClick={() => void copy()}
+        className="mt-1.5 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
+      >
+        {copied ? 'Copied ✓' : 'Copy message'}
+      </button>
     </div>
   );
 }
