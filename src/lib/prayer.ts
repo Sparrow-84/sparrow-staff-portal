@@ -312,7 +312,17 @@ export async function consecutiveMissedMonths(volunteerId: string): Promise<numb
  *  Reads their full history, not just the loaded year, since a gap over a year is exactly
  *  the case that matters (they sign the agreement again). */
 export async function fetchReturningSince(volunteerIds: string[]): Promise<Record<string, string>> {
-  if (volunteerIds.length === 0) return {};
+  const { latestDate, lastTracked } = await fetchLastTracked(volunteerIds);
+  if (!latestDate) return {};
+  return Object.fromEntries(Object.entries(lastTracked).filter(([, date]) => date < latestDate));
+}
+
+/** Volunteer id → the date of the last meeting they were tracked at (on the roster for),
+ *  plus the latest meeting logged at all. Full history, not just the loaded year. */
+export async function fetchLastTracked(
+  volunteerIds: string[],
+): Promise<{ latestDate: string | null; lastTracked: Record<string, string> }> {
+  if (volunteerIds.length === 0) return { latestDate: null, lastTracked: {} };
   const [{ data: latest, error: le }, { data: rows, error: re }] = await Promise.all([
     supabase.from('prayer_meetings').select('meeting_date').order('meeting_date', { ascending: false }).limit(1),
     supabase
@@ -323,7 +333,7 @@ export async function fetchReturningSince(volunteerIds: string[]): Promise<Recor
   if (le) throw new Error(le.message);
   if (re) throw new Error(re.message);
   const latestDate = latest?.[0]?.meeting_date as string | undefined;
-  if (!latestDate) return {};
+  if (!latestDate) return { latestDate: null, lastTracked: {} };
 
   const lastTracked: Record<string, string> = {};
   for (const row of rows ?? []) {
@@ -332,5 +342,5 @@ export async function fetchReturningSince(volunteerIds: string[]): Promise<Recor
       lastTracked[row.volunteer_id] = date;
     }
   }
-  return Object.fromEntries(Object.entries(lastTracked).filter(([, date]) => date < latestDate));
+  return { latestDate, lastTracked };
 }

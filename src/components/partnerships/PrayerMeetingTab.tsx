@@ -6,6 +6,7 @@ import {
   fetchMeetingsWithAttendance,
   fetchPrayerVolunteers,
   logPrayerMeeting,
+  fetchLastTracked,
   fetchReturningSince,
   syncPrayerVolunteersFromDirectory,
   updatePrayerVolunteerNotes,
@@ -233,6 +234,7 @@ export function PrayerMeetingTab() {
   const [editNotes, setEditNotes] = useState('');
   const [missStreaks, setMissStreaks] = useState<Record<string, number>>({});
   const [returning, setReturning] = useState<Record<string, string>>({});
+  const [leftOn, setLeftOn] = useState<Record<string, string>>({});
   const [expandedMeeting, setExpandedMeeting] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -267,6 +269,14 @@ export function PrayerMeetingTab() {
       const back = await fetchReturningSince(vols.filter((v) => v.active).map((v) => v.id)).catch(() => ({}));
       if (!mounted.current) return;
       setReturning(back);
+
+      // "No longer active": when each was last on the team, so staff can see before
+      // re-adding them whether they need to sign the agreement again.
+      const gone = await fetchLastTracked(vols.filter((v) => !v.active).map((v) => v.id))
+        .then((r) => r.lastTracked)
+        .catch(() => ({}));
+      if (!mounted.current) return;
+      setLeftOn(gone);
     } catch (e) {
       if (!mounted.current) return;
       const msg = e instanceof Error ? e.message : '';
@@ -475,10 +485,9 @@ export function PrayerMeetingTab() {
             </p>
           )}
           <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            Anyone with the Volunteer → Prayer sub-category in the Directory shows up here on their own.
-            Add Prayer to their record only after they've signed the Prayer Volunteer Agreement and
-            Confidentiality Form in SignWell. To take someone off the team, use "Move off prayer team"
-            on their card.
+            Anyone with the Volunteer → Prayer sub-category in the Directory shows up here automatically.
+            On the Directory, mark a person as a prayer volunteer only AFTER they've signed the Prayer
+            Volunteer Agreement and Confidentiality Form in SignWell.
           </p>
 
           {activeVolunteers.length === 0 && (
@@ -572,7 +581,13 @@ export function PrayerMeetingTab() {
                 {inactiveVolunteers.map((v) => (
                   <div key={v.id} className="flex items-center justify-between rounded-xl border border-sparrow-rule/60 bg-sparrow-mist/40 dark:bg-black/20 px-4 py-2.5">
                     <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{v.full_name}</span>
-                    <span className="text-xs text-sparrow-gray/70">Off the prayer team</span>
+                    <span className="text-right text-xs text-sparrow-gray/70">
+                      {leftOn[v.id]
+                        ? leftOn[v.id] < addMonthsISO(todayISO(), -RESIGN_AFTER_MONTHS)
+                          ? `Last on the team ${shortDate(leftOn[v.id])} · signs the agreement again to rejoin`
+                          : `Last on the team ${shortDate(leftOn[v.id])}`
+                        : 'Off the prayer team'}
+                    </span>
                   </div>
                 ))}
               </div>
