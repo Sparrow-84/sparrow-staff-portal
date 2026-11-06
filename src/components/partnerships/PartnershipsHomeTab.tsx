@@ -24,6 +24,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchPrayerVolunteers, type PrayerVolunteer } from '@/lib/prayer';
 import { CheckinDoneForm } from './Checkins';
 import { PrayerVolunteerActions } from './PrayerVolunteerActions';
+import { CollateralReviewedButton } from './CollateralReviewedButton';
 
 const KIND_ICON: Record<HomeItemKind, string> = {
   touchpoint: '🤝',
@@ -147,6 +148,11 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
         const b = bucketFor(i.due_date, false, today);
         return b === 'today' || b === 'this_week';
       }),
+    [items, today],
+  );
+  // Only collateral reviews reach past this week: they show two weeks ahead (migration 0211).
+  const comingUp = useMemo(
+    () => items.filter((i) => bucketFor(i.due_date, false, today) === 'upcoming'),
     [items, today],
   );
 
@@ -280,6 +286,11 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
               <ItemsByOwner items={dueThisWeek} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} />
             )}
           </WidgetCard>
+          {comingUp.length > 0 && (
+            <WidgetCard title={`Coming up in the next two weeks (${comingUp.length})`}>
+              <ItemsByOwner items={comingUp} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} />
+            </WidgetCard>
+          )}
         </>
       )}
     </div>
@@ -371,6 +382,14 @@ function ItemsByOwner({
                   >
                     Done
                   </button>
+                )}
+                {item.collateral && (
+                  <CollateralReviewedButton
+                    itemId={item.collateral.id}
+                    itemName={item.collateral.name}
+                    onDone={onDone}
+                    variant="button"
+                  />
                 )}
                 </div>
                 {item.message && <ReminderMessage message={item.message} />}

@@ -12,6 +12,7 @@ import { supabase } from './supabase';
 import { localDate } from './date';
 import { bucketFor } from './tasks';
 import { attachCheckins, fetchOpenCheckins, fetchPartnershipsRoomAdminId } from './partnerships';
+import { COLLATERAL_HEADS_UP_DAYS, toCollateral } from './partnerships-tabs';
 
 export type HomeItemKind = 'touchpoint' | 'collateral' | 'connection' | 'social_post' | 'newsletter' | 'reminder';
 
@@ -40,6 +41,8 @@ export interface HomeItem {
   /** A reminder's pre-written, ready-to-send message (prayer check-ins), shown with a Copy
    *  button. Empty until migration 0210 runs. */
   message?: string;
+  /** Set on a collateral review: Home offers the same Mark reviewed button as the tab. */
+  collateral?: { id: string; name: string };
 }
 
 /** Open Partnerships task kinds Home already lists from their own source rows (or, for
@@ -106,10 +109,12 @@ interface OpenReminderRow {
 interface CollateralRow {
   id: string;
   item_name: string;
-  owner_id: string | null;
+  owner_id: string;
   active: boolean;
-  cadence_days: number | null;
-  last_reviewed_at: string | null;
+  last_reviewed_at: string;
+  /** Migration 0211; derived from cadence_days until it runs. */
+  next_review_at?: string | null;
+  cadence_days?: number | null;
 }
 
 interface ConnectionRow {
@@ -180,7 +185,8 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
       .eq('active', true),
     supabase
       .from('partnership_collateral')
-      .select('id, item_name, owner_id, active, cadence_days, last_reviewed_at')
+      // '*' so this still works before migration 0211 adds next_review_at.
+      .select('*')
       .eq('active', true),
     supabase
       .from('partnership_connections')
@@ -239,18 +245,21 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
     }
   }
 
-  // 2. Collateral needing review — mirrors emit_collateral_review_tasks().
+  // 2. Collateral needing review — mirrors emit_collateral_review_tasks() (0211): shows two
+  // weeks before its Next review date, not just this week.
+  const collateralCutoff = addDays(today, COLLATERAL_HEADS_UP_DAYS);
   for (const c of collateral) {
-    if (!c.owner_id || c.cadence_days == null || !c.last_reviewed_at) continue;
-    const due = addDays(c.last_reviewed_at, c.cadence_days);
-    if (!inScope(due, today)) continue;
+    if (!c.owner_id || !c.last_reviewed_at) continue;
+    const due = toCollateral(c).next_review_at;
+    if (due > collateralCutoff) continue;
     items.push({
       key: `collateral:${c.id}`,
       kind: 'collateral',
-      title: `Collateral review — ${c.item_name}`,
+      title: `Review collateral — ${c.item_name}`,
       due_date: due,
       owner_id: c.owner_id,
       navigateTab: 'collateral',
+      collateral: { id: c.id, name: c.item_name },
     });
   }
 

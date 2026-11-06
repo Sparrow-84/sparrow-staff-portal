@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { localDate, localDateOf } from './date';
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -13,7 +14,6 @@ export type CommType =
   | 'christmas_cards';
 
 export type CommStatus = 'not_started' | 'in_progress' | 'sent';
-export type ReviewCycle = 'march' | 'sept' | 'both';
 export type SocialPlatform = 'facebook' | 'instagram' | 'both';
 export type SocialStatus = 'planned' | 'scheduled' | 'posted';
 
@@ -34,22 +34,19 @@ export interface PartnershipCollateral {
   id: string;
   item_name: string;
   qty_on_hand: string | null;
-  last_updated: string | null;
-  /** Informational only as of migration 0080 — no longer drives review scheduling. */
-  review_cycle: ReviewCycle;
-  needs_attention: boolean;
   notes: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
-  /** Required (migration 0080). Days between reviews for this item. */
-  cadence_days: number;
-  /** Required (migration 0080). Days ahead of the review due date the owner is warned. */
-  lead_time_days: number;
-  /** Required (migration 0080). Who is responsible for this item's review. */
+  /** Who is responsible for this item's review. */
   owner_id: string;
-  /** Required (migration 0080). due_date = last_reviewed_at + cadence_days. */
+  /** Date this item was last reviewed. */
   last_reviewed_at: string;
+  /** When it's next due for review (migration 0211). It comes up on Home and in the owner's
+   *  tasks two weeks before. Before 0211 runs it's derived from the old cadence on fetch. */
+  next_review_at: string;
+  /** Link to the editable source file or its folder (migration 0211). */
+  link: string | null;
 }
 
 export interface PartnershipSocialPost {
@@ -441,6 +438,44 @@ export async function syncCommsMilestoneTasks(): Promise<number> {
 
 // ─── Collateral ───────────────────────────────────────────────────────
 
+/** Days ahead of its Next review date that an item comes up on Home and in the owner's
+ *  tasks. Same number as emit_collateral_review_tasks() (migration 0211). */
+export const COLLATERAL_HEADS_UP_DAYS = 14;
+
+/** The suggested next review after one is done: six months out (same as migration 0211's
+ *  rule for a review task finished outside this tab). */
+export function defaultNextCollateralReview(from: string = localDate()): string {
+  const d = new Date(`${from}T12:00:00`);
+  d.setMonth(d.getMonth() + 6);
+  return localDateOf(d);
+}
+
+type CollateralRow = Omit<PartnershipCollateral, 'next_review_at' | 'link'> & {
+  next_review_at?: string | null;
+  link?: string | null;
+  cadence_days?: number | null;
+};
+
+/** Before migration 0211 runs there's no next_review_at/link column: derive the date from
+ *  the old cadence so the tab and Home still read correctly. */
+export function toCollateral<T extends Pick<CollateralRow, 'last_reviewed_at' | 'next_review_at' | 'link' | 'cadence_days'>>(
+  r: T,
+): T & Pick<PartnershipCollateral, 'next_review_at' | 'link'> {
+  let next = r.next_review_at ?? null;
+  if (!next) {
+    const d = new Date(`${r.last_reviewed_at}T12:00:00`);
+    d.setDate(d.getDate() + (r.cadence_days ?? 182));
+    next = localDateOf(d);
+  }
+  return { ...r, next_review_at: next, link: r.link ?? null };
+}
+
+/** True once migration 0211 has run (the new columns exist). */
+export async function collateralSchemaReady(): Promise<boolean> {
+  const { error } = await supabase.from('partnership_collateral').select('next_review_at').limit(1);
+  return !error;
+}
+
 export async function fetchCollateral(): Promise<PartnershipCollateral[]> {
   const { data, error } = await supabase
     .from('partnership_collateral')
@@ -448,7 +483,7 @@ export async function fetchCollateral(): Promise<PartnershipCollateral[]> {
     .eq('active', true)
     .order('item_name');
   if (error) throw new Error(error.message);
-  return (data ?? []) as PartnershipCollateral[];
+  return ((data ?? []) as CollateralRow[]).map(toCollateral);
 }
 
 export async function fetchArchivedCollateral(): Promise<PartnershipCollateral[]> {
@@ -458,21 +493,12 @@ export async function fetchArchivedCollateral(): Promise<PartnershipCollateral[]
     .eq('active', false)
     .order('item_name');
   if (error) throw new Error(error.message);
-  return (data ?? []) as PartnershipCollateral[];
+  return ((data ?? []) as CollateralRow[]).map(toCollateral);
 }
 
 export type CollateralInput = Pick<
   PartnershipCollateral,
-  | 'item_name'
-  | 'qty_on_hand'
-  | 'last_updated'
-  | 'review_cycle'
-  | 'needs_attention'
-  | 'notes'
-  | 'cadence_days'
-  | 'lead_time_days'
-  | 'owner_id'
-  | 'last_reviewed_at'
+  'item_name' | 'qty_on_hand' | 'notes' | 'owner_id' | 'last_reviewed_at' | 'next_review_at' | 'link'
 >;
 
 export async function createCollateralItem(input: CollateralInput): Promise<void> {
@@ -491,10 +517,16 @@ export async function updateCollateralItem(
   if (error) throw new Error(error.message);
 }
 
-export async function archiveCollateralItem(id: string): Promise<void> {
+/** Reviewed today; next review on the given date. Closes the open review task (0211 trigger). */
+export async function markCollateralReviewed(id: string, nextReview: string): Promise<void> {
+  await updateCollateralItem(id, { last_reviewed_at: localDate(), next_review_at: nextReview });
+}
+
+/** Archive (false) or restore (true). Archiving removes its open review task (0211 trigger). */
+export async function setCollateralActive(id: string, active: boolean): Promise<void> {
   const { error } = await supabase
     .from('partnership_collateral')
-    .update({ active: false })
+    .update({ active })
     .eq('id', id);
   if (error) throw new Error(error.message);
 }
@@ -642,11 +674,9 @@ export async function syncOverdueConnectionFollowups(): Promise<number> {
 }
 
 /**
- * Push a "Collateral review due…" task to each item's own owner once that item is inside
- * its own lead_time_days window ahead of its own last_reviewed_at + cadence_days due date
- * (dedup-safe; requires migration 0080's emit_collateral_review_tasks(), which replaced the
- * old room-wide, hardcoded-to-Bethany emit_collateral_review_task()). Returns the number of
- * tasks emitted.
+ * Push a "Review collateral — …" task to each item's owner once it's within two weeks of its
+ * Next review date (dedup-safe; emit_collateral_review_tasks(), migration 0211). Returns the
+ * number of tasks emitted.
  */
 export async function syncCollateralReviewTasks(): Promise<number> {
   const { data, error } = await supabase.rpc('emit_collateral_review_tasks');
