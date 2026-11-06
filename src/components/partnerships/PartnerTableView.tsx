@@ -68,7 +68,7 @@ const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'name', label: 'Name', defaultWidth: 200 },
   { key: 'type', label: 'Category', defaultWidth: 150 },
   { key: 'sub_category', label: 'Sub-category', defaultWidth: 130 },
-  { key: 'contact_name', label: 'Contact Person', defaultWidth: 150 },
+  { key: 'contact_name', label: 'Primary Contact Person', defaultWidth: 150 },
   { key: 'email', label: 'Email', defaultWidth: 190 },
   { key: 'phone', label: 'Phone', defaultWidth: 130 },
   { key: 'address', label: 'Address', defaultWidth: 200 },
@@ -574,7 +574,7 @@ export function PartnerTableView({
               display={[p.contact_name, p.role].filter(Boolean).join(', ')}
               placeholder="—"
               fields={[
-                { key: 'contact_name', label: 'Contact person', value: p.contact_name ?? '' },
+                { key: 'contact_name', label: 'Primary Contact Person', value: p.contact_name ?? '' },
                 { key: 'role', label: 'Role / title', value: p.role ?? '' },
               ]}
               onSave={(v) => void patch(p.id, { contact_name: v.contact_name.trim() || null, role: v.role.trim() || null })}

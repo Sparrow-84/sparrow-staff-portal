@@ -438,7 +438,7 @@ export function AddPartnerPanel({
 
         <div className={`grid grid-cols-2 gap-3 ${isPerson ? 'opacity-50' : ''}`}>
           <div>
-            <label className="field-label" htmlFor="pa-contact">Primary contact</label>
+            <label className="field-label" htmlFor="pa-contact">Primary Contact Person</label>
             <input id="pa-contact" className="field-input" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="optional" />
           </div>
           <div>

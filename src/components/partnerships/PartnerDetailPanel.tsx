@@ -561,7 +561,7 @@ export function PartnerDetailPanel({
               {/* An organization's contacts (and its ★ primary) live in the Contacts list below. */}
               {isPersonRecord(partner) && (
                 <div className="space-y-1.5 opacity-50">
-                  <InfoRow label="Contact" value={partner.contact_name} />
+                  <InfoRow label="Primary Contact Person" value={partner.contact_name} />
                   <InfoRow label="Role" value={partner.role} />
                 </div>
               )}
@@ -608,7 +608,7 @@ export function PartnerDetailPanel({
               {isPersonRecord(partner) && (
                 <div className="space-y-3 opacity-50">
                   <div className="grid grid-cols-2 gap-3">
-                    <EditField label="Primary contact" value={partner.contact_name ?? ''} disabled={busy} onSave={(v) => void patch({ contact_name: v })} />
+                    <EditField label="Primary Contact Person" value={partner.contact_name ?? ''} disabled={busy} onSave={(v) => void patch({ contact_name: v })} />
                     <EditField label="Role / title" value={partner.role ?? ''} disabled={busy} onSave={(v) => void patch({ role: v })} />
                   </div>
                 </div>
