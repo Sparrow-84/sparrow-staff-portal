@@ -1,8 +1,8 @@
 // Partnerships Room — Social Media tab: post ideas, what's planned, and what's gone up.
 // Same table engine and look as the Directory and Collateral; every cell edits in place.
-// The posting rhythm is fixed (migration 0212): aim to post at least every two weeks. When
-// nothing has gone up in two weeks and nothing is planned for the next two, the reminder
-// owner gets a task and it shows on Home.
+// The posting rhythm is fixed (migration 0212): post at least every two weeks. When nothing
+// has gone up in two weeks, the reminder owner gets a task and it shows on Home. Planned posts
+// don't count; only marking a post Posted clears it.
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
@@ -180,11 +180,8 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
   const past = posts.filter((p) => p.status === 'posted');
 
   // Same rule as emit_social_post_reminder() (0212).
-  const lastPosted = past.map((p) => p.planned_date).filter((d): d is string => !!d).sort().at(-1) ?? null;
-  const nextPlanned = upcoming.map((p) => p.planned_date).filter((d): d is string => !!d && d >= today).sort()[0] ?? null;
-  const gapOpen =
-    (!lastPosted || daysBetween(lastPosted, today) > SOCIAL_RHYTHM_DAYS)
-    && (!nextPlanned || daysBetween(today, nextPlanned) > SOCIAL_RHYTHM_DAYS);
+  const lastPosted = past.map((p) => p.planned_date).filter((d): d is string => !!d && d <= today).sort().at(-1) ?? null;
+  const gapOpen = !lastPosted || daysBetween(lastPosted, today) > SOCIAL_RHYTHM_DAYS;
 
   const ownerName = setting ? profiles.find((p) => p.id === setting.owner_id)?.full_name ?? 'the reminder owner' : 'the reminder owner';
 
@@ -276,17 +273,17 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
     <div className="space-y-4">
       {gapOpen && !loading && (
         <div className="rounded-xl border border-sparrow-gold/40 bg-sparrow-gold/5 px-4 py-3 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
-          Nothing has gone up in the last two weeks and nothing is planned for the next two.
-          {' '}{ownerName} has a reminder, and it shows on Home. Plan a post to clear it.
+          Nothing has gone up in the last two weeks. {ownerName} has a reminder, and it shows on
+          Home. It clears when a post is marked Posted.
         </div>
       )}
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-2xl space-y-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           <p>
-            Aim to post at least every two weeks. If nothing has gone up in two weeks and nothing
-            is planned for the next two, the reminder owner gets a task and it shows on Home.
-            Add ideas any time, even without a date. When a post goes up, set its Status to Posted.
+            Post at least every two weeks. If nothing has gone up in two weeks, the reminder owner
+            gets a task and it shows on Home. Planned posts don't count; marking a post Posted
+            clears it. Add ideas any time, even without a date.
           </p>
           {setting && (
             <div className="flex items-center gap-2">

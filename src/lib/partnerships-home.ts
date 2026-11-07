@@ -280,26 +280,19 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
   }
 
   // 4. Social posting reminder — mirrors emit_social_post_reminder() (0212): nags only when
-  // nothing has gone up in two weeks AND nothing is planned for the next two.
+  // nothing has gone up in two weeks. Planned posts don't count.
   const socialCfg = settings.find((s) => s.kind === 'social_post');
   if (socialCfg) {
-    const posted = socialPosts.filter((s) => s.status === 'posted' && s.planned_date);
+    const posted = socialPosts.filter((s) => s.status === 'posted' && s.planned_date && s.planned_date <= today);
     const lastPosted = posted.length
       ? posted.map((s) => s.planned_date as string).sort().at(-1)!
       : null;
-    const plannedAhead = socialPosts.filter(
-      (s) => (s.status === 'planned' || s.status === 'scheduled') && s.planned_date && s.planned_date >= today,
-    );
-    const nextPlanned = plannedAhead.length
-      ? plannedAhead.map((s) => s.planned_date as string).sort()[0]
-      : null;
     const daysSinceLast = lastPosted ? daysBetween(lastPosted, today) : Infinity;
-    const daysToNext = nextPlanned ? daysBetween(today, nextPlanned) : Infinity;
-    if (daysSinceLast > SOCIAL_RHYTHM_DAYS && daysToNext > SOCIAL_RHYTHM_DAYS) {
+    if (daysSinceLast > SOCIAL_RHYTHM_DAYS) {
       items.push({
         key: 'social_post:reminder',
         kind: 'social_post',
-        title: 'Social post needed — nothing posted or planned in two weeks',
+        title: 'Social post needed — nothing posted in two weeks',
         due_date: today,
         owner_id: socialCfg.owner_id,
         navigateTab: 'social',

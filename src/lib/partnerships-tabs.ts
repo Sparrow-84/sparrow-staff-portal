@@ -709,9 +709,8 @@ export async function updateRecurringSetting(
   if (error) throw new Error(error.message);
 }
 
-/** The posting rhythm (migration 0212): aim to post at least this often. The owner gets a
- *  reminder when nothing has gone up in this many days AND nothing is planned within this
- *  many days ahead. Fixed, not a setting. */
+/** The posting rhythm (migration 0212): post at least this often. The owner gets a reminder
+ *  when nothing has gone up in this many days; planned posts don't count. Fixed, not a setting. */
 export const SOCIAL_RHYTHM_DAYS = 14;
 
 /** Push the "No social post in two weeks" task to the social_post settings owner (dedup-safe). */

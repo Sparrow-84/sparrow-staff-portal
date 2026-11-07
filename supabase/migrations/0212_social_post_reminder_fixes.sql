@@ -3,16 +3,15 @@
 --
 -- Decided with the product owner 2026-11-07 while writing the Social Media tab guide:
 --   * The Cadence + Lead time settings are gone from the app. The rule is now fixed and written
---     on the tab: aim to post at least every two weeks. The owner gets a reminder when nothing
---     has gone up in 14 days AND nothing is planned for the next 14. Only the Owner setting
---     stays. partnership_recurring_settings.cadence_days / lead_time_days are kept (the
+--     on the tab: post at least every two weeks. The owner gets a reminder when nothing has
+--     gone up in 14 days. Planned posts don't count — only marking a post Posted clears it
+--     (otherwise a post planned two weeks out could mean a month of silence). Only the Owner
+--     setting stays. partnership_recurring_settings.cadence_days / lead_time_days are kept (the
 --     newsletter row still uses lead_time_days; the social_post row's values are now unused).
 --   * Bug fix: every reminder reused one source_ref ('social_post:reminder'), and
 --     emit_system_task never reopens a done task, so after the first reminder was closed the
 --     owner never got another one. Refs are now per gap: 'social_post:reminder:<last posted
 --     date>' (or ':none' before the first post), so each new gap gets a fresh task.
---   * Planning a post inside the next two weeks now closes the open reminder too (before, only
---     a post going up did).
 --   * Changing the reminder owner (social or newsletter) now moves the open tasks to the new
 --     owner. Before, they stayed with the old owner.
 -- Safe to re-run.
@@ -29,17 +28,11 @@ CREATE OR REPLACE FUNCTION social_post_gap_ref() RETURNS text
   LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   last_posted date;
-  next_planned date;
 BEGIN
   SELECT max(planned_date) INTO last_posted
-  FROM partnership_social_posts WHERE status = 'posted';
+  FROM partnership_social_posts WHERE status = 'posted' AND planned_date <= current_date;
 
-  SELECT min(planned_date) INTO next_planned
-  FROM partnership_social_posts
-  WHERE status IN ('planned', 'scheduled') AND planned_date >= current_date;
-
-  IF (last_posted IS NULL OR current_date - last_posted > 14)
-     AND (next_planned IS NULL OR next_planned - current_date > 14) THEN
+  IF last_posted IS NULL OR current_date - last_posted > 14 THEN
     RETURN 'social_post:reminder:' || COALESCE(last_posted::text, 'none');
   END IF;
   RETURN NULL;
@@ -77,7 +70,7 @@ BEGIN
 
   PERFORM emit_system_task(
     'crm', v_ref, v_owner,
-    'No social post in two weeks — plan the next one',
+    'No social post in two weeks — post something',
     'partnerships'::department, 'p3'::priority, current_date
   );
   RETURN 1;
@@ -92,9 +85,10 @@ BEGIN
      AND status <> 'done';
 END $$;
 
--- ─── 4. Posting OR planning a post closes the open reminder ────────────
+-- ─── 4. A post going up closes the open reminder ──────────────────────
 -- Replaces 0080's posted-only triggers. Runs after any change to the posts list; if the gap is
--- now closed (a post went up, or one is now planned within two weeks), the reminder is done.
+-- now closed (a post marked Posted within the last two weeks), the reminder is done. Planning
+-- a post does not close it.
 CREATE OR REPLACE FUNCTION on_social_post_changed() RETURNS trigger
   LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
