@@ -709,7 +709,12 @@ export async function updateRecurringSetting(
   if (error) throw new Error(error.message);
 }
 
-/** Push the "No social post in N+ days" task to the social_post settings owner (dedup-safe). */
+/** The posting rhythm (migration 0212): aim to post at least this often. The owner gets a
+ *  reminder when nothing has gone up in this many days AND nothing is planned within this
+ *  many days ahead. Fixed, not a setting. */
+export const SOCIAL_RHYTHM_DAYS = 14;
+
+/** Push the "No social post in two weeks" task to the social_post settings owner (dedup-safe). */
 export async function syncSocialPostReminder(): Promise<number> {
   const { data, error } = await supabase.rpc('emit_social_post_reminder');
   if (error) throw new Error(error.message);

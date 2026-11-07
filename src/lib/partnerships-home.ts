@@ -12,7 +12,7 @@ import { supabase } from './supabase';
 import { localDate } from './date';
 import { bucketFor } from './tasks';
 import { attachCheckins, fetchOpenCheckins, fetchPartnershipsRoomAdminId } from './partnerships';
-import { COLLATERAL_HEADS_UP_DAYS, toCollateral } from './partnerships-tabs';
+import { COLLATERAL_HEADS_UP_DAYS, SOCIAL_RHYTHM_DAYS, toCollateral } from './partnerships-tabs';
 
 export type HomeItemKind = 'touchpoint' | 'collateral' | 'connection' | 'social_post' | 'newsletter' | 'reminder';
 
@@ -279,8 +279,8 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
     });
   }
 
-  // 4. Social posting reminder — mirrors emit_social_post_reminder() exactly: nags only
-  // when BOTH sides fail (no recent post AND nothing already planned ahead of the gap).
+  // 4. Social posting reminder — mirrors emit_social_post_reminder() (0212): nags only when
+  // nothing has gone up in two weeks AND nothing is planned for the next two.
   const socialCfg = settings.find((s) => s.kind === 'social_post');
   if (socialCfg) {
     const posted = socialPosts.filter((s) => s.status === 'posted' && s.planned_date);
@@ -295,11 +295,11 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
       : null;
     const daysSinceLast = lastPosted ? daysBetween(lastPosted, today) : Infinity;
     const daysToNext = nextPlanned ? daysBetween(today, nextPlanned) : Infinity;
-    if (daysSinceLast > socialCfg.cadence_days && daysToNext > socialCfg.lead_time_days) {
+    if (daysSinceLast > SOCIAL_RHYTHM_DAYS && daysToNext > SOCIAL_RHYTHM_DAYS) {
       items.push({
         key: 'social_post:reminder',
         kind: 'social_post',
-        title: `Social post needed — none posted in ${socialCfg.cadence_days}+ days`,
+        title: 'Social post needed — nothing posted or planned in two weeks',
         due_date: today,
         owner_id: socialCfg.owner_id,
         navigateTab: 'social',

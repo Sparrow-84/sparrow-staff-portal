@@ -23,6 +23,10 @@ import { OrgEventDetailPanel } from './OrgEventDetailPanel';
 import { MeetingNotesView } from './MeetingNotesView';
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Height of a day cell's number row (4px cell padding + the 24px number), so multi-day bars
+ *  start just below the dates they belong to. */
+const DAY_NUMBER_ROW_PX = 30;
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -237,9 +241,10 @@ export function DeptCalendar({ department, showEvents = true, extraToolbar, onMo
 
               return (
                 <div key={wi} className="relative">
-                  {/* Caller-supplied overlay (e.g. Comms Production bars) — reserved above this calendar's own event bars */}
+                  {/* Caller-supplied overlay (e.g. Comms Production bars). Sits BELOW the day
+                      numbers, so a bar reads as belonging to the dates above it. */}
                   {weekOverlay && overlayH > 0 && (
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: overlayH }}>
+                    <div style={{ position: 'absolute', top: DAY_NUMBER_ROW_PX, left: 0, width: '100%', height: overlayH }}>
                       {weekOverlay(week)}
                     </div>
                   )}
@@ -253,7 +258,7 @@ export function DeptCalendar({ department, showEvents = true, extraToolbar, onMo
                       onMouseLeave={() => setTooltip(null)}
                       style={{
                         position: 'absolute',
-                        top: overlayH + 4 + bar.lane * 22,
+                        top: DAY_NUMBER_ROW_PX + overlayH + 4 + bar.lane * 22,
                         left: `calc(${bar.startCol / 7 * 100}% + 2px)`,
                         width: `calc(${bar.span / 7 * 100}% - 4px)`,
                         height: 20,
@@ -283,9 +288,9 @@ export function DeptCalendar({ department, showEvents = true, extraToolbar, onMo
                         <div
                           key={`${dStr}-${col}`}
                           className={`group min-h-[6rem] border-b border-r border-sparrow-rule dark:border-sparrow-dark-border p-1 ${!inMonth || isPast ? 'bg-sparrow-mist/30 dark:bg-black/20' : ''}`}
-                          style={barAreaPx > 0 ? { paddingTop: barAreaPx + 4 } : undefined}
                         >
-                          <div className="flex items-center justify-between">
+                          {/* Day number first; the multi-day bars are drawn in the gap below it. */}
+                          <div className="flex h-6 items-center justify-between">
                             <span className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${isToday ? 'bg-sparrow-green text-white' : !inMonth ? 'text-sparrow-rule dark:text-sparrow-dark-border' : isPast ? 'text-sparrow-gray dark:text-sparrow-dark-gray' : 'text-sparrow-ink dark:text-sparrow-dark-ink'}`}>
                               {day.getDate()}
                             </span>
@@ -295,6 +300,7 @@ export function DeptCalendar({ department, showEvents = true, extraToolbar, onMo
                               aria-label={`Add event on ${dStr}`}
                             >+</button>
                           </div>
+                          {barAreaPx > 0 && <div style={{ height: barAreaPx + 2 }} aria-hidden />}
                           <div className={`mt-1 space-y-0.5 ${isPast ? 'opacity-60' : ''}`}>
                             {shown.map((ev) => (
                               <button

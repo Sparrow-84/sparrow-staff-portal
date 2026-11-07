@@ -1,55 +1,64 @@
-import { useEffect, useState } from 'react';
+// Partnerships Room — Social Media tab: post ideas, what's planned, and what's gone up.
+// Same table engine and look as the Directory and Collateral; every cell edits in place.
+// The posting rhythm is fixed (migration 0212): aim to post at least every two weeks. When
+// nothing has gone up in two weeks and nothing is planned for the next two, the reminder
+// owner gets a task and it shows on Home.
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { localDate } from '@/lib/date';
+import { assignAvatarColors } from '@/lib/avatarColors';
 import type { Profile } from '@/lib/types';
 import {
+  SOCIAL_RHYTHM_DAYS,
   createSocialPost,
   deleteSocialPost,
   fetchRecurringSetting,
   fetchSocialPosts,
   syncSocialPostReminder,
+  updateRecurringSetting,
   updateSocialPost,
   type PartnershipRecurringSetting,
   type PartnershipSocialPost,
   type SocialPlatform,
   type SocialStatus,
 } from '@/lib/partnerships-tabs';
-import { PartnershipRecurringSettingsPanel } from './PartnershipRecurringSettingsPanel';
+import {
+  useColumnLayout, useHeaderInteractions, GridTableShell,
+  InlineText, InlineSelect, ExpandableText,
+  type GridColumn,
+} from '@/components/gridtable/GridTable';
 
-const PLATFORM_LABEL: Record<SocialPlatform, string> = {
-  facebook: 'FB',
-  instagram: 'IG',
-  both: 'Both',
-};
+type ColKey = 'date' | 'platform' | 'idea' | 'status' | 'notes' | 'actions';
 
-const PLATFORM_CHIP: Record<SocialPlatform, string> = {
-  facebook: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300',
-  instagram: 'bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-300',
-  both: 'bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300',
-};
+const COLUMNS: GridColumn<ColKey>[] = [
+  { key: 'date', label: 'Date', defaultWidth: 160 },
+  { key: 'platform', label: 'Platform', defaultWidth: 150 },
+  { key: 'idea', label: 'Post idea', defaultWidth: 360 },
+  { key: 'status', label: 'Status', defaultWidth: 130 },
+  { key: 'notes', label: 'Notes', defaultWidth: 280 },
+  { key: 'actions', label: '', defaultWidth: 80 },
+];
 
-const STATUS_LABEL: Record<SocialStatus, string> = {
-  planned: 'Planned',
-  scheduled: 'Scheduled',
-  posted: 'Posted',
-};
+const SORTABLE: ColKey[] = ['date', 'platform', 'idea', 'status'];
 
-const STATUS_CHIP: Record<SocialStatus, string> = {
-  planned: 'bg-slate-100 dark:bg-slate-500/15 text-slate-600 dark:text-slate-300',
-  scheduled: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300',
-  posted: 'bg-sparrow-green/10 text-sparrow-green dark:text-sparrow-dark-green',
-};
+const PLATFORM_OPTIONS: { value: SocialPlatform; label: string }[] = [
+  { value: 'both', label: 'Both (FB + IG)' },
+  { value: 'facebook', label: 'Facebook only' },
+  { value: 'instagram', label: 'Instagram only' },
+];
 
-const STATUS_CYCLE: SocialStatus[] = ['planned', 'scheduled', 'posted'];
+const STATUS_OPTIONS: { value: SocialStatus; label: string }[] = [
+  { value: 'planned', label: 'Planned' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'posted', label: 'Posted' },
+];
 
-function nextStatus(s: SocialStatus): SocialStatus {
-  const idx = STATUS_CYCLE.indexOf(s);
-  return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-}
+const STATUS_ORDER: Record<SocialStatus, number> = { planned: 0, scheduled: 1, posted: 2 };
 
-function shortDate(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+const DAY_MS = 86_400_000;
+
+function daysBetween(fromIso: string, toIso: string): number {
+  return Math.round((new Date(`${toIso}T12:00:00`).getTime() - new Date(`${fromIso}T12:00:00`).getTime()) / DAY_MS);
 }
 
 const EMPTY_FORM = {
@@ -59,18 +68,32 @@ const EMPTY_FORM = {
   notes: '',
 };
 
+/** Clicks inside an editable cell shouldn't bubble to the row. */
+function Stop({ children }: { children: ReactNode }) {
+  return <div className="w-full" onClick={(e) => e.stopPropagation()}>{children}</div>;
+}
+
 export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
   const [posts, setPosts] = useState<PartnershipSocialPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [postedOpen, setPostedOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [showPast, setShowPast] = useState(false);
   const [setting, setSetting] = useState<PartnershipRecurringSetting | null>(null);
 
   const { fieldClass, fieldError, clear, validate } = useRequiredFields([
-    { key: 'pst-content-idea', label: 'Content idea', valid: form.content_idea.trim().length > 0 },
+    { key: 'pst-content-idea', label: 'Post idea', valid: form.content_idea.trim().length > 0 },
   ]);
+
+  // Same standing-owner rule as the Directory: Partnerships staff + anyone granted room
+  // access, never Exec.
+  const ownerProfiles = profiles.filter(
+    (p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec',
+  );
+  const ownerColors = useMemo(() => assignAvatarColors(profiles), [profiles]);
 
   function load() {
     setLoading(true);
@@ -80,124 +103,223 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => { load(); }, []);
-
   useEffect(() => {
+    load();
     syncSocialPostReminder().catch(console.error);
     fetchRecurringSetting('social_post').then(setSetting).catch(console.error);
   }, []);
 
+  async function patch(post: PartnershipSocialPost, update: Partial<Pick<PartnershipSocialPost, 'platform' | 'content_idea' | 'planned_date' | 'status' | 'notes'>>) {
+    setSaveError(null);
+    setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, ...update } : p)));
+    try {
+      await updateSocialPost(post.id, update);
+      if ('status' in update || 'planned_date' in update) await syncSocialPostReminder();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Could not save that change.');
+      load();
+    }
+  }
+
+  // Marking a post Posted: if it has no date yet, or a date still ahead, it went up today.
+  function changeStatus(post: PartnershipSocialPost, status: SocialStatus) {
+    const today = localDate();
+    if (status === 'posted' && (!post.planned_date || post.planned_date > today)) {
+      void patch(post, { status, planned_date: today });
+    } else {
+      void patch(post, { status });
+    }
+  }
+
+  async function changeOwner(ownerId: string) {
+    if (!ownerId || !setting) return;
+    setSetting({ ...setting, owner_id: ownerId });
+    try {
+      await updateRecurringSetting('social_post', { owner_id: ownerId });
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Could not change the reminder owner.');
+    }
+  }
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
+    setFormError(null);
     setSaving(true);
     try {
       await createSocialPost({
         platform: form.platform,
-        content_idea: form.content_idea,
+        content_idea: form.content_idea.trim(),
         planned_date: form.planned_date || null,
-        notes: form.notes || null,
+        notes: form.notes.trim() || null,
       });
+      await syncSocialPostReminder().catch(console.error);
       setForm(EMPTY_FORM);
       setShowAddForm(false);
       load();
     } catch (err) {
-      console.error(err);
+      setFormError(err instanceof Error ? err.message : 'Could not add the post.');
     } finally {
       setSaving(false);
     }
   }
 
-  function handleCycleStatus(post: PartnershipSocialPost) {
-    const next = nextStatus(post.status);
-    setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, status: next } : p)));
-    updateSocialPost(post.id, { status: next }).catch(console.error);
+  async function handleDelete(post: PartnershipSocialPost) {
+    if (!confirm(`Delete "${post.content_idea}"? This can't be undone.`)) return;
+    try {
+      await deleteSocialPost(post.id);
+      setPosts((prev) => prev.filter((p) => p.id !== post.id));
+      await syncSocialPostReminder();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Could not delete the post.');
+    }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Delete this post idea?')) return;
-    await deleteSocialPost(id).catch(console.error);
-    setPosts((prev) => prev.filter((p) => p.id !== id));
+  const today = localDate();
+  const upcoming = posts.filter((p) => p.status !== 'posted');
+  const past = posts.filter((p) => p.status === 'posted');
+
+  // Same rule as emit_social_post_reminder() (0212).
+  const lastPosted = past.map((p) => p.planned_date).filter((d): d is string => !!d).sort().at(-1) ?? null;
+  const nextPlanned = upcoming.map((p) => p.planned_date).filter((d): d is string => !!d && d >= today).sort()[0] ?? null;
+  const gapOpen =
+    (!lastPosted || daysBetween(lastPosted, today) > SOCIAL_RHYTHM_DAYS)
+    && (!nextPlanned || daysBetween(today, nextPlanned) > SOCIAL_RHYTHM_DAYS);
+
+  const ownerName = setting ? profiles.find((p) => p.id === setting.owner_id)?.full_name ?? 'the reminder owner' : 'the reminder owner';
+
+  // ── Table layout + sort (same engine as the Directory) ──
+  const layout = useColumnLayout(COLUMNS, 'sparrow-partnerships-social-table');
+  const [sortKey, setSortKey] = useState<ColKey>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const { startResize, handleHeaderClick: rawHeaderClick } = useHeaderInteractions(
+    layout.colWidths, layout.setColWidths, sortKey, setSortKey, sortDir, setSortDir,
+  );
+  function handleHeaderClick(key: ColKey) {
+    if (SORTABLE.includes(key)) rawHeaderClick(key);
   }
 
-  const todayISO = localDate();
+  const rows = useMemo(() => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const sortGroup = (list: PartnershipSocialPost[]) => [...list].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'platform': cmp = a.platform.localeCompare(b.platform); break;
+        case 'idea': cmp = a.content_idea.localeCompare(b.content_idea); break;
+        case 'status': cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]; break;
+        default:
+          // Undated ideas sit after dated posts either way.
+          if (!a.planned_date || !b.planned_date) return (a.planned_date ? -1 : 1) - (b.planned_date ? -1 : 1);
+          cmp = a.planned_date.localeCompare(b.planned_date);
+      }
+      return cmp * dir;
+    });
+    // Past posts always sit below upcoming ones, newest first.
+    const pastSorted = [...past].sort((a, b) => (b.planned_date ?? '').localeCompare(a.planned_date ?? ''));
+    return [...sortGroup(upcoming), ...(showPast ? pastSorted : [])];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts, showPast, sortKey, sortDir]);
 
-  const upcoming = posts
-    .filter((p) => p.status === 'planned' || p.status === 'scheduled')
-    .sort((a, b) => (a.planned_date ?? '').localeCompare(b.planned_date ?? ''));
-
-  const posted = posts
-    .filter((p) => p.status === 'posted')
-    .sort((a, b) => (b.planned_date ?? '').localeCompare(a.planned_date ?? ''));
-
-  // Warning: no post in the trailing cadence_days AND no post planned within the next
-  // lead_time_days — mirrors emit_social_post_reminder() (migration 0080) exactly, reading
-  // the same configured cadence/lead-time instead of a hardcoded 14. Both sides must be
-  // true — a recent post or an already-planned upcoming post each independently satisfy the
-  // minimum-frequency rule, so this must be an AND, not an OR.
-  const cadenceDays = setting?.cadence_days ?? 14;
-  const leadTimeDays = setting?.lead_time_days ?? 14;
-  const lastPostedDate = posted[0]?.planned_date ?? null;
-  const earliestUpcomingDate = upcoming[0]?.planned_date ?? null;
-  const lastPostedDaysAgo = lastPostedDate
-    ? (new Date(todayISO).getTime() - new Date(lastPostedDate).getTime()) / 86_400_000
-    : Infinity;
-  const daysToNextPost = earliestUpcomingDate
-    ? (new Date(earliestUpcomingDate).getTime() - new Date(todayISO).getTime()) / 86_400_000
-    : Infinity;
-  const showFrequencyWarning = lastPostedDaysAgo > cadenceDays && daysToNextPost > leadTimeDays;
+  function renderCell(post: PartnershipSocialPost, key: ColKey): ReactNode {
+    switch (key) {
+      case 'date': {
+        const overdue = post.status !== 'posted' && !!post.planned_date && post.planned_date < today;
+        return (
+          <Stop>
+            <div className="flex w-full flex-col gap-0.5">
+              <InlineText
+                type="date"
+                value={post.planned_date ?? ''}
+                onSave={(v) => void patch(post, { planned_date: v || null })}
+              />
+              {!post.planned_date && <span className="px-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No date yet</span>}
+              {overdue && <span className="px-1 text-xs font-medium text-priority-p1">Date passed — posted?</span>}
+            </div>
+          </Stop>
+        );
+      }
+      case 'platform':
+        return (
+          <Stop>
+            <InlineSelect value={post.platform} options={PLATFORM_OPTIONS} onSave={(v) => void patch(post, { platform: v })} />
+          </Stop>
+        );
+      case 'idea':
+        return (
+          <Stop>
+            <InlineText
+              value={post.content_idea}
+              onSave={(v) => { if (v.trim()) void patch(post, { content_idea: v.trim() }); else load(); }}
+            />
+          </Stop>
+        );
+      case 'status':
+        return (
+          <Stop>
+            <InlineSelect value={post.status} options={STATUS_OPTIONS} onSave={(v) => changeStatus(post, v)} />
+          </Stop>
+        );
+      case 'notes':
+        return <ExpandableText value={post.notes} placeholder="—" onSave={(v) => void patch(post, { notes: v })} />;
+      case 'actions':
+        return (
+          <button onClick={() => void handleDelete(post)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
+            Delete
+          </button>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <div className="space-y-4">
-      <PartnershipRecurringSettingsPanel
-        kind="social_post"
-        title="Social posting"
-        helpText="Nags the owner below when there's been no post in the configured cadence AND nothing already planned within the lead time — either side alone satisfies the rhythm."
-        profiles={profiles}
-      />
-
-      {/* Frequency warning */}
-      {showFrequencyWarning && !loading && (
+      {gapOpen && !loading && (
         <div className="rounded-xl border border-sparrow-gold/40 bg-sparrow-gold/5 px-4 py-3 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
-          No post in the last {cadenceDays} days and none planned in the next {leadTimeDays} days.
+          Nothing has gone up in the last two weeks and nothing is planned for the next two.
+          {' '}{ownerName} has a reminder, and it shows on Home. Plan a post to clear it.
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">Upcoming posts</h3>
-        <button onClick={() => setShowAddForm((v) => !v)} className="btn-primary text-xs">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="max-w-2xl space-y-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
+          <p>
+            Aim to post at least every two weeks. If nothing has gone up in two weeks and nothing
+            is planned for the next two, the reminder owner gets a task and it shows on Home.
+            Add ideas any time, even without a date. When a post goes up, set its Status to Posted.
+          </p>
+          {setting && (
+            <div className="flex items-center gap-2">
+              <span>Reminders go to</span>
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${ownerColors[setting.owner_id] ?? 'bg-sparrow-gray dark:bg-sparrow-dark-border'}`} />
+              <select
+                value={setting.owner_id}
+                onChange={(e) => void changeOwner(e.target.value)}
+                className="field-input mt-0 w-auto py-1 text-sm"
+              >
+                {(ownerProfiles.some((p) => p.id === setting.owner_id)
+                  ? ownerProfiles
+                  : [...ownerProfiles, ...profiles.filter((p) => p.id === setting.owner_id)]
+                ).map((p) => (
+                  <option key={p.id} value={p.id}>{p.full_name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={() => { setShowAddForm((v) => !v); setFormError(null); }}
+          className="btn-primary shrink-0 text-xs"
+        >
           {showAddForm ? 'Cancel' : '+ Add post'}
         </button>
       </div>
 
-      {/* Add form */}
       {showAddForm && (
-        <form onSubmit={handleAdd} className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4 space-y-3">
+        <form onSubmit={handleAdd} className="max-w-3xl space-y-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-4">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="field-label">Platform</label>
-              <select
-                className="field-input w-full"
-                value={form.platform}
-                onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value as SocialPlatform }))}
-              >
-                <option value="both">Both (FB + IG)</option>
-                <option value="facebook">Facebook only</option>
-                <option value="instagram">Instagram only</option>
-              </select>
-            </div>
-            <div>
-              <label className="field-label">Planned date</label>
-              <input
-                type="date"
-                className="field-input w-full"
-                value={form.planned_date}
-                onChange={(e) => setForm((f) => ({ ...f, planned_date: e.target.value }))}
-              />
-            </div>
             <div className="col-span-2">
-              <label className="field-label field-label-required" htmlFor="pst-content-idea">Content idea</label>
+              <label className="field-label field-label-required" htmlFor="pst-content-idea">Post idea</label>
               <textarea
                 id="pst-content-idea"
                 className={fieldClass('pst-content-idea', 'field-input w-full resize-none')}
@@ -207,17 +329,40 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
               />
               {fieldError('pst-content-idea') && <p className="mt-1 text-xs text-priority-p1">{fieldError('pst-content-idea')}</p>}
             </div>
-            <div className="col-span-2">
-              <label className="field-label">Notes (optional)</label>
+            <div>
+              <label className="field-label" htmlFor="pst-platform">Platform</label>
+              <select
+                id="pst-platform"
+                className="field-input w-full"
+                value={form.platform}
+                onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value as SocialPlatform }))}
+              >
+                {PLATFORM_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="field-label" htmlFor="pst-date">Date (optional)</label>
               <input
+                id="pst-date"
+                type="date"
+                className="field-input w-full"
+                value={form.planned_date}
+                onChange={(e) => setForm((f) => ({ ...f, planned_date: e.target.value }))}
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="field-label" htmlFor="pst-notes">Notes (optional)</label>
+              <input
+                id="pst-notes"
                 className="field-input w-full"
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               />
             </div>
           </div>
+          {formError && <p className="text-sm text-priority-p1">{formError}</p>}
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowAddForm(false)} className="btn-ghost text-sm">
+            <button type="button" onClick={() => { setShowAddForm(false); setFormError(null); }} className="btn-ghost text-sm">
               Cancel
             </button>
             <button type="submit" disabled={saving} className="btn-primary text-sm">
@@ -227,77 +372,37 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
         </form>
       )}
 
-      {loading && <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>}
+      {saveError && <p className="text-sm text-priority-p1">{saveError}</p>}
 
-      {/* Upcoming list */}
-      {!loading && upcoming.length === 0 && (
-        <p className="rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-          No upcoming posts. Add one above.
-        </p>
+      {loading && posts.length === 0 ? (
+        <p className="py-8 text-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>
+      ) : (
+        <GridTableShell
+          layout={layout}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onHeaderClick={handleHeaderClick}
+          startResize={startResize}
+          items={rows}
+          rowKey={(p) => p.id}
+          renderCell={renderCell}
+          rowClassName={(p) => (p.status === 'posted' ? 'opacity-60' : 'hover:bg-sparrow-mist/40 dark:hover:bg-sparrow-dark-surface2')}
+          emptyMessage="No upcoming posts. Add one above."
+          toolbar={
+            <span className="mr-auto self-center text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
+              {upcoming.length} upcoming post{upcoming.length !== 1 ? 's' : ''}
+            </span>
+          }
+        />
       )}
 
-      {!loading && upcoming.length > 0 && (
-        <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
-          {upcoming.map((post) => (
-            <li key={post.id} className="flex items-start gap-3 px-4 py-3">
-              <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${PLATFORM_CHIP[post.platform]}`}>
-                {PLATFORM_LABEL[post.platform]}
-              </span>
-
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{post.content_idea}</p>
-                {post.notes && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">{post.notes}</p>}
-              </div>
-
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray whitespace-nowrap">{shortDate(post.planned_date)}</span>
-                <button
-                  onClick={() => handleCycleStatus(post)}
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_CHIP[post.status]}`}
-                >
-                  {STATUS_LABEL[post.status]}
-                </button>
-                <button
-                  onClick={() => handleDelete(post.id)}
-                  className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1"
-                  title="Delete"
-                >
-                  ✕
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* Posted section */}
-      {!loading && posted.length > 0 && (
-        <div>
-          <button
-            onClick={() => setPostedOpen((v) => !v)}
-            className="flex items-center gap-2 text-sm font-semibold text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
-          >
-            <span>{posted.length} past post{posted.length !== 1 ? 's' : ''}</span>
-            <span>{postedOpen ? '▲' : '▼'}</span>
-          </button>
-
-          {postedOpen && (
-            <ul className="mt-2 divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
-              {posted.map((post) => (
-                <li key={post.id} className="flex items-start gap-3 px-4 py-3 opacity-70">
-                  <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${PLATFORM_CHIP[post.platform]}`}>
-                    {PLATFORM_LABEL[post.platform]}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{post.content_idea}</p>
-                    {post.notes && <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">{post.notes}</p>}
-                  </div>
-                  <span className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{shortDate(post.planned_date)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      {past.length > 0 && (
+        <button
+          onClick={() => setShowPast((v) => !v)}
+          className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink underline"
+        >
+          {showPast ? 'Hide past posts' : `Show past posts (${past.length})`}
+        </button>
       )}
     </div>
   );

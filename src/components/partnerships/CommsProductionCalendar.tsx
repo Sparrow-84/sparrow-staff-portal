@@ -26,8 +26,24 @@ function familyFor(commType: CommType): string {
   return commType.startsWith('tsm') ? 'tsm' : commType;
 }
 
-const BAR_HEIGHT = 46;
+// Tall enough for the title plus a two-line milestone label.
+const BAR_HEIGHT = 56;
 const BAR_GAP = 6;
+
+type MilestoneMark = WeekSegment['milestoneMarks'][number];
+
+/** Milestones in one bar segment, grouped by day, each with the width up to the next day's
+ *  milestone (or the end of the bar). */
+function markGroups(marks: MilestoneMark[]): { leftPct: number; widthPct: number; marks: MilestoneMark[] }[] {
+  const byLeft = new Map<number, MilestoneMark[]>();
+  for (const m of marks) byLeft.set(m.leftPct, [...(byLeft.get(m.leftPct) ?? []), m]);
+  const lefts = [...byLeft.keys()].sort((a, b) => a - b);
+  return lefts.map((left, i) => ({
+    leftPct: left,
+    widthPct: (lefts[i + 1] ?? 100) - left,
+    marks: byLeft.get(left)!,
+  }));
+}
 
 function localISO(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -196,29 +212,50 @@ export function CommsProductionCalendar({ profiles }: { profiles: Profile[] }) {
               {seg.title}
             </span>
             <div style={{ position: 'relative', flex: 1 }}>
-              {seg.milestoneMarks.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setOpenCommId(m.commId); setOpenMilestoneId(m.id); }}
+              {markGroups(seg.milestoneMarks).map((g) => (
+                // Each day's labels get the room up to the next milestone (or the bar's end) and
+                // wrap inside it, so neighbouring labels never run into each other.
+                <div
+                  key={g.leftPct}
                   style={{
-                    all: 'unset',
-                    cursor: 'pointer',
                     position: 'absolute',
-                    left: `${m.leftPct}%`,
+                    left: `${g.leftPct}%`,
+                    width: `calc(${g.widthPct}% - 4px)`,
                     top: 0,
-                    whiteSpace: 'nowrap',
-                    fontSize: 9.5,
-                    fontWeight: 600,
-                    color: seg.text,
-                    textDecoration: m.completed_at ? 'line-through' : 'none',
-                    opacity: m.completed_at ? 0.55 : 1,
+                    bottom: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
                     borderLeft: `2px solid ${seg.text}`,
                     paddingLeft: 3,
+                    overflow: 'hidden',
                   }}
                 >
-                  {m.completed_at ? '✓ ' : ''}{m.label}
-                </button>
+                  {g.marks.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      title={m.label}
+                      onClick={(e) => { e.stopPropagation(); setOpenCommId(m.commId); setOpenMilestoneId(m.id); }}
+                      style={{
+                        all: 'unset',
+                        cursor: 'pointer',
+                        display: '-webkit-box',
+                        WebkitBoxOrient: 'vertical',
+                        WebkitLineClamp: g.marks.length > 1 ? 1 : 2,
+                        overflow: 'hidden',
+                        fontSize: 10,
+                        lineHeight: 1.2,
+                        fontWeight: 600,
+                        color: seg.text,
+                        textDecoration: m.completed_at ? 'line-through' : 'none',
+                        opacity: m.completed_at ? 0.55 : 1,
+                      }}
+                    >
+                      {m.completed_at ? '✓ ' : ''}{m.label}
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
           </div>
