@@ -1,7 +1,7 @@
-// Partnerships Room — Social Media tab: post ideas, what's planned, and what's gone up.
+// Partnerships Room — Social Media tab: post ideas, what's planned, and what's been posted.
 // Same table engine and look as the Directory and Collateral; every cell edits in place.
 // The posting rhythm is fixed (migration 0212): post at least every two weeks. When nothing
-// has gone up in two weeks, the reminder owner gets a task and it shows on Home. Planned posts
+// has been posted in two weeks, the reminder owner gets a task and it shows on Home. Planned posts
 // don't count; only marking a post Posted clears it.
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
@@ -273,7 +273,7 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
     <div className="space-y-4">
       {gapOpen && !loading && (
         <div className="rounded-xl border border-sparrow-gold/40 bg-sparrow-gold/5 px-4 py-3 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
-          Nothing has gone up in the last two weeks. {ownerName} has a reminder, and it shows on
+          Nothing has been posted in the last two weeks. {ownerName} has a reminder, and it shows on
           Home. It clears when a post is marked Posted.
         </div>
       )}
@@ -281,9 +281,8 @@ export function PartnershipSocialTab({ profiles }: { profiles: Profile[] }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-2xl space-y-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           <p>
-            Post at least every two weeks. If nothing has gone up in two weeks, the reminder owner
-            gets a task and it shows on Home. Planned posts don't count; marking a post Posted
-            clears it. Add ideas any time, even without a date.
+            Post at least every two weeks. If nothing has been posted in two weeks, the reminder
+            owner gets a task added to their personal list and it shows on Partnerships Home.
           </p>
           {setting && (
             <div className="flex items-center gap-2">

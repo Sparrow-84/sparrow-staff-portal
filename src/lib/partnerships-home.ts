@@ -280,7 +280,7 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
   }
 
   // 4. Social posting reminder — mirrors emit_social_post_reminder() (0212): nags only when
-  // nothing has gone up in two weeks. Planned posts don't count.
+  // nothing has been posted in two weeks. Planned posts don't count.
   const socialCfg = settings.find((s) => s.kind === 'social_post');
   if (socialCfg) {
     const posted = socialPosts.filter((s) => s.status === 'posted' && s.planned_date && s.planned_date <= today);
