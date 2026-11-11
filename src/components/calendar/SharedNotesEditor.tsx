@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import * as Y from 'yjs';
-import { useEditor, EditorContent, type Editor } from '@tiptap/react';
+import { useEditor, useEditorState, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
@@ -9,6 +9,8 @@ import { sanitizeRichText } from '@/lib/sanitize';
 import { useAuth } from '@/auth/AuthContext';
 import { SupabaseYjsProvider, colorForUser } from '@/lib/sharedNotesProvider';
 import { toBase64, fromBase64 } from '@/lib/yjsCodec';
+import { markSharedNoteRestore, type SharedNoteVersion } from '@/lib/sharedNotesVersions';
+import { SharedNotesVersionHistory } from './SharedNotesVersionHistory';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -21,6 +23,9 @@ interface Props {
   eventId: string;
   userId: string;
   onStatusChange: (status: SaveStatus) => void;
+  /** Shown at the top of the Version history screen. */
+  eventTitle?: string;
+  eventSubtitle?: string;
 }
 
 interface PresenceUser {
@@ -32,6 +37,13 @@ interface PresenceUser {
 const SAVE_DEBOUNCE_MS = 1000;
 
 function EditorToolbar({ editor }: { editor: Editor }) {
+  // Undo/Redo come from the Collaboration extension's Yjs-aware undo manager, which
+  // only ever undoes YOUR OWN changes — never someone else's concurrent typing.
+  // That's why StarterKit's plain undoRedo stays disabled below.
+  const { canUndo, canRedo } = useEditorState({
+    editor,
+    selector: ({ editor: e }) => ({ canUndo: e.can().undo(), canRedo: e.can().redo() }),
+  });
   return (
     <div className="flex items-center gap-0.5 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-1.5">
       <button
@@ -63,6 +75,23 @@ function EditorToolbar({ editor }: { editor: Editor }) {
       >
         1. List
       </button>
+      <div className="mx-1.5 h-4 w-px bg-sparrow-rule dark:bg-sparrow-dark-border" />
+      <button
+        onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().undo().run(); }}
+        disabled={!canUndo}
+        className="rounded px-2.5 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 disabled:opacity-40 disabled:hover:bg-transparent"
+        title="Undo your last change (Ctrl+Z)"
+      >
+        ↶ Undo
+      </button>
+      <button
+        onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().redo().run(); }}
+        disabled={!canRedo}
+        className="rounded px-2.5 py-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 disabled:opacity-40 disabled:hover:bg-transparent"
+        title="Redo (Ctrl+Shift+Z)"
+      >
+        ↷ Redo
+      </button>
     </div>
   );
 }
@@ -77,13 +106,14 @@ function EditorToolbar({ editor }: { editor: Editor }) {
  * MeetingNotesView.tsx. Only this pane, the one everyone can see and edit, needed this.
  */
 export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function SharedNotesEditor(
-  { eventId, userId, onStatusChange },
+  { eventId, userId, onStatusChange, eventTitle, eventSubtitle },
   ref,
 ) {
   const { profile } = useAuth();
   const userName = profile?.full_name ?? 'Someone';
 
   const [ready, setReady] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [presence, setPresence] = useState<PresenceUser[]>([]);
 
   const docRef = useRef<Y.Doc | null>(null);
@@ -296,6 +326,18 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
     return { error: error ? error.message : null };
   }
 
+  // Restore: the database first keeps the current notes as a version, then the old
+  // text goes into the live collaborative doc (so everyone with the pane open sees
+  // it right away) and is saved immediately rather than on the usual debounce.
+  async function restoreVersion(version: SharedNoteVersion) {
+    if (!editor || !loadSucceeded.current) throw new Error('Notes are still loading — try again in a moment.');
+    await markSharedNoteRestore(version.id);
+    editor.commands.setContent(sanitizeRichText(version.notes));
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    const { error } = await doSave();
+    if (error) throw new Error(`Restored in the editor, but saving failed: ${error}`);
+  }
+
   useImperativeHandle(ref, () => ({
     flush: async () => {
       if (!loadSucceeded.current) return { error: null };
@@ -311,6 +353,15 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
           <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Shared Notes</p>
           <p className="text-xs text-blue-600/70 dark:text-blue-400/70">Visible to everyone with calendar access</p>
         </div>
+        <div className="flex items-center gap-3">
+        {ready && (
+          <button
+            onClick={() => setShowHistory(true)}
+            className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-500/30 dark:bg-sparrow-dark-surface dark:text-blue-300 dark:hover:bg-blue-500/15"
+          >
+            Version history
+          </button>
+        )}
         {presence.length > 0 && (
           <div className="flex items-center -space-x-1.5">
             {presence.map((p) => (
@@ -325,7 +376,17 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
             ))}
           </div>
         )}
+        </div>
       </div>
+      {showHistory && (
+        <SharedNotesVersionHistory
+          eventId={eventId}
+          eventTitle={eventTitle}
+          eventSubtitle={eventSubtitle}
+          onClose={() => setShowHistory(false)}
+          onRestore={restoreVersion}
+        />
+      )}
       {ready && <EditorToolbar editor={editor} />}
       <div className="flex flex-1 flex-col overflow-hidden bg-blue-50/20 dark:bg-blue-500/10">
         {ready ? <EditorContent editor={editor} className="flex flex-1 flex-col overflow-hidden" /> : (

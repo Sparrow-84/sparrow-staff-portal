@@ -295,7 +295,14 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
 
         {/* Shared Notes — live collaborative, unlike Prep/Live above */}
         <Suspense fallback={<div className="flex flex-1 items-center justify-center"><p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p></div>}>
-          <SharedNotesEditor ref={sharedEditorRef} eventId={event.id} userId={userId} onStatusChange={setSharedStatus} />
+          <SharedNotesEditor
+            ref={sharedEditorRef}
+            eventId={event.id}
+            userId={userId}
+            onStatusChange={setSharedStatus}
+            eventTitle={event.title}
+            eventSubtitle={`${dateLabel} · ${timeLabel}`}
+          />
         </Suspense>
       </div>
     </div>
