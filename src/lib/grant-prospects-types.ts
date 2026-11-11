@@ -69,6 +69,8 @@ export interface GrantProspect {
   status: GrantProspectStatus;
   application_opens: string | null;
   application_deadline: string | null;
+  applied_date: string | null;
+  outcome_date: string | null;
   est_amount: number | null;
   findings: string | null;
   decision_reasoning: string | null;
@@ -79,6 +81,21 @@ export interface GrantProspect {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** An append-only timeline entry — the historical record of what happened and when,
+ * separate from the current-state fields (Findings/Decision Reasoning/Action Steps)
+ * above, which get overwritten as understanding evolves. `milestone` is an optional
+ * short label (e.g. "Applied", "Awarded", "Declined") that marks an entry as a key
+ * event rather than routine narrative — the UI gives these a distinct visual treatment
+ * so they don't get lost once the log grows. */
+export interface GrantProspectUpdate {
+  id: string;
+  prospect_id: string;
+  body: string;
+  milestone: string | null;
+  created_by: string | null;
+  created_at: string;
 }
 
 export interface GrantProspectLink {

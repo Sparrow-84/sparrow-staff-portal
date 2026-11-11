@@ -4,6 +4,7 @@ import {
   addGrantContact,
   addGrantLink,
   addGrantNotification,
+  addGrantUpdate,
   deleteGrant,
   deleteGrantContact,
   deleteGrantDocument,
@@ -12,6 +13,7 @@ import {
   fetchGrantDocuments,
   fetchGrantLinks,
   fetchGrantNotifications,
+  fetchGrantUpdates,
   getGrantDocumentUrl,
   markCertified,
   setGrantStatus,
@@ -31,11 +33,13 @@ import {
   type GrantLink,
   type GrantNotification,
   type GrantNotificationCategory,
+  type GrantUpdate,
 } from '@/lib/grants-types';
 import { Drawer } from '@/components/lcp/Drawer';
 import { InfoTip } from '@/components/InfoTip';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import type { Profile } from '@/lib/types';
+import { UpdatesTimeline } from './UpdatesTimeline';
 
 type Tab = 'details' | 'notifications';
 const TABS: { key: Tab; label: string }[] = [
@@ -64,21 +68,24 @@ export function GrantPanel({
   const [documents, setDocuments] = useState<GrantDocument[]>([]);
   const [links, setLinks] = useState<GrantLink[]>([]);
   const [contacts, setContacts] = useState<GrantContact[]>([]);
+  const [updates, setUpdates] = useState<GrantUpdate[]>([]);
 
   const grantId = grant?.id;
 
   const reload = useCallback(async () => {
     if (!grantId) return;
-    const [n, d, l, c] = await Promise.all([
+    const [n, d, l, c, u] = await Promise.all([
       fetchGrantNotifications(grantId),
       fetchGrantDocuments(grantId),
       fetchGrantLinks(grantId),
       fetchGrantContacts(grantId),
+      fetchGrantUpdates(grantId),
     ]);
     setNotifications(n);
     setDocuments(d);
     setLinks(l);
     setContacts(c);
+    setUpdates(u);
   }, [grantId]);
 
   useEffect(() => {
@@ -122,6 +129,11 @@ export function GrantPanel({
           <ContactsTab grantId={grant.id} contacts={contacts} currentUserId={currentUserId} onChanged={changed} />
           <LinksTab grantId={grant.id} links={links} currentUserId={currentUserId} onChanged={changed} />
           <DocumentsTab grantId={grant.id} docs={documents} currentUserId={currentUserId} onChanged={changed} />
+          <UpdatesTimeline
+            entries={updates}
+            busy={false}
+            onAdd={async (body) => { await addGrantUpdate(grant.id, body, null, currentUserId); await reload(); }}
+          />
         </DetailsTab>
       )}
       {tab === 'notifications' && (

@@ -5,14 +5,18 @@ import { useRequiredFields } from '@/hooks/useRequiredFields';
 import {
   addProspectContact,
   addProspectLink,
+  addProspectUpdate,
   deleteProspectContact,
   deleteProspectDocument,
   deleteProspectLink,
   fetchProspectContacts,
   fetchProspectDocuments,
   fetchProspectLinks,
+  fetchProspectUpdates,
   getProspectDocumentUrl,
+  markProspectApplied,
   markProspectAwarded,
+  markProspectDeclined,
   updateProspect,
   updateProspectDocumentSummary,
   uploadProspectDocument,
@@ -26,10 +30,14 @@ import {
   type GrantProspectDocument,
   type GrantProspectLink,
   type GrantProspectStatus,
+  type GrantProspectUpdate,
 } from '@/lib/grant-prospects-types';
 import { formatDate } from '@/lib/grants-types';
 import type { Profile } from '@/lib/types';
 import { GrantProspectLabelPicker } from './GrantProspectLabelPicker';
+import { UpdatesTimeline } from './UpdatesTimeline';
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const MOVE_MESSAGE: Partial<Record<GrantProspectStatus, string>> = {
   decided_no: '→ Moves to the "Not Moving Forward" tab.',
@@ -59,6 +67,7 @@ export function GrantProspectPanel({
   const [links, setLinks] = useState<GrantProspectLink[]>([]);
   const [docs, setDocs] = useState<GrantProspectDocument[]>([]);
   const [contacts, setContacts] = useState<GrantProspectContact[]>([]);
+  const [updates, setUpdates] = useState<GrantProspectUpdate[]>([]);
   const skipNextAutosave = useRef(true);
 
   const { validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
@@ -67,14 +76,16 @@ export function GrantProspectPanel({
 
   const reload = useCallback(async () => {
     if (!prospect) return;
-    const [l, d, c] = await Promise.all([
+    const [l, d, c, u] = await Promise.all([
       fetchProspectLinks(prospect.id),
       fetchProspectDocuments(prospect.id),
       fetchProspectContacts(prospect.id),
+      fetchProspectUpdates(prospect.id),
     ]);
     setLinks(l);
     setDocs(d);
     setContacts(c);
+    setUpdates(u);
   }, [prospect]);
 
   useEffect(() => {
@@ -235,6 +246,13 @@ export function GrantProspectPanel({
           )}
         </div>
 
+        <MilestoneFields
+          prospect={prospect}
+          currentUserId={currentUserId}
+          onAwarded={onAwarded}
+          onChanged={() => { onChanged(); void reload(); }}
+        />
+
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Application opens</span>
@@ -310,8 +328,144 @@ export function GrantProspectPanel({
           Save changes
         </button>
         {autoSaveLabel && <p className="-mt-2 text-center text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">{autoSaveLabel}</p>}
+
+        <UpdatesTimeline
+          entries={updates}
+          busy={busy}
+          onAdd={async (body) => {
+            await addProspectUpdate(prospectId, body, null, currentUserId);
+            await reload();
+          }}
+        />
       </div>
     </Drawer>
+  );
+}
+
+// ── Applied Date / Outcome — structured milestone fields, always visible, never buried
+// in the Updates log below. Marking either one sets the date (sortable/visible in the
+// quick-view table) and drops a matching gold-badged entry into Updates at the same time. ──
+function MilestoneFields({
+  prospect,
+  currentUserId,
+  onAwarded,
+  onChanged,
+}: {
+  prospect: GrantProspect;
+  currentUserId: string;
+  onAwarded: (newGrantId: string) => void;
+  onChanged: () => void;
+}) {
+  const [appliedOpen, setAppliedOpen] = useState(false);
+  const [appliedDate, setAppliedDate] = useState(todayIso());
+  const [appliedNote, setAppliedNote] = useState('');
+
+  const [outcomeOpen, setOutcomeOpen] = useState(false);
+  const [outcomeResult, setOutcomeResult] = useState<'Awarded' | 'Declined'>('Awarded');
+  const [outcomeDate, setOutcomeDate] = useState(todayIso());
+  const [outcomeNote, setOutcomeNote] = useState('');
+
+  const [busy, setBusy] = useState(false);
+
+  async function confirmApplied() {
+    setBusy(true);
+    try {
+      await markProspectApplied(prospect.id, appliedDate, appliedNote.trim() || null, currentUserId, prospect.status);
+      setAppliedOpen(false);
+      setAppliedNote('');
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmOutcome() {
+    setBusy(true);
+    try {
+      if (outcomeResult === 'Awarded') {
+        const newGrantId = await markProspectAwarded(prospect.id, currentUserId, outcomeDate, outcomeNote.trim() || undefined);
+        onAwarded(newGrantId);
+      } else {
+        await markProspectDeclined(prospect.id, outcomeDate, outcomeNote.trim() || null, currentUserId);
+        onChanged();
+      }
+      setOutcomeOpen(false);
+      setOutcomeNote('');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3 rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-[10.5px] font-bold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Applied Date</span>
+        {prospect.applied_date ? (
+          <span className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{formatDate(prospect.applied_date)}</span>
+        ) : (
+          <span className="text-sm italic text-sparrow-gray dark:text-sparrow-dark-gray">Not yet applied</span>
+        )}
+        {!appliedOpen && (
+          <button onClick={() => setAppliedOpen(true)} className="mt-1 self-start text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
+            {prospect.applied_date ? 'Edit Applied Date' : 'Mark as Applied'}
+          </button>
+        )}
+        {appliedOpen && (
+          <div className="mt-1 space-y-2 rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-2">
+            <input type="date" value={appliedDate} onChange={(e) => setAppliedDate(e.target.value)} className="field-input mt-0 text-xs" />
+            <textarea
+              value={appliedNote}
+              onChange={(e) => setAppliedNote(e.target.value)}
+              rows={2}
+              placeholder="What was submitted, and to whom?"
+              className="field-input mt-0 text-xs"
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setAppliedOpen(false)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">Cancel</button>
+              <button onClick={confirmApplied} disabled={busy} className="btn-primary text-xs">Save</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <span className="text-[10.5px] font-bold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Outcome</span>
+        {prospect.outcome_date ? (
+          <span className="text-sm font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">
+            {prospect.status === 'awarded' ? 'Awarded 🎉' : 'Declined'} — {formatDate(prospect.outcome_date)}
+          </span>
+        ) : (
+          <span className="text-sm italic text-sparrow-gray dark:text-sparrow-dark-gray">Pending</span>
+        )}
+        {!outcomeOpen && !prospect.outcome_date && (
+          <button onClick={() => setOutcomeOpen(true)} className="mt-1 self-start text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
+            Record Outcome
+          </button>
+        )}
+        {outcomeOpen && (
+          <div className="mt-1 space-y-2 rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-2">
+            <div className="flex gap-2">
+              <select value={outcomeResult} onChange={(e) => setOutcomeResult(e.target.value as 'Awarded' | 'Declined')} className="field-input mt-0 text-xs">
+                <option value="Awarded">Awarded</option>
+                <option value="Declined">Declined</option>
+              </select>
+              <input type="date" value={outcomeDate} onChange={(e) => setOutcomeDate(e.target.value)} className="field-input mt-0 text-xs" />
+            </div>
+            <textarea
+              value={outcomeNote}
+              onChange={(e) => setOutcomeNote(e.target.value)}
+              rows={2}
+              placeholder="Any detail worth keeping (amount, reason, next step)"
+              className="field-input mt-0 text-xs"
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setOutcomeOpen(false)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">Cancel</button>
+              <button onClick={confirmOutcome} disabled={busy} className="btn-primary text-xs">Save</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

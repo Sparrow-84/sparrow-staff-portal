@@ -74,6 +74,20 @@ export interface GrantDocument {
   created_at: string;
 }
 
+/** An append-only timeline entry on an Active Grant — same shape and purpose as
+ * GrantProspectUpdate. When a Prospect is awarded, its own Updates log is carried
+ * forward here automatically (see mark_prospect_awarded() in 0214_grant_updates.sql)
+ * so the history survives the conversion rather than being stranded on a prospect
+ * record the UI no longer surfaces. */
+export interface GrantUpdate {
+  id: string;
+  grant_id: string;
+  body: string;
+  milestone: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 /** A named contact for this grant — funder staff, a warm intro, a board connection,
  * etc. Kept independent of grant status so info isn't lost if a grant moves between
  * stages (and, for prospects, carried forward automatically if one is later awarded —

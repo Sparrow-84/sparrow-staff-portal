@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Grant, GrantContact, GrantDocument, GrantLink, GrantNotification, GrantNotificationCategory } from './grants-types';
+import type { Grant, GrantContact, GrantDocument, GrantLink, GrantNotification, GrantNotificationCategory, GrantUpdate } from './grants-types';
 
 // All reads/writes are gated by RLS to the ops tier (has_ops_access(): Andrew, Susanna,
 // Shelly). Notifications are append-only (insert + select only — see 0078_grants.sql).
@@ -161,6 +161,28 @@ export async function addGrantNotification(
   const { error } = await supabase
     .from('grant_notifications')
     .insert({ grant_id: grantId, category, sent_on: sentOn, notes, created_by: createdBy });
+  if (error) throw new Error(error.message);
+}
+
+// ── Updates — an append-only timeline (same shape as grant_prospect_updates; a
+// Prospect's own Updates log carries forward here automatically when it's awarded) ──
+export async function fetchGrantUpdates(grantId: string): Promise<GrantUpdate[]> {
+  const { data, error } = await supabase
+    .from('grant_updates')
+    .select('*')
+    .eq('grant_id', grantId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as GrantUpdate[];
+}
+
+export async function addGrantUpdate(grantId: string, body: string, milestone: string | null, createdBy: string): Promise<void> {
+  const { error } = await supabase.from('grant_updates').insert({ grant_id: grantId, body, milestone, created_by: createdBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteGrantUpdate(id: string): Promise<void> {
+  const { error } = await supabase.from('grant_updates').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 

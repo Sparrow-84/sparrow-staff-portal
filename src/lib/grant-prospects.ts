@@ -7,6 +7,7 @@ import type {
   GrantProspectLabelKind,
   GrantProspectLink,
   GrantProspectStatus,
+  GrantProspectUpdate,
 } from './grant-prospects-types';
 
 // ── Labels (shared across ops tier — everyone with Grants access sees the same set) ──
@@ -88,15 +89,88 @@ export async function deleteProspect(id: string): Promise<void> {
 }
 
 /** Marks a prospect Awarded via the DB function — creates the real Active Grant record
- * (pre-filled, findings/reasoning folded into its notes) and closes the prospect out.
- * Returns the new grant's id so the caller can jump straight to it. */
-export async function markProspectAwarded(prospectId: string, createdBy: string): Promise<string> {
+ * (pre-filled, findings/reasoning folded into its notes), carries its Updates log
+ * forward to the new grant, and closes the prospect out. `outcomeDate` lets this be
+ * backdated to when the award actually happened rather than always "today"; `note`
+ * becomes the content of the auto-generated "Awarded" milestone entry. Returns the new
+ * grant's id so the caller can jump straight to it. */
+export async function markProspectAwarded(
+  prospectId: string,
+  createdBy: string,
+  outcomeDate?: string,
+  note?: string,
+): Promise<string> {
   const { data, error } = await supabase.rpc('mark_prospect_awarded', {
     p_prospect_id: prospectId,
     p_created_by: createdBy,
+    p_outcome_date: outcomeDate ?? new Date().toISOString().slice(0, 10),
+    p_note: note || null,
   });
   if (error) throw new Error(error.message);
   return data as string;
+}
+
+/** Records a Decided — No outcome with a date and an Updates entry, in one call — the
+ * Declined counterpart to markProspectAwarded (which has its own DB function since it
+ * also creates a Grant; a decline is just a status + outcome_date change). */
+export async function markProspectDeclined(
+  prospectId: string,
+  outcomeDate: string,
+  note: string | null,
+  createdBy: string,
+): Promise<void> {
+  await updateProspect(prospectId, { status: 'decided_no' });
+  const { error } = await supabase.from('grant_prospects').update({ outcome_date: outcomeDate }).eq('id', prospectId);
+  if (error) throw new Error(error.message);
+  await addProspectUpdate(prospectId, note || 'Declined.', 'Declined', createdBy);
+}
+
+/** Sets Applied Date and drops a matching milestone entry into the Updates log, in one
+ * call — also bumps status to 'applied' if it isn't further along already (awarded/
+ * declined shouldn't be walked back by marking an earlier Applied date). */
+export async function markProspectApplied(
+  prospectId: string,
+  appliedDate: string,
+  note: string | null,
+  createdBy: string,
+  currentStatus: GrantProspectStatus,
+): Promise<void> {
+  const patch: Partial<ProspectInput> & { applied_date?: string } = { applied_date: appliedDate };
+  if (currentStatus !== 'awarded' && currentStatus !== 'decided_no') {
+    patch.status = 'applied';
+  }
+  const { error } = await supabase.from('grant_prospects').update(patch).eq('id', prospectId);
+  if (error) throw new Error(error.message);
+  await addProspectUpdate(prospectId, note || 'Applied.', 'Applied', createdBy);
+}
+
+// ── Updates — an append-only timeline, separate from the current-state Findings/
+// Decision Reasoning/Action Steps fields above (see grant-prospects-types.ts) ───────
+export async function fetchProspectUpdates(prospectId: string): Promise<GrantProspectUpdate[]> {
+  const { data, error } = await supabase
+    .from('grant_prospect_updates')
+    .select('*')
+    .eq('prospect_id', prospectId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as GrantProspectUpdate[];
+}
+
+export async function addProspectUpdate(
+  prospectId: string,
+  body: string,
+  milestone: string | null,
+  createdBy: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('grant_prospect_updates')
+    .insert({ prospect_id: prospectId, body, milestone, created_by: createdBy });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteProspectUpdate(id: string): Promise<void> {
+  const { error } = await supabase.from('grant_prospect_updates').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 // ── Links ─────────────────────────────────────────────────────────────────────────

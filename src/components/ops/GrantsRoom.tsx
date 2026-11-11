@@ -461,7 +461,7 @@ function ProspectsTable({
   tierLabels: GrantProspectLabel[];
   onOpen: (id: string) => void;
 }) {
-  const [sortKey, setSortKey] = useState<'name' | 'status' | 'owner' | 'deadline' | 'amount'>('deadline');
+  const [sortKey, setSortKey] = useState<'name' | 'status' | 'owner' | 'deadline' | 'applied' | 'amount'>('deadline');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   function onSort(k: typeof sortKey) {
@@ -475,6 +475,7 @@ function ProspectsTable({
     else if (sortKey === 'status') cmp = PROSPECT_ACTIVE_STATUSES.indexOf(a.status) - PROSPECT_ACTIVE_STATUSES.indexOf(b.status);
     else if (sortKey === 'amount') cmp = (a.est_amount ?? 0) - (b.est_amount ?? 0);
     else if (sortKey === 'owner') cmp = (profiles.find((p) => p.id === a.owner_id)?.full_name ?? '').localeCompare(profiles.find((p) => p.id === b.owner_id)?.full_name ?? '');
+    else if (sortKey === 'applied') cmp = (daysSince(a.applied_date) ?? 9999) - (daysSince(b.applied_date) ?? 9999);
     else cmp = (daysSince(a.application_deadline) ?? 9999) - (daysSince(b.application_deadline) ?? 9999);
     return sortDir === 'asc' ? cmp : -cmp;
   });
@@ -492,6 +493,7 @@ function ProspectsTable({
             <Th label="Est. amount" k="amount" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <Th label="Owner" k="owner" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <Th label="Deadline" k="deadline" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+            <Th label="Applied" k="applied" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <th className="px-3 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Action steps</th>
           </tr>
         </thead>
@@ -510,14 +512,21 @@ function ProspectsTable({
                 <td className="whitespace-nowrap px-3 py-2.5 text-sparrow-gray dark:text-sparrow-dark-gray">{p.est_amount ? formatMoney(p.est_amount) : '—'}</td>
                 <td className="px-3 py-2.5"><OwnerCell owner={owner} ownerColors={ownerColors} /></td>
                 <td className="whitespace-nowrap px-3 py-2.5">
-                  {p.status === 'applied' ? (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">Applied</span>
-                  ) : p.application_deadline ? (
+                  {p.application_deadline ? (
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${overdue ? 'bg-priority-p1/15 text-priority-p1' : 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300'}`}>
                       {formatDate(p.application_deadline)}
                     </span>
                   ) : (
                     <span className="text-sparrow-gray dark:text-sparrow-dark-gray">No deadline set</span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5">
+                  {p.applied_date ? (
+                    <span className="rounded-full bg-sparrow-cream dark:bg-sparrow-gold/15 px-2 py-0.5 text-[10px] font-medium text-sparrow-gold">
+                      📌 {formatDate(p.applied_date)}
+                    </span>
+                  ) : (
+                    <span className="text-sparrow-gray dark:text-sparrow-dark-gray">—</span>
                   )}
                 </td>
                 <td className="max-w-xs truncate px-3 py-2.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray" title={p.action_steps ?? undefined}>{p.action_steps || '—'}</td>
