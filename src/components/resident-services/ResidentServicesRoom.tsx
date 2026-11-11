@@ -24,6 +24,7 @@ import { FreshnessStamp } from './Freshness';
 import { ServiceDetailPanel } from './ServiceDetailPanel';
 import { ServiceFormPanel } from './ServiceFormPanel';
 import { ReviewPanel } from './ReviewPanel';
+import { PrintList } from './PrintList';
 
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -47,6 +48,8 @@ export function ResidentServicesRoom() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ResidentService | null>(null);
+  const [printing, setPrinting] = useState(false);
+  const endPrint = useCallback(() => setPrinting(false), []);
 
   const load = useCallback(async () => {
     const [res, revs, profs, parts, arch] = await Promise.all([
@@ -253,6 +256,14 @@ export function ResidentServicesRoom() {
               </>
             )}
           </div>
+          <button
+            onClick={() => setPrinting(true)}
+            disabled={visible.length === 0}
+            className="btn-secondary px-3 py-1.5 text-sm"
+            title="Print the services on screen as a Sparrow handout"
+          >
+            Print this list ({visible.length})
+          </button>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={needsCheckOnly} onChange={(e) => setNeedsCheckOnly(e.target.checked)} className="h-4 w-4 accent-sparrow-green" />
             Only ones that need re-checking
@@ -309,6 +320,18 @@ export function ResidentServicesRoom() {
         ))}
       </div>
       </>)}
+
+      {printing && (
+        <PrintList
+          services={visible}
+          // What the person came in for first: the types picked, in the order picked.
+          typeOrder={[
+            ...typeFilter,
+            ...Array.from(new Set(visible.map((s) => s.service_type))).filter((t) => !typeFilter.includes(t)).sort(),
+          ]}
+          onDone={endPrint}
+        />
+      )}
 
       <ServiceDetailPanel
         open={!!selected && !formOpen}
