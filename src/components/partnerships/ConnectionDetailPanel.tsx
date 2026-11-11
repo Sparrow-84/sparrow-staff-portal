@@ -16,6 +16,7 @@ import {
   type PartnershipEvent,
 } from '@/lib/partnerships-tabs';
 import { BusinessCardPhotos } from './BusinessCardPhotos';
+import { ConnectionNextStep } from './ConnectionNextStep';
 
 function shortDate(iso: string | null): string {
   if (!iso) return '—';
@@ -34,6 +35,7 @@ export function ConnectionDetailPanel({
   currentUserId,
   onClose,
   onChanged,
+  onAddToDirectory,
 }: {
   open: boolean;
   connection: PartnershipConnection | null;
@@ -42,6 +44,8 @@ export function ConnectionDetailPanel({
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
+  /** Opens the Add to Directory form prefilled from this connection. */
+  onAddToDirectory: (conn: PartnershipConnection) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<EditableFields | null>(null);
@@ -309,8 +313,25 @@ export function ConnectionDetailPanel({
             )}
           </div>
           <div>
-            <p className="field-label">Follow-up due</p>
-            <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">{shortDate(connection.followup_due)}</p>
+            <p className="field-label">Follow up by</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+                {connection.archived_at
+                  ? '—'
+                  : connection.followup_done
+                    ? 'Followed up — no next step chosen yet'
+                    : connection.followup_due
+                      ? shortDate(connection.followup_due)
+                      : 'No next step chosen yet'}
+              </p>
+              {!connection.archived_at && (
+                <ConnectionNextStep
+                  connection={connection}
+                  onAddToDirectory={(c) => { onClose(); onAddToDirectory(c); }}
+                  onDone={onChanged}
+                />
+              )}
+            </div>
           </div>
           <div>
             <p className="field-label">Owner</p>
@@ -404,7 +425,7 @@ export function ConnectionDetailPanel({
             />
           </div>
           <div>
-            <label className="field-label">Follow-up due</label>
+            <label className="field-label">Follow up by</label>
             <input
               type="date"
               className="field-input w-full"

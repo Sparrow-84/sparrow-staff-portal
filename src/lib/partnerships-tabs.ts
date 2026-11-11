@@ -602,6 +602,12 @@ export async function updateEvent(id: string, patch: Partial<EventInput>): Promi
   if (error) throw new Error(error.message);
 }
 
+/** Connections met at this event are kept; they just lose the link (ON DELETE SET NULL). */
+export async function deleteEvent(id: string): Promise<void> {
+  const { error } = await supabase.from('partnership_events').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // ─── Connections ──────────────────────────────────────────────────────
 
 export async function fetchConnections(eventId?: string): Promise<PartnershipConnection[]> {
@@ -620,9 +626,31 @@ export type ConnectionInput = Pick<
   'event_id' | 'name' | 'organization' | 'role' | 'phone' | 'email' | 'website' | 'what_discussed' | 'next_action' | 'followup_due' | 'owner_id'
 >;
 
-export async function createConnection(input: ConnectionInput): Promise<void> {
-  const { error } = await supabase.from('partnership_connections').insert(input);
+export async function createConnection(input: ConnectionInput): Promise<PartnershipConnection> {
+  const { data, error } = await supabase.from('partnership_connections').insert(input).select('*').single();
   if (error) throw new Error(error.message);
+  return data as PartnershipConnection;
+}
+
+/** Follow-ups come up in the owner's tasks and on Home this many days ahead (migration 0215). */
+export const CONNECTION_HEADS_UP_DAYS = 7;
+// "Set a follow-up" has no pre-filled date on purpose: staff pick one, so a date is always a
+// real decision rather than a default nobody looked at.
+
+/** A connection that isn't archived but has nothing scheduled: its follow-up is done (or it
+ *  never had a date). Every connection should have a next step, so Home lists these. */
+export function connectionNeedsNextStep(c: Pick<PartnershipConnection, 'archived_at' | 'followup_done' | 'followup_due'>): boolean {
+  return !c.archived_at && (c.followup_done || !c.followup_due);
+}
+
+/** Next step = another follow-up. If one was pending, it's marked done first, so its task
+ *  closes as finished work before the new date gets its own task. */
+export async function setNextFollowup(conn: PartnershipConnection, due: string, nextAction: string | null): Promise<void> {
+  if (!conn.followup_done && conn.followup_due) {
+    await updateConnection(conn.id, { followup_done: true });
+  }
+  await updateConnection(conn.id, { followup_done: false, followup_due: due, next_action: nextAction });
+  await syncOverdueConnectionFollowups().catch(() => 0);
 }
 
 export async function updateConnection(
@@ -666,7 +694,7 @@ export async function addConnectionNote(
   if (error) throw new Error(error.message);
 }
 
-/** Push overdue connection follow-ups onto each connection's owner's Incoming Tasks (dedup-safe). Connections with no owner set are skipped. */
+/** Push follow-ups due within a week onto each owner's Incoming Tasks (dedup-safe). No owner = the Partnerships room admin (0215). */
 export async function syncOverdueConnectionFollowups(): Promise<number> {
   const { data, error } = await supabase.rpc('emit_overdue_connection_followups');
   if (error) throw new Error(error.message);

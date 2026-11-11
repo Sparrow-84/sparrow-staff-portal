@@ -27,7 +27,7 @@ import { PartnershipCommsTab } from './PartnershipCommsTab';
 import { PartnershipCollateralTab } from './PartnershipCollateralTab';
 import { PartnershipSocialTab } from './PartnershipSocialTab';
 import { PartnershipEventsTab } from './PartnershipEventsTab';
-import { markConnectionMoved } from '@/lib/partnerships-tabs';
+import { markConnectionMoved, type PartnershipConnection } from '@/lib/partnerships-tabs';
 import { PrayerMeetingTab } from './PrayerMeetingTab';
 import { PartnershipContactsTab } from './PartnershipContactsTab';
 import { CommsProductionCalendar } from './CommsProductionCalendar';
@@ -152,6 +152,23 @@ export function PartnershipsRoom() {
       : undefined,
     [addPrefill],
   );
+  // "Add to Directory" from a Meaningful Connection (Events tab, its side panel, or Home):
+  // opens the Add form prefilled with their details. Saving it archives the connection.
+  function addConnectionToDirectory(conn: PartnershipConnection) {
+    const notesParts = [conn.what_discussed, conn.next_action ? `Next action: ${conn.next_action}` : null].filter(Boolean);
+    setAddPrefill({
+      name: conn.name,
+      organization: conn.organization,
+      role: conn.role,
+      phone: conn.phone,
+      email: conn.email,
+      website: conn.website,
+      notes: notesParts.length ? notesParts.join('\n\n') : null,
+      connectionId: conn.id,
+      ownerId: conn.owner_id,
+    });
+    setAddOpen(true);
+  }
   const [helpOpen, setHelpOpen] = useState(false);
 
   // Deep-link: open a partner panel on load via ?partner=<id>
@@ -335,30 +352,14 @@ export function PartnershipsRoom() {
               profiles={profiles}
               onOpenPartner={openPartner}
               onNavigateTab={(t: HomeNavTarget) => setActiveTab(t)}
+              onAddConnectionToDirectory={addConnectionToDirectory}
             />
           )}
           {activeTab === 'comms' && <PartnershipCommsTab profiles={profiles} />}
           {activeTab === 'collateral' && <PartnershipCollateralTab profiles={profiles} />}
           {activeTab === 'social' && <PartnershipSocialTab profiles={profiles} />}
           {activeTab === 'events' && (
-            <PartnershipEventsTab
-              key={eventsTabKey}
-              onBecomePartner={(conn) => {
-                const notesParts = [conn.what_discussed, conn.next_action ? `Next action: ${conn.next_action}` : null].filter(Boolean);
-                setAddPrefill({
-                  name: conn.name,
-                  organization: conn.organization,
-                  role: conn.role,
-                  phone: conn.phone,
-                  email: conn.email,
-                  website: conn.website,
-                  notes: notesParts.length ? notesParts.join('\n\n') : null,
-                  connectionId: conn.id,
-                  ownerId: conn.owner_id,
-                });
-                setAddOpen(true);
-              }}
-            />
+            <PartnershipEventsTab key={eventsTabKey} onBecomePartner={addConnectionToDirectory} />
           )}
           {activeTab === 'prayer' && <PrayerMeetingTab />}
           {activeTab === 'contacts' && <PartnershipContactsTab profiles={profiles} />}

@@ -12,7 +12,10 @@ import { supabase } from './supabase';
 import { localDate } from './date';
 import { bucketFor } from './tasks';
 import { attachCheckins, fetchOpenCheckins, fetchPartnershipsRoomAdminId } from './partnerships';
-import { COLLATERAL_HEADS_UP_DAYS, SOCIAL_RHYTHM_DAYS, toCollateral } from './partnerships-tabs';
+import {
+  COLLATERAL_HEADS_UP_DAYS, SOCIAL_RHYTHM_DAYS, connectionNeedsNextStep, toCollateral,
+  type PartnershipConnection,
+} from './partnerships-tabs';
 
 export type HomeItemKind = 'touchpoint' | 'collateral' | 'connection' | 'social_post' | 'newsletter' | 'reminder';
 
@@ -43,6 +46,8 @@ export interface HomeItem {
   message?: string;
   /** Set on a collateral review: Home offers the same Mark reviewed button as the tab. */
   collateral?: { id: string; name: string };
+  /** Set on a connection follow-up: Home offers the same Done / Choose next step as the tab. */
+  connection?: PartnershipConnection;
 }
 
 /** Open Partnerships task kinds Home already lists from their own source rows (or, for
@@ -117,14 +122,7 @@ interface CollateralRow {
   cadence_days?: number | null;
 }
 
-interface ConnectionRow {
-  id: string;
-  name: string;
-  event_id: string | null;
-  followup_due: string | null;
-  followup_done: boolean;
-  owner_id: string | null;
-}
+type ConnectionRow = PartnershipConnection;
 
 interface EventRow {
   id: string;
@@ -190,8 +188,8 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
       .eq('active', true),
     supabase
       .from('partnership_connections')
-      .select('id, name, event_id, followup_due, followup_done, owner_id')
-      .eq('followup_done', false),
+      .select('*')
+      .is('archived_at', null),
     supabase.from('partnership_events').select('id, event_name'),
     supabase.from('partnership_recurring_settings').select('kind, cadence_days, lead_time_days, owner_id'),
     supabase.from('partnership_social_posts').select('planned_date, status'),
@@ -265,17 +263,36 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
 
   // 3. Connection follow-ups due — mirrors emit_overdue_connection_followups().
   const eventNameById = new Map(events.map((e) => [e.id, e.event_name]));
+  // A week ahead (0215); no owner = the room admin. A connection with no next step (its
+  // follow-up is done, or it never had a date) shows as due today until someone picks one.
   for (const c of connections) {
-    if (!c.owner_id || !c.followup_due) continue;
-    if (!inScope(c.followup_due, today)) continue;
+    const ownerId = c.owner_id ?? roomAdminId;
+    if (!ownerId) continue;
     const eventName = c.event_id ? eventNameById.get(c.event_id) : undefined;
+    const from = eventName ? ` — from ${eventName}` : '';
+    if (connectionNeedsNextStep(c)) {
+      items.push({
+        key: `connection:${c.id}`,
+        kind: 'connection',
+        title: `Choose a next step for ${c.name}${from}`,
+        detail: c.followup_done ? 'Followed up. Set another follow-up, add to the Directory, or archive.' : 'No follow-up set.',
+        due_date: today,
+        owner_id: ownerId,
+        navigateTab: 'events',
+        connection: c,
+      });
+      continue;
+    }
+    if (!c.followup_due || !inScope(c.followup_due, today)) continue;
     items.push({
       key: `connection:${c.id}`,
       kind: 'connection',
-      title: `Follow up with ${c.name}${eventName ? ` — from ${eventName}` : ''}`,
+      title: `Follow up with ${c.name}${from}`,
+      detail: c.next_action ?? undefined,
       due_date: c.followup_due,
-      owner_id: c.owner_id,
+      owner_id: ownerId,
       navigateTab: 'events',
+      connection: c,
     });
   }
 

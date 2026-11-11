@@ -3,7 +3,7 @@ import { Drawer } from '../lcp/Drawer';
 import { RichOrPlainView } from '../lcp/RichText';
 import { RichTextEditor } from '../stories/RichTextEditor';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
-import { updateEvent, type EventInput, type PartnershipEvent } from '@/lib/partnerships-tabs';
+import { deleteEvent, updateEvent, type EventInput, type PartnershipEvent } from '@/lib/partnerships-tabs';
 
 function shortDate(iso: string): string {
   return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
@@ -14,11 +14,14 @@ function shortDate(iso: string): string {
 export function EventDetailPanel({
   open,
   event,
+  connectionCount,
   onClose,
   onChanged,
 }: {
   open: boolean;
   event: PartnershipEvent | null;
+  /** How many connections are linked to this event (for the Delete warning). */
+  connectionCount: number;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -59,6 +62,23 @@ export function EventDetailPanel({
     }
   }
 
+  // For duplicates and mistakes. Connections met at the event are kept, just unlinked.
+  async function remove() {
+    if (!event) return;
+    const kept = connectionCount > 0
+      ? ` Its ${connectionCount} connection${connectionCount !== 1 ? 's are' : ' is'} kept, just no longer linked to an event.`
+      : '';
+    if (!window.confirm(`Delete "${event.event_name}"?${kept} This can't be undone.`)) return;
+    setBusy(true);
+    try {
+      await deleteEvent(event.id);
+      onChanged();
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Drawer
       open={open}
@@ -88,9 +108,14 @@ export function EventDetailPanel({
             </button>
           </div>
         ) : (
-          <button onClick={() => setEditing(true)} className="btn-primary w-full">
-            Edit
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setEditing(true)} className="btn-primary flex-1">
+              Edit
+            </button>
+            <button onClick={() => void remove()} disabled={busy} className="btn-ghost text-priority-p1">
+              Delete
+            </button>
+          </div>
         )
       }
     >

@@ -25,6 +25,8 @@ import { fetchPrayerVolunteers, type PrayerVolunteer } from '@/lib/prayer';
 import { CheckinDoneForm } from './Checkins';
 import { PrayerVolunteerActions } from './PrayerVolunteerActions';
 import { CollateralReviewedButton } from './CollateralReviewedButton';
+import { ConnectionNextStep } from './ConnectionNextStep';
+import type { PartnershipConnection } from '@/lib/partnerships-tabs';
 
 const KIND_ICON: Record<HomeItemKind, string> = {
   touchpoint: '🤝',
@@ -39,9 +41,11 @@ interface Props {
   profiles: Profile[];
   onOpenPartner: (id: string) => void;
   onNavigateTab: (tab: HomeNavTarget) => void;
+  /** Opens the Add to Directory form prefilled from a Meaningful Connection. */
+  onAddConnectionToDirectory: (conn: PartnershipConnection) => void;
 }
 
-export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: Props) {
+export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab, onAddConnectionToDirectory }: Props) {
   const [items, setItems] = useState<HomeItem[]>([]);
   const [needsReview, setNeedsReview] = useState<NeedsReviewDonation[]>([]);
   const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
@@ -274,7 +278,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
         <>
           {overdue.length > 0 && (
             <WidgetCard title={`🔴 Overdue (${overdue.length})`}>
-              <ItemsByOwner items={overdue} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} />
+              <ItemsByOwner items={overdue} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} onAddConnectionToDirectory={onAddConnectionToDirectory} />
             </WidgetCard>
           )}
           <WidgetCard title={`Due this week (${dueThisWeek.length})`}>
@@ -283,12 +287,12 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab }: 
                 Nothing else coming due this week.
               </p>
             ) : (
-              <ItemsByOwner items={dueThisWeek} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} />
+              <ItemsByOwner items={dueThisWeek} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} onAddConnectionToDirectory={onAddConnectionToDirectory} />
             )}
           </WidgetCard>
           {comingUp.length > 0 && (
             <WidgetCard title={`Coming up in the next two weeks (${comingUp.length})`}>
-              <ItemsByOwner items={comingUp} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} />
+              <ItemsByOwner items={comingUp} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} onAddConnectionToDirectory={onAddConnectionToDirectory} />
             </WidgetCard>
           )}
         </>
@@ -305,6 +309,7 @@ function ItemsByOwner({
   onDone,
   prayerVolunteers,
   onPrayerChanged,
+  onAddConnectionToDirectory,
 }: {
   items: HomeItem[];
   ownerName: (id: string) => string;
@@ -313,6 +318,7 @@ function ItemsByOwner({
   onDone: () => void;
   prayerVolunteers: Map<string, PrayerVolunteer>;
   onPrayerChanged: () => void;
+  onAddConnectionToDirectory: (conn: PartnershipConnection) => void;
 }) {
   const [doneKey, setDoneKey] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -387,6 +393,14 @@ function ItemsByOwner({
                   <CollateralReviewedButton
                     itemId={item.collateral.id}
                     itemName={item.collateral.name}
+                    onDone={onDone}
+                    variant="button"
+                  />
+                )}
+                {item.connection && (
+                  <ConnectionNextStep
+                    connection={item.connection}
+                    onAddToDirectory={onAddConnectionToDirectory}
                     onDone={onDone}
                     variant="button"
                   />
