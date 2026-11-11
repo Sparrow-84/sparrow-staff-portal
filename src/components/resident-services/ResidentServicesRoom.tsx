@@ -6,13 +6,17 @@ import { fetchPartners } from '@/lib/partnerships';
 import type { Partner } from '@/lib/partnerships-types';
 import type { Profile } from '@/lib/types';
 import {
+  AREA_OPTIONS,
+  PERSON_GROUPS,
   SERVES_ALL,
-  SERVES_OPTIONS,
+  SERVES_FILTER_LABEL,
+  fetchArchivedServices,
   fetchOpenReviews,
   fetchServices,
   freshness,
   providerName,
-  servesGroup,
+  matchesAreas,
+  matchesPerson,
   type ResidentService,
   type ServiceReview,
 } from '@/lib/resident-services';
@@ -21,19 +25,23 @@ import { ServiceDetailPanel } from './ServiceDetailPanel';
 import { ServiceFormPanel } from './ServiceFormPanel';
 import { ReviewPanel } from './ReviewPanel';
 
-const ALL_TYPES = 'All';
+const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
 export function ResidentServicesRoom() {
   const { profile } = useAuth();
   const [allServices, setAllServices] = useState<ResidentService[]>([]);
+  const [archived, setArchived] = useState<ResidentService[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [reviews, setReviews] = useState<ServiceReview[]>([]);
   const [reviewId, setReviewId] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
-  const [typeFilter, setTypeFilter] = useState(ALL_TYPES);
-  const [whoFilter, setWhoFilter] = useState<string>(SERVES_ALL);
+  // Each filter row takes several picks; no picks = everything.
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [whoFilter, setWhoFilter] = useState<string[]>([]);
+  const [areaFilter, setAreaFilter] = useState<string[]>([]);
   const [needsCheckOnly, setNeedsCheckOnly] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -41,12 +49,14 @@ export function ResidentServicesRoom() {
   const [editing, setEditing] = useState<ResidentService | null>(null);
 
   const load = useCallback(async () => {
-    const [res, revs, profs, parts] = await Promise.all([
+    const [res, revs, profs, parts, arch] = await Promise.all([
       fetchServices(),
       fetchOpenReviews(),
       fetchProfiles().catch(() => [] as Profile[]),
       fetchPartners().catch(() => [] as Partner[]),
+      fetchArchivedServices(),
     ]);
+    setArchived(arch);
     setAllServices(res.services);
     setReviews(revs);
     setMissing(res.missing);
@@ -76,18 +86,19 @@ export function ResidentServicesRoom() {
 
   const typesInUse = useMemo(() => {
     const set = new Set(services.map((s) => s.service_type));
-    return [ALL_TYPES, ...Array.from(set).sort()];
+    return Array.from(set).sort();
   }, [services]);
 
+  // Type + location narrow the pool; "who it's for" is then counted against it ("3 of 8").
   const inType = useMemo(
-    () => services.filter((s) => typeFilter === ALL_TYPES || s.service_type === typeFilter),
-    [services, typeFilter],
+    () => services.filter((s) => (typeFilter.length === 0 || typeFilter.includes(s.service_type)) && matchesAreas(s, areaFilter)),
+    [services, typeFilter, areaFilter],
   );
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return inType
-      .filter((s) => servesGroup(s, whoFilter))
+      .filter((s) => matchesPerson(s, whoFilter))
       .filter((s) => !needsCheckOnly || freshness(s.last_checked_at) !== 'fresh')
       .filter((s) => !q || `${providerName(s)} ${s.name} ${s.how_to_access ?? ''}`.toLowerCase().includes(q))
       .sort((a, b) => providerName(a).localeCompare(providerName(b)) || a.name.localeCompare(b.name));
@@ -95,10 +106,14 @@ export function ResidentServicesRoom() {
 
   const publishedCount = services.filter((s) => s.published_at).length;
   const needsCheckCount = services.filter((s) => freshness(s.last_checked_at) !== 'fresh').length;
-  const selected = services.find((s) => s.id === selectedId) ?? null;
+  const selected = (showArchived ? archived : services).find((s) => s.id === selectedId) ?? null;
   const nameFor = (id: string | null) => (id ? profiles.find((p) => p.id === id)?.full_name ?? null : null);
 
-  const typeLabel = typeFilter === ALL_TYPES ? 'services' : `${typeFilter.toLowerCase()} services`;
+  const typeLabel = typeFilter.length === 0 ? 'services' : `${typeFilter.join(' / ').toLowerCase()} services`;
+  const anyFilter = typeFilter.length + whoFilter.length + areaFilter.length > 0;
+  const allChip = (active: boolean, onClick: () => void) => (
+    <button onClick={onClick} aria-pressed={active} className={chip(active)}>All</button>
+  );
 
   const chip = (active: boolean) =>
     `rounded-full border px-3 py-1 text-xs font-medium transition ${
@@ -158,36 +173,83 @@ export function ResidentServicesRoom() {
         </section>
       )}
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 flex justify-end">
+        <button
+          onClick={() => { setShowArchived((v) => !v); setSelectedId(null); }}
+          className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green hover:underline"
+        >
+          {showArchived ? '← Back to the list' : `Archived (${archived.length})`}
+        </button>
+      </div>
+
+      {showArchived ? (
+        <div className="mt-2">
+          <h2 className="font-serif text-lg font-semibold">Archived services</h2>
+          <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Closed or no longer offered. Open one to restore it.</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            {archived.length === 0 && <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Nothing archived.</p>}
+            {archived.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setSelectedId(s.id)}
+                className="grid gap-1 rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border bg-white/60 dark:bg-sparrow-dark-surface p-4 text-left transition hover:border-sparrow-green"
+              >
+                <span className="font-serif text-lg font-semibold leading-tight">{providerName(s)}</span>
+                <span className="text-sm">{s.name} · {s.service_type}</span>
+                <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                  Archived {s.archived_at ? new Date(s.archived_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (<>
+      <div className="mt-2 space-y-3">
         <div>
           <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Type</p>
           <div className="flex flex-wrap gap-1.5">
+            {allChip(typeFilter.length === 0, () => setTypeFilter([]))}
             {typesInUse.map((t) => (
-              <button key={t} onClick={() => setTypeFilter(t)} aria-pressed={typeFilter === t} className={chip(typeFilter === t)}>{t}</button>
+              <button key={t} onClick={() => setTypeFilter((f) => toggle(f, t))} aria-pressed={typeFilter.includes(t)} className={chip(typeFilter.includes(t))}>{t}</button>
             ))}
           </div>
         </div>
         <div>
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Who it serves</p>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Who it's for · pick everything that fits the person</p>
           <div className="flex flex-wrap gap-1.5">
-            {SERVES_OPTIONS.map((g) => (
-              <button key={g} onClick={() => setWhoFilter(g)} aria-pressed={whoFilter === g} className={chip(whoFilter === g)}>{g}</button>
+            {allChip(whoFilter.length === 0, () => setWhoFilter([]))}
+            {PERSON_GROUPS.map((g) => (
+              <button key={g} onClick={() => setWhoFilter((f) => toggle(f, g))} aria-pressed={whoFilter.includes(g)} className={chip(whoFilter.includes(g))}>{SERVES_FILTER_LABEL[g] ?? g}</button>
             ))}
+          </div>
+        </div>
+        <div>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Where</p>
+          <div className="flex flex-wrap gap-1.5">
+            {allChip(areaFilter.length === 0, () => setAreaFilter([]))}
+            {AREA_OPTIONS.map((a) => (
+              <button key={a} onClick={() => setAreaFilter((f) => toggle(f, a))} aria-pressed={areaFilter.includes(a)} className={chip(areaFilter.includes(a))}>{a}</button>
+            ))}
+            {anyFilter && (
+              <button onClick={() => { setTypeFilter([]); setWhoFilter([]); setAreaFilter([]); }} className="ml-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green hover:underline">
+                Clear all filters
+              </button>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-baseline gap-2 rounded-xl bg-sparrow-mist/70 dark:bg-sparrow-dark-surface2 px-4 py-2.5">
-            {whoFilter === SERVES_ALL ? (
+            {whoFilter.length === 0 ? (
               <>
                 <span className="font-serif text-2xl font-semibold tabular-nums">{inType.length}</span>
                 <span className="text-sm">{typeLabel} on file</span>
               </>
             ) : (
               <>
-                <span className="font-serif text-2xl font-semibold tabular-nums">{inType.filter((s) => servesGroup(s, whoFilter)).length}</span>
+                <span className="font-serif text-2xl font-semibold tabular-nums">{inType.filter((s) => matchesPerson(s, whoFilter)).length}</span>
                 <span className="text-sm">of</span>
                 <span className="font-serif text-2xl font-semibold tabular-nums">{inType.length}</span>
-                <span className="text-sm">{typeLabel} near us serve <strong>{whoFilter.toLowerCase()}</strong></span>
+                <span className="text-sm">{typeLabel} fit <strong>{whoFilter.map((g) => (SERVES_FILTER_LABEL[g] ?? g).toLowerCase()).join(' + ')}</strong></span>
               </>
             )}
           </div>
@@ -222,6 +284,7 @@ export function ResidentServicesRoom() {
               <span className="rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2 py-0.5 text-[11px] font-medium">{s.service_type}</span>
             </div>
             <span className="text-sm">{s.name}</span>
+            {s.help_phone && <span className="select-text text-sm font-medium tabular-nums">{s.help_phone}</span>}
             <div className="flex flex-wrap gap-1">
               {s.serves.map((g) => (
                 <span
@@ -245,6 +308,7 @@ export function ResidentServicesRoom() {
           </button>
         ))}
       </div>
+      </>)}
 
       <ServiceDetailPanel
         open={!!selected && !formOpen}
@@ -252,6 +316,7 @@ export function ResidentServicesRoom() {
         profiles={profiles}
         currentUserId={profile?.id ?? ''}
         isPartnershipsStaff={isPartnershipsStaff}
+        archived={showArchived}
         onClose={() => setSelectedId(null)}
         onEdit={() => { setEditing(selected); setFormOpen(true); }}
         onChanged={() => void load()}

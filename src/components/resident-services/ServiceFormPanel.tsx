@@ -4,9 +4,11 @@ import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { isPersonRecord, type Partner } from '@/lib/partnerships-types';
 import { fetchPartnerContacts, type PartnerContact } from '@/lib/partner-contacts';
 import {
+  AREA_OPTIONS,
   SERVES_ALL,
   SERVES_OPTIONS,
   SERVICE_TYPES,
+  areasColumnReady,
   createService,
   updateService,
   type ResidentService,
@@ -40,6 +42,8 @@ export function ServiceFormPanel({
   const [name, setName] = useState('');
   const [serviceType, setServiceType] = useState('');
   const [serves, setServes] = useState<string[]>([]);
+  const [areas, setAreas] = useState<string[]>([]);
+  const [areasReady, setAreasReady] = useState(false);
   const [address, setAddress] = useState('');
   const [confidential, setConfidential] = useState(false);
   const [helpPhone, setHelpPhone] = useState('');
@@ -65,6 +69,7 @@ export function ServiceFormPanel({
     setName(service?.name ?? '');
     setServiceType(service?.service_type ?? '');
     setServes(service?.serves ?? []);
+    setAreas(service?.areas ?? []);
     setAddress(service?.address ?? '');
     setConfidential(service?.address_confidential ?? false);
     setHelpPhone(service?.help_phone ?? '');
@@ -79,6 +84,10 @@ export function ServiceFormPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, service, presetPartnerId]);
 
+  useEffect(() => {
+    if (open) void areasColumnReady().then(setAreasReady);
+  }, [open]);
+
   // The go-to contact is picked from the chosen organization's contacts list.
   useEffect(() => {
     if (!open || !partnerChoice || partnerChoice === NO_RECORD) { setOrgContacts([]); return; }
@@ -92,6 +101,7 @@ export function ServiceFormPanel({
     { key: 'rs-name', label: 'Program or service', valid: name.trim().length > 0 },
     { key: 'rs-type', label: 'Type', valid: serviceType !== '' },
     { key: 'rs-serves', label: 'Who it serves', valid: serves.length > 0 },
+    { key: 'rs-areas', label: "Where it's available", valid: !areasReady || areas.length > 0 },
   ]);
 
   function toggleServes(group: string) {
@@ -122,6 +132,8 @@ export function ServiceFormPanel({
       // Only sent when there's something to save or clear, so saving works even before 0200 adds the column.
       ...(goToContactId || service?.go_to_contact_id ? { go_to_contact_id: goToContactId || null } : {}),
       ...(forReview && !service ? { needs_review: true } : {}),
+      // The column only exists once 0216 runs.
+      ...(areasReady ? { areas } : {}),
     };
     setBusy(true);
     setError(null);
@@ -225,6 +237,30 @@ export function ServiceFormPanel({
           {fieldError('rs-serves') && <p className="mt-1 text-xs text-priority-p1">{fieldError('rs-serves')}</p>}
         </div>
 
+        {areasReady && (
+          <div id="rs-areas" tabIndex={-1}>
+            <span className="field-label field-label-required">Where it's available</span>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {AREA_OPTIONS.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => { clear('rs-areas'); setAreas((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a])); }}
+                  aria-pressed={areas.includes(a)}
+                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                    areas.includes(a)
+                      ? 'border-sparrow-green bg-sparrow-green text-white dark:border-sparrow-dark-green dark:bg-sparrow-dark-green'
+                      : 'border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-ink dark:text-sparrow-dark-ink hover:border-sparrow-green'
+                  }`}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+            {fieldError('rs-areas') && <p className="mt-1 text-xs text-priority-p1">{fieldError('rs-areas')}</p>}
+          </div>
+        )}
+
         <section className="space-y-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">For people seeking help · can go on the website</p>
           <div>
@@ -232,7 +268,7 @@ export function ServiceFormPanel({
             <input id="rs-address" className="field-input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Where someone shows up for this service" />
             <label className="mt-1.5 flex items-start gap-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
               <input type="checkbox" checked={confidential} onChange={(e) => setConfidential(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-sparrow-green" />
-              Confidential location (for example a domestic violence shelter): never publish this address
+              Confidential location (for example a domestic violence shelter): never published or printed. People call the service, and the service decides who gets the address.
             </label>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -246,8 +282,8 @@ export function ServiceFormPanel({
             </div>
           </div>
           <div>
-            <label className="field-label" htmlFor="rs-how">How to get it</label>
-            <textarea id="rs-how" rows={3} className="field-input" value={howTo} onChange={(e) => setHowTo(e.target.value)} placeholder="Who qualifies, what to bring, walk-in or referral, waitlist…" />
+            <label className="field-label" htmlFor="rs-how">First steps to get this service</label>
+            <textarea id="rs-how" rows={3} className="field-input" value={howTo} onChange={(e) => setHowTo(e.target.value)} placeholder="e.g. Walk in during open hours and bring photo ID. Or: call to get on the waitlist. Or: needs a referral from a caseworker." />
           </div>
           <div>
             <label className="field-label" htmlFor="rs-web">Website</label>

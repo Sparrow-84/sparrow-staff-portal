@@ -10,6 +10,7 @@ import {
   providerName,
   publicDropOffPassed,
   publishService,
+  restoreService,
   unpublishService,
   updatePartnerContact,
   type ResidentService,
@@ -58,6 +59,7 @@ export function ServiceDetailPanel({
   profiles,
   currentUserId,
   isPartnershipsStaff,
+  archived = false,
   onClose,
   onEdit,
   onChanged,
@@ -67,6 +69,8 @@ export function ServiceDetailPanel({
   profiles: Profile[];
   currentUserId: string;
   isPartnershipsStaff: boolean;
+  /** Opened from the room's Archived view: read-only, with Restore. */
+  archived?: boolean;
   onClose: () => void;
   onEdit: () => void;
   onChanged: () => void;
@@ -74,6 +78,7 @@ export function ServiceDetailPanel({
   const [latestNote, setLatestNote] = useState<Awaited<ReturnType<typeof fetchLatestTouchpoint>>>(null);
   const [goTo, setGoTo] = useState<PartnerContact | null>(null);
   const [officeElsewhere, setOfficeElsewhere] = useState(false);
+  const [confirmClearOffice, setConfirmClearOffice] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,6 +90,7 @@ export function ServiceDetailPanel({
     setConfirmRemove(false);
     setError(null);
     setOfficeElsewhere(!!service.partner?.address);
+    setConfirmClearOffice(false);
     setLatestNote(null);
     if (service.partner_id) void fetchLatestTouchpoint(service.partner_id).then(setLatestNote);
     setGoTo(null);
@@ -113,17 +119,26 @@ export function ServiceDetailPanel({
       onClose={onClose}
       title={providerName(service)}
       subtitle={`${service.name} · ${service.service_type}`}
-      footer={<button onClick={onEdit} className="btn-primary w-full">Edit service</button>}
+      footer={archived
+        ? <button onClick={() => void run(async () => { await restoreService(service.id); onClose(); })} className="btn-primary w-full">Restore to the list</button>
+        : <button onClick={onEdit} className="btn-primary w-full">Edit service</button>}
     >
       <div className="space-y-5">
         {error && <p className="rounded-lg bg-priority-p1/10 px-3 py-2 text-sm text-priority-p1">{error}</p>}
 
+        {archived && service.archived_at && (
+          <p className="rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-3 py-2.5 text-sm">
+            Archived on {shortDate(service.archived_at)}. It isn't on the list or the website. Restoring puts it back on the list. It only goes back on the website if someone clicks Publish again.
+          </p>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
           <FreshnessStamp checkedAt={service.last_checked_at} checkedBy={service.last_checked_by} how={service.last_checked_how} nameFor={nameFor} />
-          <StillCorrectButton onConfirm={(how) => run(() => markServiceChecked(service.id, how, currentUserId))} />
+          {!archived && <StillCorrectButton onConfirm={(how) => run(() => markServiceChecked(service.id, how, currentUserId))} />}
         </div>
 
         {/* Website */}
+        {!archived && (
         <section className="space-y-2 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
           <p className="text-sm font-medium">Website</p>
           {service.published_at ? (
@@ -152,6 +167,7 @@ export function ServiceDetailPanel({
             <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">The address is confidential and never shown on the website.</p>
           )}
         </section>
+        )}
 
         {/* Public details */}
         <section className="space-y-2">
@@ -161,10 +177,11 @@ export function ServiceDetailPanel({
               <span key={g} className="rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2 py-0.5 text-xs font-medium">{g}</span>
             ))}
           </div>
-          <Row label="Address" value={service.address ? `${service.address}${service.address_confidential ? '  (confidential, never published)' : ''}` : null} />
+          {service.areas && <Row label="Available in" value={service.areas.join(', ') || null} />}
+          <Row label="Address" value={service.address ? `${service.address}${service.address_confidential ? '  (confidential: never published or printed)' : ''}` : null} />
           <Row label="Phone for help" value={service.help_phone} />
           <Row label="Hours" value={service.hours} />
-          <Row label="How to get it" value={service.how_to_access} />
+          <Row label="First steps" value={service.how_to_access} />
           <Row label="Website" value={service.website ?? partner?.website ?? null} />
         </section>
 
@@ -196,9 +213,32 @@ export function ServiceDetailPanel({
               {/* Each person's own phone/email lives on their contact, separate from the help line people call. */}
               <OrgContacts partnerId={partner.id} onChanged={onChanged} />
               <label className="flex items-start gap-2 text-xs">
-                <input type="checkbox" checked={officeElsewhere} onChange={(e) => setOfficeElsewhere(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-sparrow-green" />
+                <input type="checkbox" checked={officeElsewhere} onChange={(e) => {
+                  // Unticking means the office is where people go, so the saved office
+                  // address goes too (it lives on the Directory record, so ask first).
+                  if (!e.target.checked && partner.address) { setConfirmClearOffice(true); return; }
+                  setOfficeElsewhere(e.target.checked);
+                }} className="mt-0.5 h-3.5 w-3.5 accent-sparrow-green" />
                 Their office is somewhere else (not where people go for help)
               </label>
+              {confirmClearOffice && (
+                <div className="space-y-2 rounded-lg bg-white dark:bg-sparrow-dark-surface p-2.5 text-xs">
+                  <p>Remove the office address? It's also removed from the Directory record in Partnerships.</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setConfirmClearOffice(false)} className="btn-ghost px-2.5 py-1 text-xs">Keep it</button>
+                    <button
+                      onClick={() => void run(async () => {
+                        await updatePartnerContact(partner.id, { address: null });
+                        setConfirmClearOffice(false);
+                        setOfficeElsewhere(false);
+                      })}
+                      className="btn-secondary px-2.5 py-1 text-xs"
+                    >
+                      Remove it
+                    </button>
+                  </div>
+                </div>
+              )}
               {officeElsewhere && (
                 <BlurField id="rs-office" label="Office / mailing address" value={partner.address ?? ''} onSave={(v) => run(() => updatePartnerContact(partner.id, { address: v || null }))} />
               )}
@@ -220,26 +260,28 @@ export function ServiceDetailPanel({
           )}
         </section>
 
+        {!archived && (
         <section className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           {confirmRemove ? (
             <div className="space-y-2">
-              <p className="text-sm">Remove this service from the list (and the website)? It's archived, not deleted.</p>
+              <p className="text-sm">Archive this service? It comes off the list and the website. You can restore it from Archived any time.</p>
               <div className="flex gap-2">
                 <button onClick={() => setConfirmRemove(false)} className="btn-ghost">Cancel</button>
                 <button
                   onClick={() => void run(async () => { await archiveService(service.id); onClose(); })}
-                  className="rounded-lg bg-priority-p1 px-3 py-1.5 text-sm font-medium text-white"
+                  className="btn-secondary"
                 >
-                  Remove service
+                  Archive it
                 </button>
               </div>
             </div>
           ) : (
-            <button onClick={() => setConfirmRemove(true)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
-              This service no longer exists → remove it
+            <button onClick={() => setConfirmRemove(true)} className="btn-secondary px-3 py-1.5 text-sm">
+              Archive this service (closed or no longer offered)
             </button>
           )}
         </section>
+        )}
       </div>
     </Drawer>
   );

@@ -8,15 +8,28 @@ import type { Partner } from './partnerships-types';
 
 export const SERVICE_TYPES = [
   'Shelter', 'Housing', 'Day services', 'Food', 'Health', 'Recovery', 'Financial',
-  'Legal', 'Transportation', 'Employment', 'Education', 'Other',
+  'Legal', 'Transportation', 'Employment', 'Education', 'Disability help', 'Other',
 ] as const;
 
 /** "All people" counts as serving every specific group too (see servesGroup). */
 export const SERVES_ALL = 'All people';
 export const SERVES_OPTIONS = [
   SERVES_ALL, 'Families with children', 'Single adults', 'Men only', 'Women only',
-  'Youth', 'Seniors', 'Veterans',
+  'Youth', 'Seniors', 'Veterans', 'People with disabilities',
 ] as const;
+
+/** How a "Who it serves" tag reads as a filter ("who is this for?"). A single mom = Women +
+ *  Families with children. */
+export const SERVES_FILTER_LABEL: Record<string, string> = {
+  'Men only': 'Men',
+  'Women only': 'Women',
+};
+
+/** The groups a person can be, for filtering (everything but "All people"). */
+export const PERSON_GROUPS = SERVES_OPTIONS.filter((g) => g !== SERVES_ALL);
+
+/** Where a service is available (migration 0216). Several can apply. */
+export const AREA_OPTIONS = ['Corvallis', 'Benton County', 'Linn County', 'Lincoln County', 'Statewide'] as const;
 
 export type CheckedHow = 'called' | 'website' | 'in_person' | 'edited';
 export const CHECKED_HOW_LABEL: Record<CheckedHow, string> = {
@@ -48,6 +61,8 @@ export interface ResidentService {
   name: string;
   service_type: string;
   serves: string[];
+  /** Migration 0216: where it's available. Missing before 0216 runs. */
+  areas?: string[];
   address: string | null;
   address_confidential: boolean;
   help_phone: string | null;
@@ -75,7 +90,7 @@ export interface ResidentService {
 export type ServiceInput = Pick<ResidentService,
   'partner_id' | 'provider_name' | 'name' | 'service_type' | 'serves' | 'address' | 'address_confidential'
   | 'help_phone' | 'hours' | 'how_to_access' | 'website' | 'internal_notes'>
-  & { go_to_contact_id?: string | null; needs_review?: boolean };
+  & { go_to_contact_id?: string | null; needs_review?: boolean; areas?: string[] };
 
 /** An organization sent over from the Directory, waiting in the room's "To review" inbox. */
 export interface ServiceReview {
@@ -109,6 +124,34 @@ export function servesGroup(s: Pick<ResidentService, 'serves'>, group: string): 
   return group === SERVES_ALL || s.serves.includes(SERVES_ALL) || s.serves.includes(group);
 }
 
+/** The filter rule agreed 2026-11-11, shared by the room, the printout and the website:
+ *  tick everything that describes the person. A service shows if it's for "All people" or
+ *  tagged with any of the picks -- except a men-only or women-only service is hidden from
+ *  someone who picked the other one. No picks = everything. */
+export function matchesPerson(s: Pick<ResidentService, 'serves'>, picks: string[]): boolean {
+  if (picks.length === 0) return true;
+  const pickedMen = picks.includes('Men only');
+  const pickedWomen = picks.includes('Women only');
+  const menOnly = s.serves.includes('Men only') && !s.serves.includes('Women only');
+  const womenOnly = s.serves.includes('Women only') && !s.serves.includes('Men only');
+  if (menOnly && pickedWomen && !pickedMen) return false;
+  if (womenOnly && pickedMen && !pickedWomen) return false;
+  return s.serves.includes(SERVES_ALL) || picks.some((g) => s.serves.includes(g));
+}
+
+/** Location filter: any of the picked areas. Statewide services match every area, and
+ *  Corvallis and Benton County count for each other (Corvallis is in Benton County).
+ *  No picks = everything. */
+export function matchesAreas(s: Pick<ResidentService, 'areas'>, picks: string[]): boolean {
+  if (picks.length === 0) return true;
+  const areas = s.areas ?? [];
+  if (areas.includes('Statewide')) return true;
+  const want = new Set(picks);
+  if (want.has('Corvallis')) want.add('Benton County');
+  if (want.has('Benton County')) want.add('Corvallis');
+  return areas.some((a) => want.has(a));
+}
+
 // ── Freshness ("last checked") — shared with the Directory record drawer ──────────────
 // Amber at 9 months (that's also when the room admin gets a re-check task), red at 18 months.
 // The public website separately drops anything not checked in 2 years.
@@ -139,6 +182,12 @@ export function publicDropOffPassed(checkedAt: string | null, now: Date = new Da
 }
 
 // ── Data ───────────────────────────────────────────────────────────────────────────
+/** False until migration 0216 adds the areas column (the form then doesn't ask for it). */
+export async function areasColumnReady(): Promise<boolean> {
+  const { error } = await supabase.from('resident_services').select('areas').limit(1);
+  return !error;
+}
+
 /** `missing` is true when the table doesn't exist yet (migration 0199 not run). */
 export async function fetchServices(): Promise<{ services: ResidentService[]; missing: boolean }> {
   const { data, error } = await supabase
@@ -192,12 +241,33 @@ export async function unpublishService(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** Archive, never delete: the service leaves the list and the website but keeps its history,
+ *  and can be restored from the room's "Archived" view. */
 export async function archiveService(id: string): Promise<void> {
   const { error } = await supabase
     .from('resident_services')
     .update({ archived_at: new Date().toISOString(), published_at: null })
     .eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+/** Back onto the main list. Not republished: someone has to click "Publish to website" again. */
+export async function restoreService(id: string): Promise<void> {
+  const { error } = await supabase.from('resident_services').update({ archived_at: null }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/** Archived services for the room's "Archived" view. Programs removed while still waiting
+ *  for review were never on the list, so they're left out. */
+export async function fetchArchivedServices(): Promise<ResidentService[]> {
+  const { data, error } = await supabase
+    .from('resident_services')
+    .select(SELECT)
+    .not('archived_at', 'is', null)
+    .eq('needs_review', false)
+    .order('archived_at', { ascending: false });
+  if (error) return [];
+  return (data ?? []) as unknown as ResidentService[];
 }
 
 // ── "To review" inbox (migration 0206) ───────────────────────────────────────────────
