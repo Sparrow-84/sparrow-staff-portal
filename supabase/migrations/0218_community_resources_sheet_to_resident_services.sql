@@ -133,10 +133,10 @@ BEGIN
     '541-752-7220', NULL, NULL);
 
   v := pg_temp.rs_org('4093aa1b-8bfa-4187-a58c-57e8901e8b99', 'Love Inc', 'nonprofit', '541-757-8111',
-    'Love INC: 541-286-4731 on the sheet. Love INC''s own website lists only their helpline, 541-757-8111 (Mon-Thu 9:30am-1:30pm); 286-4731 appears only on a giving page.');
+    'Love INC: 541-286-4731 on the sheet; their website lists the helpline, 541-757-8111 (Mon-Thu 9:30am-1:30pm). Resident Services confirmed (Nov 12) that both numbers work.');
   PERFORM pg_temp.rs_draft(v, 'Help line (connects people with local church help)', 'Other', all_people,
     ARRAY['Corvallis', 'Benton County'], '541-757-8111', NULL,
-    'The sheet had 541-286-4731. Their website lists the helpline as 541-757-8111, Mon-Thu 9:30am-1:30pm.');
+    'Either number works (confirmed by Resident Services Nov 12): helpline 541-757-8111 (Mon-Thu 9:30am-1:30pm) or 541-286-4731.');
 
   v := pg_temp.rs_org('5de92891-7dd9-46d7-bb15-fc695a545e33', 'Oregon Department of Human Services (DHS)', 'nonprofit', NULL,
     'OHP (Oregon Health Plan): 1(800) 699-9075. SNAP (Food Stamps): 1(800) 699-9075. DHS (Department of Human Services): 1(855) 503-7233. Child/Adult Protective Services: 1(855) 503-7233. Senior Disability Services: 1(855) 673-2372.');
