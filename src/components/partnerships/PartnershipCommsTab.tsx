@@ -1,12 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { localDate } from '@/lib/date';
+import { assignAvatarColors } from '@/lib/avatarColors';
 import type { Profile } from '@/lib/types';
 import {
+  NEWSLETTER_EARLY_HEADS_UP_DAYS,
+  NEWSLETTER_HEADS_UP_DAYS,
   createMilestone,
   deleteMilestone,
   fetchComms,
   fetchMilestones,
   fetchRecurringSetting,
+  needsAdvanceNotice,
+  newsletterHeadsUpDays,
+  newsletterReminderDue,
   seedCommsForYear,
   seedMilestonesForComms,
   syncCommsMilestoneTasks,
@@ -14,12 +20,12 @@ import {
   updateCommStatus,
   updateCommNotes,
   updateMilestone,
+  updateRecurringSetting,
   type CommStatus,
   type PartnershipComm,
   type PartnershipCommsMilestone,
   type PartnershipRecurringSetting,
 } from '@/lib/partnerships-tabs';
-import { PartnershipRecurringSettingsPanel } from './PartnershipRecurringSettingsPanel';
 
 const STATUS_LABEL: Record<CommStatus, string> = {
   not_started: 'Not started',
@@ -35,34 +41,12 @@ const STATUS_CHIP: Record<CommStatus, string> = {
 
 const STATUS_CYCLE: CommStatus[] = ['not_started', 'in_progress', 'sent'];
 
-function nextStatus(current: CommStatus): CommStatus {
-  const idx = STATUS_CYCLE.indexOf(current);
-  return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-}
-
 function shortDate(iso: string): string {
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 
-// December's Christmas greeting (Executive Director + Director of LCP, together) and
-// January's leadership letters (same two, separately) need writers assigned and
-// coordinated months ahead — not just flagged 2 weeks out like a normal TSM issue.
-function needsAdvanceNotice(comm: PartnershipComm): boolean {
-  return comm.comm_type === 'tsm_christmas' || comm.comm_type === 'christmas_cards' || comm.comm_type === 'annual_report';
-}
-
-// window defaults to 14 (the historical hardcoded value) unless the configured newsletter
-// lead_time_days is loaded — matches emit_newsletter_reminder_tasks() (migration 0080) for
-// the normal case. The 60-day Christmas/annual-report advance-notice special case is kept
-// here as a UI-only nicety even though the backend deliberately simplified that away.
-function isLeadTimeWarning(comm: PartnershipComm, leadTimeDays: number): boolean {
-  if (comm.status !== 'not_started') return false;
-  const diff = (new Date(comm.publish_date + 'T00:00:00').getTime() - Date.now()) / 86_400_000;
-  const window = needsAdvanceNotice(comm) ? 60 : leadTimeDays;
-  return diff >= 0 && diff <= window;
-}
 
 export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
   const [year, setYear] = useState(new Date().getFullYear());
@@ -81,6 +65,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
     (p) => (p.department === 'partnerships' || p.partnerships_access) && p.department !== 'exec',
   );
   const bethanyId = profiles.find((p) => p.full_name.toLowerCase().startsWith('bethany'))?.id ?? null;
+  const ownerColors = useMemo(() => assignAvatarColors(profiles), [profiles]);
 
   useEffect(() => {
     setLoading(true);
@@ -112,10 +97,15 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
     fetchRecurringSetting('newsletter').then(setSetting).catch(console.error);
   }, []);
 
-  function handleCycleStatus(comm: PartnershipComm) {
-    const next = nextStatus(comm.status);
+  function handleStatusChange(comm: PartnershipComm, next: CommStatus) {
     setComms((prev) => prev.map((c) => (c.id === comm.id ? { ...c, status: next } : c)));
     updateCommStatus(comm.id, next).catch(console.error);
+  }
+
+  async function changeReminderOwner(ownerId: string) {
+    if (!ownerId || !setting) return;
+    setSetting({ ...setting, owner_id: ownerId });
+    await updateRecurringSetting('newsletter', { owner_id: ownerId }).catch(console.error);
   }
 
   function handleBlurNotes(comm: PartnershipComm) {
@@ -167,16 +157,35 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
   const asksCounterColor = 'text-sparrow-green dark:text-sparrow-dark-green bg-sparrow-green/10';
 
   const todayISO = localDate();
-  const leadTimeDays = setting?.lead_time_days ?? 14;
 
   return (
     <div className="space-y-4">
-      <PartnershipRecurringSettingsPanel
-        kind="newsletter"
-        title="Newsletter"
-        helpText="Lead time here nags each comms entry's owner once inside the window ahead of its own publish date. Cadence is informational only — actual due dates come from each entry's own publish_date, seeded from the annual calendar."
-        profiles={profiles}
-      />
+      <div className="max-w-2xl space-y-2 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
+        <p>
+          A piece that isn't started yet comes up on Partnerships Home and in the reminder
+          owner's tasks {NEWSLETTER_HEADS_UP_DAYS / 7} weeks before its publish date, or {NEWSLETTER_EARLY_HEADS_UP_DAYS} days
+          before for the Christmas TSM, Christmas cards and the Annual Report, which need
+          writers lined up early. Setting it to In progress clears the reminder.
+        </p>
+        {setting && (
+          <div className="flex items-center gap-2">
+            <span>Reminders go to</span>
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${ownerColors[setting.owner_id] ?? 'bg-sparrow-gray dark:bg-sparrow-dark-border'}`} />
+            <select
+              value={setting.owner_id}
+              onChange={(e) => void changeReminderOwner(e.target.value)}
+              className="field-input mt-0 w-auto py-1 text-sm"
+            >
+              {(ownerProfiles.some((p) => p.id === setting.owner_id)
+                ? ownerProfiles
+                : [...ownerProfiles, ...profiles.filter((p) => p.id === setting.owner_id)]
+              ).map((p) => (
+                <option key={p.id} value={p.id}>{p.full_name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
       {/* Header: year nav + ask counter */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -217,7 +226,7 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
         <ul className="divide-y divide-sparrow-rule dark:divide-sparrow-dark-border overflow-hidden rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface">
           {comms.map((comm) => {
             const expanded = expandedId === comm.id;
-            const warn = isLeadTimeWarning(comm, leadTimeDays);
+            const warn = newsletterReminderDue(comm, todayISO) && comm.publish_date >= todayISO;
             const isPast = comm.publish_date < todayISO;
 
             return (
@@ -243,21 +252,22 @@ export function PartnershipCommsTab({ profiles }: { profiles: Profile[] }) {
                     )}
                     {warn && (
                       <span
-                        title={needsAdvanceNotice(comm) ? 'Needs writer assignment + advance coordination — not yet started' : `Publish date within ${leadTimeDays} days — not yet started`}
+                        title={needsAdvanceNotice(comm.comm_type) ? 'Needs writer assignment + advance coordination — not yet started' : `Publish date within ${newsletterHeadsUpDays(comm.comm_type)} days — not yet started`}
                         className="text-amber-500 text-sm"
                       >
                         ⚠
                       </span>
                     )}
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => { e.stopPropagation(); handleCycleStatus(comm); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleCycleStatus(comm); } }}
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium cursor-pointer ${STATUS_CHIP[comm.status]}`}
+                    {/* A dropdown, not a click-to-cycle chip, so one extra click can't mark a piece Sent. */}
+                    <select
+                      value={comm.status}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onChange={(e) => handleStatusChange(comm, e.target.value as CommStatus)}
+                      className={`cursor-pointer appearance-none rounded-full border-0 px-2 py-0.5 text-[10px] font-medium ${STATUS_CHIP[comm.status]}`}
                     >
-                      {STATUS_LABEL[comm.status]}
-                    </span>
+                      {STATUS_CYCLE.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                    </select>
                     <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{expanded ? '▲' : '▼'}</span>
                   </span>
                 </button>

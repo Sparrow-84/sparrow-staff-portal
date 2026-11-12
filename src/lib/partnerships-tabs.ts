@@ -279,6 +279,31 @@ export async function seedCommsForYear(year: number): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+// ── Newsletter reminders (migration 0221) ──
+// One fixed rule, the same on the comms tab, on Partnerships Home and in the owner's tasks:
+// a piece that isn't started yet comes up two weeks before its publish date, or 60 days
+// before for the pieces that need writers lined up early (the Christmas TSM greeting from
+// the Executive Director and Director of LCP, Christmas cards, and the Annual Report's
+// leadership letters). Marking it In progress clears it.
+export const NEWSLETTER_HEADS_UP_DAYS = 14;
+export const NEWSLETTER_EARLY_HEADS_UP_DAYS = 60;
+
+export function needsAdvanceNotice(commType: CommType): boolean {
+  return commType === 'tsm_christmas' || commType === 'christmas_cards' || commType === 'annual_report';
+}
+
+export function newsletterHeadsUpDays(commType: CommType): number {
+  return needsAdvanceNotice(commType) ? NEWSLETTER_EARLY_HEADS_UP_DAYS : NEWSLETTER_HEADS_UP_DAYS;
+}
+
+/** Not started, and its publish date is inside its heads-up window (or already past). */
+export function newsletterReminderDue(comm: Pick<PartnershipComm, 'status' | 'publish_date' | 'comm_type'>, today: string): boolean {
+  if (comm.status !== 'not_started') return false;
+  const d = new Date(`${today}T00:00:00`);
+  d.setDate(d.getDate() + newsletterHeadsUpDays(comm.comm_type));
+  return comm.publish_date <= localDateOf(d);
+}
+
 export async function updateCommStatus(id: string, status: CommStatus): Promise<void> {
   const { error } = await supabase
     .from('partnership_comms')
@@ -781,4 +806,45 @@ export async function markConnectionMoved(id: string, partnerId: string, userId:
     .from('partnership_connections')
     .update({ converted_to_partner_id: partnerId, archived_at: new Date().toISOString(), archived_by: userId, followup_done: true })
     .eq('id', id);
+}
+
+/** Directory records to pick from when a connection belongs to one already there. */
+export async function fetchDirectoryRecordNames(): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await supabase.from('partners').select('id, name').eq('active', true).order('name');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as { id: string; name: string }[];
+}
+
+/** "Add to an existing Directory record": the person joins that record's contacts (name,
+ *  role, phone, email), with where you met and what you discussed in the contact's notes,
+ *  and the connection is archived pointing at the record. Nothing gets re-typed. */
+export async function addConnectionToExistingRecord(
+  conn: PartnershipConnection,
+  partnerId: string,
+  userId: string,
+): Promise<void> {
+  let eventLabel: string | null = null;
+  if (conn.event_id) {
+    const { data } = await supabase.from('partnership_events').select('event_name, event_date').eq('id', conn.event_id).maybeSingle();
+    if (data) {
+      const when = new Date(`${data.event_date}T00:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+      eventLabel = `${data.event_name} (${when})`;
+    }
+  }
+  const notes = [
+    eventLabel ? `Met at ${eventLabel}.` : null,
+    conn.what_discussed ? `Discussed: ${conn.what_discussed}` : null,
+    conn.next_action ? `Next action: ${conn.next_action}` : null,
+  ].filter(Boolean).join('\n');
+  const { error } = await supabase.from('partner_contacts').insert({
+    partner_id: partnerId,
+    name: conn.name,
+    role: conn.role,
+    phone: conn.phone,
+    email: conn.email,
+    notes: notes || null,
+    is_primary: false,
+  });
+  if (error) throw new Error(error.message);
+  await markConnectionMoved(conn.id, partnerId, userId);
 }

@@ -1,18 +1,21 @@
 // "Done" / "Choose next step" for a Meaningful Connection. Every connection always has a next
-// step: another follow-up, a Directory record, or the archive (nothing more to do; kept as a
-// record of what happened). Used on the Events tab, the connection's side panel and
+// step: another follow-up, a new Directory record, a contact on an existing Directory record,
+// or the archive (nothing more to do; kept as a record of what happened). Used on the
+// Events tab, the connection's side panel and
 // Partnerships Home, so the button and its question are identical everywhere.
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/auth/AuthContext';
+import { DirectoryRecordPicker } from './DirectoryRecordPicker';
 import {
+  addConnectionToExistingRecord,
   archiveConnection,
   connectionNeedsNextStep,
   setNextFollowup,
   type PartnershipConnection,
 } from '@/lib/partnerships-tabs';
 
-type Choice = 'followup' | 'directory' | 'archive';
+type Choice = 'followup' | 'existing' | 'directory' | 'archive';
 
 export function ConnectionNextStep({
   connection,
@@ -33,6 +36,7 @@ export function ConnectionNextStep({
   const [choice, setChoice] = useState<Choice | null>(null);
   const [due, setDue] = useState('');
   const [nextAction, setNextAction] = useState('');
+  const [recordId, setRecordId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -67,6 +71,7 @@ export function ConnectionNextStep({
     setChoice(null);
     setDue('');
     setNextAction('');
+    setRecordId(null);
     setError(null);
     setOpen(true);
   }
@@ -92,6 +97,9 @@ export function ConnectionNextStep({
     } else if (choice === 'archive') {
       if (!profile) return;
       void run(() => archiveConnection(connection.id, profile.id));
+    } else if (choice === 'existing') {
+      if (!profile || !recordId) return;
+      void run(() => addConnectionToExistingRecord(connection, recordId, profile.id));
     } else if (choice === 'directory') {
       setOpen(false);
       onAddToDirectory(connection);
@@ -100,7 +108,8 @@ export function ConnectionNextStep({
 
   const options: { value: Choice; label: string; hint: string }[] = [
     { value: 'followup', label: 'Set a follow-up', hint: 'There is something more to do with them.' },
-    { value: 'directory', label: 'Add to Directory', hint: 'An ongoing relationship. Opens the Add form with their details.' },
+    { value: 'existing', label: 'Add to an existing Directory record', hint: 'Their organization is already in the Directory. They join its contacts.' },
+    { value: 'directory', label: 'Add to Directory as a new record', hint: 'An ongoing relationship. Opens the Add form with their details.' },
     { value: 'archive', label: 'Archive', hint: 'Nothing more to do. Kept as a record of what happened.' },
   ];
 
@@ -170,6 +179,16 @@ export function ConnectionNextStep({
               </p>
             </div>
           )}
+          {choice === 'existing' && (
+            <div className="space-y-1 pl-2">
+              <label className="field-label field-label-required">Which record?</label>
+              <DirectoryRecordPicker value={recordId} onChange={setRecordId} initialSearch={connection.organization} disabled={busy} />
+              <p className="text-[11px] leading-snug text-sparrow-gray dark:text-sparrow-dark-gray">
+                Their name, role, phone and email are added to the record's contacts, with where
+                you met and what you discussed in the contact's notes.
+              </p>
+            </div>
+          )}
           {error && <p className="text-xs text-priority-p1">{error}</p>}
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={() => setOpen(false)} disabled={busy} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink">
@@ -178,7 +197,7 @@ export function ConnectionNextStep({
             <button
               type="button"
               onClick={save}
-              disabled={busy || !choice || (choice === 'followup' && !due)}
+              disabled={busy || !choice || (choice === 'followup' && !due) || (choice === 'existing' && !recordId)}
               className="btn-primary px-3 py-1.5 text-xs"
             >
               {busy ? 'Saving…' : choice === 'directory' ? 'Continue' : 'Save'}

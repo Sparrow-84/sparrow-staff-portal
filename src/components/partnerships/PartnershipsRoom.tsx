@@ -29,7 +29,6 @@ import { PartnershipSocialTab } from './PartnershipSocialTab';
 import { PartnershipEventsTab } from './PartnershipEventsTab';
 import { markConnectionMoved, type PartnershipConnection } from '@/lib/partnerships-tabs';
 import { PrayerMeetingTab } from './PrayerMeetingTab';
-import { PartnershipContactsTab } from './PartnershipContactsTab';
 import { CommsProductionCalendar } from './CommsProductionCalendar';
 
 const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
@@ -71,7 +70,7 @@ const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
   },
 ];
 
-type Tab = 'home' | 'directory' | 'comms' | 'collateral' | 'social' | 'events' | 'prayer' | 'calendar' | 'contacts';
+type Tab = 'home' | 'directory' | 'comms' | 'collateral' | 'social' | 'events' | 'prayer' | 'calendar';
 type View = 'table' | 'tile';
 type Filter = 'all' | 'archived' | PartnerType;
 
@@ -84,7 +83,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'social', label: 'Social Media' },
   { key: 'events', label: 'Events' },
   { key: 'prayer', label: 'Prayer Team' },
-  { key: 'contacts', label: 'All Staff Contacts' },
 ];
 
 const FILTERS: { key: Filter; label: string }[] = [
@@ -302,7 +300,7 @@ export function PartnershipsRoom() {
     : null;
 
   return (
-    <div className={`mx-auto px-4 py-8 sm:px-6 ${['directory', 'contacts', 'events', 'collateral', 'social'].includes(activeTab) ? 'max-w-[1800px]' : 'max-w-4xl'}`}>
+    <div className={`mx-auto px-4 py-8 sm:px-6 ${['directory', 'events', 'collateral', 'social'].includes(activeTab) ? 'max-w-[1800px]' : 'max-w-4xl'}`}>
       <RoomTour steps={PARTNERSHIPS_TOUR_STEPS} open={tourOpen} onDismiss={dismissTour} />
       {/* Room header */}
       <div className="flex items-start justify-between gap-4">
@@ -362,7 +360,6 @@ export function PartnershipsRoom() {
             <PartnershipEventsTab key={eventsTabKey} onBecomePartner={addConnectionToDirectory} />
           )}
           {activeTab === 'prayer' && <PrayerMeetingTab />}
-          {activeTab === 'contacts' && <PartnershipContactsTab profiles={profiles} />}
           {activeTab === 'calendar' && (
             <div>
               <CommsProductionCalendar profiles={profiles} />

@@ -282,7 +282,7 @@ export function AddPartnerPanel({
       <div className="space-y-4">
         {initialValues && (
           <p className="rounded-lg bg-sparrow-green/10 px-3 py-2 text-xs text-sparrow-green dark:text-sparrow-dark-green">
-            Prefilled from {initialValues.name}'s {initialValues.originLabel ?? 'My Contacts entry'}. Pick a category and sub-category to add them to the Directory.
+            Prefilled from {initialValues.name}'s {initialValues.originLabel ?? 'details'}. Pick a category and sub-category to add them to the Directory.
           </p>
         )}
         {initialValues && prefillOrg && (

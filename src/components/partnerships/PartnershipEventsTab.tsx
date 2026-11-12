@@ -11,6 +11,7 @@ import { fetchProfiles } from '@/lib/data';
 import { assignAvatarColors } from '@/lib/avatarColors';
 import type { Profile } from '@/lib/types';
 import {
+  addConnectionToExistingRecord,
   archiveConnection,
   connectionNeedsNextStep,
   createConnection,
@@ -34,6 +35,7 @@ import { stripHtml } from '../lcp/RichText';
 import { EventDetailPanel } from './EventDetailPanel';
 import { ConnectionDetailPanel } from './ConnectionDetailPanel';
 import { ConnectionNextStep } from './ConnectionNextStep';
+import { DirectoryRecordPicker } from './DirectoryRecordPicker';
 
 function shortDate(iso: string | null): string {
   if (!iso) return '—';
@@ -96,7 +98,7 @@ const EMPTY_CONN_FORM: ConnectionInput = {
   owner_id: null,
 };
 
-type NewNextStep = 'followup' | 'directory' | 'archive';
+type NewNextStep = 'followup' | 'existing' | 'directory' | 'archive';
 
 export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (conn: PartnershipConnection) => void }) {
   const { profile } = useAuth();
@@ -113,6 +115,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
   const [showConnForm, setShowConnForm] = useState(false);
   const [connForm, setConnForm] = useState<ConnectionInput>(EMPTY_CONN_FORM);
   const [newNextStep, setNewNextStep] = useState<NewNextStep | null>(null);
+  const [newRecordId, setNewRecordId] = useState<string | null>(null);
   const [savingConn, setSavingConn] = useState(false);
 
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -128,6 +131,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
     { key: 'pet-conn-name', label: 'Name', valid: connForm.name.trim().length > 0 },
     { key: 'pet-conn-next', label: "What's next", valid: newNextStep !== null },
     { key: 'pet-conn-due', label: 'Follow up by', valid: newNextStep !== 'followup' || !!connForm.followup_due },
+    { key: 'pet-conn-record', label: 'Directory record', valid: newNextStep !== 'existing' || !!newRecordId },
   ]);
 
   // Exec is excluded even if flagged with partnerships_access — same standing-owner
@@ -181,6 +185,7 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
   function openConnForm(eventId: string | null) {
     setConnForm({ ...EMPTY_CONN_FORM, event_id: eventId, owner_id: profile?.id ?? null });
     setNewNextStep(null);
+    setNewRecordId(null);
     setShowConnForm(true);
     setShowArchived(false);
     setTimeout(() => {
@@ -209,8 +214,10 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
         followup_due: newNextStep === 'followup' ? connForm.followup_due : null,
       });
       if (newNextStep === 'archive' && profile) await archiveConnection(created.id, profile.id);
+      if (newNextStep === 'existing' && newRecordId && profile) await addConnectionToExistingRecord(created, newRecordId, profile.id);
       setConnForm(EMPTY_CONN_FORM);
       setNewNextStep(null);
+      setNewRecordId(null);
       setShowConnForm(false);
       load();
       if (newNextStep === 'followup') syncOverdueConnectionFollowups().catch(console.error);
@@ -523,7 +530,8 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
             </h3>
             {!showArchived && (
               <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-                Every connection needs a next step: a follow-up date, Add to Directory, or Archive
+                Every connection needs a next step: a follow-up date, adding them to the Directory
+                (as a new record, or as a contact on one already there), or Archive
                 when there's nothing more to do. Follow-ups come up on Home and in the owner's
                 tasks a week before their date.
               </p>
@@ -650,10 +658,11 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
               {/* What's next — required, nothing pre-selected. */}
               <fieldset id="pet-conn-next" className="col-span-2">
                 <legend className="field-label field-label-required">What's next?</legend>
-                <div className={connFields.fieldClass('pet-conn-next', 'mt-1 grid gap-1 rounded-lg sm:grid-cols-3')}>
+                <div className={connFields.fieldClass('pet-conn-next', 'mt-1 grid gap-1 rounded-lg sm:grid-cols-2')}>
                   {([
                     ['followup', 'Set a follow-up', 'There is something more to do with them.'],
-                    ['directory', 'Add to Directory', 'An ongoing relationship. Opens the Add form next.'],
+                    ['existing', 'Add to an existing Directory record', 'Their organization is already in the Directory. They join its contacts.'],
+                    ['directory', 'Add to Directory as a new record', 'An ongoing relationship. Opens the Add form next.'],
                     ['archive', 'Archive', 'Nothing more to do. Kept as a record.'],
                   ] as [NewNextStep, string, string][]).map(([value, label, hint]) => (
                     <label
@@ -704,6 +713,24 @@ export function PartnershipEventsTab({ onBecomePartner }: { onBecomePartner: (co
                     />
                   </div>
                 </>
+              )}
+
+              {newNextStep === 'existing' && (
+                <div id="pet-conn-record" className="col-span-2">
+                  <label className="field-label field-label-required">Which Directory record?</label>
+                  <div className={connFields.fieldClass('pet-conn-record', 'rounded-lg')}>
+                    <DirectoryRecordPicker
+                      value={newRecordId}
+                      onChange={(id) => { setNewRecordId(id); connFields.clear('pet-conn-record'); }}
+                      initialSearch={connForm.organization}
+                    />
+                  </div>
+                  {connFields.fieldError('pet-conn-record') && <p className="mt-1 text-xs text-priority-p1">{connFields.fieldError('pet-conn-record')}</p>}
+                  <p className="mt-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+                    Their name, role, phone and email are added to the record's contacts, with where
+                    you met and what you discussed in the contact's notes.
+                  </p>
+                </div>
               )}
             </div>
             <div className="flex justify-end gap-2">

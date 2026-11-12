@@ -13,14 +13,15 @@ import { localDate } from './date';
 import { bucketFor } from './tasks';
 import { attachCheckins, fetchOpenCheckins, fetchPartnershipsRoomAdminId } from './partnerships';
 import {
-  COLLATERAL_HEADS_UP_DAYS, SOCIAL_RHYTHM_DAYS, connectionNeedsNextStep, toCollateral,
+  COLLATERAL_HEADS_UP_DAYS, SOCIAL_RHYTHM_DAYS, connectionNeedsNextStep, newsletterReminderDue, toCollateral,
+  type CommStatus, type CommType,
   type PartnershipConnection,
 } from './partnerships-tabs';
 
 export type HomeItemKind = 'touchpoint' | 'collateral' | 'connection' | 'social_post' | 'newsletter' | 'reminder';
 
 /** Which existing Partnerships tab a "view" click on this item should jump to. */
-export type HomeNavTarget = 'collateral' | 'events' | 'social' | 'comms' | 'contacts' | 'prayer';
+export type HomeNavTarget = 'collateral' | 'events' | 'social' | 'comms' | 'prayer';
 
 export interface HomeItem {
   key: string;
@@ -48,6 +49,8 @@ export interface HomeItem {
   collateral?: { id: string; name: string };
   /** Set on a connection follow-up: Home offers the same Done / Choose next step as the tab. */
   connection?: PartnershipConnection;
+  /** Set on a newsletter piece not started yet: Home offers Mark started (sets In progress). */
+  comm?: { id: string };
 }
 
 /** Open Partnerships task kinds Home already lists from their own source rows (or, for
@@ -61,7 +64,6 @@ function reminderTarget(ref: string): Pick<HomeItem, 'partnerId' | 'navigateTab'
   const [prefix, id] = ref.split(':');
   if (prefix === 'prayer_miss' || prefix === 'prayer_snooze_check') return { navigateTab: 'prayer', prayerVolunteerId: id };
   if (prefix === 'comms_milestone') return { navigateTab: 'comms' };
-  if ((prefix === 'first_time_donor' || prefix === 'lapsed') && id) return { partnerId: id };
   return {};
 }
 
@@ -145,7 +147,8 @@ interface CommRow {
   id: string;
   title: string;
   publish_date: string;
-  status: string;
+  status: CommStatus;
+  comm_type: CommType;
 }
 
 /**
@@ -193,7 +196,7 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
     supabase.from('partnership_events').select('id, event_name'),
     supabase.from('partnership_recurring_settings').select('kind, cadence_days, lead_time_days, owner_id'),
     supabase.from('partnership_social_posts').select('planned_date, status'),
-    supabase.from('partnership_comms').select('id, title, publish_date, status').eq('status', 'not_started'),
+    supabase.from('partnership_comms').select('id, title, publish_date, status, comm_type').eq('status', 'not_started'),
     fetchOpenCheckins(),
     // Every other open Partnerships reminder (migration 0209); empty until it runs.
     supabase.rpc('partnerships_open_reminders'),
@@ -317,18 +320,21 @@ export async function fetchHomeItems(): Promise<HomeItem[]> {
     }
   }
 
-  // 5. Newsletter/comms items coming due — mirrors emit_newsletter_reminder_tasks().
+  // 5. Pieces not started yet — mirrors emit_newsletter_reminder_tasks() (0221): two weeks
+  // before the publish date, or 60 days for the pieces that need writers lined up early.
   const newsletterCfg = settings.find((s) => s.kind === 'newsletter');
   if (newsletterCfg) {
     for (const c of comms) {
-      if (!inScope(c.publish_date, today)) continue;
+      if (!newsletterReminderDue(c, today)) continue;
       items.push({
         key: `comms:${c.id}`,
         kind: 'newsletter',
-        title: c.title,
+        title: `Start ${c.title}`,
+        detail: 'Not started yet. Mark started once the piece is underway.',
         due_date: c.publish_date,
         owner_id: newsletterCfg.owner_id,
         navigateTab: 'comms',
+        comm: { id: c.id },
       });
     }
   }

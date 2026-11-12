@@ -18,7 +18,6 @@ import {
   type NeedsReviewDonation,
   type RecentUnsubscribe,
 } from '@/lib/partnerships';
-import { fetchAllContacts, type PersonalContactWithOwner } from '@/lib/personalContacts';
 import { WidgetCard } from '@/components/home/widgets';
 import { supabase } from '@/lib/supabase';
 import { fetchPrayerVolunteers, type PrayerVolunteer } from '@/lib/prayer';
@@ -26,7 +25,7 @@ import { CheckinDoneForm } from './Checkins';
 import { PrayerVolunteerActions } from './PrayerVolunteerActions';
 import { CollateralReviewedButton } from './CollateralReviewedButton';
 import { ConnectionNextStep } from './ConnectionNextStep';
-import type { PartnershipConnection } from '@/lib/partnerships-tabs';
+import { updateCommStatus, type PartnershipConnection } from '@/lib/partnerships-tabs';
 
 const KIND_ICON: Record<HomeItemKind, string> = {
   touchpoint: '🤝',
@@ -49,12 +48,17 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab, on
   const [items, setItems] = useState<HomeItem[]>([]);
   const [needsReview, setNeedsReview] = useState<NeedsReviewDonation[]>([]);
   const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
-  const [newContacts, setNewContacts] = useState<PersonalContactWithOwner[]>([]);
   const [unsubscribes, setUnsubscribes] = useState<RecentUnsubscribe[]>([]);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
   const [prayerVolunteers, setPrayerVolunteers] = useState<Map<string, PrayerVolunteer>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // A button that didn't work says so, instead of just becoming clickable again.
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  function showActionError(e: unknown) {
+    setActionError(`That didn't save: ${e instanceof Error ? e.message : 'something went wrong'}. Try again, or refresh the page.`);
+  }
 
   const loadUnsubscribes = useCallback(() => {
     fetchRecentUnsubscribes().then(setUnsubscribes).catch(() => undefined);
@@ -62,9 +66,12 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab, on
 
   async function dismiss(partnerId: string) {
     setDismissingId(partnerId);
+    setActionError(null);
     try {
       await dismissUnsubscribe(partnerId);
       loadUnsubscribes();
+    } catch (e) {
+      showActionError(e);
     } finally {
       setDismissingId(null);
     }
@@ -97,12 +104,11 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab, on
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([fetchHomeItems(), fetchNeedsReviewDonations(), fetchAllContacts(), fetchRecentUnsubscribes()])
-      .then(([homeItems, review, contacts, recentUnsubs]) => {
+    Promise.all([fetchHomeItems(), fetchNeedsReviewDonations(), fetchRecentUnsubscribes()])
+      .then(([homeItems, review, recentUnsubs]) => {
         if (!cancelled) {
           setItems(homeItems);
           setNeedsReview(review);
-          setNewContacts(contacts.filter((c) => !c.converted_to_partner_id));
           setUnsubscribes(recentUnsubs);
         }
       })
@@ -120,9 +126,12 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab, on
   async function linkDonation(item: NeedsReviewDonation) {
     if (!item.donation.possible_match_partner_id) return;
     setReviewBusyId(item.donation.id);
+    setActionError(null);
     try {
       await resolveDonationLink(item.donation.id, item.donation.possible_match_partner_id);
       loadNeedsReview();
+    } catch (e) {
+      showActionError(e);
     } finally {
       setReviewBusyId(null);
     }
@@ -130,10 +139,13 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab, on
 
   async function confirmNewDonor(item: NeedsReviewDonation) {
     setReviewBusyId(item.donation.id);
+    setActionError(null);
     try {
       const newPartnerId = await resolveDonationAsNewPartner(item.donation.id);
       loadNeedsReview();
       onOpenPartner(newPartnerId);
+    } catch (e) {
+      showActionError(e);
     } finally {
       setReviewBusyId(null);
     }
@@ -154,7 +166,8 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab, on
       }),
     [items, today],
   );
-  // Only collateral reviews reach past this week: they show two weeks ahead (migration 0211).
+  // Past this week: collateral reviews (two weeks ahead, 0211) and newsletter pieces (two weeks,
+  // or 60 days for the Christmas TSM, Christmas cards and Annual Report, 0221).
   const comingUp = useMemo(
     () => items.filter((i) => bucketFor(i.due_date, false, today) === 'upcoming'),
     [items, today],
@@ -178,9 +191,13 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab, on
   return (
     <div className="space-y-6">
       <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-        Everything due or overdue across the Partnerships room this week. Everyone with
+        Everything in the Partnerships room that needs attention: what's overdue, due this
+        week or coming up, plus gifts to review and recent unsubscribes. Everyone with
         Partnerships access sees the same list.
       </p>
+      {actionError && (
+        <p className="rounded-xl border border-priority-p1/30 bg-priority-p1/5 px-4 py-2 text-sm text-priority-p1">{actionError}</p>
+      )}
 
       {needsReview.length > 0 && (
         <WidgetCard title={`⚠️ Needs review (${needsReview.length})`}>
@@ -216,30 +233,6 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab, on
               </li>
             ))}
           </ul>
-        </WidgetCard>
-      )}
-
-      {newContacts.length > 0 && (
-        <WidgetCard title={`👋 New contacts to review (${newContacts.length})`}>
-          <ul className="space-y-2">
-            {newContacts.map((c) => (
-              <li key={c.id}>
-                <button
-                  onClick={() => onNavigateTab('contacts')}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-sparrow-mist/50 dark:hover:bg-sparrow-dark-surface2"
-                >
-                  <span className="min-w-0 truncate text-sparrow-ink dark:text-sparrow-dark-ink">
-                    <span className="font-medium">{c.name}</span>
-                    {c.organization && <span className="text-sparrow-gray dark:text-sparrow-dark-gray"> · {c.organization}</span>}
-                  </span>
-                  <span className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">logged by {c.owner?.full_name ?? 'staff'}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
-            Not a to-do — just everything logged in My Contacts that hasn't been added to the Directory yet.
-          </p>
         </WidgetCard>
       )}
 
@@ -291,7 +284,7 @@ export function PartnershipsHomeTab({ profiles, onOpenPartner, onNavigateTab, on
             )}
           </WidgetCard>
           {comingUp.length > 0 && (
-            <WidgetCard title={`Coming up in the next two weeks (${comingUp.length})`}>
+            <WidgetCard title={`Coming up (${comingUp.length})`}>
               <ItemsByOwner items={comingUp} ownerName={ownerName} today={today} onOpen={open} onDone={reloadItems} prayerVolunteers={prayerVolunteers} onPrayerChanged={onPrayerChanged} onAddConnectionToDirectory={onAddConnectionToDirectory} />
             </WidgetCard>
           )}
@@ -322,15 +315,35 @@ function ItemsByOwner({
 }) {
   const [doneKey, setDoneKey] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
 
-  // A reminder that isn't a check-in (prayer check-in, comms milestone...): Done just closes
-  // that one task.
+  // A reminder that isn't a check-in (prayer check-in, comms milestone...): Done closes that
+  // one task. A comms milestone's task closing also marks the milestone done (0221).
   async function closeTask(item: HomeItem) {
     if (!item.taskRef) return;
     setBusyKey(item.key);
+    setErrorKey(null);
     try {
-      await supabase.rpc('resolve_system_task', { p_system: 'crm', p_ref: item.taskRef });
+      const { error } = await supabase.rpc('resolve_system_task', { p_system: 'crm', p_ref: item.taskRef });
+      if (error) throw new Error(error.message);
       onDone();
+    } catch {
+      setErrorKey(item.key);
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  // A newsletter piece not started yet: Mark started sets it In progress, same as the comms tab.
+  async function markStarted(item: HomeItem) {
+    if (!item.comm) return;
+    setBusyKey(item.key);
+    setErrorKey(null);
+    try {
+      await updateCommStatus(item.comm.id, 'in_progress');
+      onDone();
+    } catch {
+      setErrorKey(item.key);
     } finally {
       setBusyKey(null);
     }
@@ -405,7 +418,19 @@ function ItemsByOwner({
                     variant="button"
                   />
                 )}
+                {item.comm && (
+                  <button
+                    onClick={() => void markStarted(item)}
+                    disabled={busyKey === item.key}
+                    className="mt-1 shrink-0 rounded-lg bg-sparrow-green dark:bg-sparrow-dark-green px-2.5 py-1 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                  >
+                    Mark started
+                  </button>
+                )}
                 </div>
+                {errorKey === item.key && (
+                  <p className="pb-1 pl-8 text-xs text-priority-p1">That didn't save. Try again, or refresh the page.</p>
+                )}
                 {item.message && <ReminderMessage message={item.message} />}
                 {item.prayerVolunteerId && prayerVolunteers.get(item.prayerVolunteerId)?.active && (
                   <div className="pb-1 pl-8">
