@@ -23,6 +23,7 @@ export const SERVES_OPTIONS = [
 export const SERVES_FILTER_LABEL: Record<string, string> = {
   'Men only': 'Men',
   'Women only': 'Women',
+  'People with disabilities': 'Disability',
 };
 
 /** The groups a person can be, for filtering (everything but "All people"). */
