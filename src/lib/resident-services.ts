@@ -142,15 +142,15 @@ export function matchesPerson(s: Pick<ResidentService, 'serves'>, picks: string[
   return s.serves.includes(SERVES_ALL) || picks.some((g) => s.serves.includes(g));
 }
 
-/** Location filter: any of the picked areas. Statewide services match every area, and
- *  Corvallis and Benton County count for each other (Corvallis is in Benton County).
- *  No picks = everything. */
+/** Location filter: any of the picked areas. Statewide services match every area.
+ *  Corvallis is inside Benton County, so picking Benton County also shows Corvallis
+ *  programs -- but picking Corvallis shows only programs tagged Corvallis (a program for
+ *  the whole county is tagged both). No picks = everything. */
 export function matchesAreas(s: Pick<ResidentService, 'areas'>, picks: string[]): boolean {
   if (picks.length === 0) return true;
   const areas = s.areas ?? [];
   if (areas.includes('Statewide')) return true;
   const want = new Set(picks);
-  if (want.has('Corvallis')) want.add('Benton County');
   if (want.has('Benton County')) want.add('Corvallis');
   return areas.some((a) => want.has(a));
 }

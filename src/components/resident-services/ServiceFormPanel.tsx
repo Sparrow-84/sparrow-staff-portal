@@ -263,6 +263,9 @@ export function ServiceFormPanel({
         {areasReady && (
           <div id="rs-areas" tabIndex={-1}>
             <span className="field-label field-label-required">Where it's available</span>
+            <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+              For the whole county, tick both Corvallis and Benton County. Someone filtering for Corvallis only sees programs ticked Corvallis.
+            </p>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {AREA_OPTIONS.map((a) => (
                 <button

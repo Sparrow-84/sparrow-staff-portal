@@ -109,7 +109,8 @@ DECLARE
   v_open int;
   v uuid;
   all_people text[] := ARRAY['All people'];
-  local3 text[] := ARRAY['Benton County', 'Linn County', 'Lincoln County'];
+  -- Corvallis is listed too: picking Corvallis in the filter only shows programs tagged Corvallis.
+  local3 text[] := ARRAY['Corvallis', 'Benton County', 'Linn County', 'Lincoln County'];
 BEGIN
   ALTER TABLE resident_service_reviews DISABLE TRIGGER resident_service_reviews_emit;
 
