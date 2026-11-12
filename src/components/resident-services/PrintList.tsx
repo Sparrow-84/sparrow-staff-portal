@@ -1,16 +1,21 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { providerName, type ResidentService } from '@/lib/resident-services';
+import { groupNumbers, type ResidentNumber } from '@/lib/resident-numbers';
 
 /**
- * The printed "Resources in Our Area" handout (design approved 2026-11-11). It follows the
+ * The printed Resident Services handouts (design approved 2026-11-11). They follow the
  * Sparrow document standards: Arial, the bird + "Sparrow" running header, a green H1 with a
- * thin rule per type, yellow and green callouts, and Susanna's own overrides: Sparrow's
+ * thin rule per section, yellow and green callouts, and Susanna's own overrides: Sparrow's
  * phone and website on the header's right, and "Printed [date] by Sparrow Resident
  * Services" + page number in the footer.
  *
- * It never shows: the client's name, the filters used (no "For: a veteran…"), internal
- * notes, contacts, or a confidential address -- those rows say "Call them for the location".
+ * Two handouts share one frame:
+ *  - PrintList: "Resources in Our Area", the services on screen.
+ *  - PrintNumbers: "Important Numbers", the Important numbers tab.
+ *
+ * They never show: the client's name, the filters used, internal notes, contacts, or a
+ * confidential address -- those rows say "Call them for the location".
  *
  * How it prints: it's rendered into <body> only while printing, everything else on the page
  * is hidden by @media print, and the table's <thead> repeats the header on every page.
@@ -19,16 +24,7 @@ import { providerName, type ResidentService } from '@/lib/resident-services';
 const PHONE = '(541) 753-3334';
 const WEBSITE = 'sparrowinc.org';
 
-export function PrintList({
-  services,
-  typeOrder,
-  onDone,
-}: {
-  services: ResidentService[];
-  /** Types in the order to print them (what the person came in for first). */
-  typeOrder: string[];
-  onDone: () => void;
-}) {
+function PrintFrame({ title, subtitle, onDone, children }: { title: string; subtitle: string; onDone: () => void; children: ReactNode }) {
   const logoRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -44,15 +40,6 @@ export function PrintList({
   }, [onDone]);
 
   const printed = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  const groups = typeOrder
-    .map((type) => ({
-      type,
-      rows: services
-        .filter((s) => s.service_type === type)
-        .sort((a, b) => providerName(a).localeCompare(providerName(b)) || a.name.localeCompare(b.name)),
-    }))
-    .filter((g) => g.rows.length > 0);
-
   // The footer text goes in CSS (an @page margin box), so the date is escaped for a CSS string.
   const footer = `Printed ${printed} by Sparrow Resident Services`.replace(/["\\]/g, '');
 
@@ -96,6 +83,9 @@ export function PrintList({
         .rsp-row > div { display: flex; flex-direction: column; gap: 1pt; }
         .rsp-row b { font-weight: 700; }
         .rsp-how { grid-column: 1 / 3; margin-top: 3pt; }
+        .rsp-num { display: flex; justify-content: space-between; align-items: baseline; gap: 10pt; padding: 4pt 0; border-bottom: 0.5pt solid #D8D8D8; break-inside: avoid; }
+        .rsp-num small { display: block; color: #767676; font-size: 9pt; }
+        .rsp-num b { white-space: nowrap; }
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       `}</style>
       <table className="rsp-frame">
@@ -110,51 +100,101 @@ export function PrintList({
         </thead>
         <tbody>
           <tr><td>
-            <h1 className="rsp-title">Resources in Our Area</h1>
-            <p className="rsp-subt">Local programs and services we know and refer people to</p>
+            <h1 className="rsp-title">{title}</h1>
+            <p className="rsp-subt">{subtitle}</p>
             <div className="rsp-rule" />
-
-            <div className="rsp-callout rsp-yellow"><div>
-              <b>Please call ahead.</b> We do our best to keep this list accurate and up to date, but the programs below can change their hours, rules or locations. Call a program before you go.
-            </div></div>
-
-            {groups.map((g) => (
-              <section key={g.type}>
-                <h2 className="rsp-h1">{g.type}</h2>
-                <div className="rsp-h1rule" />
-                {g.rows.map((s) => (
-                  <div key={s.id} className="rsp-row">
-                    <div>
-                      <b>{providerName(s)}</b>
-                      <span>{s.name}</span>
-                    </div>
-                    <div>
-                      {s.help_phone && <b>{s.help_phone}</b>}
-                      {/* Never print a confidential address: the program decides who gets it. */}
-                      {s.address_confidential
-                        ? <span>Call them for the location</span>
-                        : s.address && <span>{s.address}</span>}
-                      {s.hours && <span>{s.hours}</span>}
-                    </div>
-                    {s.how_to_access && <div className="rsp-how"><span><b>First steps:</b> {s.how_to_access}</span></div>}
-                  </div>
-                ))}
-              </section>
-            ))}
-
-            <div className="rsp-callout rsp-green"><div>
-              <b>Other numbers to keep, any time</b>
-              <ul>
-                <li><b>911</b>Emergency</li>
-                <li><b>541-754-0110</b>Domestic violence, 24-hour crisis line (CARDV)</li>
-                <li><b>988</b>Suicide &amp; crisis line, call or text</li>
-                <li><b>211</b>More local help with housing, food, utilities and more</li>
-              </ul>
-            </div></div>
+            {children}
           </td></tr>
         </tbody>
       </table>
     </div>,
     document.body,
+  );
+}
+
+export function PrintList({
+  services,
+  typeOrder,
+  keepNumbers,
+  onDone,
+}: {
+  services: ResidentService[];
+  /** Types in the order to print them (what the person came in for first). */
+  typeOrder: string[];
+  /** The "Other numbers to keep, any time" box: Important numbers marked "On every services list". */
+  keepNumbers: Pick<ResidentNumber, 'name' | 'phone' | 'note'>[];
+  onDone: () => void;
+}) {
+  const groups = typeOrder
+    .map((type) => ({
+      type,
+      rows: services
+        .filter((s) => s.service_type === type)
+        .sort((a, b) => providerName(a).localeCompare(providerName(b)) || a.name.localeCompare(b.name)),
+    }))
+    .filter((g) => g.rows.length > 0);
+
+  return (
+    <PrintFrame title="Resources in Our Area" subtitle="Local programs and services we know and refer people to" onDone={onDone}>
+      <div className="rsp-callout rsp-yellow"><div>
+        <b>Please call ahead.</b> We do our best to keep this list accurate and up to date, but the programs below can change their hours, rules or locations. Call a program before you go.
+      </div></div>
+
+      {groups.map((g) => (
+        <section key={g.type}>
+          <h2 className="rsp-h1">{g.type}</h2>
+          <div className="rsp-h1rule" />
+          {g.rows.map((s) => (
+            <div key={s.id} className="rsp-row">
+              <div>
+                <b>{providerName(s)}</b>
+                <span>{s.name}</span>
+              </div>
+              <div>
+                {s.help_phone && <b>{s.help_phone}</b>}
+                {/* Never print a confidential address: the program decides who gets it. */}
+                {s.address_confidential
+                  ? <span>Call them for the location</span>
+                  : s.address && <span>{s.address}</span>}
+                {s.hours && <span>{s.hours}</span>}
+              </div>
+              {s.how_to_access && <div className="rsp-how"><span><b>First steps:</b> {s.how_to_access}</span></div>}
+            </div>
+          ))}
+        </section>
+      ))}
+
+      {keepNumbers.length > 0 && (
+        <div className="rsp-callout rsp-green"><div>
+          <b>Other numbers to keep, any time</b>
+          <ul>
+            {keepNumbers.map((n) => (
+              <li key={`${n.phone}-${n.name}`}><b>{n.phone}</b>{n.name}{n.note ? ` · ${n.note}` : ''}</li>
+            ))}
+          </ul>
+        </div></div>
+      )}
+    </PrintFrame>
+  );
+}
+
+/** The Important numbers tab, printed. Emergency numbers appear once, in their own section
+ *  at the top -- there's no bottom box on this one. */
+export function PrintNumbers({ numbers, onDone }: { numbers: ResidentNumber[]; onDone: () => void }) {
+  return (
+    <PrintFrame title="Important Numbers" subtitle="Phone numbers to keep handy" onDone={onDone}>
+      {groupNumbers(numbers).map((g) => (
+        <section key={g.key}>
+          <h2 className="rsp-h1">{g.label}</h2>
+          <div className="rsp-h1rule" />
+          {g.rows.map((n) => (
+            <div key={n.id} className="rsp-num">
+              <span>{n.name}{n.note && <small>{n.note}</small>}</span>
+              <b>{n.phone}</b>
+            </div>
+          ))}
+        </section>
+      ))}
+    </PrintFrame>
   );
 }

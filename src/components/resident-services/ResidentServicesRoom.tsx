@@ -25,6 +25,8 @@ import { ServiceDetailPanel } from './ServiceDetailPanel';
 import { ServiceFormPanel } from './ServiceFormPanel';
 import { ReviewPanel } from './ReviewPanel';
 import { PrintList } from './PrintList';
+import { ImportantNumbersTab } from './ImportantNumbersTab';
+import { FALLBACK_SERVICES_LIST_NUMBERS, fetchNumbers, type ResidentNumber } from '@/lib/resident-numbers';
 
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -50,15 +52,21 @@ export function ResidentServicesRoom() {
   const [editing, setEditing] = useState<ResidentService | null>(null);
   const [printing, setPrinting] = useState(false);
   const endPrint = useCallback(() => setPrinting(false), []);
+  const [tab, setTab] = useState<'services' | 'numbers'>('services');
+  const [numbers, setNumbers] = useState<ResidentNumber[]>([]);
+  const [numbersMissing, setNumbersMissing] = useState(false);
 
   const load = useCallback(async () => {
-    const [res, revs, profs, parts, arch] = await Promise.all([
+    const [res, revs, profs, parts, arch, nums] = await Promise.all([
       fetchServices(),
       fetchOpenReviews(),
       fetchProfiles().catch(() => [] as Profile[]),
       fetchPartners().catch(() => [] as Partner[]),
       fetchArchivedServices(),
+      fetchNumbers(),
     ]);
+    setNumbers(nums.numbers);
+    setNumbersMissing(nums.missing);
     setArchived(arch);
     setAllServices(res.services);
     setReviews(revs);
@@ -136,11 +144,36 @@ export function ResidentServicesRoom() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <RoomSopsButton room="resident-services" />
-          <button onClick={() => { setEditing(null); setFormOpen(true); }} className="btn-primary" disabled={missing}>
-            + Add a service
-          </button>
+          {tab === 'services' && (
+            <button onClick={() => { setEditing(null); setFormOpen(true); }} className="btn-primary" disabled={missing}>
+              + Add a service
+            </button>
+          )}
         </div>
       </div>
+
+      <div className="mt-6 flex border-b border-sparrow-rule dark:border-sparrow-dark-border">
+        {([
+          ['services', `Services (${services.length})`],
+          ['numbers', `Important numbers${numbersMissing ? '' : ` (${numbers.length})`}`],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => { setTab(key); setSelectedId(null); }}
+            className={`px-4 py-2 text-sm font-medium transition ${
+              tab === key
+                ? '-mb-px border-b-2 border-sparrow-green dark:border-sparrow-dark-green text-sparrow-green dark:text-sparrow-dark-green'
+                : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'numbers' ? (
+        <ImportantNumbersTab numbers={numbers} missing={numbersMissing} onChanged={() => void load()} />
+      ) : (<>
 
       {missing && !loading && (
         <p className="mt-6 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
@@ -320,6 +353,7 @@ export function ResidentServicesRoom() {
         ))}
       </div>
       </>)}
+      </>)}
 
       {printing && (
         <PrintList
@@ -329,6 +363,7 @@ export function ResidentServicesRoom() {
             ...typeFilter,
             ...Array.from(new Set(visible.map((s) => s.service_type))).filter((t) => !typeFilter.includes(t)).sort(),
           ]}
+          keepNumbers={numbersMissing ? FALLBACK_SERVICES_LIST_NUMBERS : numbers.filter((n) => n.on_services_list)}
           onDone={endPrint}
         />
       )}

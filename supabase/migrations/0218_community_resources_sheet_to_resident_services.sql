@@ -115,7 +115,8 @@ BEGIN
     'Benton County Mental Health: 541-766-6835, or after hours 1(888) 232-7192.');
   PERFORM pg_temp.rs_draft(v, 'Mental health (Benton County Behavioral Health)', 'Health', all_people,
     ARRAY['Corvallis', 'Benton County'], '541-766-6835',
-    'Call during business hours. After hours or in a crisis, call 1-888-232-7192.', NULL);
+    'Call during business hours. After hours or in a crisis, call 1-888-232-7192.',
+    'The county says to call 541-766-6767 to check whether someone is eligible for services; 541-766-6835 is the main line.');
 
   v := pg_temp.rs_org('7bd39678-6d6b-47ce-939f-7481732a39b0', 'C.H.A.N.C.E.', 'nonprofit', NULL,
     'C.H.A.N.C.E. (of Corvallis / Benton County) (Alcohol/Drugs): 541-791-3411.');
@@ -131,10 +132,11 @@ BEGIN
   PERFORM pg_temp.rs_draft(v, 'Homeownership and financial coaching', 'Housing', all_people, local3,
     '541-752-7220', NULL, NULL);
 
-  v := pg_temp.rs_org('4093aa1b-8bfa-4187-a58c-57e8901e8b99', 'Love Inc', 'nonprofit', '541-286-4731',
-    'Love INC: 541-286-4731.');
+  v := pg_temp.rs_org('4093aa1b-8bfa-4187-a58c-57e8901e8b99', 'Love Inc', 'nonprofit', '541-757-8111',
+    'Love INC: 541-286-4731 on the sheet. Love INC''s own website lists only their helpline, 541-757-8111 (Mon-Thu 9:30am-1:30pm); 286-4731 appears only on a giving page.');
   PERFORM pg_temp.rs_draft(v, 'Help line (connects people with local church help)', 'Other', all_people,
-    ARRAY['Corvallis', 'Benton County'], '541-286-4731', NULL, NULL);
+    ARRAY['Corvallis', 'Benton County'], '541-757-8111', NULL,
+    'The sheet had 541-286-4731. Their website lists the helpline as 541-757-8111, Mon-Thu 9:30am-1:30pm.');
 
   v := pg_temp.rs_org('5de92891-7dd9-46d7-bb15-fc695a545e33', 'Oregon Department of Human Services (DHS)', 'nonprofit', NULL,
     'OHP (Oregon Health Plan): 1(800) 699-9075. SNAP (Food Stamps): 1(800) 699-9075. DHS (Department of Human Services): 1(855) 503-7233. Child/Adult Protective Services: 1(855) 503-7233. Senior Disability Services: 1(855) 673-2372.');
@@ -158,7 +160,8 @@ BEGIN
   v := pg_temp.rs_org('3a626a5f-6967-4d07-a011-f35e188452d6', 'Vina Moses Center', 'nonprofit', NULL,
     'Vina Moses: 541-753-1420.');
   PERFORM pg_temp.rs_draft(v, 'Clothing and household help', 'Other', all_people,
-    ARRAY['Corvallis', 'Benton County'], '541-753-1420', NULL, NULL);
+    ARRAY['Corvallis', 'Benton County'], '541-753-1420', NULL,
+    '541-753-1420 is the main line. Help with rent, utilities and prescriptions goes through their intake line, 541-752-4688 (211info).');
 
   v := pg_temp.rs_org('20168986-9219-4b93-b873-cc7768794b34', 'We Care Benton County', 'nonprofit', NULL,
     'We Care (Emergency Services): 541-203-0102.');
@@ -166,9 +169,10 @@ BEGIN
     ARRAY['Corvallis', 'Benton County'], '541-203-0102', NULL, NULL);
 
   -- ── New to the Directory ──────────────────────────────────────────
-  v := pg_temp.rs_org(NULL, 'Samaritan Health Services', 'nonprofit', '541-757-5111',
-    'Samaritan Health Services: 541-757-5111.');
-  PERFORM pg_temp.rs_draft(v, 'Hospital and clinics', 'Health', all_people, local3, '541-757-5111', NULL, NULL);
+  v := pg_temp.rs_org(NULL, 'Samaritan Health Services', 'nonprofit', '541-768-5111',
+    'Samaritan Health Services: 541-757-5111 on the sheet, which is wrong. Good Samaritan Regional Medical Center''s main line is 541-768-5111 (samhealth.org).');
+  PERFORM pg_temp.rs_draft(v, 'Hospital and clinics', 'Health', all_people, local3, '541-768-5111', NULL,
+    'The sheet had 541-757-5111, which is wrong; 541-768-5111 is Good Samaritan Regional Medical Center''s main line.');
 
   v := pg_temp.rs_org(NULL, 'The Corvallis Clinic', 'business', '541-754-1150',
     'The Corvallis Clinic: 541-754-1150.');
