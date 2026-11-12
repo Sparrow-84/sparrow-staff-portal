@@ -194,7 +194,7 @@ BEGIN
   v := pg_temp.rs_org(NULL, 'Oregon Cascades West Council of Governments (OCWCOG)', 'nonprofit', '541-967-8630',
     'Meals on Wheels: 541-967-8630.');
   PERFORM pg_temp.rs_draft(v, 'Meals on Wheels', 'Food', ARRAY['Seniors', 'People with disabilities'],
-    ARRAY['Benton County', 'Linn County'], '541-967-8630', NULL,
+    ARRAY['Corvallis', 'Benton County', 'Linn County'], '541-967-8630', NULL,
     '541-967-8630 is also listed publicly as OCWCOG''s Senior and Disability Services line for Benton and Linn; check which program it reaches.');
 
   v := pg_temp.rs_org(NULL, 'Community Services Consortium', 'nonprofit', '541-752-1010',
