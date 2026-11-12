@@ -3,8 +3,8 @@
 -- them instead of typing them in. Asked for 2026-11-11.
 --
 -- The sheet is a phone list (name + number), no addresses or hours. Triage:
---   * Resident services on it: 21 lines -> 15 organizations, 18 draft programs, plus 4 more
---     CSC programs added 2026-11-12 (22 drafts in all).
+--   * Resident services on it: 21 lines -> 15 organizations, 17 draft programs, plus 4 more
+--     CSC programs added 2026-11-12 (21 drafts in all).
 --       - 9 organizations already in the Directory (Benton County Health Department, C.H.A.N.C.E.,
 --         CARDV, DevNW, Love Inc, Oregon DHS, St. Vincent de Paul (Corvallis), Vina Moses Center,
 --         We Care Benton County). The sheet line goes in their notes; a phone is only filled in
