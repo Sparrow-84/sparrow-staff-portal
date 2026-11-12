@@ -3,7 +3,8 @@
 -- them instead of typing them in. Asked for 2026-11-11.
 --
 -- The sheet is a phone list (name + number), no addresses or hours. Triage:
---   * Resident services on it: 21 lines -> 15 organizations, 18 draft programs.
+--   * Resident services on it: 21 lines -> 15 organizations, 18 draft programs, plus 4 more
+--     CSC programs added 2026-11-12 (22 drafts in all).
 --       - 9 organizations already in the Directory (Benton County Health Department, C.H.A.N.C.E.,
 --         CARDV, DevNW, Love Inc, Oregon DHS, St. Vincent de Paul (Corvallis), Vina Moses Center,
 --         We Care Benton County). The sheet line goes in their notes; a phone is only filled in
@@ -197,8 +198,19 @@ BEGIN
 
   v := pg_temp.rs_org(NULL, 'Community Services Consortium', 'nonprofit', '541-752-1010',
     'CSC (Community Services Consortium): main line 541-752-1010. Utility Assistance Program: 541-704-7632.');
-  PERFORM pg_temp.rs_draft(v, 'Energy (utility bill) assistance', 'Financial', all_people, local3, '541-704-7632', NULL,
-    '541-704-7632 is the energy assistance intake line; their Corvallis main line is 541-752-1010.');
+  PERFORM pg_temp.rs_draft(v, 'Utility Assistance Program (help paying utility bills)', 'Financial', all_people, local3, '541-704-7632', NULL,
+    '541-704-7632 is the utility assistance intake line; their Corvallis main line is 541-752-1010.');
+  -- CSC runs several programs; these four aren't on the sheet (added at Susanna's request
+  -- 2026-11-12 from CSC's own pages). Public details are a few years old, so each says to check.
+  -- Each has a different type: same phone + same type would be skipped as a duplicate.
+  PERFORM pg_temp.rs_draft(v, 'Rent and deposit help', 'Financial', all_people, local3, '541-752-1010', NULL,
+    'Not on the sheet; added from CSC''s website. Help with a deposit on a new rental, and rent help when funding allows. A 2023 Corvallis guide listed rent and utility help Wednesdays 9-11am at the Albany office. Check current hours, funding and eligibility with CSC.');
+  PERFORM pg_temp.rs_draft(v, 'Rent Well (renter class)', 'Education', all_people, local3, '541-752-1010', NULL,
+    'Not on the sheet; added from CSC''s website. A renter education class; the certificate can be shown to landlords (helps people with rental history problems). Check current class dates with CSC.');
+  PERFORM pg_temp.rs_draft(v, 'Weatherization (home repairs to save energy)', 'Housing', all_people, local3, '541-752-1010', NULL,
+    'Not on the sheet; added from CSC''s website. Repairs that make a home safer and more energy-efficient. Check who qualifies (including renters) with CSC.');
+  PERFORM pg_temp.rs_draft(v, 'Job training and youth programs', 'Employment', all_people, local3, '541-752-1010', NULL,
+    'Not on the sheet; added from CSC''s website. Job training and workforce programs, including programs for youth. Check which programs are running and who qualifies with CSC.');
 
   ALTER TABLE resident_service_reviews ENABLE TRIGGER resident_service_reviews_emit;
 
