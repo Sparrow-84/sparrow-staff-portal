@@ -27,6 +27,9 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   const [sharedStatus, setSharedStatus] = useState<SaveStatus>('idle');
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState<string | null>(null);
+  // Set when Close is clicked after this person removed a lot of the Shared Notes.
+  const [removalWarning, setRemovalWarning] = useState<{ removed: number } | null>(null);
+  const [undoing, setUndoing] = useState(false);
 
   const sharedEditorRef = useRef<SharedNotesHandle>(null);
 
@@ -112,11 +115,22 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   // Close is the one path that must never silently drop content: cancel any
   // pending debounce timers and save directly, awaited, so a failure is
   // actually shown instead of discarded when the panel unmounts.
-  async function flushAndClose() {
+  async function flushAndClose(opts?: { keepRemoval?: boolean }) {
     if (!loadSucceeded.current) {
       onClose();
       return;
     }
+    // Stop before closing if this person removed a lot of the Shared Notes, so a
+    // select-all-and-type-over or a held Backspace gets noticed while it can still
+    // be undone in one click.
+    if (!opts?.keepRemoval) {
+      const removal = sharedEditorRef.current?.bigRemoval() ?? null;
+      if (removal) {
+        setRemovalWarning(removal);
+        return;
+      }
+    }
+    setRemovalWarning(null);
     setClosing(true);
     setCloseError(null);
     if (privateTimer.current) clearTimeout(privateTimer.current);
@@ -228,7 +242,7 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
           {!closing && displayStatus === 'saved' && <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Saved</span>}
           {!closing && displayStatus === 'error' && <span className="text-xs text-priority-p1">Error saving</span>}
           <button
-            onClick={flushAndClose}
+            onClick={() => void flushAndClose()}
             disabled={closing}
             className="rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border px-4 py-2 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 disabled:opacity-60"
           >
@@ -237,12 +251,54 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
         </div>
       </div>
 
+      {removalWarning && (
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-300 bg-amber-50 px-6 py-3 dark:border-amber-500/40 dark:bg-amber-500/10">
+          <div>
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              You removed about {removalWarning.removed} words from the Shared Notes.
+            </p>
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              If that wasn't on purpose, undo it before you close. Other people's notes aren't affected.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button
+              onClick={async () => {
+                setUndoing(true);
+                const { error } = (await sharedEditorRef.current?.undoAllMine()) ?? { error: null };
+                setUndoing(false);
+                setRemovalWarning(null);
+                if (error) setCloseError(`Your changes were undone, but saving failed: ${error}. Try closing again.`);
+              }}
+              disabled={undoing}
+              className="rounded-lg bg-sparrow-green px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+            >
+              {undoing ? 'Undoing…' : 'Undo all my changes'}
+            </button>
+            <button
+              onClick={() => setRemovalWarning(null)}
+              disabled={undoing}
+              className="rounded-lg border border-amber-400 px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-500/50 dark:text-amber-200 dark:hover:bg-amber-500/20"
+            >
+              Go back to the notes
+            </button>
+            <button
+              onClick={() => void flushAndClose({ keepRemoval: true })}
+              disabled={undoing}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-sparrow-gray hover:bg-sparrow-mist dark:text-sparrow-dark-gray dark:hover:bg-sparrow-dark-surface2"
+            >
+              Keep it this way and close
+            </button>
+          </div>
+        </div>
+      )}
+
       {closeError && (
         <div className="flex items-center justify-between gap-4 border-b border-priority-p1/30 bg-priority-p1/5 px-6 py-3">
           <p className="text-sm text-priority-p1">{closeError}</p>
           <div className="flex shrink-0 gap-2">
             <button
-              onClick={flushAndClose}
+              onClick={() => void flushAndClose()}
               className="rounded-lg border border-priority-p1/40 px-3 py-1.5 text-xs font-medium text-priority-p1 hover:bg-priority-p1/10"
             >
               Try again

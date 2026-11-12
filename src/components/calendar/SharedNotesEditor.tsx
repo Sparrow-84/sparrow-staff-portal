@@ -15,8 +15,25 @@ import { SharedNotesVersionHistory } from './SharedNotesVersionHistory';
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface SharedNotesHandle {
-  /** Cancels any pending debounce and saves immediately, awaited. Used on Close. */
+  /** Cancels any pending debounce and saves immediately, awaited. Used on Close.
+   *  Does nothing when the notes haven't changed since the last save. */
   flush: () => Promise<{ error: string | null }>;
+  /** How many words THIS person's own changes have removed since they opened the
+   *  notes, when that's big enough to warn about before closing; otherwise null. */
+  bigRemoval: () => { removed: number } | null;
+  /** Undoes every change this person made since opening the notes (never anyone
+   *  else's), then saves. */
+  undoAllMine: () => Promise<{ error: string | null }>;
+}
+
+// Same rule the database uses for "before a big removal" versions (migration 0219).
+function isBigRemoval(startWords: number, removed: number) {
+  return removed >= 40 || (startWords >= 10 && removed * 2 >= startWords);
+}
+
+function countWords(node: { textBetween: (from: number, to: number, block?: string, leaf?: string) => string; content: { size: number } }) {
+  const text = node.textBetween(0, node.content.size, ' ', ' ').trim();
+  return text ? text.split(/\s+/).length : 0;
 }
 
 interface Props {
@@ -130,6 +147,20 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
   // subsequent edit still persist whatever ended up in the doc, seeded or typed.
   const skipNextUpdate = useRef(true);
 
+  // What needs saving. Only the person who actually typed is recorded as the editor
+  // (updated_by): opening and closing notes, or just watching someone else type,
+  // used to re-save them under the viewer's name, which hid who really changed them.
+  // Someone else's typing that arrives live is still saved (as a backup copy) but
+  // without touching updated_by.
+  const localDirty = useRef(false);
+  const remoteDirty = useRef(false);
+  // True only while a change from another person is being applied to this doc.
+  const applyingRemote = useRef(false);
+  // Net words added (+) or removed (-) by this person's own changes since they
+  // opened the notes (reset after the legacy seed and after a restore).
+  const localNetWords = useRef(0);
+  const startWords = useRef(0);
+
   const editor = useEditor(
     {
       extensions: [
@@ -153,10 +184,18 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
       // aren't wired yet, so anything typed into this throwaway instance would be
       // lost the moment it's swapped for the real, doc-backed editor.
       editable: ready,
-      onUpdate: () => {
+      onUpdate: ({ transaction }) => {
         if (skipNextUpdate.current) {
           skipNextUpdate.current = false;
+          // The initial sync is when the saved notes show up in the editor.
+          startWords.current = countWords(transaction.doc);
           return;
+        }
+        if (applyingRemote.current) {
+          remoteDirty.current = true;
+        } else {
+          localDirty.current = true;
+          localNetWords.current += countWords(transaction.doc) - countWords(transaction.before);
         }
         scheduleSave();
       },
@@ -211,6 +250,21 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
       docRef.current = doc;
       providerRef.current = new SupabaseYjsProvider(doc, eventId, userId, userName);
       loadSucceeded.current = true;
+      localDirty.current = false;
+      remoteDirty.current = false;
+      localNetWords.current = 0;
+
+      // The provider applies other people's changes with itself as the origin. The
+      // editor updates inside that Yjs transaction (before 'afterTransaction'), so
+      // this flag tells onUpdate the change wasn't typed here. Undo/redo and our own
+      // typing have other origins, so they count as this person's changes.
+      const provider = providerRef.current;
+      doc.on('beforeTransaction', (tr: Y.Transaction) => {
+        if (tr.origin === provider) applyingRemote.current = true;
+      });
+      doc.on('afterTransaction', (tr: Y.Transaction) => {
+        if (tr.origin === provider) applyingRemote.current = false;
+      });
 
       if (cancelled) return;
 
@@ -275,7 +329,13 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
       editor.commands.setContent(pending);
       delete (docRef.current as unknown as { _pendingSeedHtml?: string })._pendingSeedHtml;
     }
+    resetRemovalTracking();
   }, [editor]);
+
+  function resetRemovalTracking() {
+    localNetWords.current = 0;
+    startWords.current = editor ? countWords(editor.state.doc) : 0;
+  }
 
   // Presence — who else currently has this pane open, shown as small dots up top.
   useEffect(() => {
@@ -308,19 +368,31 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
   async function doSave(): Promise<{ error: string | null }> {
     const doc = docRef.current;
     if (!doc || !editor) return { error: null };
+    const mine = localDirty.current;
+    const theirs = remoteDirty.current;
+    // Nothing changed since the last save: don't re-save (and don't put this
+    // person's name on notes they only looked at).
+    if (!mine && !theirs) return { error: null };
+    localDirty.current = false;
+    remoteDirty.current = false;
     onStatusChange('saving');
     const html = sanitizeRichText(editor.getHTML());
-    const base = {
-      event_id: eventId,
-      notes: html,
-      updated_at: new Date().toISOString(),
-      updated_by: userId,
-    };
+    // Only this person's own changes stamp updated_by/updated_at. A save that only
+    // carries someone else's live changes leaves both as they were (an upsert only
+    // sets the columns it's given).
+    const base: { event_id: string; notes: string; updated_at?: string; updated_by?: string } = mine
+      ? { event_id: eventId, notes: html, updated_at: new Date().toISOString(), updated_by: userId }
+      : { event_id: eventId, notes: html };
     const yjsState = toBase64(Y.encodeStateAsUpdate(doc));
     let { error } = await supabase.from('event_shared_notes').upsert({ ...base, yjs_state: yjsState }, { onConflict: 'event_id' });
     if (error) {
       // Retry without yjs_state in case migration 0172 hasn't landed yet.
       ({ error } = await supabase.from('event_shared_notes').upsert(base, { onConflict: 'event_id' }));
+    }
+    if (error) {
+      // Keep it marked unsaved so Close / the next change tries again.
+      localDirty.current = localDirty.current || mine;
+      remoteDirty.current = remoteDirty.current || theirs;
     }
     onStatusChange(error ? 'error' : 'saved');
     return { error: error ? error.message : null };
@@ -333,6 +405,8 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
     if (!editor || !loadSucceeded.current) throw new Error('Notes are still loading — try again in a moment.');
     await markSharedNoteRestore(version.id);
     editor.commands.setContent(sanitizeRichText(version.notes));
+    // A restore is on purpose, so it never triggers the "you removed a lot" warning.
+    resetRemovalTracking();
     if (saveTimer.current) clearTimeout(saveTimer.current);
     const { error } = await doSave();
     if (error) throw new Error(`Restored in the editor, but saving failed: ${error}`);
@@ -341,6 +415,19 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
   useImperativeHandle(ref, () => ({
     flush: async () => {
       if (!loadSucceeded.current) return { error: null };
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      return doSave();
+    },
+    bigRemoval: () => {
+      if (!loadSucceeded.current) return null;
+      const removed = -localNetWords.current;
+      return removed > 0 && isBigRemoval(startWords.current, removed) ? { removed } : null;
+    },
+    undoAllMine: async () => {
+      if (!editor || !loadSucceeded.current) return { error: null };
+      // The Yjs undo stack only holds this person's own changes. Cap the loop so a
+      // stuck stack can never hang the page.
+      for (let i = 0; i < 1000 && editor.can().undo(); i++) editor.commands.undo();
       if (saveTimer.current) clearTimeout(saveTimer.current);
       return doSave();
     },
