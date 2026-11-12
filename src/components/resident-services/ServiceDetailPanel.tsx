@@ -264,7 +264,7 @@ export function ServiceDetailPanel({
         <section className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           {confirmRemove ? (
             <div className="space-y-2">
-              <p className="text-sm">Archive this service? It comes off the list and the website. You can restore it from Archived any time.</p>
+              <p className="text-sm">Archive this program? It comes off the list and the website. You can restore it from Archived any time.</p>
               <div className="flex gap-2">
                 <button onClick={() => setConfirmRemove(false)} className="btn-ghost">Cancel</button>
                 <button
@@ -277,7 +277,7 @@ export function ServiceDetailPanel({
             </div>
           ) : (
             <button onClick={() => setConfirmRemove(true)} className="btn-secondary px-3 py-1.5 text-sm">
-              Archive this service (closed or no longer offered)
+              Archive this program (closed or no longer offered)
             </button>
           )}
         </section>

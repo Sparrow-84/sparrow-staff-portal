@@ -120,7 +120,7 @@ export function ResidentServicesRoom() {
   const selected = (showArchived ? archived : services).find((s) => s.id === selectedId) ?? null;
   const nameFor = (id: string | null) => (id ? profiles.find((p) => p.id === id)?.full_name ?? null : null);
 
-  const typeLabel = typeFilter.length === 0 ? 'services' : `${typeFilter.join(' / ').toLowerCase()} services`;
+  const typeLabel = typeFilter.length === 0 ? 'programs' : `${typeFilter.join(' / ').toLowerCase()} programs`;
   const anyFilter = typeFilter.length + whoFilter.length + areaFilter.length > 0;
   const allChip = (active: boolean, onClick: () => void) => (
     <button onClick={onClick} aria-pressed={active} className={chip(active)}>All</button>
@@ -139,14 +139,14 @@ export function ResidentServicesRoom() {
         <div>
           <h1 className="font-serif text-2xl font-semibold">Resident Services</h1>
           <p className="mt-1 text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-            {services.length} services near us · {publishedCount} on the website · {needsCheckCount} need re-checking
+            {services.length} assistance programs · {publishedCount} on the website · {needsCheckCount} need re-checking
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <RoomSopsButton room="resident-services" />
           {tab === 'services' && (
             <button onClick={() => { setEditing(null); setFormOpen(true); }} className="btn-primary" disabled={missing}>
-              + Add a service
+              + Add a program
             </button>
           )}
         </div>
@@ -154,8 +154,8 @@ export function ResidentServicesRoom() {
 
       <div className="mt-6 flex border-b border-sparrow-rule dark:border-sparrow-dark-border">
         {([
-          ['services', `Services (${services.length})`],
-          ['numbers', `Important numbers${numbersMissing ? '' : ` (${numbers.length})`}`],
+          ['services', `Assistance Programs (${services.length})`],
+          ['numbers', `Essential Phone Numbers${numbersMissing ? '' : ` (${numbers.length})`}`],
         ] as const).map(([key, label]) => (
           <button
             key={key}
@@ -220,7 +220,7 @@ export function ResidentServicesRoom() {
 
       {showArchived ? (
         <div className="mt-2">
-          <h2 className="font-serif text-lg font-semibold">Archived services</h2>
+          <h2 className="font-serif text-lg font-semibold">Archived programs</h2>
           <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Closed or no longer offered. Open one to restore it.</p>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             {archived.length === 0 && <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Nothing archived.</p>}
@@ -293,7 +293,7 @@ export function ResidentServicesRoom() {
             onClick={() => setPrinting(true)}
             disabled={visible.length === 0}
             className="btn-secondary px-3 py-1.5 text-sm"
-            title="Print the services on screen as a Sparrow handout"
+            title="Print the programs on screen as a Sparrow handout"
           >
             Print this list ({visible.length})
           </button>
@@ -304,7 +304,7 @@ export function ResidentServicesRoom() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by organization or service…"
+            placeholder="Search by organization or program…"
             className="field-input mt-0 w-full sm:ml-auto sm:w-64"
           />
         </div>
@@ -314,7 +314,7 @@ export function ResidentServicesRoom() {
         {loading && <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">Loading…</p>}
         {!loading && !missing && visible.length === 0 && (
           <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-            {services.length === 0 ? 'No services yet. Click "+ Add a service" to add the first one.' : 'No services match these filters.'}
+            {services.length === 0 ? 'No programs yet. Click "+ Add a program" to add the first one.' : 'No programs match these filters.'}
           </p>
         )}
         {visible.map((s) => (

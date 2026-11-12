@@ -11,8 +11,8 @@ import { groupNumbers, type ResidentNumber } from '@/lib/resident-numbers';
  * Services" + page number in the footer.
  *
  * Two handouts share one frame:
- *  - PrintList: "Resources in Our Area", the services on screen.
- *  - PrintNumbers: "Important Numbers", the Important numbers tab.
+ *  - PrintList: "Resources in Our Area", the Assistance Programs on screen.
+ *  - PrintNumbers: "Essential Phone Numbers", the Essential Phone Numbers tab.
  *
  * They never show: the client's name, the filters used, internal notes, contacts, or a
  * confidential address -- those rows say "Call them for the location".
@@ -121,7 +121,7 @@ export function PrintList({
   services: ResidentService[];
   /** Types in the order to print them (what the person came in for first). */
   typeOrder: string[];
-  /** The "Other numbers to keep, any time" box: Important numbers marked "On every services list". */
+  /** The "Other numbers to keep, any time" box: Essential Phone Numbers marked "Also on every Assistance Programs printout". */
   keepNumbers: Pick<ResidentNumber, 'name' | 'phone' | 'note'>[];
   onDone: () => void;
 }) {
@@ -178,11 +178,11 @@ export function PrintList({
   );
 }
 
-/** The Important numbers tab, printed. Emergency numbers appear once, in their own section
+/** The Essential Phone Numbers tab, printed. Emergency numbers appear once, in their own section
  *  at the top -- there's no bottom box on this one. */
 export function PrintNumbers({ numbers, onDone }: { numbers: ResidentNumber[]; onDone: () => void }) {
   return (
-    <PrintFrame title="Important Numbers" subtitle="Phone numbers to keep handy" onDone={onDone}>
+    <PrintFrame title="Essential Phone Numbers" subtitle="Phone numbers to keep handy" onDone={onDone}>
       {groupNumbers(numbers).map((g) => (
         <section key={g.key}>
           <h2 className="rsp-h1">{g.label}</h2>

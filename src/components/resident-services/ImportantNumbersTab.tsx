@@ -11,7 +11,7 @@ import {
 } from '@/lib/resident-numbers';
 import { PrintNumbers } from './PrintList';
 
-/** Resident Services → "Important numbers": a plain phone list, not linked to the Directory. */
+/** Resident Services → "Essential Phone Numbers": a plain phone list, not linked to the Directory. */
 export function ImportantNumbersTab({
   numbers,
   missing,
@@ -38,7 +38,7 @@ export function ImportantNumbersTab({
     <div className="mt-6 space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <p className="mr-auto max-w-xl text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
-          Phone numbers residents ask for that aren't a program you sign up for. Not linked to the Directory.
+          Numbers anyone can call. There's nothing to qualify for, and the list is the same for every resident. Not linked to the Partnerships Directory.
         </p>
         <button onClick={() => setPrinting(true)} disabled={numbers.length === 0} className="btn-secondary px-3 py-1.5 text-sm">
           Print
@@ -79,7 +79,7 @@ export function ImportantNumbersTab({
                     <span className="font-medium">{n.name}</span>
                     {n.on_services_list && (
                       <span className="ml-2 rounded-full bg-sparrow-green/10 px-2 py-0.5 text-[11px] font-semibold text-sparrow-green dark:text-sparrow-dark-green">
-                        On every services list
+                        Also on every Assistance Programs printout
                       </span>
                     )}
                     {n.note && <span className="block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{n.note}</span>}
@@ -178,7 +178,7 @@ function NumberForm({
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" checked={pin} onChange={(e) => setPin(e.target.checked)} className="mt-0.5 h-4 w-4 accent-sparrow-green" />
         <span>
-          Also put it at the bottom of every printed services list
+          Also put it at the bottom of every Assistance Programs printout
           <span className="block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">For numbers everyone should keep, like 911 and 988.</span>
         </span>
       </label>

@@ -146,7 +146,7 @@ export function ServiceFormPanel({
       }
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save this service.');
+      setError(e instanceof Error ? e.message : 'Could not save this program.');
     } finally {
       setBusy(false);
     }
@@ -265,10 +265,10 @@ export function ServiceFormPanel({
           <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">For people seeking help · can go on the website</p>
           <div>
             <label className="field-label" htmlFor="rs-address">Address people go to</label>
-            <input id="rs-address" className="field-input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Where someone shows up for this service" />
+            <input id="rs-address" className="field-input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Where someone shows up for this program" />
             <label className="mt-1.5 flex items-start gap-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
               <input type="checkbox" checked={confidential} onChange={(e) => setConfidential(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-sparrow-green" />
-              Confidential location (for example a domestic violence shelter): never published or printed. People call the service, and the service decides who gets the address.
+              Confidential location (for example a domestic violence shelter): never published or printed. People call the program, and the program decides who gets the address.
             </label>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -282,7 +282,7 @@ export function ServiceFormPanel({
             </div>
           </div>
           <div>
-            <label className="field-label" htmlFor="rs-how">First steps to get this service</label>
+            <label className="field-label" htmlFor="rs-how">First steps to get this program</label>
             <textarea id="rs-how" rows={3} className="field-input" value={howTo} onChange={(e) => setHowTo(e.target.value)} placeholder="e.g. Walk in during open hours and bring photo ID. Or: call to get on the waitlist. Or: needs a referral from a caseworker." />
           </div>
           <div>
