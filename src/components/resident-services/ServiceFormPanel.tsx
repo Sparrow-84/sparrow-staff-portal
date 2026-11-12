@@ -5,6 +5,7 @@ import { isPersonRecord, type Partner } from '@/lib/partnerships-types';
 import { fetchPartnerContacts, type PartnerContact } from '@/lib/partner-contacts';
 import {
   AREA_OPTIONS,
+  BENTON_TOWNS,
   SERVES_ALL,
   SERVES_OPTIONS,
   SERVICE_TYPES,
@@ -264,14 +265,22 @@ export function ServiceFormPanel({
           <div id="rs-areas" tabIndex={-1}>
             <span className="field-label field-label-required">Where it's available</span>
             <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              For the whole county, tick both Corvallis and Benton County. Someone filtering for Corvallis only sees programs ticked Corvallis.
+              Ticking Benton County also ticks Corvallis and Philomath. Untick a town if the program isn't there. Someone filtering for a town only sees programs ticked with that town.
             </p>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {AREA_OPTIONS.map((a) => (
                 <button
                   key={a}
                   type="button"
-                  onClick={() => { clear('rs-areas'); setAreas((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a])); }}
+                  onClick={() => {
+                    clear('rs-areas');
+                    setAreas((prev) => {
+                      if (prev.includes(a)) return prev.filter((x) => x !== a);
+                      // The whole county includes its towns; untick one if it doesn't apply.
+                      if (a === 'Benton County') return Array.from(new Set([...prev, a, ...BENTON_TOWNS]));
+                      return [...prev, a];
+                    });
+                  }}
                   aria-pressed={areas.includes(a)}
                   className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
                     areas.includes(a)

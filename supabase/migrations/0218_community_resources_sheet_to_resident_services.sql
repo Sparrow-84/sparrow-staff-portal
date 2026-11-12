@@ -109,8 +109,8 @@ DECLARE
   v_open int;
   v uuid;
   all_people text[] := ARRAY['All people'];
-  -- Corvallis is listed too: picking Corvallis in the filter only shows programs tagged Corvallis.
-  local3 text[] := ARRAY['Corvallis', 'Benton County', 'Linn County', 'Lincoln County'];
+  -- The towns are listed too: picking a town in the filter only shows programs tagged with it.
+  local3 text[] := ARRAY['Corvallis', 'Philomath', 'Benton County', 'Linn County', 'Lincoln County'];
 BEGIN
   ALTER TABLE resident_service_reviews DISABLE TRIGGER resident_service_reviews_emit;
 
@@ -118,7 +118,7 @@ BEGIN
   v := pg_temp.rs_org('24c54aea-45ef-46e6-84a2-a19f787f27ca', 'Benton County Health Department', 'nonprofit', NULL,
     'Benton County Mental Health: 541-766-6835, or after hours 1(888) 232-7192.');
   PERFORM pg_temp.rs_draft(v, 'Mental health (Benton County Behavioral Health)', 'Health', all_people,
-    ARRAY['Corvallis', 'Benton County'], '541-766-6835',
+    ARRAY['Corvallis', 'Philomath', 'Benton County'], '541-766-6835',
     'Call during business hours. After hours or in a crisis, call 1-888-232-7192.',
     'The county says to call 541-766-6767 to check whether someone is eligible for services; 541-766-6835 is the main line.');
 
@@ -170,7 +170,7 @@ BEGIN
   v := pg_temp.rs_org('20168986-9219-4b93-b873-cc7768794b34', 'We Care Benton County', 'nonprofit', NULL,
     'We Care (Emergency Services): 541-203-0102.');
   PERFORM pg_temp.rs_draft(v, 'Emergency financial help', 'Financial', all_people,
-    ARRAY['Corvallis', 'Benton County'], '541-203-0102', NULL, NULL);
+    ARRAY['Corvallis', 'Philomath', 'Benton County'], '541-203-0102', NULL, NULL);
 
   -- ── New to the Directory ──────────────────────────────────────────
   v := pg_temp.rs_org(NULL, 'Samaritan Health Services', 'nonprofit', '541-768-5111',
@@ -184,7 +184,7 @@ BEGIN
 
   v := pg_temp.rs_org(NULL, 'Philomath Community Services', 'nonprofit', '541-929-2499',
     'Gleaners: 541-929-2499. That is the main line for Philomath Community Services, which runs the Philomath Community Gleaners (and a food bank and baby bank).');
-  PERFORM pg_temp.rs_draft(v, 'Philomath Community Gleaners', 'Food', all_people, ARRAY['Benton County'], '541-929-2499', NULL,
+  PERFORM pg_temp.rs_draft(v, 'Philomath Community Gleaners', 'Food', all_people, ARRAY['Philomath'], '541-929-2499', NULL,
     'Listed on the sheet just as "Gleaners".');
 
   v := pg_temp.rs_org(NULL, 'South Corvallis Food Bank', 'nonprofit', '541-753-4263',
@@ -194,7 +194,7 @@ BEGIN
   v := pg_temp.rs_org(NULL, 'Oregon Cascades West Council of Governments (OCWCOG)', 'nonprofit', '541-967-8630',
     'Meals on Wheels: 541-967-8630.');
   PERFORM pg_temp.rs_draft(v, 'Meals on Wheels', 'Food', ARRAY['Seniors', 'People with disabilities'],
-    ARRAY['Corvallis', 'Benton County', 'Linn County'], '541-967-8630', NULL,
+    ARRAY['Corvallis', 'Philomath', 'Benton County', 'Linn County'], '541-967-8630', NULL,
     '541-967-8630 is also listed publicly as OCWCOG''s Senior and Disability Services line for Benton and Linn; check which program it reaches.');
 
   v := pg_temp.rs_org(NULL, 'Community Services Consortium', 'nonprofit', '541-752-1010',

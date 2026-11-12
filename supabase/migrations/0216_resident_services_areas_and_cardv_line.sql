@@ -1,7 +1,8 @@
 -- 0216: Resident Services, after the Nov 10 rollout with Resident Services + Partnerships staff.
 --
 -- 1. Where a service is available (resident_services.areas): Corvallis, Benton County, Linn
---    County, Lincoln County, Statewide. Several can be picked. Used by the room's location
+--    County, Lincoln County, Statewide (Philomath added to the list 2026-11-12; it's a text
+--    column, so no database change for that). Several can be picked. Used by the room's location
 --    filter, the printed handout and the website's "Where" filter.
 -- 2. get_public_resources() also returns `areas` and `location_confidential`, so the website
 --    can say "Call them for the location" only for a confidential location (a domestic
@@ -61,7 +62,7 @@ SELECT p.id,
        '24-hour crisis line and confidential shelter',
        'Shelter',
        ARRAY['All people'],
-       ARRAY['Corvallis', 'Benton County', 'Linn County'],
+       ARRAY['Corvallis', 'Philomath', 'Benton County', 'Linn County'],
        NULL,
        true,
        '541-754-0110',

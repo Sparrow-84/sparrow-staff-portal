@@ -170,12 +170,12 @@ export function AddOrganizationPanel({
                         <span className="font-medium">{m.name}</span>
                         <span className="block text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                           {m.reason}
-                          {m.in_resident_services ? ' · already in Resident Services' : ''}
+                          {m.in_resident_services && mode === 'program' ? ' · already in Resident Services' : ''}
                           {m.inactive ? ' · inactive in Partnerships' : ''}
                         </span>
                       </span>
                       <button type="button" onClick={() => void useExisting(m)} disabled={busy} className="btn-secondary px-2.5 py-1 text-xs">
-                        {mode === 'room' && m.in_resident_services ? "It's already here" : 'Use this one'}
+                        {mode === 'room' && m.in_resident_services ? 'Already in Resident Services' : 'Use this one'}
                       </button>
                     </li>
                   ))}

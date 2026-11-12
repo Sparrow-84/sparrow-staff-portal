@@ -30,7 +30,10 @@ export const SERVES_FILTER_LABEL: Record<string, string> = {
 export const PERSON_GROUPS = SERVES_OPTIONS.filter((g) => g !== SERVES_ALL);
 
 /** Where a service is available (migration 0216). Several can apply. */
-export const AREA_OPTIONS = ['Corvallis', 'Benton County', 'Linn County', 'Lincoln County', 'Statewide'] as const;
+export const AREA_OPTIONS = ['Corvallis', 'Philomath', 'Benton County', 'Linn County', 'Lincoln County', 'Statewide'] as const;
+
+/** The towns inside Benton County: picking Benton County in the filter includes them. */
+export const BENTON_TOWNS = ['Corvallis', 'Philomath'] as const;
 
 export type CheckedHow = 'called' | 'website' | 'in_person' | 'edited';
 export const CHECKED_HOW_LABEL: Record<CheckedHow, string> = {
@@ -143,15 +146,16 @@ export function matchesPerson(s: Pick<ResidentService, 'serves'>, picks: string[
 }
 
 /** Location filter: any of the picked areas. Statewide services match every area.
- *  Corvallis is inside Benton County, so picking Benton County also shows Corvallis
- *  programs -- but picking Corvallis shows only programs tagged Corvallis (a program for
- *  the whole county is tagged both). No picks = everything. */
+ *  Corvallis and Philomath are inside Benton County, so picking Benton County also shows
+ *  their programs -- but picking a town shows only programs tagged with that town (many
+ *  residents don't drive). A program for the whole county is tagged the county and its
+ *  towns. No picks = everything. */
 export function matchesAreas(s: Pick<ResidentService, 'areas'>, picks: string[]): boolean {
   if (picks.length === 0) return true;
   const areas = s.areas ?? [];
   if (areas.includes('Statewide')) return true;
   const want = new Set(picks);
-  if (want.has('Benton County')) want.add('Corvallis');
+  if (want.has('Benton County')) BENTON_TOWNS.forEach((t) => want.add(t));
   return areas.some((a) => want.has(a));
 }
 
