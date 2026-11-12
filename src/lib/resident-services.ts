@@ -99,6 +99,8 @@ export interface ServiceReview {
   sent_by: string | null;
   sent_at: string;
   reviewed_at: string | null;
+  /** Migration 0222: added from the Resident Services room itself, not sent from Partnerships. */
+  added_by_resident_services?: boolean;
   partner: {
     id: string;
     name: string;
@@ -300,6 +302,56 @@ export async function fetchOpenReviewForPartner(partnerId: string): Promise<{ re
 export async function sendToResidentServices(partnerId: string): Promise<void> {
   const { error } = await supabase.from('resident_service_reviews').insert({ partner_id: partnerId });
   if (error && error.code !== '23505') throw new Error(error.message);
+}
+
+// ── Resident Services adds an organization itself (migration 0222) ──────────────────
+/** A likely match already in the Directory. Names only -- Resident Services can't open
+ *  records that aren't connected to the room. */
+export interface SimilarOrganization {
+  id: string;
+  name: string;
+  /** Why it came up: "Same name", "Similar name", "Similar spelling", "Its initials match",
+   *  "Same phone number", "Same website". */
+  reason: string;
+  in_resident_services: boolean;
+  inactive: boolean;
+}
+
+/** The kinds of organization Resident Services can add (Partnerships sets the rest). */
+export const ORG_KINDS = [
+  { key: 'nonprofit', label: 'Nonprofit or government agency' },
+  { key: 'church', label: 'Church' },
+  { key: 'business', label: 'Business' },
+] as const;
+export type OrgKind = (typeof ORG_KINDS)[number]['key'];
+
+/** `available` is false until 0222 runs. */
+export async function findSimilarOrganizations(
+  name: string, phone: string, website: string,
+): Promise<{ matches: SimilarOrganization[]; available: boolean }> {
+  const { data, error } = await supabase.rpc('rs_find_similar_organizations', {
+    p_name: name, p_phone: phone || null, p_website: website || null,
+  });
+  if (error) return { matches: [], available: false };
+  return { matches: (data ?? []) as SimilarOrganization[], available: true };
+}
+
+/** "None of these — add a new organization". Returns the new Directory record's id. */
+export async function addOrganization(input: {
+  name: string; kind: OrgKind; phone: string; website: string; address: string; openReview: boolean;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('rs_add_organization', {
+    p_name: input.name, p_kind: input.kind, p_phone: input.phone || null,
+    p_website: input.website || null, p_address: input.address || null, p_open_review: input.openReview,
+  });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
+/** "Use this one": connects an existing Directory record to Resident Services. */
+export async function linkOrganization(partnerId: string, openReview: boolean): Promise<void> {
+  const { error } = await supabase.rpc('rs_link_organization', { p_partner_id: partnerId, p_open_review: openReview });
+  if (error) throw new Error(error.message);
 }
 
 /** "Reviewed — this is correct": stamps the waiting services checked and closes the review. */

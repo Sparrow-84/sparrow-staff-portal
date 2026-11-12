@@ -27,6 +27,8 @@ export function ServiceFormPanel({
   forReview = false,
   onClose,
   onSaved,
+  onFindOrganization,
+  addedOrg = null,
 }: {
   open: boolean;
   service: ResidentService | null;
@@ -36,6 +38,10 @@ export function ServiceFormPanel({
   forReview?: boolean;
   onClose: () => void;
   onSaved: (id: string) => void;
+  /** "Can't find it?": opens the room's Add an organization panel (migration 0222). */
+  onFindOrganization?: () => void;
+  /** An organization just added or linked from that panel: picked for this program. */
+  addedOrg?: { id: string; name: string } | null;
 }) {
   const [partnerChoice, setPartnerChoice] = useState('');
   const [providerName, setProviderName] = useState('');
@@ -56,11 +62,19 @@ export function ServiceFormPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Organizations only -- a service is offered by an organization, not a person.
-  const orgOptions = useMemo(
-    () => partners.filter((p) => !isPersonRecord(p)).sort((a, b) => a.name.localeCompare(b.name)),
-    [partners],
-  );
+  // Organizations only -- a service is offered by an organization, not a person. One just
+  // added or linked from "Can't find it?" isn't visible to this person until the program is
+  // saved, so it's added to the list here.
+  const orgOptions = useMemo(() => {
+    const list: Pick<Partner, 'id' | 'name'>[] = partners.filter((p) => !isPersonRecord(p));
+    if (addedOrg && !list.some((p) => p.id === addedOrg.id)) list.push(addedOrg);
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [partners, addedOrg]);
+
+  useEffect(() => {
+    if (open && addedOrg) { setPartnerChoice(addedOrg.id); setGoToContactId(''); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addedOrg]);
 
   useEffect(() => {
     if (!open) return;
@@ -191,9 +205,18 @@ export function ServiceFormPanel({
               placeholder="Who provides it, e.g. Reser Family Foundation"
             />
           ) : (
-            <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              Organization not listed? Add it in Partnerships → Directory first, so both rooms share one record.
-            </p>
+            onFindOrganization ? (
+              <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                Can't find it?{' '}
+                <button type="button" onClick={onFindOrganization} className="font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
+                  Add a new organization
+                </button>
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                Organization not listed? Add it in Partnerships → Directory first, so both rooms share one record.
+              </p>
+            )
           )}
           {fieldError('rs-org') && <p className="mt-1 text-xs text-priority-p1">{fieldError('rs-org')}</p>}
         </div>

@@ -64,6 +64,8 @@ function reminderTarget(ref: string): Pick<HomeItem, 'partnerId' | 'navigateTab'
   const [prefix, id] = ref.split(':');
   if (prefix === 'prayer_miss' || prefix === 'prayer_snooze_check') return { navigateTab: 'prayer', prayerVolunteerId: id };
   if (prefix === 'comms_milestone') return { navigateTab: 'comms' };
+  // Resident Services added or connected an organization (migration 0222): open its record.
+  if (prefix === 'rs_new_org' || prefix === 'rs_linked_org') return { partnerId: id };
   return {};
 }
 

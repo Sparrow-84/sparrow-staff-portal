@@ -26,6 +26,7 @@ import { ServiceFormPanel } from './ServiceFormPanel';
 import { ReviewPanel } from './ReviewPanel';
 import { PrintList } from './PrintList';
 import { ImportantNumbersTab } from './ImportantNumbersTab';
+import { AddOrganizationPanel, type AddOrgResult } from './AddOrganizationPanel';
 import { FALLBACK_SERVICES_LIST_NUMBERS, fetchNumbers, type ResidentNumber } from '@/lib/resident-numbers';
 
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -55,6 +56,10 @@ export function ResidentServicesRoom() {
   const [tab, setTab] = useState<'services' | 'numbers'>('services');
   const [numbers, setNumbers] = useState<ResidentNumber[]>([]);
   const [numbersMissing, setNumbersMissing] = useState(false);
+  // "+ Add an organization" (room) or "Can't find it?" inside "+ Add a program" (program).
+  const [addOrgMode, setAddOrgMode] = useState<'room' | 'program' | null>(null);
+  const [formAddedOrg, setFormAddedOrg] = useState<{ id: string; name: string } | null>(null);
+  const [pendingReviewPartner, setPendingReviewPartner] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [res, revs, profs, parts, arch, nums] = await Promise.all([
@@ -77,6 +82,24 @@ export function ResidentServicesRoom() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  // An organization just added from "+ Add an organization" opens in "To review".
+  useEffect(() => {
+    if (!pendingReviewPartner) return;
+    const r = reviews.find((x) => x.partner_id === pendingReviewPartner);
+    if (r) { setReviewId(r.id); setPendingReviewPartner(null); }
+  }, [reviews, pendingReviewPartner]);
+
+  useEffect(() => { if (!formOpen) setFormAddedOrg(null); }, [formOpen]);
+
+  const onOrgDone = async (res: AddOrgResult) => {
+    const mode = addOrgMode;
+    setAddOrgMode(null);
+    if (mode === 'program') { setFormAddedOrg({ id: res.id, name: res.name }); return; }
+    if (res.kind === 'already') { setShowArchived(false); setSearch(res.name); return; }
+    await load();
+    setPendingReviewPartner(res.id);
+  };
 
   const isPartnershipsStaff = profile?.role === 'admin' || profile?.department === 'partnerships';
 
@@ -145,9 +168,14 @@ export function ResidentServicesRoom() {
         <div className="flex shrink-0 items-center gap-2">
           <RoomSopsButton room="resident-services" />
           {tab === 'services' && (
-            <button onClick={() => { setEditing(null); setFormOpen(true); }} className="btn-primary" disabled={missing}>
-              + Add a program
-            </button>
+            <>
+              <button onClick={() => setAddOrgMode('room')} className="btn-secondary" disabled={missing}>
+                + Add an organization
+              </button>
+              <button onClick={() => { setEditing(null); setFormOpen(true); }} className="btn-primary" disabled={missing}>
+                + Add a program
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -185,7 +213,7 @@ export function ResidentServicesRoom() {
         <section className="mt-6 rounded-xl border border-amber-300 bg-amber-50/70 dark:border-amber-500/30 dark:bg-amber-500/10 p-4">
           <h2 className="font-serif text-lg font-semibold">To review ({reviews.length})</h2>
           <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-            Sent over from the Partnerships Directory. Nothing here is checked or on the main list until you review it.
+            Organizations sent over from Partnerships, or added here. Nothing here is checked or on the main list until you review it.
           </p>
           <div className="mt-3 grid gap-2 md:grid-cols-2">
             {reviews.map((r) => (
@@ -196,7 +224,7 @@ export function ResidentServicesRoom() {
               >
                 <span className="block font-medium">{r.partner?.name ?? 'Organization'}</span>
                 <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-                  Sent {new Date(r.sent_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  {r.added_by_resident_services ? 'Added' : 'Sent'} {new Date(r.sent_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   {nameFor(r.sent_by) ? ` by ${nameFor(r.sent_by)}` : ''}
                   {(() => {
                     const n = allServices.filter((s) => s.needs_review && s.partner_id === r.partner_id).length;
@@ -398,6 +426,14 @@ export function ResidentServicesRoom() {
         forReview={!!review}
         onClose={() => setFormOpen(false)}
         onSaved={(id) => { void load(); if (!review) setSelectedId(id); }}
+        onFindOrganization={review ? undefined : () => setAddOrgMode('program')}
+        addedOrg={formAddedOrg}
+      />
+      <AddOrganizationPanel
+        open={addOrgMode !== null}
+        mode={addOrgMode ?? 'room'}
+        onClose={() => setAddOrgMode(null)}
+        onDone={(res) => void onOrgDone(res)}
       />
     </div>
   );
