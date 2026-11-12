@@ -5,6 +5,7 @@ import { MOU_STATUS } from '@/lib/partnerships-types';
 import {
   archiveService,
   fetchLatestTouchpoint,
+  locationLines,
   markPartnerInfoChecked,
   markServiceChecked,
   providerName,
@@ -13,8 +14,10 @@ import {
   restoreService,
   unpublishService,
   updatePartnerContact,
+  programAddresses,
   type ResidentService,
 } from '@/lib/resident-services';
+import { OrgAddresses } from '../partnerships/OrgAddresses';
 import { FreshnessStamp, StillCorrectButton } from './Freshness';
 import { OrgContacts } from '../partnerships/OrgContacts';
 import { fetchPartnerContacts, type PartnerContact } from '@/lib/partner-contacts';
@@ -121,7 +124,7 @@ export function ServiceDetailPanel({
       subtitle={`${service.name} · ${service.service_type}`}
       footer={archived
         ? <button onClick={() => void run(async () => { await restoreService(service.id); onClose(); })} className="btn-primary w-full">Restore to the list</button>
-        : <button onClick={onEdit} className="btn-primary w-full">Edit service</button>}
+        : <button onClick={onEdit} className="btn-primary w-full">Edit program</button>}
     >
       <div className="space-y-5">
         {error && <p className="rounded-lg bg-priority-p1/10 px-3 py-2 text-sm text-priority-p1">{error}</p>}
@@ -163,8 +166,8 @@ export function ServiceDetailPanel({
           {service.published_at && tooOldForWebsite && (
             <p className="text-xs text-priority-p1">Hidden from the website: not checked in over 2 years. Check it and click "Still correct" to bring it back.</p>
           )}
-          {service.published_at && service.address_confidential && (
-            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">The address is confidential and never shown on the website.</p>
+          {service.published_at && programAddresses(service).some((a) => a.is_private) && (
+            <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Its private location shows only the city on the website, with "call them for the location".</p>
           )}
         </section>
         )}
@@ -177,8 +180,16 @@ export function ServiceDetailPanel({
               <span key={g} className="rounded-full bg-sparrow-mist dark:bg-sparrow-dark-surface2 px-2 py-0.5 text-xs font-medium">{g}</span>
             ))}
           </div>
-          {service.areas && <Row label="Available in" value={service.areas.join(', ') || null} />}
-          <Row label="Address" value={service.address ? `${service.address}${service.address_confidential ? '  (confidential: never published or printed)' : ''}` : null} />
+          {service.location_remote === undefined ? (
+            <Row label="Address" value={service.address ? `${service.address}${service.address_confidential ? '  (confidential: never published or printed)' : ''}` : null} />
+          ) : (
+            <Row
+              label="Where people go"
+              value={service.location_unknown
+                ? 'Unknown. Fill it in with Edit when you find out.'
+                : locationLines(service).join('\n') || 'Not filled in yet. Add it with Edit.'}
+            />
+          )}
           <Row label="Phone for help" value={service.help_phone} />
           <Row label="Hours" value={service.hours} />
           <Row label="First steps" value={service.how_to_access} />
@@ -212,6 +223,10 @@ export function ServiceDetailPanel({
               <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Stored once. Changes here show in Partnerships too.</p>
               {/* Each person's own phone/email lives on their contact, separate from the help line people call. */}
               <OrgContacts partnerId={partner.id} onChanged={onChanged} />
+              <OrgAddresses
+                partnerId={partner.id}
+                onChanged={onChanged}
+                fallback={<>
               <label className="flex items-start gap-2 text-xs">
                 <input type="checkbox" checked={officeElsewhere} onChange={(e) => {
                   // Unticking means the office is where people go, so the saved office
@@ -242,6 +257,8 @@ export function ServiceDetailPanel({
               {officeElsewhere && (
                 <BlurField id="rs-office" label="Office / mailing address" value={partner.address ?? ''} onSave={(v) => run(() => updatePartnerContact(partner.id, { address: v || null }))} />
               )}
+                </>}
+              />
               <div className="flex flex-wrap items-center gap-2">
                 <FreshnessStamp checkedAt={partner.info_checked_at} checkedBy={partner.info_checked_by} how={partner.info_checked_how} nameFor={nameFor} />
                 <StillCorrectButton onConfirm={(how) => run(() => markPartnerInfoChecked(partner.id, how, currentUserId))} />

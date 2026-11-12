@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { TOWNS, cityArea, type OrgAddress } from './locations';
 import type { Partner } from './partnerships-types';
 
 // Resident Services room (migration 0199). The Directory (partners) holds the relationship
@@ -29,11 +30,6 @@ export const SERVES_FILTER_LABEL: Record<string, string> = {
 /** The groups a person can be, for filtering (everything but "All people"). */
 export const PERSON_GROUPS = SERVES_OPTIONS.filter((g) => g !== SERVES_ALL);
 
-/** Where a service is available (migration 0216). Several can apply. */
-export const AREA_OPTIONS = ['Corvallis', 'Philomath', 'Benton County', 'Linn County', 'Lincoln County', 'Statewide'] as const;
-
-/** The towns inside Benton County: picking Benton County in the filter includes them. */
-export const BENTON_TOWNS = ['Corvallis', 'Philomath'] as const;
 
 export type CheckedHow = 'called' | 'website' | 'in_person' | 'edited';
 export const CHECKED_HOW_LABEL: Record<CheckedHow, string> = {
@@ -65,8 +61,13 @@ export interface ResidentService {
   name: string;
   service_type: string;
   serves: string[];
-  /** Migration 0216: where it's available. Missing before 0216 runs. */
+  /** Migration 0216: no longer used (0224 replaced it with locations). */
   areas?: string[];
+  /** Migration 0224: where people go -- the organization's addresses ticked for this program,
+   *  Remote, or Unknown (which stands alone). Missing before 0224 runs. */
+  location_remote?: boolean;
+  location_unknown?: boolean;
+  locations?: { address: OrgAddress | null }[];
   address: string | null;
   address_confidential: boolean;
   help_phone: string | null;
@@ -91,8 +92,10 @@ export interface ResidentService {
   partner: ServicePartner | null;
 }
 
+// Where people go is saved separately (setProgramLocation, migration 0224); the old
+// address / address_confidential columns are no longer written.
 export type ServiceInput = Pick<ResidentService,
-  'partner_id' | 'provider_name' | 'name' | 'service_type' | 'serves' | 'address' | 'address_confidential'
+  'partner_id' | 'provider_name' | 'name' | 'service_type' | 'serves'
   | 'help_phone' | 'hours' | 'how_to_access' | 'website' | 'internal_notes'>
   & { go_to_contact_id?: string | null; needs_review?: boolean; areas?: string[] };
 
@@ -120,6 +123,9 @@ export interface ServiceReview {
 }
 
 const SELECT = '*, partner:partners(id, name, contact_name, role, phone, address, website, mou_status, info_checked_at, info_checked_by, info_checked_how)';
+// With where people go (migration 0224). Each fetch tries this first and falls back to SELECT
+// before 0224 runs, so the room keeps working.
+const SELECT_WITH_LOCATIONS = `${SELECT}, locations:resident_service_locations(address:organization_addresses(id, partner_id, label, street, city, is_private))`;
 
 /** The organization name a service is listed under. */
 export function providerName(s: Pick<ResidentService, 'provider_name' | 'partner'>): string {
@@ -145,18 +151,49 @@ export function matchesPerson(s: Pick<ResidentService, 'serves'>, picks: string[
   return s.serves.includes(SERVES_ALL) || picks.some((g) => s.serves.includes(g));
 }
 
-/** Location filter: any of the picked areas. Statewide services match every area.
- *  Corvallis and Philomath are inside Benton County, so picking Benton County also shows
- *  their programs -- but picking a town shows only programs tagged with that town (many
- *  residents don't drive). A program for the whole county is tagged the county and its
- *  towns. No picks = everything. */
-export function matchesAreas(s: Pick<ResidentService, 'areas'>, picks: string[]): boolean {
+/** A program's ticked addresses (none for Remote-only, Unknown, or before 0224 runs). */
+export function programAddresses(s: Pick<ResidentService, 'locations' | 'location_unknown'>): OrgAddress[] {
+  if (s.location_unknown) return [];
+  return (s.locations ?? []).map((l) => l.address).filter((a): a is OrgAddress => !!a);
+}
+
+/** "Corvallis Office — 257 SW Madison Ave, Corvallis" lines, plus "Remote", for showing
+ *  where people go. Unknown or nothing ticked gives an empty list. A private location shows
+ *  its city only. */
+export function locationLines(s: Pick<ResidentService, 'locations' | 'location_unknown' | 'location_remote'>): string[] {
+  const lines = programAddresses(s).map((a) =>
+    a.is_private
+      ? `${a.label}: ${a.city ?? ''} · private location, call them for it`
+      : `${a.label}: ${[a.street, a.city].filter(Boolean).join(', ')}`);
+  if (s.location_remote && !s.location_unknown) lines.push('Remote: by video call or phone');
+  return lines;
+}
+
+/** No location yet: Unknown, or nothing ticked at all. */
+export function needsLocation(s: Pick<ResidentService, 'locations' | 'location_unknown' | 'location_remote'>): boolean {
+  if (s.location_remote === undefined) return false;   // before 0224 runs
+  return !!s.location_unknown || (!s.location_remote && programAddresses(s).length === 0);
+}
+
+/** The "Where" filter (agreed 2026-11-12): is the program somewhere this person can get to?
+ *  Worked out from where it IS -- its addresses' cities -- not from who it serves.
+ *  - A town (Corvallis, Philomath) shows only programs with an address in that town, for
+ *    residents who don't drive.
+ *  - A county shows programs with an address anywhere in it, towns included.
+ *  - "Farther away" is any city not in our three counties (Salem, Eugene, Portland).
+ *  - Remote programs show under every pick, and on their own under "Remote".
+ *  - Unknown shows only when nothing is picked.
+ *  No picks = everything. */
+export function matchesAreas(s: Pick<ResidentService, 'locations' | 'location_unknown' | 'location_remote'>, picks: string[]): boolean {
   if (picks.length === 0) return true;
-  const areas = s.areas ?? [];
-  if (areas.includes('Statewide')) return true;
-  const want = new Set(picks);
-  if (want.has('Benton County')) BENTON_TOWNS.forEach((t) => want.add(t));
-  return areas.some((a) => want.has(a));
+  if (s.location_remote && !s.location_unknown) return true;
+  const places = programAddresses(s);
+  return places.some((a) => {
+    const city = (a.city ?? '').trim().toLowerCase();
+    const area = cityArea(a.city);
+    return picks.some((p) =>
+      (TOWNS as readonly string[]).includes(p) ? city === p.toLowerCase() : area === p);
+  });
 }
 
 // ── Freshness ("last checked") — shared with the Directory record drawer ──────────────
@@ -189,19 +226,21 @@ export function publicDropOffPassed(checkedAt: string | null, now: Date = new Da
 }
 
 // ── Data ───────────────────────────────────────────────────────────────────────────
-/** False until migration 0216 adds the areas column (the form then doesn't ask for it). */
-export async function areasColumnReady(): Promise<boolean> {
-  const { error } = await supabase.from('resident_services').select('areas').limit(1);
+/** False until migration 0224 adds locations (the form then says it's waiting). */
+export async function locationsReady(): Promise<boolean> {
+  const { error } = await supabase.from('resident_services').select('location_remote').limit(1);
   return !error;
 }
 
 /** `missing` is true when the table doesn't exist yet (migration 0199 not run). */
 export async function fetchServices(): Promise<{ services: ResidentService[]; missing: boolean }> {
-  const { data, error } = await supabase
+  const run = (select: string) => supabase
     .from('resident_services')
-    .select(SELECT)
+    .select(select)
     .is('archived_at', null)
     .order('created_at', { ascending: false });
+  let { data, error } = await run(SELECT_WITH_LOCATIONS);
+  if (error) ({ data, error } = await run(SELECT));
   if (error) return { services: [], missing: true };
   return { services: (data ?? []) as unknown as ResidentService[], missing: false };
 }
@@ -267,12 +306,14 @@ export async function restoreService(id: string): Promise<void> {
 /** Archived services for the room's "Archived" view. Programs removed while still waiting
  *  for review were never on the list, so they're left out. */
 export async function fetchArchivedServices(): Promise<ResidentService[]> {
-  const { data, error } = await supabase
+  const run = (select: string) => supabase
     .from('resident_services')
-    .select(SELECT)
+    .select(select)
     .not('archived_at', 'is', null)
     .eq('needs_review', false)
     .order('archived_at', { ascending: false });
+  let { data, error } = await run(SELECT_WITH_LOCATIONS);
+  if (error) ({ data, error } = await run(SELECT));
   if (error) return [];
   return (data ?? []) as unknown as ResidentService[];
 }

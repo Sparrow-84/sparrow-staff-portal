@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Profile } from '@/lib/types';
-import { createPartner, findPossibleDuplicatePartner } from '@/lib/partnerships';
+import { createPartner, findPossibleDuplicatePartner, updatePartner } from '@/lib/partnerships';
 import { sendToResidentServices } from '@/lib/resident-services';
 import {
   PARTNER_STAGE,
@@ -31,6 +31,7 @@ import { Drawer } from '../lcp/Drawer';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import { createInterest, setPartnerInterests, type PartnershipInterest } from '@/lib/partnership-interests';
+import { addOrgAddress, splitAddress } from '@/lib/locations';
 
 export function AddPartnerPanel({
   open,
@@ -220,13 +221,23 @@ export function AddPartnerPanel({
         website: website.trim() || null,
         email: email.trim() || null,
         phone: phone.trim() || null,
-        address: address.trim() || null,
+        // An organization's address goes in its address list (migration 0224), below.
+        address: isPerson ? (address.trim() || null) : null,
         donor_tier: null,
         source: source.trim() || null,
         notes: finalNotes || null,
       });
       if (interestIds.length > 0) {
         await setPartnerInterests(newPartnerId, interestIds);
+      }
+      if (!isPerson && address.trim()) {
+        const parts = splitAddress(address);
+        try {
+          await addOrgAddress(newPartnerId, { label: 'Main address', street: parts.street, city: parts.city, is_private: false });
+        } catch {
+          // Before 0224 runs there's no address list yet: keep it on the record as before.
+          await updatePartner(newPartnerId, { address: address.trim() }).catch(() => undefined);
+        }
       }
       if (alsoSendToRs && !isPerson) {
         // The record is already saved; failing to send (e.g. before migration 0206 runs)

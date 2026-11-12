@@ -4,17 +4,18 @@ import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { isPersonRecord, type Partner } from '@/lib/partnerships-types';
 import { fetchPartnerContacts, type PartnerContact } from '@/lib/partner-contacts';
 import {
-  AREA_OPTIONS,
-  BENTON_TOWNS,
   SERVES_ALL,
   SERVES_OPTIONS,
   SERVICE_TYPES,
-  areasColumnReady,
   createService,
+  locationsReady,
+  programAddresses,
   updateService,
   type ResidentService,
   type ServiceInput,
 } from '@/lib/resident-services';
+import { addOrgAddress, addressLine, fetchOrgAddresses, setProgramLocation, type OrgAddress } from '@/lib/locations';
+import { AddressForm } from '../partnerships/OrgAddresses';
 
 const NO_RECORD = '__none__';
 
@@ -49,10 +50,13 @@ export function ServiceFormPanel({
   const [name, setName] = useState('');
   const [serviceType, setServiceType] = useState('');
   const [serves, setServes] = useState<string[]>([]);
-  const [areas, setAreas] = useState<string[]>([]);
-  const [areasReady, setAreasReady] = useState(false);
-  const [address, setAddress] = useState('');
-  const [confidential, setConfidential] = useState(false);
+  // Where people go (migration 0224): the organization's addresses, Remote, or Unknown.
+  const [locReady, setLocReady] = useState(true);
+  const [orgAddresses, setOrgAddresses] = useState<OrgAddress[]>([]);
+  const [pickedAddr, setPickedAddr] = useState<string[]>([]);
+  const [remote, setRemote] = useState(false);
+  const [unknown, setUnknown] = useState(false);
+  const [addingAddr, setAddingAddr] = useState(false);
   const [helpPhone, setHelpPhone] = useState('');
   const [hours, setHours] = useState('');
   const [howTo, setHowTo] = useState('');
@@ -84,9 +88,10 @@ export function ServiceFormPanel({
     setName(service?.name ?? '');
     setServiceType(service?.service_type ?? '');
     setServes(service?.serves ?? []);
-    setAreas(service?.areas ?? []);
-    setAddress(service?.address ?? '');
-    setConfidential(service?.address_confidential ?? false);
+    setPickedAddr(service ? programAddresses(service).map((a) => a.id) : []);
+    setRemote(!!service?.location_remote);
+    setUnknown(!!service?.location_unknown);
+    setAddingAddr(false);
     setHelpPhone(service?.help_phone ?? '');
     setHours(service?.hours ?? '');
     setHowTo(service?.how_to_access ?? '');
@@ -100,8 +105,30 @@ export function ServiceFormPanel({
   }, [open, service, presetPartnerId]);
 
   useEffect(() => {
-    if (open) void areasColumnReady().then(setAreasReady);
+    if (open) void locationsReady().then(setLocReady);
   }, [open]);
+
+  // The chosen organization's addresses, to tick where people go.
+  useEffect(() => {
+    if (!open || !partnerChoice || partnerChoice === NO_RECORD) { setOrgAddresses([]); return; }
+    let cancelled = false;
+    void fetchOrgAddresses(partnerChoice).then((res) => { if (!cancelled) setOrgAddresses(res.addresses); });
+    return () => { cancelled = true; };
+  }, [open, partnerChoice]);
+
+  // Unknown stands alone: ticking it clears the rest, and ticking anything else clears it.
+  const tickAddress = (id: string) => {
+    clear('rs-where');
+    setUnknown(false);
+    setPickedAddr((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+  const tickRemote = () => { clear('rs-where'); setUnknown(false); setRemote((v) => !v); };
+  const tickUnknown = () => {
+    clear('rs-where');
+    const next = !unknown;
+    setUnknown(next);
+    if (next) { setPickedAddr([]); setRemote(false); }
+  };
 
   // The go-to contact is picked from the chosen organization's contacts list.
   useEffect(() => {
@@ -116,7 +143,7 @@ export function ServiceFormPanel({
     { key: 'rs-name', label: 'Program or service', valid: name.trim().length > 0 },
     { key: 'rs-type', label: 'Type', valid: serviceType !== '' },
     { key: 'rs-serves', label: 'Who it serves', valid: serves.length > 0 },
-    { key: 'rs-areas', label: "Where it's available", valid: !areasReady || areas.length > 0 },
+    { key: 'rs-where', label: 'Where people go', valid: !locReady || unknown || remote || pickedAddr.some((id) => orgAddresses.some((a) => a.id === id)) },
   ]);
 
   function toggleServes(group: string) {
@@ -137,8 +164,6 @@ export function ServiceFormPanel({
       name: name.trim(),
       service_type: serviceType,
       serves,
-      address: address.trim() || null,
-      address_confidential: confidential,
       help_phone: helpPhone.trim() || null,
       hours: hours.trim() || null,
       how_to_access: howTo.trim() || null,
@@ -147,18 +172,19 @@ export function ServiceFormPanel({
       // Only sent when there's something to save or clear, so saving works even before 0200 adds the column.
       ...(goToContactId || service?.go_to_contact_id ? { go_to_contact_id: goToContactId || null } : {}),
       ...(forReview && !service ? { needs_review: true } : {}),
-      // The column only exists once 0216 runs.
-      ...(areasReady ? { areas } : {}),
+    };
+    const location = {
+      addressIds: partnerChoice === NO_RECORD ? [] : pickedAddr.filter((id) => orgAddresses.some((a) => a.id === id)),
+      remote,
+      unknown,
     };
     setBusy(true);
     setError(null);
     try {
-      if (service) {
-        await updateService(service.id, input);
-        onSaved(service.id);
-      } else {
-        onSaved(await createService(input));
-      }
+      const id = service ? service.id : await createService(input);
+      if (service) await updateService(service.id, input);
+      if (locReady) await setProgramLocation(id, location);
+      onSaved(id);
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save this program.');
@@ -261,50 +287,41 @@ export function ServiceFormPanel({
           {fieldError('rs-serves') && <p className="mt-1 text-xs text-priority-p1">{fieldError('rs-serves')}</p>}
         </div>
 
-        {areasReady && (
-          <div id="rs-areas" tabIndex={-1}>
-            <span className="field-label field-label-required">Where it's available</span>
-            <p className="mt-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              Ticking Benton County also ticks Corvallis and Philomath. Untick a town if the program isn't there. Someone filtering for a town only sees programs ticked with that town.
-            </p>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {AREA_OPTIONS.map((a) => (
-                <button
-                  key={a}
-                  type="button"
-                  onClick={() => {
-                    clear('rs-areas');
-                    setAreas((prev) => {
-                      if (prev.includes(a)) return prev.filter((x) => x !== a);
-                      // The whole county includes its towns; untick one if it doesn't apply.
-                      if (a === 'Benton County') return Array.from(new Set([...prev, a, ...BENTON_TOWNS]));
-                      return [...prev, a];
-                    });
-                  }}
-                  aria-pressed={areas.includes(a)}
-                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
-                    areas.includes(a)
-                      ? 'border-sparrow-green bg-sparrow-green text-white dark:border-sparrow-dark-green dark:bg-sparrow-dark-green'
-                      : 'border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-ink dark:text-sparrow-dark-ink hover:border-sparrow-green'
-                  }`}
-                >
-                  {a}
-                </button>
-              ))}
-            </div>
-            {fieldError('rs-areas') && <p className="mt-1 text-xs text-priority-p1">{fieldError('rs-areas')}</p>}
-          </div>
-        )}
-
         <section className="space-y-3 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">For people seeking help · can go on the website</p>
-          <div>
-            <label className="field-label" htmlFor="rs-address">Address people go to</label>
-            <input id="rs-address" className="field-input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Where someone shows up for this program" />
-            <label className="mt-1.5 flex items-start gap-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
-              <input type="checkbox" checked={confidential} onChange={(e) => setConfidential(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-sparrow-green" />
-              Confidential location (for example a domestic violence shelter): never published or printed. People call the program, and the program decides who gets the address.
-            </label>
+          <div id="rs-where" tabIndex={-1} className="space-y-1.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="field-label field-label-required">Where people go for this program</span>
+              {locReady && partnerChoice && partnerChoice !== NO_RECORD && !addingAddr && (
+                <button type="button" onClick={() => setAddingAddr(true)} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
+                  + Add an address
+                </button>
+              )}
+            </div>
+            {!locReady ? (
+              <p className="text-xs text-amber-800 dark:text-amber-200">Locations are waiting on a database update (migration 0224). You can save the rest now and add where people go once it runs.</p>
+            ) : (
+              <>
+                {orgAddresses.map((a) => (
+                  <LocationCard key={a.id} checked={pickedAddr.includes(a.id)} onToggle={() => tickAddress(a.id)} title={a.label} sub={addressLine(a)} private={a.is_private} />
+                ))}
+                {addingAddr && partnerChoice && partnerChoice !== NO_RECORD && (
+                  <AddressForm
+                    onCancel={() => setAddingAddr(false)}
+                    onSave={async (input) => {
+                      const added = await addOrgAddress(partnerChoice, input);
+                      setOrgAddresses((prev) => [...prev, added]);
+                      tickAddress(added.id);
+                      setAddingAddr(false);
+                    }}
+                  />
+                )}
+                <LocationCard checked={remote} onToggle={tickRemote} title="Remote" sub="By video call or phone" />
+                <LocationCard checked={unknown} onToggle={tickUnknown} title="Unknown" sub="Not sure yet. Fill it in when you find out." />
+                <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Tick every place people can go. Not sure? Tick Unknown.</p>
+              </>
+            )}
+            {fieldError('rs-where') && <p className="text-xs text-priority-p1">{fieldError('rs-where')}</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -349,5 +366,26 @@ export function ServiceFormPanel({
         </section>
       </div>
     </Drawer>
+  );
+}
+
+/** One choice in "Where people go": an address, Remote or Unknown, all in the same card style. */
+function LocationCard({ checked, onToggle, title, sub, private: isPrivate = false }: {
+  checked: boolean; onToggle: () => void; title: string; sub: string; private?: boolean;
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 text-sm transition ${
+        checked
+          ? 'border-sparrow-green bg-sparrow-green/5 dark:border-sparrow-dark-green'
+          : 'border-sparrow-rule dark:border-sparrow-dark-border hover:border-sparrow-green'
+      }`}
+    >
+      <input type="checkbox" checked={checked} onChange={onToggle} className="mt-0.5 h-4 w-4 accent-sparrow-green" />
+      <span className="min-w-0">
+        <span className="block font-medium">{title}</span>
+        <span className={`block text-xs ${isPrivate ? 'text-purple-700 dark:text-purple-300' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>{sub}</span>
+      </span>
+    </label>
   );
 }

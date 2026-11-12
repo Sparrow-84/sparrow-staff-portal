@@ -6,7 +6,6 @@ import { fetchPartners } from '@/lib/partnerships';
 import type { Partner } from '@/lib/partnerships-types';
 import type { Profile } from '@/lib/types';
 import {
-  AREA_OPTIONS,
   PERSON_GROUPS,
   SERVES_ALL,
   SERVES_FILTER_LABEL,
@@ -17,6 +16,7 @@ import {
   freshness,
   providerName,
   matchesAreas,
+  needsLocation,
   matchesPerson,
   type ResidentService,
   type ServiceReview,
@@ -27,6 +27,7 @@ import { ServiceFormPanel } from './ServiceFormPanel';
 import { ReviewPanel } from './ReviewPanel';
 import { PrintList } from './PrintList';
 import { ImportantNumbersTab } from './ImportantNumbersTab';
+import { WHERE_OPTIONS } from '@/lib/locations';
 import { AddOrganizationPanel, type AddOrgResult } from './AddOrganizationPanel';
 import { FALLBACK_SERVICES_LIST_NUMBERS, fetchNumbers, type ResidentNumber } from '@/lib/resident-numbers';
 
@@ -48,6 +49,8 @@ export function ResidentServicesRoom() {
   const [whoFilter, setWhoFilter] = useState<string[]>([]);
   const [areaFilter, setAreaFilter] = useState<string[]>([]);
   const [needsCheckOnly, setNeedsCheckOnly] = useState(false);
+  // "N programs still need a location": shows only those.
+  const [needLocationOnly, setNeedLocationOnly] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -150,9 +153,11 @@ export function ResidentServicesRoom() {
     return inType
       .filter((s) => matchesPerson(s, whoFilter))
       .filter((s) => !needsCheckOnly || freshness(s.last_checked_at) !== 'fresh')
+      .filter((s) => !needLocationOnly || needsLocation(s))
       .filter((s) => !q || `${providerName(s)} ${s.name} ${s.how_to_access ?? ''}`.toLowerCase().includes(q))
       .sort((a, b) => providerName(a).localeCompare(providerName(b)) || a.name.localeCompare(b.name));
-  }, [inType, whoFilter, needsCheckOnly, search]);
+  }, [inType, whoFilter, needsCheckOnly, needLocationOnly, search]);
+  const needLocationCount = useMemo(() => services.filter(needsLocation).length, [services]);
 
   const publishedCount = services.filter((s) => s.published_at).length;
   const needsCheckCount = services.filter((s) => freshness(s.last_checked_at) !== 'fresh').length;
@@ -254,7 +259,18 @@ export function ResidentServicesRoom() {
         </section>
       )}
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+        {!showArchived && (needLocationCount > 0 || needLocationOnly) && (
+          <button
+            onClick={() => setNeedLocationOnly((v) => !v)}
+            aria-pressed={needLocationOnly}
+            className="mr-auto text-xs font-medium text-amber-800 dark:text-amber-200 hover:underline"
+          >
+            {needLocationOnly
+              ? '← Show all programs'
+              : `${needLocationCount} program${needLocationCount === 1 ? '' : 's'} still need${needLocationCount === 1 ? 's' : ''} a location`}
+          </button>
+        )}
         <button
           onClick={() => { setShowArchived((v) => !v); setSelectedId(null); }}
           className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green hover:underline"
@@ -308,7 +324,7 @@ export function ResidentServicesRoom() {
           <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Where</p>
           <div className="flex flex-wrap gap-1.5">
             {allChip(areaFilter.length === 0, () => setAreaFilter([]))}
-            {AREA_OPTIONS.map((a) => (
+            {WHERE_OPTIONS.map((a) => (
               <button key={a} onClick={() => setAreaFilter((f) => toggle(f, a))} aria-pressed={areaFilter.includes(a)} className={chip(areaFilter.includes(a))}>{a}</button>
             ))}
             {anyFilter && (

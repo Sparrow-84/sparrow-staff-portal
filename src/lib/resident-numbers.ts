@@ -1,11 +1,12 @@
 import { supabase } from './supabase';
 
-// Resident Services → "Important numbers" tab (migration 0220). Phone numbers residents ask
+// Resident Services → "Essential Phone Numbers" tab (migration 0220; "Help lines" group 0224). Phone numbers residents ask
 // for that aren't a program you sign up for: police, utilities, city offices, crisis lines.
 // Deliberately NOT linked to the Partnerships Directory -- these are never partners.
 
 export const NUMBER_GROUPS = [
   { key: 'emergency', label: 'Emergency and crisis' },
+  { key: 'help', label: 'Help lines' },
   { key: 'safety', label: 'Police, fire and safety (not emergencies)' },
   { key: 'offices', label: 'City and county offices' },
   { key: 'utilities', label: 'Utilities' },

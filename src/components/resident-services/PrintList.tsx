@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { providerName, type ResidentService } from '@/lib/resident-services';
+import { programAddresses, providerName, type ResidentService } from '@/lib/resident-services';
 import { groupNumbers, type ResidentNumber } from '@/lib/resident-numbers';
 
 /**
@@ -152,10 +152,7 @@ export function PrintList({
               </div>
               <div>
                 {s.help_phone && <b>{s.help_phone}</b>}
-                {/* Never print a confidential address: the program decides who gets it. */}
-                {s.address_confidential
-                  ? <span>Call them for the location</span>
-                  : s.address && <span>{s.address}</span>}
+                <PrintLocations s={s} />
                 {s.hours && <span>{s.hours}</span>}
               </div>
               {s.how_to_access && <div className="rsp-how"><span><b>First steps:</b> {s.how_to_access}</span></div>}
@@ -196,5 +193,30 @@ export function PrintNumbers({ numbers, onDone }: { numbers: ResidentNumber[]; o
         </section>
       ))}
     </PrintFrame>
+  );
+}
+
+/** Where people go, on the printout (migration 0224): each ticked address, "Remote", or --
+ *  for Unknown -- nothing. A private location prints its city only; its street was never
+ *  stored. Before 0224 runs, the old single address is used. */
+function PrintLocations({ s }: { s: ResidentService }) {
+  if (s.location_remote === undefined) {
+    // Never print a confidential address: the program decides who gets it.
+    if (s.address_confidential) return <span>Call them for the location</span>;
+    return s.address ? <span>{s.address}</span> : null;
+  }
+  if (s.location_unknown) return null;
+  const places = programAddresses(s);
+  return (
+    <>
+      {places.map((a) => (
+        <span key={a.id}>
+          {a.is_private
+            ? `${a.city ?? ''} · call them for the location`
+            : `${places.length > 1 ? `${a.label}: ` : ''}${[a.street, a.city].filter(Boolean).join(', ')}`}
+        </span>
+      ))}
+      {s.location_remote && <span>Remote</span>}
+    </>
   );
 }

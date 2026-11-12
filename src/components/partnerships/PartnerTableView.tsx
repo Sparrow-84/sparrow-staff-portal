@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { addressLine, fetchAllOrgAddresses, type OrgAddress } from '@/lib/locations';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/auth/AuthContext';
 import type { Profile } from '@/lib/types';
@@ -371,6 +372,25 @@ export function PartnerTableView({
 
   const [columnFilters, setColumnFilters] = useState<Partial<Record<FilterableKey, Set<string>>>>({});
 
+  // Organizations keep a list of labeled addresses (migration 0224), edited in the record.
+  // Null until 0224 runs: the table shows the old single address field instead.
+  const [orgAddresses, setOrgAddresses] = useState<Map<string, OrgAddress[]> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchAllOrgAddresses().then((list) => {
+      if (cancelled || !list) return;
+      const map = new Map<string, OrgAddress[]>();
+      for (const a of list) map.set(a.partner_id, [...(map.get(a.partner_id) ?? []), a]);
+      setOrgAddresses(map);
+    });
+    return () => { cancelled = true; };
+  }, [partners]);
+  const orgAddressText = (p: Partner): string | null => {
+    if (!orgAddresses || isPersonRecord(p)) return p.address;
+    const list = orgAddresses.get(p.id) ?? [];
+    return list.length ? list.map((a) => `${a.label}: ${addressLine(a)}`).join('\n') : null;
+  };
+
   const givingMethodOptions = useMemo(() => {
     const values = new Set<string>();
     for (const p of partners) values.add(p.giving_method ?? NONE);
@@ -431,7 +451,7 @@ export function PartnerTableView({
       case 'contact_name': return (a.contact_name ?? '').localeCompare(b.contact_name ?? '');
       case 'email': return (a.email ?? '').localeCompare(b.email ?? '');
       case 'phone': return (a.phone ?? '').localeCompare(b.phone ?? '');
-      case 'address': return (a.address ?? '').localeCompare(b.address ?? '');
+      case 'address': return (orgAddressText(a) ?? '').localeCompare(orgAddressText(b) ?? '');
       case 'donor_tier': return (a.donor_tier ?? '').localeCompare(b.donor_tier ?? '');
       case 'stage': return a.stage.localeCompare(b.stage);
       case 'owner': return (a.owner_id ?? '').localeCompare(b.owner_id ?? '');
@@ -588,6 +608,15 @@ export function PartnerTableView({
       case 'phone':
         return <Stop><InlineText value={p.phone ?? ''} placeholder="—" onSave={(v) => void patch(p.id, { phone: v.trim() || null })} /></Stop>;
       case 'address':
+        // An organization's addresses are a list, edited in its record.
+        if (orgAddresses && !isPersonRecord(p)) {
+          const text = orgAddressText(p);
+          return (
+            <span className={`block whitespace-pre-line text-sm ${text ? '' : 'text-sparrow-gray/60 dark:text-sparrow-dark-gray/60'}`} title="Edit addresses in the record">
+              {text ?? 'No address'}
+            </span>
+          );
+        }
         return <ExpandableText value={p.address} placeholder="No address" onSave={(v) => void patch(p.id, { address: v })} />;
       case 'donor_tier':
         return (

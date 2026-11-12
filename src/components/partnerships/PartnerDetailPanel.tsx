@@ -63,6 +63,7 @@ import {
 import { FreshnessStamp, StillCorrectButton } from '../resident-services/Freshness';
 import { ServiceFormPanel } from '../resident-services/ServiceFormPanel';
 import { OrgContacts } from './OrgContacts';
+import { OrgAddresses } from './OrgAddresses';
 import { CheckinList } from './Checkins';
 
 // For the collapsed "last touchpoint" preview only -- the full note (with
@@ -572,7 +573,11 @@ export function PartnerDetailPanel({
               <div className={isPersonRecord(partner) ? 'opacity-50' : ''}>
                 <InfoRow label="Website" value={partner.website} href={partner.website ? withScheme(partner.website) : undefined} />
               </div>
-              <InfoRow label="Address" value={partner.address} />
+              {/* Organizations keep a list of labeled addresses, shared with Resident Services
+                  (migration 0224). People keep their one mailing address. */}
+              {isPersonRecord(partner)
+                ? <InfoRow label="Address" value={partner.address} />
+                : <OrgAddresses partnerId={partner.id} onChanged={onChanged} fallback={<InfoRow label="Address" value={partner.address} />} />}
               <InfoRow label="Source" value={partner.source} />
             </div>
           ) : (
@@ -641,19 +646,24 @@ export function PartnerDetailPanel({
                   action={partner.website ? <a className="text-xs text-sparrow-green dark:text-sparrow-dark-green hover:underline" href={withScheme(partner.website)} target="_blank" rel="noreferrer">Visit</a> : undefined}
                 />
               </div>
-              <div>
-                <span className="field-label">Mailing address</span>
-                <textarea
-                  defaultValue={partner.address ?? ''}
-                  onBlur={(e) => {
-                    const v = e.target.value.trim() || null;
-                    if (v !== (partner.address ?? null)) void patch({ address: v });
-                  }}
-                  rows={2}
-                  placeholder="Street, city, state ZIP"
-                  className="field-input"
-                />
-              </div>
+              {(() => {
+                const mailing = (
+                  <div>
+                    <span className="field-label">Mailing address</span>
+                    <textarea
+                      defaultValue={partner.address ?? ''}
+                      onBlur={(e) => {
+                        const v = e.target.value.trim() || null;
+                        if (v !== (partner.address ?? null)) void patch({ address: v });
+                      }}
+                      rows={2}
+                      placeholder="Street, city, state ZIP"
+                      className="field-input"
+                    />
+                  </div>
+                );
+                return isPersonRecord(partner) ? mailing : <OrgAddresses partnerId={partner.id} onChanged={onChanged} fallback={mailing} />;
+              })()}
               <EditField label="Source (how the connection was made)" value={partner.source ?? ''} disabled={busy} onSave={(v) => void patch({ source: v })} />
             </div>
           )}

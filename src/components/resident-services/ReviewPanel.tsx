@@ -10,6 +10,7 @@ import {
 } from '@/lib/resident-services';
 import { StillCorrectButton } from './Freshness';
 import { OrgContacts } from '../partnerships/OrgContacts';
+import { OrgAddresses } from '../partnerships/OrgAddresses';
 
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -169,7 +170,7 @@ export function ReviewPanel({
             <Row label="Where it came from" value={partner.source} />
             <Row label="Phone" value={partner.phone} />
             <Row label="Email" value={partner.email} />
-            <Row label="Address" value={partner.address} />
+            <OrgAddresses partnerId={partner.id} onChanged={onChanged} fallback={<Row label="Address" value={partner.address} />} />
             <Row label="Website" value={partner.website} />
             <OrgContacts partnerId={partner.id} onChanged={onChanged} />
             <div className="space-y-1">
