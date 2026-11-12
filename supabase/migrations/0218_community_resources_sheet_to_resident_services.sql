@@ -8,6 +8,8 @@
 --         CARDV, DevNW, Love Inc, Oregon DHS, St. Vincent de Paul (Corvallis), Vina Moses Center,
 --         We Care Benton County). The sheet line goes in their notes; a phone is only filled in
 --         where the record has none.
+--       - (Updated 2026-11-12 from the newer Word copy of the sheet: CSC's main line
+--         541-752-1010 added; Love INC: both numbers work.)
 --       - 6 new Community Partner prospects: Samaritan Health Services, The Corvallis Clinic
 --         (business), Philomath Community Services (runs the Gleaners), South Corvallis Food
 --         Bank, Oregon Cascades West Council of Governments (Meals on Wheels), Community
@@ -125,7 +127,7 @@ BEGIN
     'The Directory record has 541-968-9803; public listings (211) give 541-791-3411, the number on the sheet.');
 
   PERFORM pg_temp.rs_org('70e828cd-bf86-4219-a2aa-45a774e2e47e', 'CARDV', 'nonprofit', NULL,
-    'C.A.R.D.V.A. (Domestic Violence): 541-738-8319. Not found in any public listing for CARDV; their 24-hour crisis line is 541-754-0110 and office line 541-758-0219.');
+    'CARDV (Domestic Violence): 541-738-8319 on the sheet. Not found in any public listing for CARDV; their 24-hour crisis line is 541-754-0110 and office line 541-758-0219.');
 
   v := pg_temp.rs_org('9be8aab7-7718-449e-89d5-9d6d8f383dd1', 'DevNW', 'nonprofit', '541-752-7220',
     'DevNW: 541-752-7220.');
@@ -193,8 +195,8 @@ BEGIN
     ARRAY['Benton County', 'Linn County'], '541-967-8630', NULL,
     '541-967-8630 is also listed publicly as OCWCOG''s Senior and Disability Services line for Benton and Linn; check which program it reaches.');
 
-  v := pg_temp.rs_org(NULL, 'Community Services Consortium', 'nonprofit', '541-704-7632',
-    'CSC (Community Services Consortium): 541-704-7632.');
+  v := pg_temp.rs_org(NULL, 'Community Services Consortium', 'nonprofit', '541-752-1010',
+    'CSC (Community Services Consortium): main line 541-752-1010. Utility Assistance Program: 541-704-7632.');
   PERFORM pg_temp.rs_draft(v, 'Energy (utility bill) assistance', 'Financial', all_people, local3, '541-704-7632', NULL,
     '541-704-7632 is the energy assistance intake line; their Corvallis main line is 541-752-1010.');
 
