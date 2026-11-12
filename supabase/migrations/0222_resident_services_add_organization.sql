@@ -15,14 +15,16 @@
 --      and never people (donors, volunteers).
 --   2. rs_link_organization() -- "Use this one": connects an existing record to Resident
 --      Services (decided 2026-11-12: link right away, Partnerships is told).
---   3. rs_add_organization() -- "None of these": creates the Directory record (Prospect,
+--   3. rs_add_organization() -- "Add as a new organization": creates the Directory record (Prospect,
 --      owned by the Partnerships room admin, source says Resident Services added it).
 --   Either way, the Partnerships room admin gets a task, which also shows on Partnerships
 --   Home ("crm" + department partnerships, like the other Partnerships reminders).
 --
--- An organization added from the room's own button goes into the room's "To review" box so
--- its programs can be added; it doesn't send the room admin a "Partnerships sent this"
--- task, since they added it themselves.
+-- An organization added (or connected) from the room's own button opens straight into its own
+-- page to add programs. Programs added there go straight onto the list. If it's closed with
+-- no programs yet, it waits in "To review" (added_by_resident_services) so it isn't lost. It
+-- never sends the room admin a "Partnerships sent this" task, since they added it themselves.
+-- No category is asked for when adding: the Partnerships room admin sets it.
 --
 -- Safe to run more than once.
 
@@ -159,11 +161,12 @@ DO $$ BEGIN
 EXCEPTION WHEN undefined_object THEN null;
 END $$;
 
--- ─── 5. "None of these — add a new organization" ───────────────────
+-- ─── 5. "Add as a new organization" ─────────────────────────────────
+-- No category is asked for: the Partnerships room admin sets it from their task.
 DROP FUNCTION IF EXISTS rs_add_organization(text, text, text, text, text, boolean);
+DROP FUNCTION IF EXISTS rs_add_organization(text, text, text, boolean);
 CREATE FUNCTION rs_add_organization(
-  p_name text, p_kind text, p_phone text DEFAULT NULL, p_website text DEFAULT NULL,
-  p_address text DEFAULT NULL, p_open_review boolean DEFAULT true
+  p_name text, p_phone text DEFAULT NULL, p_website text DEFAULT NULL, p_open_review boolean DEFAULT true
 ) RETURNS uuid
   LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -177,15 +180,11 @@ BEGIN
   IF v_name IS NULL THEN
     RAISE EXCEPTION 'Type the organization''s name.';
   END IF;
-  IF p_kind NOT IN ('nonprofit', 'church', 'business') THEN
-    RAISE EXCEPTION 'Pick what kind of organization it is.';
-  END IF;
-
-  INSERT INTO partners (name, type, sub_category, stage, owner_id, source, phone, website, address)
-  VALUES (v_name, 'community', p_kind::partner_sub_category, 'prospect',
+  INSERT INTO partners (name, type, stage, owner_id, source, phone, website)
+  VALUES (v_name, 'community', 'prospect',
           partnerships_room_admin_id(),
           'Added by Resident Services' || COALESCE(' (' || v_who || ')', '') || ', ' || to_char(current_date, 'Mon FMDD, YYYY'),
-          nullif(trim(p_phone), ''), nullif(trim(p_website), ''), nullif(trim(p_address), ''))
+          nullif(trim(p_phone), ''), nullif(trim(p_website), ''))
   RETURNING id INTO v_id;
 
   IF p_open_review THEN
@@ -204,8 +203,8 @@ BEGIN
   );
   RETURN v_id;
 END $$;
-REVOKE EXECUTE ON FUNCTION rs_add_organization(text, text, text, text, text, boolean) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION rs_add_organization(text, text, text, text, text, boolean) TO authenticated;
+REVOKE EXECUTE ON FUNCTION rs_add_organization(text, text, text, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION rs_add_organization(text, text, text, boolean) TO authenticated;
 
 -- ─── 6. "Use this one" ──────────────────────────────────────────────
 -- p_open_review: put it in "To review" (from the room's "+ Add an organization"). From

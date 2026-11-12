@@ -24,11 +24,16 @@ function Row({ label, value }: { label: string; value: string | null }) {
 
 /** One organization sent over from the Directory. The reviewer reads what Partnerships
  *  already has, adds the programs residents can use (saved as waiting for review), then
- *  confirms -- which is the moment they become "checked" and join the main list. */
+ *  confirms -- which is the moment they become "checked" and join the main list.
+ *
+ *  An organization Resident Services added (or connected) itself opens here too, as its own
+ *  page: programs added go straight onto the list, and "Done" closes it. Closed with no
+ *  programs yet, it waits in "To review" (migration 0222). */
 export function ReviewPanel({
   open,
   review,
   pendingServices,
+  orgPrograms = [],
   profiles,
   currentUserId,
   onClose,
@@ -39,6 +44,8 @@ export function ReviewPanel({
   open: boolean;
   review: ServiceReview | null;
   pendingServices: ResidentService[];
+  /** Added by Resident Services: this organization's programs already on the list. */
+  orgPrograms?: ResidentService[];
   profiles: Profile[];
   currentUserId: string;
   onClose: () => void;
@@ -58,6 +65,8 @@ export function ReviewPanel({
   if (!review) return null;
   const partner = review.partner;
   const sender = review.sent_by ? profiles.find((p) => p.id === review.sent_by)?.full_name ?? null : null;
+  const added = !!review.added_by_resident_services;
+  const programs = added ? [...orgPrograms, ...pendingServices] : pendingServices;
 
   async function run(fn: () => Promise<void>) {
     setError(null);
@@ -74,8 +83,20 @@ export function ReviewPanel({
       open={open}
       onClose={onClose}
       title={partner?.name ?? 'Organization'}
-      subtitle={`To review · sent ${shortDate(review.sent_at)}${sender ? ` by ${sender}` : ''}`}
-      footer={
+      subtitle={added
+        ? `Added ${shortDate(review.sent_at)}${sender ? ` by ${sender}` : ''}`
+        : `To review · sent ${shortDate(review.sent_at)}${sender ? ` by ${sender}` : ''}`}
+      footer={added ? (
+        <div className="space-y-2">
+          {error && <p className="text-sm text-priority-p1">{error}</p>}
+          <button onClick={onClose} className="btn-primary w-full">Done</button>
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            {programs.length === 0
+              ? 'No programs yet. If you close now, it waits in "To review" so you can add them later.'
+              : `${programs.length === 1 ? 'This program is' : `These ${programs.length} programs are`} on the Assistance Programs list. Click Done when you've added them all.`}
+          </p>
+        </div>
+      ) : (
         <div className="space-y-2">
           {error && <p className="text-sm text-priority-p1">{error}</p>}
           <div className="flex flex-wrap items-center gap-2">
@@ -92,12 +113,18 @@ export function ReviewPanel({
               : `Marks ${pendingServices.length === 1 ? 'this program' : `these ${pendingServices.length} programs`} checked today by you and adds ${pendingServices.length === 1 ? 'it' : 'them'} to the main list.`}
           </p>
         </div>
-      }
+      )}
     >
       <div className="space-y-5">
-        <p className="rounded-xl bg-amber-50 dark:bg-amber-500/10 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-200">
-          Partnerships sent this over from the Directory. Read what we have below, check it with them, add the programs residents can use, then click <strong>Reviewed — this is correct</strong>.
-        </p>
+        {added ? (
+          <p className="rounded-xl bg-sparrow-green/10 dark:bg-sparrow-dark-surface2 px-3 py-2.5 text-sm">
+            Add each program residents can use. They go straight onto the Assistance Programs list. Partnerships has been told about this organization.
+          </p>
+        ) : (
+          <p className="rounded-xl bg-amber-50 dark:bg-amber-500/10 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-200">
+            Partnerships sent this over from the Directory. Read what we have below, check it with them, add the programs residents can use, then click <strong>Reviewed — this is correct</strong>.
+          </p>
+        )}
 
         {/* Programs being added */}
         <section className="space-y-2">
@@ -107,13 +134,13 @@ export function ReviewPanel({
               + Add a program or service
             </button>
           </div>
-          {pendingServices.length === 0 ? (
+          {programs.length === 0 ? (
             <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
               None yet. One organization can offer several, so add each program separately.
             </p>
           ) : (
             <div className="space-y-2">
-              {pendingServices.map((s) => (
+              {programs.map((s) => (
                 <div key={s.id} className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-sparrow-rule/70 dark:border-sparrow-dark-border px-3 py-2.5">
                   <div>
                     <span className="text-sm font-medium">{s.name}</span>
@@ -177,8 +204,8 @@ export function ReviewPanel({
           ) : (
             <button
               onClick={() => setConfirmClose(true)}
-              disabled={pendingServices.length > 0}
-              title={pendingServices.length > 0 ? 'Remove the programs you added first' : undefined}
+              disabled={programs.length > 0}
+              title={programs.length > 0 ? 'Remove the programs you added first' : undefined}
               className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink disabled:opacity-50"
             >
               Nothing here for residents → close without adding

@@ -10,6 +10,7 @@ import {
   PERSON_GROUPS,
   SERVES_ALL,
   SERVES_FILTER_LABEL,
+  closeReviewWithoutServices,
   fetchArchivedServices,
   fetchOpenReviews,
   fetchServices,
@@ -111,6 +112,21 @@ export function ResidentServicesRoom() {
     () => (review ? allServices.filter((s) => s.needs_review && s.partner_id === review.partner_id) : []),
     [allServices, review],
   );
+  // An organization Resident Services added itself: its programs go straight onto the list.
+  const reviewOrgPrograms = useMemo(
+    () => (review?.added_by_resident_services ? allServices.filter((s) => !s.needs_review && s.partner_id === review.partner_id) : []),
+    [allServices, review],
+  );
+
+  // Closing an organization Resident Services added: once it has programs it's done, so it
+  // leaves "To review". With none yet, it stays there to come back to.
+  const closeReviewPanel = async () => {
+    const r = review;
+    setReviewId(null);
+    if (r?.added_by_resident_services && reviewOrgPrograms.length > 0 && profile?.id) {
+      try { await closeReviewWithoutServices(r.id, profile.id); } finally { void load(); }
+    }
+  };
   // The form's organization list needs the review's organization even if it isn't in the
   // Directory list this person can load.
   const formPartners = useMemo(() => {
@@ -228,6 +244,7 @@ export function ResidentServicesRoom() {
                   {nameFor(r.sent_by) ? ` by ${nameFor(r.sent_by)}` : ''}
                   {(() => {
                     const n = allServices.filter((s) => s.needs_review && s.partner_id === r.partner_id).length;
+                    if (r.added_by_resident_services) return ' · no programs yet';
                     return n ? ` · ${n} program${n === 1 ? '' : 's'} added` : '';
                   })()}
                 </span>
@@ -411,9 +428,10 @@ export function ResidentServicesRoom() {
         open={!!review && !formOpen}
         review={review}
         pendingServices={pendingForReview}
+        orgPrograms={reviewOrgPrograms}
         profiles={profiles}
         currentUserId={profile?.id ?? ''}
-        onClose={() => setReviewId(null)}
+        onClose={() => void closeReviewPanel()}
         onAddService={() => { setEditing(null); setFormOpen(true); }}
         onEditService={(s) => { setEditing(s); setFormOpen(true); }}
         onChanged={() => void load()}
@@ -423,7 +441,7 @@ export function ResidentServicesRoom() {
         service={editing}
         partners={formPartners}
         presetPartnerId={review?.partner_id ?? null}
-        forReview={!!review}
+        forReview={!!review && !review.added_by_resident_services}
         onClose={() => setFormOpen(false)}
         onSaved={(id) => { void load(); if (!review) setSelectedId(id); }}
         onFindOrganization={review ? undefined : () => setAddOrgMode('program')}

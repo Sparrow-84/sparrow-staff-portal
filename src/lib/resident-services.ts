@@ -322,14 +322,6 @@ export interface SimilarOrganization {
   inactive: boolean;
 }
 
-/** The kinds of organization Resident Services can add (Partnerships sets the rest). */
-export const ORG_KINDS = [
-  { key: 'nonprofit', label: 'Nonprofit or government agency' },
-  { key: 'church', label: 'Church' },
-  { key: 'business', label: 'Business' },
-] as const;
-export type OrgKind = (typeof ORG_KINDS)[number]['key'];
-
 /** `available` is false until 0222 runs. */
 export async function findSimilarOrganizations(
   name: string, phone: string, website: string,
@@ -341,13 +333,14 @@ export async function findSimilarOrganizations(
   return { matches: (data ?? []) as SimilarOrganization[], available: true };
 }
 
-/** "None of these — add a new organization". Returns the new Directory record's id. */
+/** "Add as a new organization". Returns the new Directory record's id. Partnerships sets
+ *  its category afterwards (from their task). */
 export async function addOrganization(input: {
-  name: string; kind: OrgKind; phone: string; website: string; address: string; openReview: boolean;
+  name: string; phone: string; website: string; openReview: boolean;
 }): Promise<string> {
   const { data, error } = await supabase.rpc('rs_add_organization', {
-    p_name: input.name, p_kind: input.kind, p_phone: input.phone || null,
-    p_website: input.website || null, p_address: input.address || null, p_open_review: input.openReview,
+    p_name: input.name, p_phone: input.phone || null,
+    p_website: input.website || null, p_open_review: input.openReview,
   });
   if (error) throw new Error(error.message);
   return data as string;
