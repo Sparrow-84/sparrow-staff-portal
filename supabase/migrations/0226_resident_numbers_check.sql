@@ -10,7 +10,8 @@
 --            replaces the first.
 --   * Clicking "✓ All checked" (or finishing the task from a task list) closes the tasks.
 --     From a task list, the next check is set 2 years out.
---   * Moving the Next check date removes the stale open task; a fresh one comes for the new date.
+--   * The Next check date can only be set by "✓ All checked" (any time, early is fine), and is
+--     never more than 2 years out. There is no way to just move it later. (Decided 2026-11-13.)
 -- Starts with no check recorded (the room shows "Not checked yet" and sends no task) until
 -- someone clicks "✓ All checked" for the first time.
 --
@@ -105,20 +106,25 @@ DO $$ BEGIN
 EXCEPTION WHEN OTHERS THEN null;
 END $$;
 
--- ─── 3. "✓ All checked" or a moved date keeps the tasks in step ────────
+-- ─── 3. "✓ All checked" closes the tasks; the date can't just be pushed back ──
+-- The Next check date is only ever set while marking the whole list checked today, and never
+-- more than 2 years out -- so it can't be moved back again and again without a check.
 CREATE OR REPLACE FUNCTION on_resident_numbers_checked() RETURNS trigger
   LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   NEW.updated_at := now();
+  IF NEW.next_check_on IS DISTINCT FROM OLD.next_check_on THEN
+    IF NEW.last_checked_on IS DISTINCT FROM current_date THEN
+      RAISE EXCEPTION 'The next check date can only be set when the whole list is checked.';
+    END IF;
+    IF NEW.next_check_on IS NULL OR NEW.next_check_on <= current_date
+       OR NEW.next_check_on > (current_date + interval '2 years')::date THEN
+      RAISE EXCEPTION 'The next check must be after today and no more than 2 years away.';
+    END IF;
+  END IF;
   -- Checked: the open tasks are done.
   IF NEW.last_checked_on IS DISTINCT FROM OLD.last_checked_on AND NEW.last_checked_on IS NOT NULL THEN
     UPDATE tasks SET status = 'done', updated_at = now()
-     WHERE source_system = 'resident_services' AND source_ref LIKE 'numbers_check:%' AND status <> 'done';
-  END IF;
-  -- Date moved: any task still open is stale. Removed rather than marked done, so it never
-  -- shows as finished work; the daily job makes a fresh one for the new date.
-  IF NEW.next_check_on IS DISTINCT FROM OLD.next_check_on THEN
-    DELETE FROM tasks
      WHERE source_system = 'resident_services' AND source_ref LIKE 'numbers_check:%' AND status <> 'done';
   END IF;
   RETURN NEW;

@@ -7,7 +7,6 @@ import {
   longDate,
   markNumbersChecked,
   numbersCheckTone,
-  setNextNumbersCheck,
   todayISO,
   twoYearsFrom,
   updateNumber,
@@ -140,26 +139,29 @@ function CheckBar({
   onChanged: () => void;
 }) {
   const tone = numbersCheckTone(check);
-  // 'checked' = "✓ All checked" asking for the next date; 'move' = changing the Next check date.
-  const [mode, setMode] = useState<'checked' | 'move' | null>(null);
+  // "✓ All checked" asks for the next check date. It's the only way to set that date (any time,
+  // early is fine), and it can't be more than 2 years out -- so the check can't just be pushed
+  // back again and again (decided 2026-11-13; the database enforces it too).
+  const [asking, setAsking] = useState(false);
   const [date, setDate] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const maxDate = twoYearsFrom(todayISO());
 
-  const open = (m: 'checked' | 'move') => {
-    setMode(m);
+  const open = () => {
+    setAsking(true);
     setError(null);
-    setDate(m === 'checked' ? twoYearsFrom(todayISO()) : (check.next_check_on ?? twoYearsFrom(todayISO())));
+    setDate(maxDate);
   };
 
   const save = async () => {
     if (!date) { setError('Pick a date.'); return; }
     if (date <= todayISO()) { setError('Pick a date after today.'); return; }
+    if (date > maxDate) { setError('The next check can be 2 years away at most.'); return; }
     setBusy(true); setError(null);
     try {
-      if (mode === 'checked') await markNumbersChecked(currentUserId, date);
-      else await setNextNumbersCheck(date);
-      setMode(null);
+      await markNumbersChecked(currentUserId, date);
+      setAsking(false);
       onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save.');
@@ -188,29 +190,22 @@ function CheckBar({
             {tone !== 'fresh' && last && <span className="block text-xs opacity-80">{last}</span>}
           </span>
         </span>
-        {mode === null && (
-          <>
-            {next && (
-              <button type="button" onClick={() => open('move')} className="text-xs font-medium underline-offset-2 hover:underline">
-                Change date
-              </button>
-            )}
-            <button type="button" onClick={() => open('checked')} className="btn-primary px-3 py-1.5 text-sm">
-              ✓ All checked
-            </button>
-          </>
+        {!asking && (
+          <button type="button" onClick={open} className="btn-primary px-3 py-1.5 text-sm">
+            ✓ All checked
+          </button>
         )}
       </div>
-      {mode !== null && (
+      {asking && (
         <form
           onSubmit={(e) => { e.preventDefault(); void save(); }}
           className="mt-3 flex flex-wrap items-end gap-2 border-t border-current/15 pt-3"
         >
           <label className="block">
-            <span className="field-label">{mode === 'checked' ? 'When should the next check be?' : 'Next check'}</span>
-            <input type="date" value={date} min={todayISO()} onChange={(e) => setDate(e.target.value)} className="field-input" />
+            <span className="field-label">When should the next check be? (2 years at most)</span>
+            <input type="date" value={date} min={todayISO()} max={maxDate} onChange={(e) => setDate(e.target.value)} className="field-input" />
           </label>
-          <button type="button" onClick={() => setMode(null)} className="btn-secondary px-3 py-1.5 text-sm">Cancel</button>
+          <button type="button" onClick={() => setAsking(false)} className="btn-secondary px-3 py-1.5 text-sm">Cancel</button>
           <button type="submit" disabled={busy} className="btn-primary">{busy ? 'Saving…' : 'Save'}</button>
           {error && <p className="w-full text-xs text-priority-p1">{error}</p>}
         </form>

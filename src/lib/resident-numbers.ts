@@ -124,11 +124,6 @@ export async function markNumbersChecked(userId: string, nextOn: string): Promis
   if (error) throw new Error(error.message);
 }
 
-export async function setNextNumbersCheck(nextOn: string): Promise<void> {
-  const { error } = await supabase.from('resident_numbers_check').update({ next_check_on: nextOn }).eq('id', true);
-  if (error) throw new Error(error.message);
-}
-
 /** Groups in display order, each with its numbers; empty groups dropped. */
 export function groupNumbers(numbers: ResidentNumber[]) {
   return NUMBER_GROUPS
