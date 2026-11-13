@@ -49,6 +49,12 @@ export interface ServicePartner {
   address: string | null;
   website: string | null;
   mou_status: 'not_needed' | 'needed' | 'on_file' | null;
+  // Shared from the Directory record so Resident Services doesn't call a partner to ask what
+  // Partnerships already knows (decided 2026-11-13). Never giving, donor or volunteer details.
+  owner_id: string | null;
+  notes: string | null;
+  sparrow_provides: string | null;
+  partner_provides_tags: string[] | null;
   info_checked_at: string | null;
   info_checked_by: string | null;
   info_checked_how: CheckedHow | null;
@@ -122,7 +128,7 @@ export interface ServiceReview {
   } | null;
 }
 
-const SELECT = '*, partner:partners(id, name, contact_name, role, phone, address, website, mou_status, info_checked_at, info_checked_by, info_checked_how)';
+const SELECT = '*, partner:partners(id, name, contact_name, role, phone, address, website, mou_status, owner_id, notes, sparrow_provides, partner_provides_tags, info_checked_at, info_checked_by, info_checked_how)';
 // With where people go (migration 0224). Each fetch tries this first and falls back to SELECT
 // before 0224 runs, so the room keeps working.
 const SELECT_WITH_LOCATIONS = `${SELECT}, locations:resident_service_locations(address:organization_addresses(id, partner_id, label, street, city, is_private))`;
@@ -435,17 +441,17 @@ export async function markPartnerInfoChecked(partnerId: string, how: Exclude<Che
   if (error) throw new Error(error.message);
 }
 
-/** The most recent touchpoint on an organization's Directory record (read-only context). */
-export async function fetchLatestTouchpoint(partnerId: string): Promise<{ summary: string | null; occurred_on: string; logged_by: string | null } | null> {
+/** An organization's scheduled check-ins (Partnerships schedules them; Resident Services sees
+ *  them, read-only, from migration 0227). Empty when none or before 0227 runs. */
+export async function fetchUpcomingCheckins(partnerId: string): Promise<{ id: string; label: string; due_date: string | null }[]> {
   const { data, error } = await supabase
-    .from('partner_touchpoints')
-    .select('summary, occurred_on, logged_by')
+    .from('partner_checkins')
+    .select('id, label, due_date')
     .eq('partner_id', partnerId)
-    .order('occurred_on', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error || !data) return null;
-  return data as { summary: string | null; occurred_on: string; logged_by: string | null };
+    .is('done_at', null)
+    .order('due_date', { ascending: true, nullsFirst: false });
+  if (error) return [];
+  return (data ?? []) as { id: string; label: string; due_date: string | null }[];
 }
 
 export async function updatePartnerContact(

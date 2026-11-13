@@ -47,13 +47,13 @@ const PARTNERSHIPS_TOUR_STEPS: TourStep[] = [
   {
     icon: '👤',
     title: 'Record drawer',
-    body: "Click any record to open its drawer: contacts, giving history, notes, and the touchpoints you've logged. Log a touchpoint for a personal, 1:1 contact — a call, a personal email, a visit.",
+    body: "Click any record to open its drawer: contacts, giving history, notes, and its check-ins. Log a check-in after a personal, 1:1 contact — a call, a personal email, a visit. On an organization in the Resident Services room, the parts that team also sees are marked Shared with Resident Services.",
     tag: { icon: '👤', label: 'Record drawer' },
   },
   {
     icon: '💬',
     title: 'Stewardship',
-    body: "Most relationships need nothing extra beyond TSM and the regular thank-yous. When one needs a specific, dated check-in (often a Community Partner's MOU), add it under Check-ins in the record. A record can have more than one. Each shows on Home when it's due; click Done and it asks when the next one is.",
+    body: "Most relationships need nothing extra beyond TSM and the regular thank-yous. When one needs a specific, dated check-in (often a Community Partner's MOU), add it under Upcoming check-ins in the record. A record can have more than one. Each shows on Home when it's due; click Done and it asks when the next one is.",
     tag: null,
   },
   {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import { addCheckin, completeCheckin, deleteCheckin, updateCheckin } from '@/lib/partnerships';
 import { checkinDueLabel, daysUntil, type Partner, type PartnerCheckin } from '@/lib/partnerships-types';
+import { SharedWithRs } from './SharedWithRs';
 
 /** Shown after clicking Done: closes this one check-in and asks when the next one of the
  *  same kind is due. Used in the record drawer and on Partnerships Home. */
@@ -66,8 +67,14 @@ export function CheckinDoneForm({
   );
 }
 
-/** The record drawer's Check-ins section. */
-export function CheckinList({ partner, onChanged }: { partner: Partner; onChanged: () => void }) {
+/** The record drawer's "Upcoming check-ins" section (what's scheduled; what already happened
+ *  is "Check-in history"). */
+export function CheckinList({ partner, onChanged, shared = false }: {
+  partner: Partner;
+  onChanged: () => void;
+  /** Show the "Shared with Resident Services" tag. */
+  shared?: boolean;
+}) {
   const [doneId, setDoneId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
@@ -120,7 +127,7 @@ export function CheckinList({ partner, onChanged }: { partner: Partner; onChange
 
   return (
     <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
-      <span className="field-label block">Check-ins</span>
+      <span className="field-label block">Upcoming check-ins <SharedWithRs show={shared} className="ml-1.5" /></span>
 
       {checkins.length > 0 && (
         <ul className="space-y-2">
@@ -237,7 +244,7 @@ export function CheckinList({ partner, onChanged }: { partner: Partner; onChange
           onClick={() => setAdding(true)}
           className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
         >
-          + Add a check-in
+          + Schedule a check-in
         </button>
       )}
 

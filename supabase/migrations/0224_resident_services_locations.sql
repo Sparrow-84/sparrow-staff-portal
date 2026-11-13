@@ -425,7 +425,7 @@ BEGIN
       'rs_linked_org:' || p_partner_id,
       'Resident Services is now listing programs from ' || v_name,
       COALESCE(v_who, 'Resident Services') || ' connected ' || v_name || ' to the Resident Services room, '
-        || 'so Resident Services staff can now see its Directory record (contacts, notes, latest touchpoint) '
+        || 'so Resident Services staff can now see its Directory record (contacts, addresses, notes and check-ins) '
         || 'inside its programs. Nothing to do unless something on the record shouldn''t be shared. Then mark this done.'
     );
   END IF;

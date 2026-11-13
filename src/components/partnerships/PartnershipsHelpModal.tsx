@@ -37,12 +37,13 @@ export function PartnershipsHelpModal({ open, onClose }: { open: boolean; onClos
         <div className="space-y-6 px-6 py-5">
 
           <p className="text-xs leading-relaxed text-sparrow-gray dark:text-sparrow-dark-gray">
-            A <strong>touchpoint</strong> is a personal, 1:1 interaction — a call, a personal
-            email, a text, a letter, a meeting, or a visit. For most relationships, no separate
-            touchpoint is expected at all: TSM subscription plus any fixed thank-you moments is
-            the complete plan. Community Partners are the exception — they need specific, named,
-            dated check-ins, since the relationship is ongoing and practical rather than built
-            around a single gift or signup.
+            A <strong>check-in</strong> is a personal, 1:1 interaction — a call, a personal
+            email, a text, a letter, a meeting, or a visit. Log one after it happens with
+            <strong> + Log a check-in</strong>; schedule one that's coming up under
+            <strong> Upcoming check-ins</strong>. Most relationships don't need scheduled check-ins:
+            TSM subscription plus any fixed thank-you moments is the complete plan. Community
+            Partners are the exception — they need specific, named, dated check-ins, since the
+            relationship is ongoing and practical rather than built around a single gift or signup.
           </p>
 
           {/* ── Do I have a to-do right now? ── The most important section */}

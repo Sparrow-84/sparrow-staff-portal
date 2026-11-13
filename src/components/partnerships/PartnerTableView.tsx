@@ -78,7 +78,7 @@ const COLUMNS: GridColumn<ColKey>[] = [
   { key: 'interests', label: 'Interests', defaultWidth: 170 },
   { key: 'stage', label: 'Stage', defaultWidth: 130 },
   { key: 'owner', label: 'Owner', defaultWidth: 170 },
-  { key: 'needs_touchpoint', label: 'Check-ins', defaultWidth: 220 },
+  { key: 'needs_touchpoint', label: 'Upcoming check-ins', defaultWidth: 220 },
   { key: 'gift_count', label: 'Total Gifts', align: 'right', defaultWidth: 90 },
   { key: 'last_gift', label: 'Last gift', defaultWidth: 100 },
   { key: 'source', label: 'Source', defaultWidth: 170 },

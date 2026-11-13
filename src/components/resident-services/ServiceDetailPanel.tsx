@@ -4,7 +4,6 @@ import type { Profile } from '@/lib/types';
 import { MOU_STATUS } from '@/lib/partnerships-types';
 import {
   archiveService,
-  fetchLatestTouchpoint,
   locationLines,
   markPartnerInfoChecked,
   markServiceChecked,
@@ -21,10 +20,7 @@ import { OrgAddresses } from '../partnerships/OrgAddresses';
 import { FreshnessStamp, StillCorrectButton } from './Freshness';
 import { OrgContacts } from '../partnerships/OrgContacts';
 import { fetchPartnerContacts, type PartnerContact } from '@/lib/partner-contacts';
-
-function plainText(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
+import { DirectoryCheckins } from './DirectoryCheckins';
 
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -78,7 +74,6 @@ export function ServiceDetailPanel({
   onEdit: () => void;
   onChanged: () => void;
 }) {
-  const [latestNote, setLatestNote] = useState<Awaited<ReturnType<typeof fetchLatestTouchpoint>>>(null);
   const [goTo, setGoTo] = useState<PartnerContact | null>(null);
   const [officeElsewhere, setOfficeElsewhere] = useState(false);
   const [confirmClearOffice, setConfirmClearOffice] = useState(false);
@@ -94,8 +89,6 @@ export function ServiceDetailPanel({
     setError(null);
     setOfficeElsewhere(!!service.partner?.address);
     setConfirmClearOffice(false);
-    setLatestNote(null);
-    if (service.partner_id) void fetchLatestTouchpoint(service.partner_id).then(setLatestNote);
     setGoTo(null);
     if (service.partner_id && service.go_to_contact_id) {
       void fetchPartnerContacts(service.partner_id).then((res) => setGoTo(res.contacts.find((c) => c.id === service.go_to_contact_id) ?? null));
@@ -264,11 +257,23 @@ export function ServiceDetailPanel({
                 <StillCorrectButton onConfirm={(how) => run(() => markPartnerInfoChecked(partner.id, how, currentUserId))} />
               </div>
               <Row label="MOU" value={`${partner.mou_status ? MOU_STATUS[partner.mou_status] : 'Not set'}${isPartnershipsStaff ? '' : '  (Partnerships staff edit this)'}`} />
-              <Row
-                label="Last touchpoint"
-                value={latestNote ? `${shortDate(latestNote.occurred_on)}${nameFor(latestNote.logged_by) ? ` · ${nameFor(latestNote.logged_by)}` : ''}${latestNote.summary ? `: ${plainText(latestNote.summary)}` : ''}` : null}
+              {/* Shared from the Directory record (decided 2026-11-13): so nobody calls the
+                  organization to ask what Partnerships already knows. Giving, donor and
+                  volunteer details are never shown here. */}
+              <Row label="Ask in Partnerships" value={nameFor(partner.owner_id) ?? 'No owner yet. Ask the Partnerships Coordinator.'} />
+              <Row label="Notes" value={partner.notes} />
+              {(partner.sparrow_provides || (partner.partner_provides_tags ?? []).length > 0) && (
+                <>
+                  <Row label="What Sparrow provides" value={partner.sparrow_provides} />
+                  <Row label="What they provide" value={(partner.partner_provides_tags ?? []).join(', ') || null} />
+                </>
+              )}
+              <DirectoryCheckins
+                partnerId={partner.id}
+                currentUserId={currentUserId}
+                isAdmin={profiles.find((p) => p.id === currentUserId)?.role === 'admin'}
+                nameFor={nameFor}
               />
-              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Full record, notes and history: Partnerships → Directory.</p>
             </div>
           ) : (
             <p className="rounded-xl bg-sparrow-mist/60 dark:bg-sparrow-dark-surface2 p-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">

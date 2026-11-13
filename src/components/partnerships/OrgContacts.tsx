@@ -9,6 +9,7 @@ import {
   type PartnerContactInput,
 } from '@/lib/partner-contacts';
 import { fetchServicesForPartner } from '@/lib/resident-services';
+import { SharedWithRs } from './SharedWithRs';
 
 const EMPTY: PartnerContactInput = { name: '', role: '', phone: '', email: '', notes: '' };
 
@@ -68,7 +69,12 @@ function ContactForm({
  *  (the one shown in the Directory's Contact Person column). Renders nothing until
  *  migration 0200 runs. Used in the Directory record drawer and in a Resident Services
  *  service, so either team can keep it current. */
-export function OrgContacts({ partnerId, onChanged }: { partnerId: string; onChanged?: () => void }) {
+export function OrgContacts({ partnerId, onChanged, shared = false }: {
+  partnerId: string;
+  onChanged?: () => void;
+  /** Show the "Shared with Resident Services" tag (Directory drawer only). */
+  shared?: boolean;
+}) {
   const [contacts, setContacts] = useState<PartnerContact[]>([]);
   const [available, setAvailable] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -115,7 +121,7 @@ export function OrgContacts({ partnerId, onChanged }: { partnerId: string; onCha
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="field-label">Contacts</span>
+        <span className="field-label">Contacts <SharedWithRs show={shared} className="ml-1.5" /></span>
         {!adding && (
           <button onClick={() => setAdding(true)} className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
             + Add a contact

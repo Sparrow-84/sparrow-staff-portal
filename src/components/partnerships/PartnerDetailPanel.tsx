@@ -65,9 +65,14 @@ import { ServiceFormPanel } from '../resident-services/ServiceFormPanel';
 import { OrgContacts } from './OrgContacts';
 import { OrgAddresses } from './OrgAddresses';
 import { CheckinList } from './Checkins';
+import { SharedWithRs } from './SharedWithRs';
 
-// For the collapsed "last touchpoint" preview only -- the full note (with
-// formatting) renders in the Touchpoint history list below via RichTextView.
+// Naming (decided 2026-11-13): what used to be called a "touchpoint" is a check-in. Scheduled
+// ones are "Upcoming check-ins" (partner_checkins); what already happened is "Check-in history"
+// (partner_touchpoints -- the table and code names stay as they are).
+
+// For the collapsed "Last check-in" preview only -- the full note (with
+// formatting) renders in the Check-in history list below via RichTextView.
 function plainTextPreview(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -203,6 +208,9 @@ export function PartnerDetailPanel({
   const isDonor = partnerMatchesType(partner, 'donor');
   const showPartnershipTerms = hasPartnershipTerms(partner);
   const lastTouchpoint = touchpoints[0] ?? null;
+  // An organization in the Resident Services room (a program there, or waiting in To review):
+  // the sections Resident Services staff also see get a "Shared with Resident Services" tag.
+  const sharedWithRs = !isPersonRecord(partner) && (services.length > 0 || !!rsReview.review);
 
   async function patch(p: Parameters<typeof updatePartner>[1]) {
     if (!partner) return;
@@ -323,11 +331,11 @@ export function PartnerDetailPanel({
           <span className="text-xs">{dueLabel(partner)}</span>
         </div>
 
-        {/* ── 2. Last touchpoint snippet ── */}
+        {/* ── 2. Last check-in snippet ── */}
         {lastTouchpoint ? (
           <div className="rounded-xl border border-sparrow-rule/70 bg-sparrow-mist/40 dark:bg-sparrow-dark-surface2 px-3 py-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Last touchpoint</span>
+              <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Last check-in <SharedWithRs show={sharedWithRs} className="ml-1" /></span>
               <span className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
                 {TOUCHPOINT_METHOD[lastTouchpoint.method]} · {shortDate(lastTouchpoint.occurred_on)}
               </span>
@@ -337,10 +345,10 @@ export function PartnerDetailPanel({
             )}
           </div>
         ) : (
-          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No touchpoints logged yet.</p>
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No check-ins logged yet.</p>
         )}
 
-        {/* ── 4. Log touchpoint — collapsed behind a button ── */}
+        {/* ── 4. Log a check-in — collapsed behind a button ── */}
         <section>
           <button
             onClick={() => {
@@ -358,7 +366,7 @@ export function PartnerDetailPanel({
                 : 'btn-primary'
             }`}
           >
-            {logOpen ? '↑ Cancel' : '+ Log a touchpoint'}
+            {logOpen ? '↑ Cancel' : '+ Log a check-in'}
           </button>
 
           {logOpen && (
@@ -399,6 +407,11 @@ export function PartnerDetailPanel({
                 placeholder="What was discussed, any follow-up needed, etc. (optional)"
                 className="min-h-[6rem]"
               />
+              {sharedWithRs && (
+                <p className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">
+                  <SharedWithRs show /> Resident Services staff will see this check-in.
+                </p>
+              )}
 
               {/* Inline updates */}
               <div className="space-y-2 border-t border-sparrow-rule/60 pt-2">
@@ -441,7 +454,7 @@ export function PartnerDetailPanel({
               </div>
 
               <button onClick={log} disabled={busy} className="btn-primary w-full">
-                {busy ? 'Saving…' : 'Log touchpoint'}
+                {busy ? 'Saving…' : 'Log check-in'}
               </button>
             </div>
           )}
@@ -495,7 +508,7 @@ export function PartnerDetailPanel({
             </div>
           )}
           <div>
-            <span className="field-label">Owner</span>
+            <span className="field-label">Owner <SharedWithRs show={sharedWithRs} className="ml-1.5" /></span>
             <select
               value={partner.owner_id ?? ''}
               onChange={(e) => void patch({ owner_id: e.target.value || null })}
@@ -510,7 +523,7 @@ export function PartnerDetailPanel({
               ))}
             </select>
           </div>
-          <CheckinList partner={partner} onChanged={() => { onChanged(); void reload(); }} />
+          <CheckinList partner={partner} shared={sharedWithRs} onChanged={() => { onChanged(); void reload(); }} />
           <div>
             <span className="field-label">Stage</span>
             <select
@@ -548,7 +561,7 @@ export function PartnerDetailPanel({
         {/* Key on edit state so uncontrolled inputs reset when toggling */}
         <section key={`info-${editingInfo}-${partner.id}`}>
           <div className="mb-2 flex items-center justify-between">
-            <span className="field-label">Partner info</span>
+            <span className="field-label">Partner info <SharedWithRs show={sharedWithRs} className="ml-1.5" /></span>
             <button
               onClick={() => setEditingInfo((v) => !v)}
               className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
@@ -678,7 +691,7 @@ export function PartnerDetailPanel({
         )}
 
         {/* ── 6.3. Everyone we know there, with roles; ★ = primary contact ── */}
-        {!isPersonRecord(partner) && <OrgContacts partnerId={partner.id} onChanged={onChanged} />}
+        {!isPersonRecord(partner) && <OrgContacts partnerId={partner.id} onChanged={onChanged} shared={sharedWithRs} />}
 
         {/* ── 6.4. Business card photo ── */}
         <section>
@@ -712,7 +725,7 @@ export function PartnerDetailPanel({
 
         {/* ── 7. Notes ── */}
         <section>
-          <span className="field-label">Notes</span>
+          <span className="field-label">Notes <SharedWithRs show={sharedWithRs} className="ml-1.5" /></span>
           <textarea
             defaultValue={partner.notes ?? ''}
             onBlur={(e) => {
@@ -775,7 +788,7 @@ export function PartnerDetailPanel({
         {/* ── 9. Partnership terms — bottom, records that are a Community Partner ── */}
         {showPartnershipTerms && (
           <section className="space-y-3 rounded-xl border border-sparrow-rule/70 p-3">
-            <span className="field-label block">Partnership terms</span>
+            <span className="field-label block">Partnership terms <SharedWithRs show={sharedWithRs} className="ml-1.5" /></span>
             <div>
               <span className="field-label">What Sparrow provides</span>
               <textarea
@@ -908,11 +921,11 @@ export function PartnerDetailPanel({
           </section>
         )}
 
-        {/* ── 10. Touchpoint history ── */}
+        {/* ── 10. Check-in history ── */}
         <section>
-          <span className="field-label">Touchpoint history</span>
+          <span className="field-label">Check-in history <SharedWithRs show={sharedWithRs} className="ml-1.5" /></span>
           <ul className="mt-1 space-y-2">
-            {touchpoints.length === 0 && <li className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No touchpoints logged yet.</li>}
+            {touchpoints.length === 0 && <li className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">No check-ins logged yet.</li>}
             {touchpoints.map((t) => (
               <li key={t.id} className="group rounded-xl border border-sparrow-rule/70 p-3">
                 {editingTouchpointId === t.id ? (
@@ -958,7 +971,7 @@ export function PartnerDetailPanel({
                         <button
                           onClick={() => startEditTouchpoint(t)}
                           title="Edit"
-                          aria-label="Edit touchpoint"
+                          aria-label="Edit check-in"
                           className="opacity-0 hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink group-hover:opacity-100"
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -969,7 +982,7 @@ export function PartnerDetailPanel({
                           onClick={() => void removeTouchpoint(t.id)}
                           disabled={deletingTouchpointId === t.id}
                           title="Delete"
-                          aria-label="Delete touchpoint"
+                          aria-label="Delete check-in"
                           className="opacity-0 hover:text-priority-p1 group-hover:opacity-100 disabled:opacity-50"
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1077,7 +1090,7 @@ export function PartnerDetailPanel({
               {mergeTarget && (
                 <div className="space-y-2 rounded-xl bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2 p-3">
                   <p className="text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
-                    This will move {touchpoints.length} touchpoint{touchpoints.length === 1 ? '' : 's'}
+                    This will move {touchpoints.length} check-in{touchpoints.length === 1 ? '' : 's'}
                     {isDonor && `, ${donations.length} gift${donations.length === 1 ? '' : 's'}`} from{' '}
                     <span className="font-semibold">{partner.name}</span> into{' '}
                     <span className="font-semibold">{mergeTarget.name}</span>, then delete {partner.name}.
@@ -1190,9 +1203,9 @@ export function PartnerDetailPanel({
             <div className="space-y-2">
               {(touchpoints.length > 0 || donations.length > 0) && (
                 <p className="text-xs leading-snug text-amber-800 dark:text-amber-300">
-                  {partner.name} has {touchpoints.length} touchpoint{touchpoints.length === 1 ? '' : 's'}
+                  {partner.name} has {touchpoints.length} logged check-in{touchpoints.length === 1 ? '' : 's'}
                   {isDonor && donations.length > 0 && ` and ${donations.length} logged gift${donations.length === 1 ? '' : 's'}`} on
-                  record. Deleting removes the touchpoint history for good{isDonor && donations.length > 0 ? ' (gifts stay in the giving records, just unlinked from this partner)' : ''}.
+                  record. Deleting removes the check-in history for good{isDonor && donations.length > 0 ? ' (gifts stay in the giving records, just unlinked from this partner)' : ''}.
                   If this was a real relationship, use Archive instead — it's reversible.
                 </p>
               )}
