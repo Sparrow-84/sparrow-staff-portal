@@ -213,7 +213,6 @@ export function ServiceDetailPanel({
           {partner ? (
             <div className="space-y-3 rounded-xl bg-sparrow-green/5 dark:bg-sparrow-dark-surface2 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">From the Directory record · {partner.name}</p>
-              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Stored once. Changes here show in Partnerships too.</p>
               {/* Each person's own phone/email lives on their contact, separate from the help line people call. */}
               <OrgContacts partnerId={partner.id} onChanged={onChanged} />
               <OrgAddresses
@@ -258,9 +257,8 @@ export function ServiceDetailPanel({
               </div>
               <Row label="MOU" value={`${partner.mou_status ? MOU_STATUS[partner.mou_status] : 'Not set'}${isPartnershipsStaff ? '' : '  (Partnerships staff edit this)'}`} />
               {/* Shared from the Directory record (decided 2026-11-13): so nobody calls the
-                  organization to ask what Partnerships already knows. Giving, donor and
-                  volunteer details are never shown here. */}
-              <Row label="Ask in Partnerships" value={nameFor(partner.owner_id) ?? 'No owner yet. Ask the Partnerships Coordinator.'} />
+                  organization to ask what Partnerships already knows. Giving history etc.
+                  isn't built in here (not hidden, just not needed). */}
               <Row label="Notes" value={partner.notes} />
               {(partner.sparrow_provides || (partner.partner_provides_tags ?? []).length > 0) && (
                 <>
