@@ -62,6 +62,73 @@ export const FALLBACK_SERVICES_LIST_NUMBERS: Pick<ResidentNumber, 'name' | 'phon
   { phone: '211', name: 'More local help with housing, food, utilities and more', note: null },
 ];
 
+// ── Checking the whole list (migration 0226) ───────────────────────────────────────
+// The list is checked all together, every 2 years. Green until two weeks before the Next
+// check date; amber from then (the room admins get a task); red once the date passes (a
+// second, higher-priority task). Before the first "✓ All checked" there's no date at all.
+
+export interface NumbersCheck {
+  last_checked_on: string | null;
+  last_checked_by: string | null;
+  next_check_on: string | null;
+}
+
+export type NumbersCheckTone = 'fresh' | 'due' | 'overdue' | 'never';
+
+/** Today as YYYY-MM-DD in local time (dates here are plain calendar dates). */
+export function todayISO(now: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
+export function addDaysISO(iso: string, days: number): string {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return todayISO(d);
+}
+
+export function twoYearsFrom(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setFullYear(d.getFullYear() + 2);
+  return todayISO(d);
+}
+
+export function numbersCheckTone(c: NumbersCheck | null, today: string = todayISO()): NumbersCheckTone {
+  if (!c?.next_check_on) return 'never';
+  if (today > c.next_check_on) return 'overdue';
+  if (today >= addDaysISO(c.next_check_on, -14)) return 'due';
+  return 'fresh';
+}
+
+/** "November 13, 2026" from a plain YYYY-MM-DD date. */
+export function longDate(iso: string): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+/** Null until migration 0226 runs (the tab then just doesn't show the check bar). */
+export async function fetchNumbersCheck(): Promise<NumbersCheck | null> {
+  const { data, error } = await supabase
+    .from('resident_numbers_check')
+    .select('last_checked_on, last_checked_by, next_check_on')
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as NumbersCheck;
+}
+
+/** "✓ All checked": checked today by `userId`, next check on `nextOn`. */
+export async function markNumbersChecked(userId: string, nextOn: string): Promise<void> {
+  const { error } = await supabase
+    .from('resident_numbers_check')
+    .update({ last_checked_on: todayISO(), last_checked_by: userId || null, next_check_on: nextOn })
+    .eq('id', true);
+  if (error) throw new Error(error.message);
+}
+
+export async function setNextNumbersCheck(nextOn: string): Promise<void> {
+  const { error } = await supabase.from('resident_numbers_check').update({ next_check_on: nextOn }).eq('id', true);
+  if (error) throw new Error(error.message);
+}
+
 /** Groups in display order, each with its numbers; empty groups dropped. */
 export function groupNumbers(numbers: ResidentNumber[]) {
   return NUMBER_GROUPS

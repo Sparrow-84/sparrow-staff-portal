@@ -4,7 +4,14 @@ import {
   createNumber,
   deleteNumber,
   groupNumbers,
+  longDate,
+  markNumbersChecked,
+  numbersCheckTone,
+  setNextNumbersCheck,
+  todayISO,
+  twoYearsFrom,
   updateNumber,
+  type NumbersCheck,
   type NumberGroup,
   type NumberInput,
   type ResidentNumber,
@@ -15,10 +22,17 @@ import { PrintNumbers } from './PrintList';
 export function ImportantNumbersTab({
   numbers,
   missing,
+  check,
+  currentUserId,
+  nameFor,
   onChanged,
 }: {
   numbers: ResidentNumber[];
   missing: boolean;
+  /** The whole-list check (migration 0226); null until it runs. */
+  check: NumbersCheck | null;
+  currentUserId: string;
+  nameFor: (id: string | null) => string | null;
   onChanged: () => void;
 }) {
   const [adding, setAdding] = useState(false);
@@ -36,6 +50,7 @@ export function ImportantNumbersTab({
 
   return (
     <div className="mt-6 space-y-5">
+      {check && <CheckBar check={check} currentUserId={currentUserId} nameFor={nameFor} onChanged={onChanged} />}
       <div className="flex flex-wrap items-center gap-3">
         <p className="mr-auto max-w-xl text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           Numbers anyone can call. There's nothing to qualify for, and the list is the same for every resident. Not linked to the Partnerships Directory.
@@ -98,7 +113,108 @@ export function ImportantNumbersTab({
         </section>
       ))}
 
-      {printing && <PrintNumbers numbers={numbers} onDone={endPrint} />}
+      {printing && <PrintNumbers numbers={numbers} lastChecked={check?.last_checked_on ?? null} onDone={endPrint} />}
+    </div>
+  );
+}
+
+const BAR_TONE = {
+  fresh: 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200',
+  due: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200',
+  overdue: 'border-red-300 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200',
+  never: 'border-sparrow-rule bg-sparrow-mist text-sparrow-ink dark:border-sparrow-dark-border dark:bg-sparrow-dark-surface2 dark:text-sparrow-dark-ink',
+} as const;
+
+/** The whole list is checked together every 2 years. Same colors as the Assistance Programs
+ *  stamps: green, amber from two weeks before the Next check (a task arrives), red once it's
+ *  overdue (a higher-priority task). */
+function CheckBar({
+  check,
+  currentUserId,
+  nameFor,
+  onChanged,
+}: {
+  check: NumbersCheck;
+  currentUserId: string;
+  nameFor: (id: string | null) => string | null;
+  onChanged: () => void;
+}) {
+  const tone = numbersCheckTone(check);
+  // 'checked' = "✓ All checked" asking for the next date; 'move' = changing the Next check date.
+  const [mode, setMode] = useState<'checked' | 'move' | null>(null);
+  const [date, setDate] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const open = (m: 'checked' | 'move') => {
+    setMode(m);
+    setError(null);
+    setDate(m === 'checked' ? twoYearsFrom(todayISO()) : (check.next_check_on ?? twoYearsFrom(todayISO())));
+  };
+
+  const save = async () => {
+    if (!date) { setError('Pick a date.'); return; }
+    if (date <= todayISO()) { setError('Pick a date after today.'); return; }
+    setBusy(true); setError(null);
+    try {
+      if (mode === 'checked') await markNumbersChecked(currentUserId, date);
+      else await setNextNumbersCheck(date);
+      setMode(null);
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const who = nameFor(check.last_checked_by);
+  const last = check.last_checked_on ? `All numbers last checked ${longDate(check.last_checked_on)}${who ? ` by ${who}` : ''}` : null;
+  const next = check.next_check_on ? longDate(check.next_check_on) : null;
+
+  let message: string;
+  if (tone === 'never') message = "The full list hasn't been checked yet. Once you've called or looked up every number, click ✓ All checked.";
+  else if (tone === 'due') message = `Time to check every number. Due ${next}. Call or look up each one, fix any that changed, then click ✓ All checked.`;
+  else if (tone === 'overdue') message = `Overdue: every number should have been checked by ${next}. Call or look up each one, fix any that changed, then click ✓ All checked.`;
+  else message = `${last} · Next check ${next}`;
+
+  return (
+    <div className={`rounded-xl border px-4 py-3 text-sm ${BAR_TONE[tone]}`}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="mr-auto flex min-w-0 items-start gap-2">
+          {tone !== 'never' && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-current" aria-hidden />}
+          <span>
+            {message}
+            {tone !== 'fresh' && last && <span className="block text-xs opacity-80">{last}</span>}
+          </span>
+        </span>
+        {mode === null && (
+          <>
+            {next && (
+              <button type="button" onClick={() => open('move')} className="text-xs font-medium underline-offset-2 hover:underline">
+                Change date
+              </button>
+            )}
+            <button type="button" onClick={() => open('checked')} className="btn-primary px-3 py-1.5 text-sm">
+              ✓ All checked
+            </button>
+          </>
+        )}
+      </div>
+      {mode !== null && (
+        <form
+          onSubmit={(e) => { e.preventDefault(); void save(); }}
+          className="mt-3 flex flex-wrap items-end gap-2 border-t border-current/15 pt-3"
+        >
+          <label className="block">
+            <span className="field-label">{mode === 'checked' ? 'When should the next check be?' : 'Next check'}</span>
+            <input type="date" value={date} min={todayISO()} onChange={(e) => setDate(e.target.value)} className="field-input" />
+          </label>
+          <button type="button" onClick={() => setMode(null)} className="btn-secondary px-3 py-1.5 text-sm">Cancel</button>
+          <button type="submit" disabled={busy} className="btn-primary">{busy ? 'Saving…' : 'Save'}</button>
+          {error && <p className="w-full text-xs text-priority-p1">{error}</p>}
+        </form>
+      )}
     </div>
   );
 }

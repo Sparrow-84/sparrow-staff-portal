@@ -29,7 +29,7 @@ import { PrintList } from './PrintList';
 import { ImportantNumbersTab } from './ImportantNumbersTab';
 import { WHERE_OPTIONS } from '@/lib/locations';
 import { AddOrganizationPanel, type AddOrgResult } from './AddOrganizationPanel';
-import { FALLBACK_SERVICES_LIST_NUMBERS, fetchNumbers, type ResidentNumber } from '@/lib/resident-numbers';
+import { FALLBACK_SERVICES_LIST_NUMBERS, fetchNumbers, fetchNumbersCheck, type NumbersCheck, type ResidentNumber } from '@/lib/resident-numbers';
 
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -60,20 +60,23 @@ export function ResidentServicesRoom() {
   const [tab, setTab] = useState<'services' | 'numbers'>('services');
   const [numbers, setNumbers] = useState<ResidentNumber[]>([]);
   const [numbersMissing, setNumbersMissing] = useState(false);
+  const [numbersCheck, setNumbersCheck] = useState<NumbersCheck | null>(null);
   // "+ Add an organization" (room) or "Can't find it?" inside "+ Add a program" (program).
   const [addOrgMode, setAddOrgMode] = useState<'room' | 'program' | null>(null);
   const [formAddedOrg, setFormAddedOrg] = useState<{ id: string; name: string } | null>(null);
   const [pendingReviewPartner, setPendingReviewPartner] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [res, revs, profs, parts, arch, nums] = await Promise.all([
+    const [res, revs, profs, parts, arch, nums, numCheck] = await Promise.all([
       fetchServices(),
       fetchOpenReviews(),
       fetchProfiles().catch(() => [] as Profile[]),
       fetchPartners().catch(() => [] as Partner[]),
       fetchArchivedServices(),
       fetchNumbers(),
+      fetchNumbersCheck(),
     ]);
+    setNumbersCheck(numCheck);
     setNumbers(nums.numbers);
     setNumbersMissing(nums.missing);
     setArchived(arch);
@@ -221,7 +224,14 @@ export function ResidentServicesRoom() {
       </div>
 
       {tab === 'numbers' ? (
-        <ImportantNumbersTab numbers={numbers} missing={numbersMissing} onChanged={() => void load()} />
+        <ImportantNumbersTab
+          numbers={numbers}
+          missing={numbersMissing}
+          check={numbersCheck}
+          currentUserId={profile?.id ?? ''}
+          nameFor={nameFor}
+          onChanged={() => void load()}
+        />
       ) : (<>
 
       {missing && !loading && (

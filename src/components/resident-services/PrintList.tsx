@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { programAddresses, providerName, type ResidentService } from '@/lib/resident-services';
-import { groupNumbers, type ResidentNumber } from '@/lib/resident-numbers';
+import { groupNumbers, longDate, type ResidentNumber } from '@/lib/resident-numbers';
 
 /**
  * The printed Resident Services handouts (design approved 2026-11-11). They follow the
@@ -24,7 +24,7 @@ import { groupNumbers, type ResidentNumber } from '@/lib/resident-numbers';
 const PHONE = '(541) 753-3334';
 const WEBSITE = 'sparrowinc.org';
 
-function PrintFrame({ title, subtitle, onDone, children }: { title: string; subtitle: string; onDone: () => void; children: ReactNode }) {
+function PrintFrame({ title, subtitle, note, onDone, children }: { title: string; subtitle: string; note?: string | null; onDone: () => void; children: ReactNode }) {
   const logoRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -68,6 +68,7 @@ function PrintFrame({ title, subtitle, onDone, children }: { title: string; subt
         .rsp-rh span { margin-left: auto; color: #767676; }
         .rsp-title { font-size: 26pt; font-weight: 700; color: #1E4D30; margin: 0; line-height: 1.1; }
         .rsp-subt { font-size: 10pt; color: #767676; margin: 4pt 0 8pt; }
+        .rsp-note { font-size: 8.5pt; font-style: italic; color: #767676; margin: -5pt 0 8pt; }
         .rsp-rule { border-bottom: 0.5pt solid #D8D8D8; margin: 0 0 10pt; }
         .rsp-callout { display: flex; margin: 0 0 8pt; break-inside: avoid; }
         .rsp-callout::before { content: ""; flex: 0 0 3pt; }
@@ -102,6 +103,7 @@ function PrintFrame({ title, subtitle, onDone, children }: { title: string; subt
           <tr><td>
             <h1 className="rsp-title">{title}</h1>
             <p className="rsp-subt">{subtitle}</p>
+            {note && <p className="rsp-note">{note}</p>}
             <div className="rsp-rule" />
             {children}
           </td></tr>
@@ -177,9 +179,19 @@ export function PrintList({
 
 /** The Essential Phone Numbers tab, printed. Emergency numbers appear once, in their own section
  *  at the top -- there's no bottom box on this one. */
-export function PrintNumbers({ numbers, onDone }: { numbers: ResidentNumber[]; onDone: () => void }) {
+export function PrintNumbers({ numbers, lastChecked, onDone }: {
+  numbers: ResidentNumber[];
+  /** When the whole list was last checked (migration 0226); the line is left off until then. */
+  lastChecked?: string | null;
+  onDone: () => void;
+}) {
   return (
-    <PrintFrame title="Essential Phone Numbers" subtitle="Phone numbers to keep handy" onDone={onDone}>
+    <PrintFrame
+      title="Essential Phone Numbers"
+      subtitle="Phone numbers to keep handy"
+      note={lastChecked ? `Every number on this list was last checked ${longDate(lastChecked)}.` : null}
+      onDone={onDone}
+    >
       {groupNumbers(numbers).map((g) => (
         <section key={g.key}>
           <h2 className="rsp-h1">{g.label}</h2>
