@@ -265,7 +265,7 @@ export function ServiceDetailPanel({
               </div>
               <Row label="MOU" value={`${partner.mou_status ? MOU_STATUS[partner.mou_status] : 'Not set'}${isPartnershipsStaff ? '' : '  (Partnerships staff edit this)'}`} />
               <Row
-                label="Latest touchpoint"
+                label="Last touchpoint"
                 value={latestNote ? `${shortDate(latestNote.occurred_on)}${nameFor(latestNote.logged_by) ? ` · ${nameFor(latestNote.logged_by)}` : ''}${latestNote.summary ? `: ${plainText(latestNote.summary)}` : ''}` : null}
               />
               <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">Full record, notes and history: Partnerships → Directory.</p>
