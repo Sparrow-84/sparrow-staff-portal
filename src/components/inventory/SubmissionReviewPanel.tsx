@@ -6,7 +6,7 @@ import {
 } from '@/lib/inventory';
 import {
   EXIT_METHOD_LABELS,
-  monthName, displayAdditionCost,
+  monthName, displayAdditionCost, addedByLabel,
   type InvMonthlySubmission, type InvAddition, type InvRemoval,
 } from '@/lib/inventory-types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
@@ -63,6 +63,7 @@ function AdditionEditRow({
             <span>{displayAdditionCost(entry)}</span>
             {entry.cost_source === 'estimated' && <span className="text-sparrow-gold">est.</span>}
             {entry.ops_edited && <span className="text-sparrow-gold">edited by ops</span>}
+            {addedByLabel(entry) && <span>{addedByLabel(entry)}</span>}
             <span className="capitalize">{entry.condition}</span>
             {entry.is_donated && <span>Donated</span>}
             {entry.sub_location && <span>{entry.sub_location.name}</span>}
@@ -165,6 +166,7 @@ function RemovalEditRow({
             {entry.quantity_removed > 1 && <span>Qty: {entry.quantity_removed}</span>}
             <span>{EXIT_METHOD_LABELS[entry.how_it_left]}</span>
             {entry.ops_edited && <span className="text-sparrow-gold">edited by ops</span>}
+            {addedByLabel(entry) && <span>{addedByLabel(entry)}</span>}
           </div>
         </div>
         <div className="flex gap-1 shrink-0">
@@ -342,6 +344,7 @@ export function SubmissionReviewPanel({
                     <span className="capitalize">{a.condition}</span>
                     {a.is_donated && <span>Donated</span>}
                     {a.sub_location && <span>{a.sub_location.name}</span>}
+                    {addedByLabel(a) && <span>{addedByLabel(a)}</span>}
                   </div>
                 </div>
               )
@@ -365,6 +368,7 @@ export function SubmissionReviewPanel({
                   <div className="flex flex-wrap gap-x-3 text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
                     {r.quantity_removed > 1 && <span>Qty: {r.quantity_removed}</span>}
                     <span>{EXIT_METHOD_LABELS[r.how_it_left]}</span>
+                    {addedByLabel(r) && <span>{addedByLabel(r)}</span>}
                   </div>
                 </div>
               )

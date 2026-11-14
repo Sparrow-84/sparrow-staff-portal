@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   fetchOrCreateSubmission, fetchSubLocations, fetchActiveItems,
-  patchSubmission, submitForReview,
+  patchSubmission, submitForReview, fetchSubmitRole,
   addAddition, deleteAddition, addRemoval, deleteRemoval,
+  updateAddition, updateRemoval,
   type NewAddition, type NewRemoval,
 } from '@/lib/inventory';
 import {
   BATCH_CATEGORIES, BATCH_CATEGORY_HINTS, EXIT_METHOD_LABELS,
-  monthName, formatCost, displayAdditionCost, canSubmitForReview,
+  monthName, formatCost, displayAdditionCost, canSubmitForReview, addedByLabel,
   isSectionAResolved, isSectionBResolved,
   type InvMonthlySubmission, type InvSubLocation, type InvItem,
   type InvAddition, type InvRemoval,
@@ -25,19 +26,39 @@ const EMPTY_ADD: Omit<NewAddition, 'is_donated'> = {
 
 function AdditionForm({
   subLocations,
+  initial,
   onSave,
   onCancel,
 }: {
   subLocations: InvSubLocation[];
+  /** When set, the form edits this existing line instead of adding a new one. */
+  initial?: InvAddition;
   onSave: (entry: NewAddition) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState<Omit<NewAddition, 'is_donated'>>(EMPTY_ADD);
+  const [form, setForm] = useState<Omit<NewAddition, 'is_donated'>>(() =>
+    initial
+      ? {
+          is_batch: initial.is_batch,
+          batch_category: initial.batch_category,
+          description: initial.description,
+          serial_number: initial.serial_number,
+          condition: initial.condition,
+          quantity: initial.quantity,
+          cost: initial.cost,
+          cost_basis: initial.cost_basis,
+          cost_source: initial.cost_source,
+          sub_location_id: initial.sub_location_id,
+          notes: initial.notes,
+        }
+      : EMPTY_ADD,
+  );
   // Not a plain boolean here on purpose — starts unanswered so staff must
   // explicitly pick Yes or No rather than silently inheriting a default.
   // (This is exactly the gap that left ~150 historical items recorded as
   // "not donated" when nobody had actually ever confirmed that.)
-  const [donated, setDonated] = useState<boolean | null>(null);
+  // When editing, the existing line already has an answer.
+  const [donated, setDonated] = useState<boolean | null>(initial ? initial.is_donated : null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -307,7 +328,7 @@ function AdditionForm({
           disabled={busy}
           className="btn-primary text-sm disabled:opacity-40"
         >
-          {busy ? 'Saving…' : 'Add item'}
+          {busy ? 'Saving…' : initial ? 'Save changes' : 'Add item'}
         </button>
       </div>
     </div>
@@ -318,18 +339,26 @@ function AdditionForm({
 
 function RemovalForm({
   items,
+  initial,
   onSave,
   onCancel,
 }: {
   items: InvItem[];
+  /** When set, the form edits this existing line instead of adding a new one. */
+  initial?: InvRemoval;
   onSave: (entry: NewRemoval) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [selectedItemId, setSelectedItemId] = useState('');
-  const [freeText, setFreeText] = useState('');
-  const [qtyRemoved, setQtyRemoved] = useState(1);
-  const [howItLeft, setHowItLeft] = useState<NewRemoval['how_it_left'] | ''>('');
-  const [notes, setNotes] = useState('');
+  const initialPicked = initial?.inv_item_id && items.some((i) => i.id === initial.inv_item_id)
+    ? initial.inv_item_id
+    : '';
+  const [selectedItemId, setSelectedItemId] = useState(
+    initial && !initialPicked && items.length > 0 ? '__freetext__' : initialPicked,
+  );
+  const [freeText, setFreeText] = useState(initial && !initialPicked ? initial.description : '');
+  const [qtyRemoved, setQtyRemoved] = useState(initial?.quantity_removed ?? 1);
+  const [howItLeft, setHowItLeft] = useState<NewRemoval['how_it_left'] | ''>(initial?.how_it_left ?? '');
+  const [notes, setNotes] = useState(initial?.notes ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -348,7 +377,7 @@ function RemovalForm({
     setErr('');
     try {
       await onSave({
-        inv_item_id: selectedItemId || null,
+        inv_item_id: selectedItem ? selectedItem.id : null,
         description,
         serial_number: selectedItem?.serial_number ?? null,
         quantity_removed: qtyRemoved,
@@ -385,7 +414,7 @@ function RemovalForm({
           {selectedItemId === '__freetext__' && (
             <input
               value={freeText}
-              onChange={(e) => { setFreeText(e.target.value); setSelectedItemId(''); clear('rm-what'); }}
+              onChange={(e) => { setFreeText(e.target.value); clear('rm-what'); }}
               placeholder='e.g. "Large brown leather couch"'
               className="field-input mt-2"
             />
@@ -463,24 +492,94 @@ function RemovalForm({
           disabled={busy}
           className="btn-primary text-sm disabled:opacity-40"
         >
-          {busy ? 'Saving…' : 'Log removal'}
+          {busy ? 'Saving…' : initial ? 'Save changes' : 'Log removal'}
         </button>
       </div>
     </div>
   );
 }
 
+// ── Row actions: Edit + ✕ with an inline "are you sure?" ──────────────────
+
+function RowActions({
+  label,
+  addedBy,
+  onEdit,
+  onDelete,
+}: {
+  label: string;
+  addedBy: string | null;
+  onEdit: () => void;
+  onDelete: () => Promise<void>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  if (confirming) {
+    return (
+      <div className="w-full mt-2 rounded-lg border border-priority-p1/30 bg-white dark:bg-sparrow-dark-surface px-3 py-2 space-y-2">
+        <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+          Remove “{label}”?{addedBy ? ` ${addedBy} added this line.` : ''}
+        </p>
+        {err && <p className="text-xs text-priority-p1">{err}</p>}
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => { setConfirming(false); setErr(''); }} className="btn-ghost text-sm">Keep it</button>
+          <button
+            onClick={async () => {
+              setBusy(true);
+              setErr('');
+              try { await onDelete(); } catch (e) {
+                setErr(e instanceof Error ? e.message : 'Could not remove that line.');
+                setBusy(false);
+              }
+            }}
+            disabled={busy}
+            className="rounded-lg border border-priority-p1/40 px-3 py-1.5 text-sm font-medium text-priority-p1 hover:bg-priority-p1/10 transition disabled:opacity-40"
+          >
+            {busy ? 'Removing…' : 'Remove'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="shrink-0 flex items-center gap-3">
+      <button
+        onClick={onEdit}
+        className="text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline"
+      >
+        Edit
+      </button>
+      <button
+        onClick={() => setConfirming(true)}
+        className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 transition"
+        aria-label="Remove entry"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+const firstName = (p?: { full_name: string } | null) => p?.full_name?.split(' ')[0] ?? null;
+
 // ── Addition row ──────────────────────────────────────────────────────────
 
 function AdditionRow({
   entry,
+  readOnly,
+  onEdit,
   onDelete,
 }: {
   entry: InvAddition;
-  onDelete: () => void;
+  readOnly: boolean;
+  onEdit: () => void;
+  onDelete: () => Promise<void>;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-sparrow-green/25 bg-sparrow-green/5 px-4 py-3">
+    <div className="flex flex-wrap items-start gap-3 rounded-xl border border-sparrow-green/25 bg-sparrow-green/5 px-4 py-3">
       <div className="flex-1 min-w-0 space-y-0.5">
         <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink truncate">{entry.description}</p>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
@@ -494,14 +593,13 @@ function AdditionRow({
           {entry.is_batch && <span className="italic">{entry.batch_category}</span>}
           {entry.serial_number && <span>S/N: {entry.serial_number}</span>}
         </div>
+        {addedByLabel(entry) && (
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{addedByLabel(entry)}</p>
+        )}
       </div>
-      <button
-        onClick={onDelete}
-        className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 transition"
-        aria-label="Remove entry"
-      >
-        ✕
-      </button>
+      {!readOnly && (
+        <RowActions label={entry.description} addedBy={firstName(entry.added_by)} onEdit={onEdit} onDelete={onDelete} />
+      )}
     </div>
   );
 }
@@ -510,27 +608,30 @@ function AdditionRow({
 
 function RemovalRow({
   entry,
+  readOnly,
+  onEdit,
   onDelete,
 }: {
   entry: InvRemoval;
-  onDelete: () => void;
+  readOnly: boolean;
+  onEdit: () => void;
+  onDelete: () => Promise<void>;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-priority-p1/25 bg-priority-p1/5 px-4 py-3">
+    <div className="flex flex-wrap items-start gap-3 rounded-xl border border-priority-p1/25 bg-priority-p1/5 px-4 py-3">
       <div className="flex-1 min-w-0 space-y-0.5">
         <p className="text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink truncate">{entry.description}</p>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
           {entry.quantity_removed > 1 && <span>Qty removed: {entry.quantity_removed}</span>}
           <span>{EXIT_METHOD_LABELS[entry.how_it_left]}</span>
         </div>
+        {addedByLabel(entry) && (
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">{addedByLabel(entry)}</p>
+        )}
       </div>
-      <button
-        onClick={onDelete}
-        className="shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1 transition"
-        aria-label="Remove entry"
-      >
-        ✕
-      </button>
+      {!readOnly && (
+        <RowActions label={entry.description} addedBy={firstName(entry.added_by)} onEdit={onEdit} onDelete={onDelete} />
+      )}
     </div>
   );
 }
@@ -557,20 +658,32 @@ export function MonthlySubmissionForm({
   const [items, setItems] = useState<InvItem[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showRemovalForm, setShowRemovalForm] = useState(false);
+  // Only one entry form open at a time (add or edit), so field ids and
+  // validation never collide between two open forms.
+  const [editingAddId, setEditingAddId] = useState<string | null>(null);
+  const [editingRemId, setEditingRemId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // Set when someone presses Submit with a section still empty. Outlines the
+  // empty section's add box in red to point them at it (Susanna, 2026-11-14:
+  // no "done/resolved" label once a section has one item, since more may
+  // still need adding; only point at what's missing when they try to submit).
+  const [triedSubmit, setTriedSubmit] = useState(false);
   const [err, setErr] = useState('');
+  const [role, setRole] = useState<{ canSubmit: boolean; submitterName: string | null }>({ canSubmit: false, submitterName: null });
 
   const load = useCallback(async () => {
     try {
-      const [s, sls, its] = await Promise.all([
+      const [s, sls, its, r] = await Promise.all([
         fetchOrCreateSubmission(locationId, month, year),
         fetchSubLocations(locationId),
         fetchActiveItems(locationId),
+        fetchSubmitRole(locationId),
       ]);
       setSub(s);
       setSubLocations(sls);
       setItems(its);
+      setRole(r);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not load.');
     } finally {
@@ -614,6 +727,25 @@ export function MonthlySubmissionForm({
     await reload();
   }
 
+  async function handleUpdateAddition(id: string, entry: NewAddition) {
+    await updateAddition(id, entry);
+    setEditingAddId(null);
+    await reload();
+  }
+
+  async function handleUpdateRemoval(id: string, entry: NewRemoval) {
+    await updateRemoval(id, entry);
+    setEditingRemId(null);
+    await reload();
+  }
+
+  function closeEntryForms() {
+    setShowAddForm(false);
+    setShowRemovalForm(false);
+    setEditingAddId(null);
+    setEditingRemId(null);
+  }
+
   async function handleSaveRemoval(entry: NewRemoval) {
     if (!sub) return;
     await addRemoval(sub.id, entry);
@@ -628,6 +760,10 @@ export function MonthlySubmissionForm({
 
   async function handleSubmit() {
     if (!sub) return;
+    if (!canSubmitForReview(sub)) {
+      setTriedSubmit(true);
+      return;
+    }
     setSubmitting(true);
     setErr('');
     try {
@@ -692,18 +828,27 @@ export function MonthlySubmissionForm({
           {!sectionAOk && (
             <span className="text-xs text-priority-p1">Required</span>
           )}
-          {sectionAOk && (
-            <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green">✓ Resolved</span>
-          )}
         </div>
 
-        {additions.map((a) => (
-          <AdditionRow
-            key={a.id}
-            entry={a}
-            onDelete={isReadOnly ? () => {} : () => handleDeleteAddition(a.id)}
-          />
-        ))}
+        {additions.map((a) =>
+          editingAddId === a.id && !isReadOnly ? (
+            <AdditionForm
+              key={a.id}
+              subLocations={subLocations}
+              initial={a}
+              onSave={(entry) => handleUpdateAddition(a.id, entry)}
+              onCancel={() => setEditingAddId(null)}
+            />
+          ) : (
+            <AdditionRow
+              key={a.id}
+              entry={a}
+              readOnly={isReadOnly}
+              onEdit={() => { closeEntryForms(); setEditingAddId(a.id); }}
+              onDelete={() => handleDeleteAddition(a.id)}
+            />
+          ),
+        )}
 
         {!isReadOnly && (
           <>
@@ -715,9 +860,13 @@ export function MonthlySubmissionForm({
               />
             ) : (
               <button
-                onClick={() => { setShowAddForm(true); handleNothingCameIn(false); }}
+                onClick={() => { closeEntryForms(); setShowAddForm(true); handleNothingCameIn(false); }}
                 disabled={sub.nothing_came_in}
-                className="w-full rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border py-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/40 hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`w-full rounded-xl border-dashed py-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/40 hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                  triedSubmit && !sectionAOk
+                    ? 'border-2 border-priority-p1'
+                    : 'border border-sparrow-rule dark:border-sparrow-dark-border'
+                }`}
               >
                 + Add item
               </button>
@@ -751,18 +900,27 @@ export function MonthlySubmissionForm({
           {!sectionBOk && (
             <span className="text-xs text-priority-p1">Required</span>
           )}
-          {sectionBOk && (
-            <span className="text-xs text-sparrow-green dark:text-sparrow-dark-green">✓ Resolved</span>
-          )}
         </div>
 
-        {removals.map((r) => (
-          <RemovalRow
-            key={r.id}
-            entry={r}
-            onDelete={isReadOnly ? () => {} : () => handleDeleteRemoval(r.id)}
-          />
-        ))}
+        {removals.map((r) =>
+          editingRemId === r.id && !isReadOnly ? (
+            <RemovalForm
+              key={r.id}
+              items={items}
+              initial={r}
+              onSave={(entry) => handleUpdateRemoval(r.id, entry)}
+              onCancel={() => setEditingRemId(null)}
+            />
+          ) : (
+            <RemovalRow
+              key={r.id}
+              entry={r}
+              readOnly={isReadOnly}
+              onEdit={() => { closeEntryForms(); setEditingRemId(r.id); }}
+              onDelete={() => handleDeleteRemoval(r.id)}
+            />
+          ),
+        )}
 
         {!isReadOnly && (
           <>
@@ -774,9 +932,13 @@ export function MonthlySubmissionForm({
               />
             ) : (
               <button
-                onClick={() => { setShowRemovalForm(true); handleNothingLeft(false); }}
+                onClick={() => { closeEntryForms(); setShowRemovalForm(true); handleNothingLeft(false); }}
                 disabled={sub.nothing_left}
-                className="w-full rounded-xl border border-dashed border-sparrow-rule dark:border-sparrow-dark-border py-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-priority-p1/40 hover:text-priority-p1 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`w-full rounded-xl border-dashed py-3 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-priority-p1/40 hover:text-priority-p1 transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                  triedSubmit && !sectionBOk
+                    ? 'border-2 border-priority-p1'
+                    : 'border border-sparrow-rule dark:border-sparrow-dark-border'
+                }`}
               >
                 + Log removal
               </button>
@@ -800,24 +962,35 @@ export function MonthlySubmissionForm({
       </section>
 
       {/* Submit */}
-      {!isReadOnly && (
+      {!isReadOnly && !role.canSubmit && (
+        <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
+          {err && <p className="text-sm text-priority-p1 mb-3">{err}</p>}
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
+            {role.submitterName
+              ? `Your changes are saved. ${role.submitterName} submits this sheet at the end of the month.`
+              : 'Your changes are saved. This location doesn\'t have a submitter set yet.'}
+          </p>
+        </div>
+      )}
+
+      {!isReadOnly && role.canSubmit && (
         <div className="border-t border-sparrow-rule dark:border-sparrow-dark-border pt-4">
           {err && <p className="text-sm text-priority-p1 mb-3">{err}</p>}
           <div className="flex items-center gap-4">
             <button
               onClick={handleSubmit}
-              disabled={!ready || submitting}
+              disabled={submitting}
               className="btn-primary disabled:opacity-40"
             >
               {submitting ? 'Submitting…' : 'Submit for review'}
             </button>
-            {!ready && (
-              <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            {triedSubmit && !ready && (
+              <p className="text-xs text-priority-p1">
                 {!sectionAOk && !sectionBOk
-                  ? 'Resolve both sections to submit'
+                  ? 'Each section needs an item or its “Nothing…” box checked'
                   : !sectionAOk
-                  ? 'Resolve Section A to submit'
-                  : 'Resolve Section B to submit'}
+                  ? 'Section A needs an item or “Nothing came in this month” checked'
+                  : 'Section B needs an item or “Nothing left this month” checked'}
               </p>
             )}
           </div>

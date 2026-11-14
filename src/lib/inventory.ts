@@ -22,10 +22,30 @@ const SUB_DETAIL_COLS = `
   *,
   location:inv_locations(${LOC_COLS}),
   submitter:profiles!submitted_by(id, full_name),
+  additions:inv_additions(*, sub_location:inv_sub_locations(*), added_by:profiles!created_by(id, full_name), edited_by_profile:profiles!edited_by(id, full_name)),
+  removals:inv_removals(*, item:inv_items(id, description, quantity, unit_cost, serial_number), added_by:profiles!created_by(id, full_name), edited_by_profile:profiles!edited_by(id, full_name)),
+  comments:inv_comments(*, author:profiles!author_id(id, full_name))
+`;
+
+// Pre-0228 shape (no created_by column yet). Used as a fallback so the
+// inventory forms keep working in the window between this code deploying
+// and Byron running migration 0228. Safe to delete once 0228 is confirmed.
+const SUB_DETAIL_COLS_PRE_0228 = `
+  *,
+  location:inv_locations(${LOC_COLS}),
+  submitter:profiles!submitted_by(id, full_name),
   additions:inv_additions(*, sub_location:inv_sub_locations(*)),
   removals:inv_removals(*, item:inv_items(id, description, quantity, unit_cost, serial_number)),
   comments:inv_comments(*, author:profiles!author_id(id, full_name))
 `;
+
+async function selectSubmissionDetail(
+  filter: (cols: string) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
+): Promise<{ data: unknown; error: { message: string } | null }> {
+  const first = await filter(SUB_DETAIL_COLS);
+  if (!first.error) return first;
+  return filter(SUB_DETAIL_COLS_PRE_0228);
+}
 
 const FLIP_COLS = `
   *,
@@ -59,10 +79,32 @@ export async function fetchMyOpenInvTaskCount(userId: string): Promise<number> {
 
 export type MyLocationAssignment = { location: InvLocation; is_owner: boolean };
 
-export async function fetchMyLocations(): Promise<MyLocationAssignment[]> {
+export async function fetchMyLocations(isOps = false): Promise<MyLocationAssignment[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Ops users (Susanna, Andrew) can log items on any location's list, so
+  // "My Inventory" shows them every location, once each. Their own
+  // designated-submitter flag still comes from their assignment rows.
+  if (isOps) {
+    const [{ data: locs, error: e1 }, { data: mine, error: e2 }] = await Promise.all([
+      supabase.from('inv_locations').select(LOC_COLS).order('sort_order'),
+      supabase.from('inv_location_assignments').select('location_id, is_owner').eq('user_id', user.id),
+    ]);
+    if (e1) throw new Error(e1.message);
+    if (e2) throw new Error(e2.message);
+    const ownerOf = new Set((mine ?? []).filter((m: any) => m.is_owner).map((m: any) => m.location_id as string));
+    return ((locs ?? []) as unknown as InvLocation[]).map((l) => ({ location: l, is_owner: ownerOf.has(l.id) }));
+  }
+
+  // Everyone else: only their own assignments. Must filter by user: the
+  // read policy on inv_location_assignments lets all staff see every row
+  // (the Ops view needs that), so without this "My Inventory" listed
+  // everyone's locations, with a duplicate card per person assigned.
   const { data, error } = await supabase
     .from('inv_location_assignments')
-    .select(`is_owner, location:inv_locations(${LOC_COLS})`);
+    .select(`is_owner, location:inv_locations(${LOC_COLS})`)
+    .eq('user_id', user.id);
   if (error) throw new Error(error.message);
   return (data ?? [])
     .filter((d: any) => d.location)
@@ -307,11 +349,9 @@ export async function fetchAllCurrentPeriodSubmissions(
 }
 
 export async function fetchSubmission(id: string): Promise<InvMonthlySubmission> {
-  const { data, error } = await supabase
-    .from('inv_monthly_submissions')
-    .select(SUB_DETAIL_COLS)
-    .eq('id', id)
-    .single();
+  const { data, error } = await selectSubmissionDetail((cols) =>
+    supabase.from('inv_monthly_submissions').select(cols).eq('id', id).single(),
+  );
   if (error) throw new Error(error.message);
   return data as InvMonthlySubmission;
 }
@@ -321,21 +361,23 @@ export async function fetchOrCreateSubmission(
   month: number,
   year: number,
 ): Promise<InvMonthlySubmission> {
-  const { data: existing } = await supabase
-    .from('inv_monthly_submissions')
-    .select(SUB_DETAIL_COLS)
-    .eq('location_id', locationId)
-    .eq('period_month', month)
-    .eq('period_year', year)
-    .maybeSingle();
+  const { data: existing } = await selectSubmissionDetail((cols) =>
+    supabase
+      .from('inv_monthly_submissions')
+      .select(cols)
+      .eq('location_id', locationId)
+      .eq('period_month', month)
+      .eq('period_year', year)
+      .maybeSingle(),
+  );
   if (existing) return existing as InvMonthlySubmission;
-  const { data, error } = await supabase
+  const { data: created, error } = await supabase
     .from('inv_monthly_submissions')
     .insert({ location_id: locationId, period_month: month, period_year: year })
-    .select(SUB_DETAIL_COLS)
+    .select('id')
     .single();
   if (error) throw new Error(error.message);
-  return data as InvMonthlySubmission;
+  return fetchSubmission((created as { id: string }).id);
 }
 
 export async function patchSubmission(
@@ -347,11 +389,42 @@ export async function patchSubmission(
 }
 
 export async function submitForReview(id: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
   const { error } = await supabase
     .from('inv_monthly_submissions')
-    .update({ status: 'submitted', submitted_at: new Date().toISOString() })
+    .update({
+      status: 'submitted',
+      submitted_at: new Date().toISOString(),
+      submitted_by: user?.id ?? null,
+    })
     .eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+/** Whether the current user is the one who submits this location's sheet,
+ *  plus the designated submitter's first name when it's someone else.
+ *  Rule (Susanna, 2026-11-14): only the designated submitter gets the
+ *  Submit button; everyone else who can open the sheet (other assigned
+ *  staff, ops) can add items, which the submitter then sees. If a location
+ *  has no designated submitter yet, anyone assigned to it can submit so the
+ *  sheet isn't stuck. */
+export async function fetchSubmitRole(
+  locationId: string,
+): Promise<{ canSubmit: boolean; submitterName: string | null }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('inv_location_assignments')
+    .select('user_id, is_owner, user:profiles!user_id(full_name)')
+    .eq('location_id', locationId);
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as any[];
+  const owner = rows.find((r) => r.is_owner);
+  if (owner) {
+    const isMe = owner.user_id === user?.id;
+    const name = owner.user?.full_name ? String(owner.user.full_name).split(' ')[0] : null;
+    return { canSubmit: isMe, submitterName: isMe ? null : name };
+  }
+  return { canSubmit: rows.some((r) => r.user_id === user?.id), submitterName: null };
 }
 
 export async function approveSubmission(id: string): Promise<void> {
@@ -386,9 +459,23 @@ export async function addAddition(submissionId: string, entry: NewAddition): Pro
   return data as InvAddition;
 }
 
+/** Stamps who saved an edit and when. Falls back to a plain update if
+ *  migration 0228 (edited_by/edited_at columns) hasn't run yet. */
+async function updateWithEditStamp(
+  table: 'inv_additions' | 'inv_removals',
+  id: string,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const stamped = { ...patch, edited_by: user?.id ?? null, edited_at: new Date().toISOString() };
+  const { error } = await supabase.from(table).update(stamped).eq('id', id);
+  if (!error) return;
+  const { error: e2 } = await supabase.from(table).update(patch).eq('id', id);
+  if (e2) throw new Error(e2.message);
+}
+
 export async function updateAddition(id: string, patch: Partial<NewAddition>): Promise<void> {
-  const { error } = await supabase.from('inv_additions').update(patch).eq('id', id);
-  if (error) throw new Error(error.message);
+  await updateWithEditStamp('inv_additions', id, patch);
 }
 
 export async function deleteAddition(id: string): Promise<void> {
@@ -418,8 +505,7 @@ export async function addRemoval(submissionId: string, entry: NewRemoval): Promi
 }
 
 export async function updateRemoval(id: string, patch: Partial<NewRemoval>): Promise<void> {
-  const { error } = await supabase.from('inv_removals').update(patch).eq('id', id);
-  if (error) throw new Error(error.message);
+  await updateWithEditStamp('inv_removals', id, patch);
 }
 
 export async function deleteRemoval(id: string): Promise<void> {

@@ -20,6 +20,7 @@ interface ActiveForm {
 
 export function StaffSubmissionView({ month, year }: { month: number; year: number }) {
   const { profile } = useAuth();
+  const isOps = profile?.ops_access ?? false;
   const [assignments,  setAssignments]  = useState<MyLocationAssignment[]>([]);
   const [submissions,  setSubmissions]  = useState<InvMonthlySubmission[]>([]);
   const [activeFlips,  setActiveFlips]  = useState<Record<string, InvHouseFlip | null>>({});
@@ -32,7 +33,7 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const myAssignments = await fetchMyLocations();
+      const myAssignments = await fetchMyLocations(isOps);
       if (myAssignments.length === 0) {
         setAssignments([]);
         setLoading(false);
@@ -60,7 +61,7 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isOps]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -144,7 +145,7 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
                 year={year}
                 isOwner={is_owner}
                 ownerName={owner && owner.id !== myId ? owner.full_name.split(' ')[0] : null}
-                onOpenForm={() => setActiveForm({ locationId: loc.id, locationName: loc.name, month, year })}
+                onOpenForm={(m = month, y = year) => setActiveForm({ locationId: loc.id, locationName: loc.name, month: m, year: y })}
                 onOpenFlip={() => setFlipLocId(loc.id)}
               />
             );
@@ -160,7 +161,9 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
               Remote Items
             </p>
             <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray mt-0.5">
-              Items in your possession outside of a fixed Sparrow location. Same submission rules apply.
+              {isOps
+                ? 'Items staff keep outside of a fixed Sparrow location. Same submission rules apply.'
+                : 'Items in your possession outside of a fixed Sparrow location. Same submission rules apply.'}
             </p>
           </div>
           <div className="space-y-4">
@@ -174,8 +177,8 @@ export function StaffSubmissionView({ month, year }: { month: number; year: numb
                 month={month}
                 year={year}
                 isOwner={is_owner}
-                ownerName={null}
-                onOpenForm={() => setActiveForm({ locationId: loc.id, locationName: loc.name, month, year })}
+                ownerName={(() => { const o = ownerMap[loc.id]; return o && o.id !== myId ? o.full_name.split(' ')[0] : null; })()}
+                onOpenForm={(m = month, y = year) => setActiveForm({ locationId: loc.id, locationName: loc.name, month: m, year: y })}
                 onOpenFlip={() => {}}
               />
             ))}
@@ -206,7 +209,7 @@ function LocationCard({
   year: number;
   isOwner: boolean;
   ownerName: string | null;
-  onOpenForm: () => void;
+  onOpenForm: (month?: number, year?: number) => void;
   onOpenFlip: () => void;
 }) {
   return (
@@ -242,7 +245,7 @@ function LocationCard({
         </p>
         {currentSub ? (
           <button
-            onClick={onOpenForm}
+            onClick={() => onOpenForm()}
             className="w-full flex items-center justify-between rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2.5 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2 transition"
           >
             <div className="space-y-0.5">
@@ -261,7 +264,7 @@ function LocationCard({
           </button>
         ) : (
           <button
-            onClick={onOpenForm}
+            onClick={() => onOpenForm()}
             className="w-full rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border px-3 py-2.5 text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green/50 hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition text-left"
           >
             Start {monthName(month)} submission →
@@ -307,7 +310,7 @@ function LocationCard({
             {recentSubs.map((s) => (
               <button
                 key={s.id}
-                onClick={onOpenForm}
+                onClick={() => onOpenForm(s.period_month, s.period_year)}
                 className="w-full flex items-center justify-between text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink transition py-0.5"
               >
                 <span>{monthName(s.period_month)} {s.period_year}</span>

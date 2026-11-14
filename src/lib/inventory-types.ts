@@ -219,6 +219,29 @@ export interface InvAddition {
   created_at: string;
   updated_at: string;
   sub_location?: InvSubLocation;
+  created_by?: string | null;
+  added_by?: { id: string; full_name: string } | null;
+  edited_by?: string | null;
+  edited_at?: string | null;
+  edited_by_profile?: { id: string; full_name: string } | null;
+}
+
+/** "Added by Andrew · Nov 14 · Edited by Raymond · Nov 15" for an
+ *  addition/removal. Either half is left out when it wasn't recorded
+ *  (entries from before migration 0228 have neither). */
+export function addedByLabel(entry: {
+  created_at: string;
+  added_by?: { full_name: string } | null;
+  edited_at?: string | null;
+  edited_by_profile?: { full_name: string } | null;
+}): string | null {
+  const short = (d: string) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const parts: string[] = [];
+  const adder = entry.added_by?.full_name?.split(' ')[0];
+  if (adder) parts.push(`Added by ${adder} · ${short(entry.created_at)}`);
+  const editor = entry.edited_by_profile?.full_name?.split(' ')[0];
+  if (editor && entry.edited_at) parts.push(`Edited by ${editor} · ${short(entry.edited_at)}`);
+  return parts.length ? parts.join(' · ') : null;
 }
 
 export interface InvRemoval {
@@ -234,6 +257,11 @@ export interface InvRemoval {
   created_at: string;
   updated_at: string;
   item?: Pick<InvItem, 'id' | 'description' | 'quantity' | 'unit_cost' | 'serial_number'>;
+  created_by?: string | null;
+  added_by?: { id: string; full_name: string } | null;
+  edited_by?: string | null;
+  edited_at?: string | null;
+  edited_by_profile?: { id: string; full_name: string } | null;
 }
 
 export interface InvComment {
