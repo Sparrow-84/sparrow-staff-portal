@@ -15,8 +15,14 @@ interface Props {
   eventTitle?: string;
   eventSubtitle?: string;
   onClose: () => void;
-  /** Puts this version's text back in the live Shared Notes for everyone, and saves. */
+  /** Puts this version's text back in the notes, and saves. */
   onRestore: (version: SharedNoteVersion) => Promise<void>;
+  /** For private Prep/Live notes: loads that person's versions instead of the Shared Notes'. */
+  loadVersions?: () => Promise<SharedNoteVersion[] | null>;
+  /** Shown before "Version history" in the header. Defaults to "Shared Notes". */
+  notesLabel?: string;
+  /** Private notes only the owner sees: wording says "you", not "everyone". */
+  isPrivate?: boolean;
 }
 
 interface Row {
@@ -128,7 +134,9 @@ function buildRows(versions: SharedNoteVersion[], names: Record<string, string>)
   });
 }
 
-export function SharedNotesVersionHistory({ eventId, eventTitle, eventSubtitle, onClose, onRestore }: Props) {
+export function SharedNotesVersionHistory({
+  eventId, eventTitle, eventSubtitle, onClose, onRestore, loadVersions, notesLabel = 'Shared Notes', isPrivate = false,
+}: Props) {
   const [versions, setVersions] = useState<SharedNoteVersion[] | null | undefined>(undefined);
   const [names, setNames] = useState<Record<string, string>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -139,7 +147,7 @@ export function SharedNotesVersionHistory({ eventId, eventTitle, eventSubtitle, 
 
   const load = useCallback(async () => {
     try {
-      const vs = await fetchSharedNoteVersions(eventId);
+      const vs = loadVersions ? await loadVersions() : await fetchSharedNoteVersions(eventId);
       setVersions(vs);
       if (vs) setNames(await fetchProfileNames(vs.flatMap((v) => v.editors)));
       return vs;
@@ -148,7 +156,7 @@ export function SharedNotesVersionHistory({ eventId, eventTitle, eventSubtitle, 
       setVersions([]);
       return [];
     }
-  }, [eventId]);
+  }, [eventId, loadVersions]);
 
   useEffect(() => {
     void load();
@@ -190,10 +198,12 @@ export function SharedNotesVersionHistory({ eventId, eventTitle, eventSubtitle, 
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex flex-col bg-white dark:bg-sparrow-dark-surface" role="dialog" aria-modal="true" aria-label="Shared Notes version history">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-white dark:bg-sparrow-dark-surface" role="dialog" aria-modal="true" aria-label={`${notesLabel} version history`}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sparrow-rule px-6 py-4 dark:border-sparrow-dark-border">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Shared Notes · Version history</p>
+          <p className={`text-xs font-semibold uppercase tracking-wide ${isPrivate ? 'text-sparrow-green dark:text-sparrow-dark-green' : 'text-blue-700 dark:text-blue-300'}`}>
+            {notesLabel} · Version history{isPrivate ? ' · only visible to you' : ''}
+          </p>
           {eventTitle && <h1 className="truncate text-lg font-semibold text-sparrow-ink dark:text-sparrow-dark-ink">{eventTitle}</h1>}
           {eventSubtitle && <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{eventSubtitle}</p>}
         </div>
@@ -215,7 +225,7 @@ export function SharedNotesVersionHistory({ eventId, eventTitle, eventSubtitle, 
         </div>
       ) : rows.length === 0 ? (
         <div className="flex flex-1 items-center justify-center p-6">
-          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{error ?? 'No versions yet. They start once someone writes in Shared Notes.'}</p>
+          <p className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">{error ?? (isPrivate ? `No versions yet. They start once you write in your ${notesLabel}.` : 'No versions yet. They start once someone writes in Shared Notes.')}</p>
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col md:flex-row">
@@ -232,7 +242,7 @@ export function SharedNotesVersionHistory({ eventId, eventTitle, eventSubtitle, 
                   </div>
                   {selected.isCurrent ? (
                     <span className="rounded-full bg-sparrow-sage px-3 py-1 text-sm font-semibold text-sparrow-green dark:bg-sparrow-dark-green/20 dark:text-sparrow-dark-ink">
-                      What everyone sees now
+                      {isPrivate ? 'What you see now' : 'What everyone sees now'}
                     </span>
                   ) : (
                     !confirming && (
@@ -249,7 +259,9 @@ export function SharedNotesVersionHistory({ eventId, eventTitle, eventSubtitle, 
                 {confirming && (
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sparrow-gold bg-sparrow-cream px-4 py-3 dark:bg-amber-500/10">
                     <p className="flex-1 text-sm text-sparrow-ink dark:text-sparrow-dark-ink" style={{ minWidth: 240 }}>
-                      Replace the notes with this version for everyone? The current notes are saved as a version first.
+                      {isPrivate
+                        ? `Replace your ${notesLabel} with this version? Your current notes are saved as a version first.`
+                        : 'Replace the notes with this version for everyone? The current notes are saved as a version first.'}
                     </p>
                     <div className="flex gap-2">
                       <button
@@ -272,7 +284,7 @@ export function SharedNotesVersionHistory({ eventId, eventTitle, eventSubtitle, 
 
                 {restored && (
                   <div className="rounded-xl bg-sparrow-sage px-4 py-3 text-sm font-medium text-sparrow-green dark:bg-sparrow-dark-green/20 dark:text-sparrow-dark-ink">
-                    Restored. The notes everyone sees now match that version.
+                    {isPrivate ? 'Restored. Your notes now match that version.' : 'Restored. The notes everyone sees now match that version.'}
                   </div>
                 )}
                 {error && <p className="text-sm text-priority-p1">{error}</p>}

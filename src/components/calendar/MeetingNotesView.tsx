@@ -3,6 +3,11 @@ import { supabase } from '@/lib/supabase';
 import { KIND_LABEL, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
 import { RichTextField } from '../lcp/RichText';
 import type { SaveStatus, SharedNotesHandle } from './SharedNotesEditor';
+import { SharedNotesVersionHistory } from './SharedNotesVersionHistory';
+import { fetchPrivateNoteVersions, markPrivateNoteRestore, type PrivateNoteField } from '@/lib/privateNotesVersions';
+import type { SharedNoteVersion } from '@/lib/sharedNotesVersions';
+
+const FIELD_LABEL: Record<PrivateNoteField, string> = { prep: 'Prep Notes', live: 'Live Notes' };
 
 // Lazy-loaded: Yjs + TipTap only need to be fetched once someone actually opens a
 // meeting notes panel, not as part of every page's initial bundle.
@@ -30,6 +35,14 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
   // Set when Close is clicked after this person removed a lot of the Shared Notes.
   const [removalWarning, setRemovalWarning] = useState<{ removed: number } | null>(null);
   const [undoing, setUndoing] = useState(false);
+  // Which private notes' Version history is open, if any.
+  const [historyField, setHistoryField] = useState<PrivateNoteField | null>(null);
+  // RichTextField only reads initialValue when it mounts, so a restore bumps its key
+  // to remount it with the restored text.
+  const [fieldKeys, setFieldKeys] = useState<Record<PrivateNoteField, number>>({ prep: 0, live: 0 });
+
+  const loadPrepVersions = useCallback(() => fetchPrivateNoteVersions(event.id, userId, 'prep'), [event.id, userId]);
+  const loadLiveVersions = useCallback(() => fetchPrivateNoteVersions(event.id, userId, 'live'), [event.id, userId]);
 
   const sharedEditorRef = useRef<SharedNotesHandle>(null);
 
@@ -163,6 +176,37 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
       return;
     }
     onClose();
+  }
+
+  function savePrivateNow() {
+    if (privateTimer.current) clearTimeout(privateTimer.current);
+    return supabase.from('meeting_notes').upsert(
+      {
+        event_id: event.id,
+        user_id: userId,
+        prep_notes: latestPrep.current,
+        live_notes: latestLive.current,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'event_id,user_id' },
+    );
+  }
+
+  // Restore an older version of this person's Prep or Live notes. Anything typed but
+  // not yet saved is saved first, so the database keeps it as the "before restore" copy.
+  async function restorePrivateVersion(field: PrivateNoteField, version: SharedNoteVersion) {
+    if (!loadSucceeded.current) throw new Error('Notes are still loading — try again in a moment.');
+    const pending = await savePrivateNow();
+    if (pending.error) throw new Error(`Could not save your current notes first: ${pending.error.message}`);
+    await markPrivateNoteRestore(version.id);
+    if (field === 'prep') latestPrep.current = version.notes;
+    else latestLive.current = version.notes;
+    setInitialContent({ prep: latestPrep.current, live: latestLive.current });
+    setFieldKeys((k) => ({ ...k, [field]: k[field] + 1 }));
+    setPrivateStatus('saving');
+    const { error } = await savePrivateNow();
+    setPrivateStatus(error ? 'error' : 'saved');
+    if (error) throw new Error(`Restored in the editor, but saving failed: ${error.message}`);
   }
 
   // RichTextField already sanitizes on every change (strips pasted inline
@@ -317,12 +361,21 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
       <div className="flex flex-1 overflow-hidden">
         {/* Prep Notes */}
         <div className="flex flex-1 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border">
-          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-amber-50 dark:bg-amber-500/15 px-6 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Prep Notes</p>
-            <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Before the meeting · only visible to you</p>
+          <div className="flex items-center justify-between gap-3 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-amber-50 dark:bg-amber-500/15 px-6 py-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Prep Notes</p>
+              <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Before the meeting · only visible to you</p>
+            </div>
+            <button
+              onClick={() => setHistoryField('prep')}
+              className="shrink-0 rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-50 dark:border-amber-500/30 dark:bg-sparrow-dark-surface dark:text-amber-300 dark:hover:bg-amber-500/15"
+            >
+              Version history
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto bg-amber-50/20 p-4 dark:bg-amber-500/10">
             <RichTextField
+              key={`prep-${fieldKeys.prep}`}
               initialValue={initialContent.prep}
               onChange={handlePrepChange}
               toolbar
@@ -334,12 +387,21 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
 
         {/* Live Notes */}
         <div className="flex flex-1 flex-col border-r border-sparrow-rule dark:border-sparrow-dark-border">
-          <div className="border-b border-sparrow-rule dark:border-sparrow-dark-border bg-green-50 dark:bg-green-500/15 px-6 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">Live Notes</p>
-            <p className="text-xs text-sparrow-green/60 dark:text-sparrow-dark-green/60">During the meeting · only visible to you</p>
+          <div className="flex items-center justify-between gap-3 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-green-50 dark:bg-green-500/15 px-6 py-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-green dark:text-sparrow-dark-green">Live Notes</p>
+              <p className="text-xs text-sparrow-green/60 dark:text-sparrow-dark-green/60">During the meeting · only visible to you</p>
+            </div>
+            <button
+              onClick={() => setHistoryField('live')}
+              className="shrink-0 rounded-lg border border-green-200 bg-white px-3 py-1.5 text-xs font-medium text-sparrow-green hover:bg-green-50 dark:border-green-500/30 dark:bg-sparrow-dark-surface dark:text-sparrow-dark-green dark:hover:bg-green-500/15"
+            >
+              Version history
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto bg-green-50/20 p-4 dark:bg-green-500/10">
             <RichTextField
+              key={`live-${fieldKeys.live}`}
               initialValue={initialContent.live}
               onChange={handleLiveChange}
               toolbar
@@ -361,6 +423,19 @@ export function MeetingNotesView({ event, userId, onClose }: Props) {
           />
         </Suspense>
       </div>
+
+      {historyField && (
+        <SharedNotesVersionHistory
+          eventId={event.id}
+          eventTitle={event.title}
+          eventSubtitle={`${dateLabel} · ${timeLabel}`}
+          notesLabel={FIELD_LABEL[historyField]}
+          isPrivate
+          loadVersions={historyField === 'prep' ? loadPrepVersions : loadLiveVersions}
+          onClose={() => setHistoryField(null)}
+          onRestore={(v) => restorePrivateVersion(historyField, v)}
+        />
+      )}
     </div>
   );
 }
