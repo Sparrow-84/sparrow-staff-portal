@@ -57,9 +57,20 @@ function EditorToolbar({ editor }: { editor: Editor }) {
   // Undo/Redo come from the Collaboration extension's Yjs-aware undo manager, which
   // only ever undoes YOUR OWN changes — never someone else's concurrent typing.
   // That's why StarterKit's plain undoRedo stays disabled below.
+  //
+  // For one render right after the notes load, TipTap still hands us the throwaway
+  // placeholder editor (it swaps in the real one in an effect), and that one has no
+  // undo/redo commands at all. Calling them there throws and blanks the whole page,
+  // so check they exist first.
   const { canUndo, canRedo } = useEditorState({
     editor,
-    selector: ({ editor: e }) => ({ canUndo: e.can().undo(), canRedo: e.can().redo() }),
+    selector: ({ editor: e }) => {
+      const can = e.can() as unknown as { undo?: () => boolean; redo?: () => boolean };
+      return {
+        canUndo: typeof can.undo === 'function' ? can.undo() : false,
+        canRedo: typeof can.redo === 'function' ? can.redo() : false,
+      };
+    },
   });
   return (
     <div className="flex items-center gap-0.5 border-b border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface px-4 py-1.5">
@@ -427,6 +438,7 @@ export const SharedNotesEditor = forwardRef<SharedNotesHandle, Props>(function S
       if (!editor || !loadSucceeded.current) return { error: null };
       // The Yjs undo stack only holds this person's own changes. Cap the loop so a
       // stuck stack can never hang the page.
+      if (typeof (editor.can() as unknown as { undo?: unknown }).undo !== 'function') return { error: null };
       for (let i = 0; i < 1000 && editor.can().undo(); i++) editor.commands.undo();
       if (saveTimer.current) clearTimeout(saveTimer.current);
       return doSave();
