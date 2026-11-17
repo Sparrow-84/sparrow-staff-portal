@@ -34,6 +34,15 @@ export async function inviteExternalToEvent(
   const { data, error } = await supabase.functions.invoke('send-external-invite', {
     body: { eventId, email: email.trim(), note: note?.trim() || null },
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    // On a non-2xx response supabase-js only says "returned a non-2xx status code";
+    // the function's own explanation is in the response body, so surface that instead.
+    const ctx = (error as { context?: Response }).context;
+    if (ctx && typeof ctx.json === 'function') {
+      const body = await ctx.json().catch(() => null);
+      if (body?.error) throw new Error(body.error);
+    }
+    throw new Error(error.message);
+  }
   if (data?.error) throw new Error(data.error);
 }

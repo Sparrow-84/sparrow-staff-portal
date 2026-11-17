@@ -158,7 +158,25 @@ async function getDelegatedAccessToken(
   return json.access_token as string;
 }
 
+// The staff portal calls this from the browser (a different origin than supabase.co), so
+// the browser sends a CORS preflight first and requires these headers on every response.
+// Without them the request is blocked before it ever reaches this code, and supabase-js
+// reports only "Failed to send a request to the Edge Function".
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const handled = await handle(req);
+  const headers = new Headers(handled.headers);
+  for (const [k, v] of Object.entries(CORS)) headers.set(k, v);
+  headers.set('Content-Type', 'application/json');
+  return new Response(handled.body, { status: handled.status, headers });
+});
+
+async function handle(req: Request): Promise<Response> {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
 
   const supabase = createClient(
@@ -231,9 +249,11 @@ Deno.serve(async (req) => {
     // non-fatal, see comment above
   }
 
+  // Edge functions run in UTC; without an explicit zone a 10:00 AM meeting would read 6:00 PM.
+  const tz = 'America/Los_Angeles';
   const whenLabel = event.all_day
-    ? new Date(event.starts_at).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
-    : `${new Date(event.starts_at).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} · ${new Date(event.starts_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}${event.ends_at ? ' – ' + new Date(event.ends_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : ''}`;
+    ? new Date(event.starts_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+    : `${new Date(event.starts_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz })} · ${new Date(event.starts_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz })}${event.ends_at ? ' – ' + new Date(event.ends_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz, timeZoneName: 'short' }) : ''}`;
 
   const html = buildEmailHtml({
     organizerName: inviter.full_name ?? inviter.email,
@@ -292,4 +312,4 @@ Deno.serve(async (req) => {
   });
 
   return new Response(JSON.stringify({ sent: true }), { status: 200 });
-});
+}
