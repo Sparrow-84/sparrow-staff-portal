@@ -5,7 +5,7 @@ import { checkPushSubscription, getPushPermission, requestPushPermission } from 
 import { applyTheme } from '@/lib/theme';
 import type { ScheduleBlock } from '@/lib/types';
 import {
-  fetchGoogleCalendarSyncStatus, regenerateExportToken, setGoogleImportUrl, exportFeedUrl,
+  fetchGoogleCalendarSyncStatus, regenerateExportToken, setGoogleImportUrl, exportFeedUrl, syncGoogleCalendarImportNow,
 } from '@/lib/googleCalendarSync';
 
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -106,7 +106,8 @@ export function SettingsView() {
     setGcalStatus(null);
     try {
       await setGoogleImportUrl(profile.id, gcalImportUrl.trim() || null);
-      setGcalStatus('Saved.');
+      setGcalStatus('Saved. Importing…');
+      setGcalStatus(await syncGoogleCalendarImportNow());
     } catch {
       setGcalStatus('Could not save — try again.');
     } finally {

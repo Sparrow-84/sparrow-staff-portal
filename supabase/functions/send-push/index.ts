@@ -1,6 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const ONESIGNAL_API = 'https://onesignal.com/api/v1/notifications';
+// Current OneSignal REST endpoint -- the one documented for "Authorization: Key ..." app
+// API keys and include_aliases targeting.
+const ONESIGNAL_API = 'https://api.onesignal.com/notifications?c=push';
+
+// Called from the staff portal in the browser (a different origin than supabase.co), so
+// every response needs CORS headers and the OPTIONS preflight must be answered, or the
+// browser blocks the call before it reaches this code. Missing this is why staff push
+// never worked: push.ts swallows the error, so it failed silently.
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  });
+}
 
 interface PushPayload {
   to: 'user' | 'staff';
@@ -12,21 +30,23 @@ interface PushPayload {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  if (req.method !== 'POST') return json({ error: 'Method Not Allowed' }, 405);
 
   const appId = Deno.env.get('ONESIGNAL_APP_ID');
   const apiKey = Deno.env.get('ONESIGNAL_API_KEY');
-  if (!appId || !apiKey) {
-    return new Response(JSON.stringify({ sent: 0, reason: 'push not configured' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  if (!appId || !apiKey) return json({ sent: 0, reason: 'push not configured' });
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
+
+  // Only a signed-in staff member may trigger a push -- the public anon key alone isn't
+  // enough, so nobody outside Sparrow can use this to message staff phones.
+  const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  const { data: userData, error: authErr } = await supabase.auth.getUser(jwt);
+  if (authErr || !userData?.user) return json({ error: 'Not authenticated' }, 401);
 
   const { to, userId, excludeId, title, body, url } = await req.json() as PushPayload;
 
@@ -50,12 +70,7 @@ Deno.serve(async (req) => {
     externalIds = (data ?? []).map((p: { id: string }) => p.id);
   }
 
-  if (externalIds.length === 0) {
-    return new Response(JSON.stringify({ sent: 0 }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  if (externalIds.length === 0) return json({ sent: 0 });
 
   const payload: Record<string, unknown> = {
     app_id: appId,
@@ -75,9 +90,6 @@ Deno.serve(async (req) => {
     body: JSON.stringify(payload),
   });
 
-  const result = await res.json();
-  return new Response(JSON.stringify(result), {
-    headers: { 'Content-Type': 'application/json' },
-    status: res.ok ? 200 : 500,
-  });
+  const result = await res.json().catch(() => ({}));
+  return json(result, res.ok ? 200 : 500);
 });

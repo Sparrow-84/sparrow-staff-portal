@@ -299,13 +299,16 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
       }
 
       setMode('view');
-      void sendPush({
-        to: 'staff',
-        excludeId: currentUserId,
-        title: 'Calendar update',
-        body: `${editTitle.trim()} has been updated`,
-        url: `${window.location.origin}/calendar`,
-      });
+      // Never broadcast a personal event's title to the whole staff.
+      if (!event.is_personal) {
+        void sendPush({
+          to: 'staff',
+          excludeId: currentUserId,
+          title: 'Calendar update',
+          body: `${editTitle.trim()} has been updated`,
+          url: `${window.location.origin}/calendar`,
+        });
+      }
       onUpdated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save.');

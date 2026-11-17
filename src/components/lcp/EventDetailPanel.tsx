@@ -115,10 +115,11 @@ export function EventDetailPanel({ event, onClose, onLogSession, onDeleted, onCh
         body: pushBody,
         url: `${window.location.origin}/lcp`,
       });
+      // No url: window.location.origin here is the STAFF portal, which families can't use.
+      // Without one, OneSignal opens the LCP portal's own configured site URL.
       void sendLcpFamilyPush({
         title: pushTitle,
         body: pushBody,
-        url: `${window.location.origin}/`,
       });
       onChanged?.();
     } catch (e) {

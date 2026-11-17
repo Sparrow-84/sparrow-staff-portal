@@ -5,13 +5,21 @@
 // lookup set_my_family_push_enabled() already uses.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// Called from the browser (different origin than supabase.co): answer the CORS preflight
+// and put CORS headers on every response, or the browser blocks the call outright.
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: CORS });
 
   const inconclusive = () =>
     new Response(JSON.stringify({ subscribed: null }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...CORS, 'Content-Type': 'application/json' },
     });
 
   const appId = Deno.env.get('ONESIGNAL_LCP_APP_ID');
@@ -40,14 +48,14 @@ Deno.serve(async (req) => {
 
   try {
     const res = await fetch(
-      `https://onesignal.com/api/v1/apps/${appId}/users/by/external_id/${externalId}`,
+      `https://api.onesignal.com/apps/${appId}/users/by/external_id/${externalId}`,
       { headers: { Authorization: `Key ${apiKey}` } },
     );
 
     if (res.status === 404) {
       return new Response(JSON.stringify({ subscribed: false }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...CORS, 'Content-Type': 'application/json' },
       });
     }
     if (!res.ok) return inconclusive();
@@ -58,7 +66,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ subscribed }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...CORS, 'Content-Type': 'application/json' },
     });
   } catch {
     return inconclusive();

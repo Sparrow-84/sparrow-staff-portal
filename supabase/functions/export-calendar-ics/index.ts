@@ -74,12 +74,22 @@ Deno.serve(async (req) => {
 
   const userId = profile.id as string;
 
-  const [{ data: events }, { data: attendance }] = await Promise.all([
-    supabase
+  // Paged: PostgREST returns at most 1000 rows per select, which would silently drop
+  // events once the org calendar grows past that. Only the last year onward is exported.
+  const since = new Date(Date.now() - 365 * 86_400_000).toISOString();
+  const events: CalEvent[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data } = await supabase
       .from('calendar_events')
-      .select('id, title, starts_at, ends_at, all_day, location, department, is_personal, created_by, source_system'),
-    supabase.from('event_attendees').select('event_id, status').eq('staff_id', userId),
-  ]);
+      .select('id, title, starts_at, ends_at, all_day, location, department, is_personal, created_by, source_system')
+      .gte('starts_at', since)
+      .order('starts_at')
+      .range(from, from + 999);
+    events.push(...((data ?? []) as CalEvent[]));
+    if (!data || data.length < 1000) break;
+  }
+  const { data: attendance } = await supabase
+    .from('event_attendees').select('event_id, status').eq('staff_id', userId);
 
   const attendanceMap = new Map((attendance ?? []).map((a) => [a.event_id, a.status]));
 
@@ -89,7 +99,7 @@ Deno.serve(async (req) => {
     return attendanceMap.get(ev.id) === 'attending' || ev.created_by === userId;
   }
 
-  const visible = ((events ?? []) as CalEvent[]).filter(isMyAgenda);
+  const visible = events.filter(isMyAgenda);
 
   const lines: string[] = [
     'BEGIN:VCALENDAR',
@@ -106,7 +116,8 @@ Deno.serve(async (req) => {
     lines.push(`DTSTAMP:${toIcsUtc(new Date().toISOString())}`);
     if (ev.all_day) {
       const startDate = ev.starts_at.slice(0, 10);
-      const endDate = ev.ends_at ? ev.ends_at.slice(0, 10) : addDays(startDate, 1);
+      // The app stores an all-day event's INCLUSIVE last day; iCal DTEND is exclusive.
+      const endDate = addDays(ev.ends_at ? ev.ends_at.slice(0, 10) : startDate, 1);
       lines.push(`DTSTART;VALUE=DATE:${toIcsDate(startDate)}`);
       lines.push(`DTEND;VALUE=DATE:${toIcsDate(endDate)}`);
     } else {

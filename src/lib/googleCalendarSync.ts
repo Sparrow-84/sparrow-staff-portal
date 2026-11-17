@@ -58,3 +58,23 @@ export async function syncGoogleCalendarImport(): Promise<void> {
     // best-effort — see comment above
   }
 }
+
+/**
+ * Immediate sync right after someone saves (or clears) their Google link in Settings, so
+ * they see straight away whether it worked. Unlike the background sync, this reports the
+ * outcome as a short human message instead of swallowing it.
+ */
+export async function syncGoogleCalendarImportNow(): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('sync-google-calendar-import', {
+    body: { force: true },
+  });
+  if (error) {
+    const ctx = (error as { context?: Response }).context;
+    const body = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null;
+    return `Saved, but the import failed: ${body?.error ?? error.message}`;
+  }
+  if (data?.error) return `Saved, but the import failed: ${data.error}`;
+  if (data?.reason === 'no import url set') return 'Saved. Google events removed from your calendar.';
+  const n = Number(data?.synced ?? 0);
+  return `Saved. Imported ${n} event${n === 1 ? '' : 's'} from Google (last 30 days through the next 6 months).`;
+}
