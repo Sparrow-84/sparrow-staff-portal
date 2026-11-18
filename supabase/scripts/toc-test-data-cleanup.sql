@@ -1,3 +1,8 @@
+-- !! ALREADY RUN (2026-08). DO NOT RE-RUN. !!
+-- Real LCP families now live on lots in this list (Goshen House = lot 31 after
+-- migration 0230; real tenants have since been added on 33/34 too). Re-running this
+-- would delete their tenant and household records.
+--
 -- TOC test data cleanup — run before rollout
 -- Fully deletes ALL fake resident/property data still sitting in the TOC room,
 -- both currently "active" and past/moved-out, so real LCP participant move-ins
