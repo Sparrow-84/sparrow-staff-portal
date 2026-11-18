@@ -18,12 +18,51 @@ function icsEscape(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
 }
 
+// Public copy of the green circle logo, served by the staff portal's static site.
+const LOGO_URL = 'https://staff.sparrowinc.org/brand/logo-primary-circle-green.png';
+
+// Email headers must be plain ASCII; anything else (an en dash, an accented name) has to
+// be RFC 2047 encoded or mail clients show it as garbage like "â€“".
+function encodeHeader(s: string): string {
+  if (/^[\x20-\x7E]*$/.test(s)) return s;
+  const bytes = new TextEncoder().encode(s);
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return `=?UTF-8?B?${btoa(binary)}?=`;
+}
+
 function htmlEscape(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function toIcsUtc(iso: string): string {
   return new Date(iso).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+}
+
+// The app stores an all-day event's INCLUSIVE last day (or null for one day); calendars
+// want an EXCLUSIVE end date. Returns both as YYYYMMDD.
+function allDayRange(startsAt: string, endsAt: string | null): { start: string; endExclusive: string } {
+  const startDay = startsAt.slice(0, 10);
+  const [y, m, d] = (endsAt ? endsAt.slice(0, 10) : startDay).split('-').map(Number);
+  const end = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+  return { start: startDay.replace(/-/g, ''), endExclusive: end.replace(/-/g, '') };
+}
+
+// One-click "Add to Google Calendar" link -- works for any Google user no matter how
+// their mail app treats the attached invite.
+function googleCalendarUrl(opts: {
+  title: string; startsAt: string; endsAt: string | null; allDay: boolean; location: string | null;
+}): string {
+  let dates: string;
+  if (opts.allDay) {
+    const { start, endExclusive } = allDayRange(opts.startsAt, opts.endsAt);
+    dates = `${start}/${endExclusive}`;
+  } else {
+    dates = `${toIcsUtc(opts.startsAt)}/${toIcsUtc(opts.endsAt ?? opts.startsAt)}`;
+  }
+  const params = new URLSearchParams({ action: 'TEMPLATE', text: opts.title, dates, ctz: 'America/Los_Angeles' });
+  if (opts.location) params.set('location', opts.location);
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 function buildIcsInvite(opts: {
@@ -48,7 +87,9 @@ function buildIcsInvite(opts: {
     `DTSTAMP:${toIcsUtc(new Date().toISOString())}`,
   ];
   if (opts.allDay) {
-    lines.push(`DTSTART;VALUE=DATE:${opts.startsAt.slice(0, 10).replace(/-/g, '')}`);
+    const { start, endExclusive } = allDayRange(opts.startsAt, opts.endsAt);
+    lines.push(`DTSTART;VALUE=DATE:${start}`);
+    lines.push(`DTEND;VALUE=DATE:${endExclusive}`);
   } else {
     lines.push(`DTSTART:${toIcsUtc(opts.startsAt)}`);
     lines.push(`DTEND:${toIcsUtc(opts.endsAt ?? opts.startsAt)}`);
@@ -72,6 +113,7 @@ function buildEmailHtml(opts: {
   note: string | null;
   signatureHtml: string | null;
   organizerEmail: string;
+  googleCalendarUrl: string;
 }): string {
   const noteBlock = opts.note
     ? `<div style="border-left:3px solid #F0A500;padding:2px 0 2px 16px;margin:0 0 24px;">
@@ -83,27 +125,33 @@ function buildEmailHtml(opts: {
     ? `<div style="font-size:14.5px;color:#1A1A1A;margin-top:10px;"><span style="color:#767676;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;display:block;">Location</span>${htmlEscape(opts.location)}</div>`
     : '';
 
+  // The phone number lives in the inviter's Gmail signature; without one, point to a reply.
   const parkingFallbackLine = opts.signatureHtml
-    ? `Still can't find a spot? Just reply to this email, or give us a call &mdash; you'll find a number in the signature below.`
-    : `Still can't find a spot? Just reply to this email and we'll help you out.`;
+    ? `If you have any issues with parking, please give me a call. My number is below.`
+    : `If you have any issues with parking, just reply to this email.`;
 
-  const parkingBlock = `<details style="margin:0 0 26px;">
+  // Always shown, right above the parking details; links to Google Maps for directions.
+  const addressBlock = `<p style="font-size:14.5px;line-height:1.6;color:#1A1A1A;margin:0 0 14px;">
+         <strong style="color:#1E4D30;">Sparrow Office:</strong><br />
+         <a href="https://www.google.com/maps/search/?api=1&amp;query=245+SW+Twin+Oaks+Cir%2C+Corvallis%2C+OR+97333" style="color:#1E4D30;">245 SW Twin Oaks Cir, Corvallis, OR 97333</a>
+       </p>`;
+
+  const parkingBlock = `${addressBlock}
+       <details style="margin:0 0 26px;">
          <summary style="cursor:pointer;font-family:Georgia,serif;font-weight:600;font-size:15.5px;color:#1E4D30;background:#E8F2EC;border-radius:10px;padding:14px 18px;">Coming to Twin Oaks Community? Here's what you need to know about parking.</summary>
          <div style="padding:16px 6px 0;">
-           <p style="font-size:14.5px;font-weight:600;color:#1E4D30;margin:0 0 6px;">Park at the office</p>
-           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 12px;">Two street spots sit directly in front of the Sparrow office &mdash; you can't miss our sign. Pull all the way off the road onto the gravel. If you're in the front spot of the two, pull forward to the electric pole on the right, but no further &mdash; that's our neighbor's space. A second car can park behind you.</p>
-           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 18px;">When we know you're coming, we do our best to keep one of these spaces open for you. We apologize that this is not more clearly marked. When in doubt, parking in front of the office is always a safe bet.</p>
-           <p style="font-size:14.5px;font-weight:600;color:#1E4D30;margin:0 0 6px;">Guest parking</p>
-           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 12px;">Both spots taken? Use Guest Parking &mdash; signed, near the end of the main road into Twin Oaks (SW Twin Oaks Cir). Drive straight down, passing our office on the right. Guest parking is on the left, just past the resident mailboxes, in a gravel lot marked with guest parking signs.</p>
-           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 12px;">You'll get a short walk back to our office &mdash; enjoy the little tour of Twin Oaks along the way!</p>
-           <p style="font-size:13px;color:#767676;line-height:1.6;margin:0;">${parkingFallbackLine} We can't wait to see you.</p>
+           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 12px;">After entering Twin Oaks, you'll see our office several buildings in, on the right &mdash; you can't miss our sign. There are two parking spots directly in front of our office that we always try to leave open for visiting guests. If both of these spots are taken, please continue driving down the main road. Guest parking is on the left, just past the resident mailboxes, in a gravel lot marked with guest parking signs.</p>
+           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0;">${parkingFallbackLine}</p>
          </div>
        </details>`;
 
   return `<!doctype html><html><body style="margin:0;padding:0;background:#F5F5F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
     <div style="max-width:600px;margin:0 auto;background:#FFFFFF;">
       <div style="padding:44px 48px 40px;">
-        <p style="font-family:Georgia,serif;font-weight:600;font-size:19px;color:#1E4D30;margin:0 0 34px;">Sparrow</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 34px;"><tr>
+          <td style="vertical-align:middle;padding-right:10px;"><img src="${LOGO_URL}" width="36" height="36" alt="" style="display:block;width:36px;height:36px;border:0;" /></td>
+          <td style="vertical-align:middle;font-family:Georgia,serif;font-weight:600;font-size:19px;color:#1E4D30;">Sparrow</td>
+        </tr></table>
         <p style="font-size:12.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#767676;margin:0 0 10px;">Calendar invite</p>
         <h1 style="font-family:Georgia,serif;font-weight:600;font-size:27px;line-height:1.28;color:#1E4D30;margin:0 0 8px;">You're invited to a meeting</h1>
         <p style="font-size:15px;line-height:1.6;color:#1A1A1A;margin:0 0 30px;"><strong style="color:#1E4D30;">${htmlEscape(opts.organizerName)}</strong> invited you to an event on the Sparrow calendar.</p>
@@ -111,11 +159,11 @@ function buildEmailHtml(opts: {
           <p style="font-family:Georgia,serif;font-weight:600;font-size:19px;color:#1E4D30;margin:0 0 12px;">${htmlEscape(opts.title)}</p>
           <div style="font-size:14.5px;color:#1A1A1A;"><span style="color:#767676;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;display:block;">Date &amp; time</span>${htmlEscape(opts.whenLabel)}</div>
           ${locationRow}
+          <a href="${htmlEscape(opts.googleCalendarUrl)}" style="display:inline-block;margin-top:18px;background:#1E4D30;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;border-radius:8px;padding:10px 18px;">Add to Google Calendar</a>
         </div>
         ${parkingBlock}
         ${noteBlock}
-        <p style="font-size:13.5px;color:#767676;line-height:1.6;margin:0 0 30px;">Need to reschedule? Just reply to this email, or reach ${htmlEscape(opts.organizerName)} directly${opts.signatureHtml ? ' — see below' : ` at ${opts.organizerEmail}`}.</p>
-        <hr style="border:none;border-top:1px solid #D8D8D8;margin:0 0 24px;" />
+        <hr style="border:none;border-top:1px solid #D8D8D8;margin:6px 0 24px;" />
         ${opts.signatureHtml ? `<div>${opts.signatureHtml}</div>` : ''}
       </div>
     </div>
@@ -263,6 +311,13 @@ async function handle(req: Request): Promise<Response> {
     note,
     signatureHtml,
     organizerEmail: inviter.email,
+    googleCalendarUrl: googleCalendarUrl({
+      title: event.title,
+      startsAt: event.starts_at,
+      endsAt: event.ends_at,
+      allDay: event.all_day,
+      location: event.location,
+    }),
   });
 
   const ics = buildIcsInvite({
@@ -277,20 +332,35 @@ async function handle(req: Request): Promise<Response> {
     attendeeEmail: email,
   });
 
-  const boundary = `sparrow_${crypto.randomUUID()}`;
+  // Same structure Google Calendar and Outlook use for real invites: the calendar data is
+  // an INLINE text/calendar alternative (that's what makes Gmail show its Yes/Maybe/No
+  // invite card and put the event on the guest's Google Calendar), plus a separate .ics
+  // attachment for mail apps that only look at attachments. A bare .ics attachment alone
+  // is often shown as just a file.
+  const mixed = `sparrow_mixed_${crypto.randomUUID()}`;
+  const alt = `sparrow_alt_${crypto.randomUUID()}`;
   const subject = `You're invited: ${event.title}`;
+  const plain = `${inviter.full_name ?? inviter.email} invited you to: ${event.title}\r\n${whenLabel}` +
+    `${event.location ? `\r\n${event.location}` : ''}\r\n\r\nSparrow Office: 245 SW Twin Oaks Cir, Corvallis, OR 97333`;
   const mime =
-    `From: ${inviter.full_name ?? 'Sparrow'} <${inviter.email}>\r\n` +
+    `From: ${encodeHeader(inviter.full_name ?? 'Sparrow')} <${inviter.email}>\r\n` +
     `To: ${email}\r\n` +
-    `Subject: ${subject}\r\n` +
+    `Subject: ${encodeHeader(subject)}\r\n` +
     `MIME-Version: 1.0\r\n` +
-    `Content-Type: multipart/mixed; boundary="${boundary}"\r\n\r\n` +
-    `--${boundary}\r\n` +
+    `Content-Type: multipart/mixed; boundary="${mixed}"\r\n\r\n` +
+    `--${mixed}\r\n` +
+    `Content-Type: multipart/alternative; boundary="${alt}"\r\n\r\n` +
+    `--${alt}\r\n` +
+    `Content-Type: text/plain; charset="UTF-8"\r\n\r\n${plain}\r\n\r\n` +
+    `--${alt}\r\n` +
     `Content-Type: text/html; charset="UTF-8"\r\n\r\n${html}\r\n\r\n` +
-    `--${boundary}\r\n` +
-    `Content-Type: text/calendar; method=REQUEST; charset="UTF-8"\r\n` +
+    `--${alt}\r\n` +
+    `Content-Type: text/calendar; method=REQUEST; charset="UTF-8"\r\n\r\n${ics}\r\n\r\n` +
+    `--${alt}--\r\n\r\n` +
+    `--${mixed}\r\n` +
+    `Content-Type: application/ics; name="invite.ics"\r\n` +
     `Content-Disposition: attachment; filename="invite.ics"\r\n\r\n${ics}\r\n\r\n` +
-    `--${boundary}--`;
+    `--${mixed}--`;
 
   const raw = base64UrlEncode(new TextEncoder().encode(mime));
 
