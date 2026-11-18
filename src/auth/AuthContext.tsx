@@ -8,6 +8,10 @@ interface AuthState {
   profile: Profile | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  /** Merge a just-saved change into the in-memory profile. The profile is loaded once per
+   *  session, so without this, screens that read it (e.g. Settings) show stale values after
+   *  you navigate away and back -- even though the change was saved. */
+  patchProfile: (patch: Partial<Profile>) => void;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -15,6 +19,7 @@ const AuthContext = createContext<AuthState>({
   profile: null,
   loading: true,
   signOut: async () => {},
+  patchProfile: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -63,8 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   }
 
+  function patchProfile(patch: Partial<Profile>) {
+    setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
+  }
+
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ session, profile, loading, signOut, patchProfile }}>
       {children}
     </AuthContext.Provider>
   );

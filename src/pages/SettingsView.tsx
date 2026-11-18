@@ -31,7 +31,7 @@ function joinBirthday(month: string, day: string): string | null {
 }
 
 export function SettingsView() {
-  const { profile } = useAuth();
+  const { profile, patchProfile } = useAuth();
 
   // Profile fields
   const [blurb, setBlurb] = useState('');
@@ -43,6 +43,7 @@ export function SettingsView() {
   const [pushEnabled, setPushEnabled] = useState(true);
   const [pushBlocked, setPushBlocked] = useState(false);
   const [pushJustReset, setPushJustReset] = useState(false);
+  const [pushHint, setPushHint] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
 
   // Google Calendar sync (Design Session E)
@@ -128,7 +129,7 @@ export function SettingsView() {
       if (cancelled || subscribed !== false) return;
       setPushEnabled(false);
       setPushJustReset(true);
-      void updateMyProfile(profile.id, { push_enabled: false });
+      void updateMyProfile(profile.id, { push_enabled: false }).then(() => patchProfile({ push_enabled: false }));
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -142,11 +143,13 @@ export function SettingsView() {
     setProfileStatus(null);
     try {
       const blocks = scheduleBlocks.filter((b) => b.days.length > 0);
-      await updateMyProfile(profile.id, {
+      const patch = {
         blurb: blurb.trim() || null,
         birthday: joinBirthday(birthMonth, birthDay),
         work_schedule: blocks.length > 0 ? { blocks } : null,
-      });
+      };
+      await updateMyProfile(profile.id, patch);
+      patchProfile(patch);
       setProfileStatus('Profile saved.');
     } catch {
       setProfileStatus('Could not save — try again.');
@@ -345,10 +348,17 @@ export function SettingsView() {
               disabled={pushBlocked}
               onClick={async () => {
                 const next = !pushEnabled;
+                setPushHint(null);
                 if (next && getPushPermission() !== 'granted') {
                   const granted = await requestPushPermission();
                   if (!granted) {
-                    setPushBlocked(getPushPermission() === 'denied');
+                    const denied = getPushPermission() === 'denied';
+                    setPushBlocked(denied);
+                    // Dismissed, or the browser quietly suppressed the prompt: say so instead
+                    // of leaving the switch looking like it ignored the click.
+                    if (!denied) {
+                      setPushHint("Your browser didn't confirm permission. If you didn't see a prompt, click the icon at the left of the address bar, allow notifications, and try again.");
+                    }
                     return;
                   }
                 }
@@ -356,6 +366,7 @@ export function SettingsView() {
                 setPushJustReset(false);
                 try {
                   await updateMyProfile(profile!.id, { push_enabled: next });
+                  patchProfile({ push_enabled: next });
                 } catch {
                   // Save failed — revert instead of leaving the toggle showing a
                   // state that isn't actually saved (it would otherwise silently
@@ -374,6 +385,11 @@ export function SettingsView() {
               />
             </button>
           </div>
+          {pushHint && (
+            <p className="mt-3 rounded-lg bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
+              {pushHint}
+            </p>
+          )}
           {pushJustReset && (
             <p className="mt-3 rounded-lg bg-sparrow-cream dark:bg-sparrow-dark-surface2 px-3 py-2 text-xs text-sparrow-ink dark:text-sparrow-dark-ink">
               Push notifications had stopped actually working on this device, so we turned the setting back off
@@ -479,6 +495,7 @@ export function SettingsView() {
               applyTheme(next);
               try {
                 await updateMyProfile(profile!.id, { dark_mode: next });
+                patchProfile({ dark_mode: next });
               } catch {
                 setDarkMode(!next);
                 applyTheme(!next);
