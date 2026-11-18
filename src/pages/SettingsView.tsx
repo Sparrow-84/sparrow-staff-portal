@@ -443,8 +443,8 @@ export function SettingsView() {
           <div className="mt-4">
             <GcalStepHeading n={1}>See your Sparrow calendar in Google</GcalStepHeading>
             <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-              Get your link and copy it. Then in Google Calendar, click the <strong>+</strong> next to
-              "Other calendars" on the left → "From URL" → paste it in → "Add calendar."
+              Get your link and copy it. Then in Google Calendar, open Settings (the gear icon) → click
+              <strong> your name</strong> → select "Add calendar" at the top → "From URL" → paste it in.
             </p>
             {gcalExportToken ? (
               <div className="mt-2 flex flex-wrap items-center gap-2">
