@@ -116,6 +116,7 @@ export function PartnerDetailPanel({
   const [mergeTargetId, setMergeTargetId] = useState('');
   const [confirmMerge, setConfirmMerge] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Edit/delete an existing touchpoint
   const [editingTouchpointId, setEditingTouchpointId] = useState<string | null>(null);
@@ -177,6 +178,7 @@ export function PartnerDetailPanel({
       setMergeTargetId('');
       setConfirmMerge(false);
       setConfirmDelete(false);
+      setDeleteError(null);
       setSendRsError(null);
       void reload();
     }
@@ -308,7 +310,15 @@ export function PartnerDetailPanel({
   async function remove() {
     if (!partner) return;
     setBusy(true);
-    await deletePartner(partner.id);
+    setDeleteError(null);
+    try {
+      await deletePartner(partner.id);
+    } catch (e) {
+      // Never leave the button stuck on "Deleting…": say what went wrong.
+      setDeleteError(e instanceof Error ? e.message : 'Could not delete it.');
+      setBusy(false);
+      return;
+    }
     setBusy(false);
     setConfirmDelete(false);
     onChanged();
@@ -1209,6 +1219,13 @@ export function PartnerDetailPanel({
                   If this was a real relationship, use Archive instead — it's reversible.
                 </p>
               )}
+              {services.length > 0 && (
+                <p className="text-xs leading-snug text-amber-800 dark:text-amber-300">
+                  Its {services.length} program{services.length === 1 ? '' : 's'} in Resident Services
+                  ({services.map((s) => s.name).join(', ')}) will be deleted too, and come off the website.
+                </p>
+              )}
+              {deleteError && <p className="text-xs text-priority-p1">Couldn't delete: {deleteError}</p>}
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">Permanently delete {partner.name}?</span>
                 <div className="flex shrink-0 gap-2">
