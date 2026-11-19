@@ -181,6 +181,13 @@ export async function addGrantUpdate(grantId: string, body: string, milestone: s
   if (error) throw new Error(error.message);
 }
 
+/** Edits an entry's text and/or the date it happened (created_at doubles as "when it
+ * happened" so the timeline stays in real-world order). */
+export async function updateGrantUpdate(id: string, patch: { body?: string; created_at?: string }): Promise<void> {
+  const { error } = await supabase.from('grant_updates').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export async function deleteGrantUpdate(id: string): Promise<void> {
   const { error } = await supabase.from('grant_updates').delete().eq('id', id);
   if (error) throw new Error(error.message);

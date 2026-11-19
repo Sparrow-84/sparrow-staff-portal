@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { dayToTimestamp, timestampToDay } from './grants-types';
 import type {
   GrantProspect,
   GrantProspectContact,
@@ -100,14 +101,23 @@ export async function markProspectAwarded(
   outcomeDate?: string,
   note?: string,
 ): Promise<string> {
+  const day = outcomeDate ?? timestampToDay(new Date().toISOString());
   const { data, error } = await supabase.rpc('mark_prospect_awarded', {
     p_prospect_id: prospectId,
     p_created_by: createdBy,
-    p_outcome_date: outcomeDate ?? new Date().toISOString().slice(0, 10),
+    p_outcome_date: day,
     p_note: note || null,
   });
   if (error) throw new Error(error.message);
-  return data as string;
+  const grantId = data as string;
+  // The DB function stamps its "Awarded" Updates entry with now(); move it to the day the
+  // award actually happened so the timeline doesn't say every award came the day it was logged.
+  await supabase
+    .from('grant_updates')
+    .update({ created_at: dayToTimestamp(day) })
+    .eq('grant_id', grantId)
+    .eq('milestone', 'Awarded');
+  return grantId;
 }
 
 /** Records a Decided — No outcome with a date and an Updates entry, in one call — the
@@ -122,7 +132,7 @@ export async function markProspectDeclined(
   await updateProspect(prospectId, { status: 'decided_no' });
   const { error } = await supabase.from('grant_prospects').update({ outcome_date: outcomeDate }).eq('id', prospectId);
   if (error) throw new Error(error.message);
-  await addProspectUpdate(prospectId, note || 'Declined.', 'Declined', createdBy);
+  await addProspectUpdate(prospectId, note || 'Declined.', 'Declined', createdBy, outcomeDate);
 }
 
 /** Sets Applied Date and drops a matching milestone entry into the Updates log, in one
@@ -134,6 +144,9 @@ export async function markProspectApplied(
   note: string | null,
   createdBy: string,
   currentStatus: GrantProspectStatus,
+  /** The existing "Applied" Updates entry, when editing — corrected in place rather than
+   * adding a second one. */
+  existingEntryId?: string,
 ): Promise<void> {
   const patch: Partial<ProspectInput> & { applied_date?: string } = { applied_date: appliedDate };
   if (currentStatus !== 'awarded' && currentStatus !== 'decided_no') {
@@ -141,7 +154,11 @@ export async function markProspectApplied(
   }
   const { error } = await supabase.from('grant_prospects').update(patch).eq('id', prospectId);
   if (error) throw new Error(error.message);
-  await addProspectUpdate(prospectId, note || 'Applied.', 'Applied', createdBy);
+  if (existingEntryId) {
+    await updateProspectUpdate(existingEntryId, { body: note || 'Applied.', created_at: dayToTimestamp(appliedDate) });
+  } else {
+    await addProspectUpdate(prospectId, note || 'Applied.', 'Applied', createdBy, appliedDate);
+  }
 }
 
 // ── Updates — an append-only timeline, separate from the current-state Findings/
@@ -161,10 +178,19 @@ export async function addProspectUpdate(
   body: string,
   milestone: string | null,
   createdBy: string,
+  /** "YYYY-MM-DD" the event happened, for milestones logged after the fact. Omit for now. */
+  happenedOn?: string,
 ): Promise<void> {
-  const { error } = await supabase
-    .from('grant_prospect_updates')
-    .insert({ prospect_id: prospectId, body, milestone, created_by: createdBy });
+  const row: Record<string, unknown> = { prospect_id: prospectId, body, milestone, created_by: createdBy };
+  if (happenedOn) row.created_at = dayToTimestamp(happenedOn);
+  const { error } = await supabase.from('grant_prospect_updates').insert(row);
+  if (error) throw new Error(error.message);
+}
+
+/** Edits an entry's text and/or the date it happened (created_at doubles as "when it
+ * happened" so the timeline stays in real-world order). */
+export async function updateProspectUpdate(id: string, patch: { body?: string; created_at?: string }): Promise<void> {
+  const { error } = await supabase.from('grant_prospect_updates').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 }
 

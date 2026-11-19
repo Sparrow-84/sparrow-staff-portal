@@ -19,6 +19,7 @@ import {
   markProspectDeclined,
   updateProspect,
   updateProspectDocumentSummary,
+  updateProspectUpdate,
   uploadProspectDocument,
   type ProspectInput,
 } from '@/lib/grant-prospects';
@@ -37,7 +38,11 @@ import type { Profile } from '@/lib/types';
 import { GrantProspectLabelPicker } from './GrantProspectLabelPicker';
 import { UpdatesTimeline } from './UpdatesTimeline';
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+// Local calendar day — toISOString() is UTC, so after ~5pm Pacific it returned tomorrow.
+const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 const MOVE_MESSAGE: Partial<Record<GrantProspectStatus, string>> = {
   decided_no: '→ Moves to the "Not Moving Forward" tab.',
@@ -69,6 +74,7 @@ export function GrantProspectPanel({
   const [contacts, setContacts] = useState<GrantProspectContact[]>([]);
   const [updates, setUpdates] = useState<GrantProspectUpdate[]>([]);
   const skipNextAutosave = useRef(true);
+  const [milestoneRequest, setMilestoneRequest] = useState<{ kind: 'applied' | 'awarded'; n: number } | null>(null);
 
   const { validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'prospect-name', label: 'Name', valid: form.name.trim().length > 0 },
@@ -138,15 +144,10 @@ export function GrantProspectPanel({
   }
 
   async function setStatus(status: GrantProspectStatus) {
-    if (status === 'awarded') {
-      setBusy(true);
-      try {
-        const newGrantId = await markProspectAwarded(prospectId, currentUserId);
-        onChanged();
-        onAwarded(newGrantId);
-      } finally {
-        setBusy(false);
-      }
+    // Applied/Awarded need a date — open the matching form below instead of flipping the
+    // status bare. Saving that form flips the status on its own.
+    if (status === 'applied' || status === 'awarded') {
+      setMilestoneRequest({ kind: status, n: Date.now() });
       return;
     }
     set('status', status);
@@ -222,7 +223,10 @@ export function GrantProspectPanel({
         </div>
 
         <div>
-          <p className="mb-2 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Status</p>
+          <p className="mb-2 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
+            Status
+            <InfoTip text="Applied and Awarded switch on by themselves when you fill in Applied Date or Outcome below. Clicking either one here just opens that form." />
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {PROSPECT_STATUSES.map((s) => (
               <button
@@ -248,6 +252,8 @@ export function GrantProspectPanel({
 
         <MilestoneFields
           prospect={prospect}
+          updates={updates}
+          openRequest={milestoneRequest}
           currentUserId={currentUserId}
           onAwarded={onAwarded}
           onChanged={() => { onChanged(); void reload(); }}
@@ -336,6 +342,10 @@ export function GrantProspectPanel({
             await addProspectUpdate(prospectId, body, null, currentUserId);
             await reload();
           }}
+          onEdit={async (id, patch) => {
+            await updateProspectUpdate(id, patch);
+            await reload();
+          }}
         />
       </div>
     </Drawer>
@@ -347,18 +357,36 @@ export function GrantProspectPanel({
 // quick-view table) and drops a matching gold-badged entry into Updates at the same time. ──
 function MilestoneFields({
   prospect,
+  updates,
+  openRequest,
   currentUserId,
   onAwarded,
   onChanged,
 }: {
   prospect: GrantProspect;
+  updates: GrantProspectUpdate[];
+  /** Set when the Applied/Awarded status chip is clicked — opens the matching form so the
+   * date gets recorded instead of the status flipping with no date behind it. */
+  openRequest: { kind: 'applied' | 'awarded'; n: number } | null;
   currentUserId: string;
   onAwarded: (newGrantId: string) => void;
   onChanged: () => void;
 }) {
+  // The "What was submitted, and to whom?" note lives in the Updates log as an "Applied"
+  // entry — show the newest one right under the date so it's visible where it was typed.
+  // (updates is sorted newest first; the bare "Applied." placeholder isn't worth showing.)
+  const appliedEntry = updates.find((u) => u.milestone === 'Applied');
+  const savedAppliedNote = appliedEntry && appliedEntry.body !== 'Applied.' ? appliedEntry.body : '';
+
   const [appliedOpen, setAppliedOpen] = useState(false);
   const [appliedDate, setAppliedDate] = useState(todayIso());
   const [appliedNote, setAppliedNote] = useState('');
+
+  function openApplied() {
+    setAppliedDate(prospect.applied_date ?? todayIso());
+    setAppliedNote(savedAppliedNote);
+    setAppliedOpen(true);
+  }
 
   const [outcomeOpen, setOutcomeOpen] = useState(false);
   const [outcomeResult, setOutcomeResult] = useState<'Awarded' | 'Declined'>('Awarded');
@@ -367,10 +395,23 @@ function MilestoneFields({
 
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (!openRequest) return;
+    if (openRequest.kind === 'applied') openApplied();
+    else {
+      setOutcomeResult('Awarded');
+      setOutcomeDate(todayIso());
+      setOutcomeOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRequest]);
+
   async function confirmApplied() {
     setBusy(true);
     try {
-      await markProspectApplied(prospect.id, appliedDate, appliedNote.trim() || null, currentUserId, prospect.status);
+      // Editing → correct the existing "Applied" Updates entry in place (text + date)
+      // rather than stacking a second one.
+      await markProspectApplied(prospect.id, appliedDate, appliedNote.trim() || null, currentUserId, prospect.status, appliedEntry?.id);
       setAppliedOpen(false);
       setAppliedNote('');
       onChanged();
@@ -397,7 +438,9 @@ function MilestoneFields({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3">
+    // While a form is open, go to one column so its inputs get the panel's full width
+    // (squeezed into half, the Awarded/Declined picker collapsed to just its arrow).
+    <div className={`grid gap-3 rounded-xl bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-3 ${appliedOpen || outcomeOpen ? 'grid-cols-1' : 'grid-cols-2'}`}>
       <div className="flex flex-col gap-1">
         <span className="text-[10.5px] font-bold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Applied Date</span>
         {prospect.applied_date ? (
@@ -405,18 +448,24 @@ function MilestoneFields({
         ) : (
           <span className="text-sm italic text-sparrow-gray dark:text-sparrow-dark-gray">Not yet applied</span>
         )}
+        {prospect.applied_date && savedAppliedNote && !appliedOpen && (
+          <p className="whitespace-pre-wrap text-xs text-sparrow-ink dark:text-sparrow-dark-ink">{savedAppliedNote}</p>
+        )}
         {!appliedOpen && (
-          <button onClick={() => setAppliedOpen(true)} className="mt-1 self-start text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
+          <button onClick={openApplied} className="mt-1 self-start text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
             {prospect.applied_date ? 'Edit Applied Date' : 'Mark as Applied'}
           </button>
         )}
         {appliedOpen && (
-          <div className="mt-1 space-y-2 rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-2">
-            <input type="date" value={appliedDate} onChange={(e) => setAppliedDate(e.target.value)} className="field-input mt-0 text-xs" />
+          <div className="mt-1 space-y-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3">
+            <label className="block">
+              <span className="text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Date applied</span>
+              <input type="date" value={appliedDate} onChange={(e) => setAppliedDate(e.target.value)} className="field-input mt-0.5 text-sm" />
+            </label>
             <textarea
               value={appliedNote}
               onChange={(e) => setAppliedNote(e.target.value)}
-              rows={2}
+              rows={3}
               placeholder="What was submitted, and to whom?"
               className="field-input mt-0 text-xs"
             />
@@ -438,23 +487,29 @@ function MilestoneFields({
           <span className="text-sm italic text-sparrow-gray dark:text-sparrow-dark-gray">Pending</span>
         )}
         {!outcomeOpen && !prospect.outcome_date && (
-          <button onClick={() => setOutcomeOpen(true)} className="mt-1 self-start text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
+          <button onClick={() => { setOutcomeDate(todayIso()); setOutcomeOpen(true); }} className="mt-1 self-start text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green hover:underline">
             Record Outcome
           </button>
         )}
         {outcomeOpen && (
-          <div className="mt-1 space-y-2 rounded-lg border border-dashed border-sparrow-rule dark:border-sparrow-dark-border p-2">
-            <div className="flex gap-2">
-              <select value={outcomeResult} onChange={(e) => setOutcomeResult(e.target.value as 'Awarded' | 'Declined')} className="field-input mt-0 text-xs">
-                <option value="Awarded">Awarded</option>
-                <option value="Declined">Declined</option>
-              </select>
-              <input type="date" value={outcomeDate} onChange={(e) => setOutcomeDate(e.target.value)} className="field-input mt-0 text-xs" />
+          <div className="mt-1 space-y-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface p-3">
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block">
+                <span className="text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Result</span>
+                <select value={outcomeResult} onChange={(e) => setOutcomeResult(e.target.value as 'Awarded' | 'Declined')} className="field-input mt-0.5 text-sm">
+                  <option value="Awarded">Awarded</option>
+                  <option value="Declined">Declined</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Date we heard</span>
+                <input type="date" value={outcomeDate} onChange={(e) => setOutcomeDate(e.target.value)} className="field-input mt-0.5 text-sm" />
+              </label>
             </div>
             <textarea
               value={outcomeNote}
               onChange={(e) => setOutcomeNote(e.target.value)}
-              rows={2}
+              rows={3}
               placeholder="Any detail worth keeping (amount, reason, next step)"
               className="field-input mt-0 text-xs"
             />

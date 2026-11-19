@@ -5,6 +5,7 @@ import {
   addGrantLink,
   addGrantNotification,
   addGrantUpdate,
+  updateGrantUpdate,
   deleteGrant,
   deleteGrantContact,
   deleteGrantDocument,
@@ -133,6 +134,7 @@ export function GrantPanel({
             entries={updates}
             busy={false}
             onAdd={async (body) => { await addGrantUpdate(grant.id, body, null, currentUserId); await reload(); }}
+            onEdit={async (id, patch) => { await updateGrantUpdate(id, patch); await reload(); }}
           />
         </DetailsTab>
       )}

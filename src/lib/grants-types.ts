@@ -103,10 +103,34 @@ export interface GrantContact {
   created_at: string;
 }
 
+/** Parses a date the way people mean it. A bare "YYYY-MM-DD" (a Postgres `date` column)
+ * is a calendar day, not an instant — `new Date("2026-09-11")` reads it as UTC midnight,
+ * which in Pacific time is the evening of Sept 10, so every date showed a day early.
+ * Full timestamps (created_at etc.) still go through the normal parser. */
+function parseDate(iso: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso);
+}
+
+/** A calendar day ("2026-09-11") → a timestamp at local noon, for Updates entries whose
+ * created_at should be the day something HAPPENED (applied, awarded), not the day it was
+ * typed in. Noon keeps it on the right day in any US timezone. */
+export function dayToTimestamp(day: string): string {
+  const d = parseDate(day);
+  d.setHours(12, 0, 0, 0);
+  return d.toISOString();
+}
+
+/** A timestamp → its local calendar day ("2026-09-11"), for a date input. */
+export function timestampToDay(ts: string): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /** Days since (positive) or until (negative) a due date. Same math as ops-types.daysSince. */
 export function daysSince(iso: string | null): number | null {
   if (!iso) return null;
-  const then = new Date(iso);
+  const then = parseDate(iso);
   then.setHours(0, 0, 0, 0);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -132,5 +156,5 @@ export function formatMoney(amount: number | null): string {
  * "Today/Tomorrow" labels like lcp-format's dayLabel aren't useful here). */
 export function formatDate(iso: string | null): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return parseDate(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
