@@ -18,7 +18,10 @@ export function Login() {
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      // Always show Google's account chooser. Without it, Google silently signs in as whichever
+      // account is already logged into this browser -- on a shared computer that can be someone
+      // else's (2026-11-20: Raymond landed in Susanna's portal this way).
+      options: { redirectTo: window.location.origin, queryParams: { prompt: 'select_account' } },
     });
     if (error) {
       setError(error.message);

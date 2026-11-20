@@ -37,6 +37,7 @@ export type ConsumablesCategory = (typeof CONSUMABLES_CATEGORIES)[number];
 export const BATCH_CATEGORIES = [
   'Misc office supplies (non-consumable)',
   'Misc small hand tools',
+  'Building Materials',
   'Misc kitchen supplies',
   'Misc household decor',
   'Misc holiday / seasonal decor',
@@ -54,6 +55,8 @@ export const BATCH_CATEGORY_HINTS: Record<string, string> = {
     'Durable supplies — staplers, tape dispensers, calculators. Not paper, ink, or pens (those are consumables).',
   'Misc small hand tools':
     'Non-power tools only — screwdrivers, wrenches, measuring tape, hammers. Any power tool or anything $50+ gets its own line.',
+  'Building Materials':
+    'Parts and materials kept on hand for repairs — plumbing fittings, pipe, lumber, hardware. Anything $50+ gets its own line.',
   'Misc kitchen supplies':
     'Spatulas, dish racks, measuring cups, serving utensils, can openers.',
   'Misc household decor':
