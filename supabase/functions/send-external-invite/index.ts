@@ -31,6 +31,17 @@ function encodeHeader(s: string): string {
   return `=?UTF-8?B?${btoa(binary)}?=`;
 }
 
+// Must match SPARROW_OFFICE_LOCATION in src/lib/sparrowOffice.ts. That's what the
+// "Sparrow Office" checkbox on the event form saves as the location. Only those events get
+// the office address and parking instructions.
+const SPARROW_OFFICE_ADDRESS = '245 SW Twin Oaks Cir, Corvallis, OR 97333';
+const SPARROW_OFFICE_LOCATION = `Sparrow Office: ${SPARROW_OFFICE_ADDRESS}`;
+const SPARROW_OFFICE_MAPS_URL = 'https://www.google.com/maps/search/?api=1&query=245+SW+Twin+Oaks+Cir%2C+Corvallis%2C+OR+97333';
+
+function isSparrowOffice(location: string | null): boolean {
+  return (location ?? '').trim() === SPARROW_OFFICE_LOCATION;
+}
+
 function htmlEscape(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -121,8 +132,12 @@ function buildEmailHtml(opts: {
          <span style="font-style:normal;font-size:12.5px;color:#767676;margin-top:6px;display:block;">&mdash; ${htmlEscape(opts.organizerName)}</span>
        </div>`
     : '';
+  const atOffice = isSparrowOffice(opts.location);
+  const locationValue = atOffice
+    ? `<strong style="color:#1E4D30;">Sparrow Office:</strong><br /><a href="${htmlEscape(SPARROW_OFFICE_MAPS_URL)}" style="color:#1E4D30;">${SPARROW_OFFICE_ADDRESS}</a>`
+    : htmlEscape(opts.location ?? '');
   const locationRow = opts.location
-    ? `<div style="font-size:14.5px;color:#1A1A1A;margin-top:10px;"><span style="color:#767676;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;display:block;">Location</span>${htmlEscape(opts.location)}</div>`
+    ? `<div style="font-size:14.5px;color:#1A1A1A;margin-top:10px;"><span style="color:#767676;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;display:block;">Location</span>${locationValue}</div>`
     : '';
 
   // The phone number lives in the inviter's Gmail signature; without one, point to a reply.
@@ -130,15 +145,10 @@ function buildEmailHtml(opts: {
     ? `If you have any issues with parking, please give me a call. My number is below.`
     : `If you have any issues with parking, just reply to this email.`;
 
-  // Always shown, right above the parking details; links to Google Maps for directions.
-  const addressBlock = `<p style="font-size:14.5px;line-height:1.6;color:#1A1A1A;margin:0 0 14px;">
-         <strong style="color:#1E4D30;">Sparrow Office:</strong><br />
-         <a href="https://www.google.com/maps/search/?api=1&amp;query=245+SW+Twin+Oaks+Cir%2C+Corvallis%2C+OR+97333" style="color:#1E4D30;">245 SW Twin Oaks Cir, Corvallis, OR 97333</a>
-       </p>`;
-
-  const parkingBlock = `${addressBlock}
+  // Only for events at the Sparrow Office; the address itself is in the card above.
+  const parkingBlock = !atOffice ? '' : `
        <details style="margin:0 0 26px;">
-         <summary style="cursor:pointer;font-family:Georgia,serif;font-weight:600;font-size:15.5px;color:#1E4D30;background:#E8F2EC;border-radius:10px;padding:14px 18px;">Coming to Twin Oaks Community? Here's what you need to know about parking.</summary>
+         <summary style="cursor:pointer;font-size:14.5px;font-weight:700;color:#1E4D30;background:#E8F2EC;border-radius:10px;padding:14px 18px;">Parking Instructions</summary>
          <div style="padding:16px 6px 0;">
            <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 12px;">After entering Twin Oaks, you'll see our office several buildings in, on the right &mdash; you can't miss our sign. There are two parking spots directly in front of our office that we always try to leave open for visiting guests. If both of these spots are taken, please continue driving down the main road. Guest parking is on the left, just past the resident mailboxes, in a gravel lot marked with guest parking signs.</p>
            <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0;">${parkingFallbackLine}</p>
@@ -341,7 +351,7 @@ async function handle(req: Request): Promise<Response> {
   const alt = `sparrow_alt_${crypto.randomUUID()}`;
   const subject = `You're invited: ${event.title}`;
   const plain = `${inviter.full_name ?? inviter.email} invited you to: ${event.title}\r\n${whenLabel}` +
-    `${event.location ? `\r\n${event.location}` : ''}\r\n\r\nSparrow Office: 245 SW Twin Oaks Cir, Corvallis, OR 97333`;
+    `${event.location ? `\r\n${event.location}` : ''}`;
   const mime =
     `From: ${encodeHeader(inviter.full_name ?? 'Sparrow')} <${inviter.email}>\r\n` +
     `To: ${email}\r\n` +

@@ -29,6 +29,7 @@ import { CalendarLabelPicker } from '@/components/calendar/CalendarLabelPicker';
 import { LABEL_COLORS } from '@/components/LabelPill';
 import type { OfficeRoom, Profile } from '@/lib/types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+import { SPARROW_OFFICE_ADDRESS, SPARROW_OFFICE_LOCATION, isSparrowOffice } from '@/lib/sparrowOffice';
 import { fetchExternalInvites, inviteExternalToEvent, type ExternalInvite } from '@/lib/externalInvites';
 
 interface Props {
@@ -600,12 +601,22 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                 <label className="field-label">
                   Location <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
                 </label>
-                <input
-                  type="text"
-                  value={editLocation}
-                  onChange={(e) => setEditLocation(e.target.value)}
-                  className="field-input"
-                />
+                <label className="mb-1.5 flex items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+                  <input
+                    type="checkbox"
+                    checked={isSparrowOffice(editLocation)}
+                    onChange={(e) => setEditLocation(e.target.checked ? SPARROW_OFFICE_LOCATION : '')}
+                  />
+                  <span><span className="font-semibold">Sparrow Office:</span> {SPARROW_OFFICE_ADDRESS}</span>
+                </label>
+                {!isSparrowOffice(editLocation) && (
+                  <input
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    className="field-input"
+                  />
+                )}
               </div>
             </>
           )}

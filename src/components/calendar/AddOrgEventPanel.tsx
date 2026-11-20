@@ -5,6 +5,7 @@ import { CalendarLabelPicker } from '@/components/calendar/CalendarLabelPicker';
 import type { Department, OfficeRoom, Profile } from '@/lib/types';
 import { DEPARTMENTS } from '@/lib/types';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
+import { SPARROW_OFFICE_ADDRESS, SPARROW_OFFICE_LOCATION, isSparrowOffice } from '@/lib/sparrowOffice';
 
 const DOW_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -455,13 +456,23 @@ export function AddOrgEventPanel({ open, defaultDate, currentUserId, isAdmin, us
           <label className="field-label">
             Location <span className="font-normal text-sparrow-gray dark:text-sparrow-dark-gray">(optional)</span>
           </label>
-          <input
-            type="text"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g. Twin Oaks Park"
-            className="field-input"
-          />
+          <label className="mb-1.5 flex items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+            <input
+              type="checkbox"
+              checked={isSparrowOffice(location)}
+              onChange={(e) => setLocation(e.target.checked ? SPARROW_OFFICE_LOCATION : '')}
+            />
+            <span><span className="font-semibold">Sparrow Office:</span> {SPARROW_OFFICE_ADDRESS}</span>
+          </label>
+          {!isSparrowOffice(location) && (
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g. Twin Oaks Park"
+              className="field-input"
+            />
+          )}
         </div>
 
         {/* Office room booking */}
