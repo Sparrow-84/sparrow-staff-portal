@@ -133,7 +133,10 @@ export function TwinOaksRoom() {
     void refreshNoticeMap();
   }, [load, refreshNoticeMap]);
 
-  const canManage = profile?.role === 'admin' || profile?.department === 'toc';
+  // Matches the database rule can_see_residents(): admin, TOC department, or the
+  // per-person "TOC access" switch in Admin → Staff. Every TOC table's write rule
+  // uses that same check, so anyone who can see the room this way can also save.
+  const canManage = profile?.role === 'admin' || profile?.department === 'toc' || !!profile?.toc_access;
 
   const tenantBySpace = useMemo(() => {
     const map = new Map<string, Tenant>();
