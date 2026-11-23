@@ -480,7 +480,13 @@ function useGrantRenderers(
         return <span className={`whitespace-nowrap ${MUTED}`}>{g.lead_time_days} days</span>;
       case 'due': {
         const tone = certificationTone(g.certification_due_date);
-        return tone.label ? <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`}>{tone.label}</span> : <Dash />;
+        // The actual date, still color-coded (green fine / amber due soon / red overdue);
+        // the "Due in Nd" countdown is on hover.
+        return tone.label ? (
+          <span title={tone.label} className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium ${tone.chip}`}>
+            {formatDate(g.certification_due_date)}
+          </span>
+        ) : <Dash />;
       }
       case 'last_certified': return <DateCell iso={g.last_certified_on} />;
       case 'placed_in_service': return <DateCell iso={g.placed_in_service_date} />;
