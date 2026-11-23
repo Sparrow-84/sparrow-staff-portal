@@ -36,7 +36,7 @@ import {
   type GrantNotificationCategory,
   type GrantUpdate,
 } from '@/lib/grants-types';
-import { Drawer } from '@/components/lcp/Drawer';
+import { FullPageView, FullPageColumns } from './FullPageView';
 import { InfoTip } from '@/components/InfoTip';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import type { Profile } from '@/lib/types';
@@ -103,45 +103,67 @@ export function GrantPanel({
   };
 
   return (
-    <Drawer open={open} onClose={onClose} title={grant.funder_name} subtitle="Grant record">
+    <FullPageView
+      open={open}
+      onClose={onClose}
+      title={grant.funder_name}
+      subtitle={grant.status === 'active' ? 'Active grant' : 'Past grant'}
+      headerExtra={
+        <div className="flex flex-wrap gap-1 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1 text-xs">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`rounded-lg px-2.5 py-1.5 font-medium transition ${
+                tab === t.key ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-green dark:text-sparrow-dark-green shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      }
+    >
       {grant.prior_consent_required && (
-        <p className="mb-3 flex items-start gap-2 rounded-lg border border-sparrow-green/40 bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
-          <span aria-hidden>⚠️</span>
-          Prior consent required — do not take action on this grant (insurance, management,
-          ownership, or debt changes) without the funder's sign-off first.
-        </p>
+        <div className="mx-auto max-w-[1400px] px-4 pt-5 sm:px-6">
+          <p className="flex items-start gap-2 rounded-lg border border-sparrow-green/40 bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+            <span aria-hidden>⚠️</span>
+            Prior consent required — do not take action on this grant (insurance, management,
+            ownership, or debt changes) without the funder's sign-off first.
+          </p>
+        </div>
       )}
-      <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist dark:bg-sparrow-dark-surface2 p-1 text-xs">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`rounded-lg px-2.5 py-1.5 font-medium transition ${
-              tab === t.key ? 'bg-white dark:bg-sparrow-dark-surface text-sparrow-green dark:text-sparrow-dark-green shadow-sm' : 'text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
 
       {tab === 'details' && (
-        <DetailsTab grant={grant} profiles={profiles} onChanged={changed} onDeleted={() => { onChanged(); onClose(); }}>
-          <ContactsTab grantId={grant.id} contacts={contacts} currentUserId={currentUserId} onChanged={changed} />
-          <LinksTab grantId={grant.id} links={links} currentUserId={currentUserId} onChanged={changed} />
-          <DocumentsTab grantId={grant.id} docs={documents} currentUserId={currentUserId} onChanged={changed} />
-          <UpdatesTimeline
-            entries={updates}
-            busy={false}
-            onAdd={async (body) => { await addGrantUpdate(grant.id, body, null, currentUserId); await reload(); }}
-            onEdit={async (id, patch) => { await updateGrantUpdate(id, patch); await reload(); }}
-          />
-        </DetailsTab>
+        <DetailsTab
+          grant={grant}
+          profiles={profiles}
+          onChanged={changed}
+          onDeleted={() => { onChanged(); onClose(); }}
+          leftExtra={
+            <>
+              <ContactsTab grantId={grant.id} contacts={contacts} currentUserId={currentUserId} onChanged={changed} />
+              <LinksTab grantId={grant.id} links={links} currentUserId={currentUserId} onChanged={changed} />
+              <DocumentsTab grantId={grant.id} docs={documents} currentUserId={currentUserId} onChanged={changed} />
+            </>
+          }
+          rightExtra={
+            <UpdatesTimeline
+              key={grant.id}
+              entries={updates}
+              busy={false}
+              onAdd={async (body, happenedOn) => { await addGrantUpdate(grant.id, body, null, currentUserId, happenedOn); await reload(); }}
+              onEdit={async (id, patch) => { await updateGrantUpdate(id, patch); await reload(); }}
+            />
+          }
+        />
       )}
       {tab === 'notifications' && (
-        <NotificationsTab grantId={grant.id} items={notifications} currentUserId={currentUserId} onChanged={changed} />
+        <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6">
+          <NotificationsTab grantId={grant.id} items={notifications} currentUserId={currentUserId} onChanged={changed} />
+        </div>
       )}
-    </Drawer>
+    </FullPageView>
   );
 }
 
@@ -153,13 +175,17 @@ function DetailsTab({
   profiles,
   onChanged,
   onDeleted,
-  children,
+  leftExtra,
+  rightExtra,
 }: {
   grant: Grant;
   profiles: Profile[];
   onChanged: () => void;
   onDeleted: () => void;
-  children: ReactNode;
+  /** Contacts / Links / Documents — under the details column. */
+  leftExtra: ReactNode;
+  /** The Updates history — under Notes, where there's room to read it. */
+  rightExtra: ReactNode;
 }) {
   const [form, setForm] = useState<GrantInput>(() => toInput(grant));
   const [busy, setBusy] = useState(false);
@@ -253,7 +279,9 @@ function DetailsTab({
   const tone = certificationTone(grant.certification_due_date);
 
   return (
-    <div className="space-y-4">
+    <FullPageColumns
+      left={
+        <>
       <div className="flex items-center justify-between rounded-xl border border-sparrow-rule/70 p-3">
         <span className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray">
           {grant.status === 'active' ? 'Active grant' : 'Past — wrapped up'}
@@ -386,19 +414,7 @@ function DetailsTab({
         </span>
       </label>
 
-      <label className="block">
-        <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Notes</span>
-        <textarea value={form.notes ?? ''} onChange={(e) => set('notes', e.target.value || null)} rows={3} className="field-input" />
-      </label>
-
-      {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
-      <button onClick={save} disabled={busy} className="btn-primary w-full">
-        Save changes
-      </button>
-      {autoSaveLabel && <p className="-mt-2 text-center text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">{autoSaveLabel} automatically</p>}
-
-      <hr className="border-sparrow-rule dark:border-sparrow-dark-border" />
-      {children}
+      {leftExtra}
 
       <hr className="border-sparrow-rule dark:border-sparrow-dark-border" />
       <div className="flex items-center justify-end">
@@ -416,7 +432,30 @@ function DetailsTab({
           </button>
         )}
       </div>
-    </div>
+        </>
+      }
+      right={
+        <>
+          <label className="block">
+            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
+              Notes
+              <InfoTip text="Drag the bottom-right corner to make the box taller." />
+            </span>
+            <textarea value={form.notes ?? ''} onChange={(e) => set('notes', e.target.value || null)} rows={18} className="field-input resize-y leading-relaxed" />
+          </label>
+
+          {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
+          <div className="flex items-center justify-end gap-3">
+            {autoSaveLabel && <span className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">{autoSaveLabel}</span>}
+            <button onClick={save} disabled={busy} className="btn-primary">
+              Save changes
+            </button>
+          </div>
+
+          {rightExtra}
+        </>
+      }
+    />
   );
 }
 

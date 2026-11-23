@@ -62,6 +62,9 @@ export interface ProspectInput {
   application_opens: string | null;
   application_deadline: string | null;
   est_amount: number | null;
+  /** Only included once migration 0234 has run (see toInput in GrantProspectPanel) —
+   * sending it before the column exists would fail the whole save. */
+  award_range?: string | null;
   findings: string | null;
   decision_reasoning: string | null;
   action_steps: string | null;

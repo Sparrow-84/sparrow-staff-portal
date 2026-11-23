@@ -72,6 +72,9 @@ export interface GrantProspect {
   applied_date: string | null;
   outcome_date: string | null;
   est_amount: number | null;
+  /** Free-text "Award range" ("$5,000", "$20k–$60k"), migration 0234. Undefined (not
+   * null) means the column doesn't exist yet — the migration hasn't run. */
+  award_range?: string | null;
   findings: string | null;
   decision_reasoning: string | null;
   action_steps: string | null;
@@ -81,6 +84,22 @@ export interface GrantProspect {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** What to show for Award range. Before migration 0234 runs (award_range undefined), falls
+ * back to the old numeric estimate so the column isn't blank in the meantime. */
+export function prospectAwardRange(p: { award_range?: string | null; est_amount: number | null }): string | null {
+  if (p.award_range !== undefined) return p.award_range?.trim() || null;
+  return p.est_amount != null ? `$${p.est_amount.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : null;
+}
+
+/** The one "Notes" box. Findings and Decision reasoning used to be two separate fields;
+ * they're now shown (and saved) as one, in `findings`. Rows saved before the merge may
+ * still have text in `decision_reasoning` — it's appended here so nothing is hidden, and
+ * the next save of that prospect folds it into `findings` and clears the old field. */
+export function prospectNotes(p: { findings: string | null; decision_reasoning: string | null }): string | null {
+  const parts = [p.findings, p.decision_reasoning].map((s) => s?.trim()).filter((s): s is string => !!s);
+  return parts.length ? parts.join('\n\n') : null;
 }
 
 /** An append-only timeline entry — the historical record of what happened and when,

@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { dayToTimestamp, formatDate, timestampToDay } from '@/lib/grants-types';
 
+// Local calendar day — toISOString() is UTC, so after ~5pm Pacific it would say tomorrow.
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export interface UpdateEntryLike {
   id: string;
   body: string;
@@ -22,11 +28,14 @@ export function UpdatesTimeline({
   busy,
 }: {
   entries: UpdateEntryLike[];
-  onAdd: (body: string) => Promise<void>;
+  /** `happenedOn` ("YYYY-MM-DD") is set only when the person picked a day other than
+   * today — logging history after the fact. Undefined means "now". */
+  onAdd: (body: string, happenedOn?: string) => Promise<void>;
   onEdit: (id: string, patch: { body?: string; created_at?: string }) => Promise<void>;
   busy: boolean;
 }) {
   const [draft, setDraft] = useState('');
+  const [addDay, setAddDay] = useState(localToday);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState('');
@@ -37,8 +46,12 @@ export function UpdatesTimeline({
     if (!body || saving) return;
     setSaving(true);
     try {
-      await onAdd(body);
+      // Today → leave the real timestamp so same-day entries keep their order.
+      await onAdd(body, addDay && addDay !== localToday() ? addDay : undefined);
       setDraft('');
+      // Keep a back-dated day picked, so entering a run of history doesn't mean re-picking
+      // it every time. Callers key this component by record id, so it resets to today on
+      // switching to a different grant/prospect.
     } finally {
       setSaving(false);
     }
@@ -77,11 +90,21 @@ export function UpdatesTimeline({
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            rows={2}
+            rows={4}
             placeholder="Add a note — a call, context, a question worth keeping…"
-            className="field-input mt-0 text-xs"
+            className="field-input mt-0 resize-y text-xs"
           />
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-end justify-end gap-2">
+            <label className="flex items-center gap-1.5">
+              <span className="text-[11px] font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Date it happened</span>
+              <input
+                type="date"
+                value={addDay}
+                max={localToday()}
+                onChange={(e) => setAddDay(e.target.value)}
+                className="field-input mt-0 w-auto text-xs"
+              />
+            </label>
             <button onClick={add} disabled={busy || saving || !draft.trim()} className="btn-primary text-xs">
               Add update
             </button>

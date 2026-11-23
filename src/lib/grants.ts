@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Grant, GrantContact, GrantDocument, GrantLink, GrantNotification, GrantNotificationCategory, GrantUpdate } from './grants-types';
+import { dayToTimestamp, type Grant, type GrantContact, type GrantDocument, type GrantLink, type GrantNotification, type GrantNotificationCategory, type GrantUpdate } from './grants-types';
 
 // All reads/writes are gated by RLS to the ops tier (has_ops_access(): Andrew, Susanna,
 // Shelly). Notifications are append-only (insert + select only — see 0078_grants.sql).
@@ -176,8 +176,17 @@ export async function fetchGrantUpdates(grantId: string): Promise<GrantUpdate[]>
   return (data ?? []) as GrantUpdate[];
 }
 
-export async function addGrantUpdate(grantId: string, body: string, milestone: string | null, createdBy: string): Promise<void> {
-  const { error } = await supabase.from('grant_updates').insert({ grant_id: grantId, body, milestone, created_by: createdBy });
+export async function addGrantUpdate(
+  grantId: string,
+  body: string,
+  milestone: string | null,
+  createdBy: string,
+  /** "YYYY-MM-DD" the event happened, when logging history after the fact. Omit for now. */
+  happenedOn?: string,
+): Promise<void> {
+  const row: Record<string, unknown> = { grant_id: grantId, body, milestone, created_by: createdBy };
+  if (happenedOn) row.created_at = dayToTimestamp(happenedOn);
+  const { error } = await supabase.from('grant_updates').insert(row);
   if (error) throw new Error(error.message);
 }
 

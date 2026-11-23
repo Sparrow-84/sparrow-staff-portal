@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Drawer } from '@/components/lcp/Drawer';
+import { FullPageView, FullPageColumns } from './FullPageView';
 import { InfoTip } from '@/components/InfoTip';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import {
@@ -25,6 +25,7 @@ import {
 } from '@/lib/grant-prospects';
 import {
   PROSPECT_STATUSES,
+  prospectNotes,
   prospectStatusChip,
   type GrantProspect,
   type GrantProspectContact,
@@ -160,195 +161,215 @@ export function GrantProspectPanel({
     }
   }
 
+  // Before migration 0234 runs, the Award range column doesn't exist yet — show the box
+  // but locked, rather than letting typing in it silently fail to save.
+  const awardRangeReady = prospect.award_range !== undefined;
+
   return (
-    <Drawer open={open} onClose={onClose} title={prospect.name} subtitle="Grant prospect">
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <GrantProspectLabelPicker
-            kind="tier"
-            kindDisplayName="Tier"
-            value={form.tier_label_id}
-            currentUserId={currentUserId}
-            onChange={(id) => { set('tier_label_id', id); void updateProspect(prospectId, { tier_label_id: id }).then(onChanged); }}
-          />
-          <GrantProspectLabelPicker
-            kind="source"
-            kindDisplayName="Source"
-            value={form.source_label_id}
-            currentUserId={currentUserId}
-            onChange={(id) => { set('source_label_id', id); void updateProspect(prospectId, { source_label_id: id }).then(onChanged); }}
-          />
-        </div>
+    <FullPageView
+      open={open}
+      onClose={onClose}
+      title={prospect.name}
+      subtitle="Grant prospect"
+      headerExtra={
+        <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${prospectStatusChip(form.status)}`}>
+          {PROSPECT_STATUSES.find((s) => s.value === form.status)?.label}
+        </span>
+      }
+    >
+      <FullPageColumns
+        left={
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <GrantProspectLabelPicker
+                kind="tier"
+                kindDisplayName="Tier"
+                value={form.tier_label_id}
+                currentUserId={currentUserId}
+                onChange={(id) => { set('tier_label_id', id); void updateProspect(prospectId, { tier_label_id: id }).then(onChanged); }}
+              />
+              <GrantProspectLabelPicker
+                kind="source"
+                kindDisplayName="Source"
+                value={form.source_label_id}
+                currentUserId={currentUserId}
+                onChange={(id) => { set('source_label_id', id); void updateProspect(prospectId, { source_label_id: id }).then(onChanged); }}
+              />
+            </div>
 
-        <label className="block" htmlFor="prospect-name">
-          <span className="field-label-required text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Name</span>
-          <input
-            id="prospect-name"
-            value={form.name}
-            onChange={(e) => { set('name', e.target.value); clear('prospect-name'); }}
-            className={fieldClass('prospect-name')}
-          />
-          {fieldError('prospect-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('prospect-name')}</p>}
-        </label>
+            <label className="block" htmlFor="prospect-name">
+              <span className="field-label-required text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Name</span>
+              <input
+                id="prospect-name"
+                value={form.name}
+                onChange={(e) => { set('name', e.target.value); clear('prospect-name'); }}
+                className={fieldClass('prospect-name')}
+              />
+              {fieldError('prospect-name') && <p className="mt-1 text-xs text-priority-p1">{fieldError('prospect-name')}</p>}
+            </label>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
-              Owner
-              <InfoTip text="Who's responsible for making sure this prospect actually gets researched and, if pursued, applied for on time. Reminders go to this person." />
-            </span>
-            <select
-              value={form.owner_id ?? ''}
-              onChange={(e) => set('owner_id', e.target.value || null)}
-              className="field-input"
-            >
-              <option value="">Unassigned</option>
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>{p.full_name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
-              Reminder lead time (days)
-              <InfoTip text="How many days before the application deadline the owner should get a reminder task. 30 is the default." />
-            </span>
-            <input
-              type="number"
-              value={form.lead_time_days}
-              onChange={(e) => set('lead_time_days', Number(e.target.value) || 0)}
-              className="field-input"
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
+                  Owner
+                  <InfoTip text="Who's responsible for making sure this prospect actually gets researched and, if pursued, applied for on time. Reminders go to this person." />
+                </span>
+                <select
+                  value={form.owner_id ?? ''}
+                  onChange={(e) => set('owner_id', e.target.value || null)}
+                  className="field-input"
+                >
+                  <option value="">Unassigned</option>
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>{p.full_name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
+                  Reminder lead time (days)
+                  <InfoTip text="How many days before the application deadline the owner should get a reminder task. 30 is the default." />
+                </span>
+                <input
+                  type="number"
+                  value={form.lead_time_days}
+                  onChange={(e) => set('lead_time_days', Number(e.target.value) || 0)}
+                  className="field-input"
+                />
+              </label>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
+                Status
+                <InfoTip text="Applied and Awarded switch on by themselves when you fill in Applied Date or Outcome below. Clicking either one here just opens that form." />
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {PROSPECT_STATUSES.map((s) => (
+                  <button
+                    key={s.value}
+                    onClick={() => void setStatus(s.value)}
+                    disabled={busy}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                      form.status === s.value
+                        ? `border-transparent ${prospectStatusChip(s.value)}`
+                        : 'border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green dark:hover:border-sparrow-dark-green'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              {MOVE_MESSAGE[form.status] && (
+                <p className="mt-2 rounded-lg bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
+                  {MOVE_MESSAGE[form.status]}
+                </p>
+              )}
+            </div>
+
+            <MilestoneFields
+              prospect={prospect}
+              updates={updates}
+              openRequest={milestoneRequest}
+              currentUserId={currentUserId}
+              onAwarded={onAwarded}
+              onChanged={() => { onChanged(); void reload(); }}
             />
-          </label>
-        </div>
 
-        <div>
-          <p className="mb-2 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
-            Status
-            <InfoTip text="Applied and Awarded switch on by themselves when you fill in Applied Date or Outcome below. Clicking either one here just opens that form." />
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {PROSPECT_STATUSES.map((s) => (
-              <button
-                key={s.value}
-                onClick={() => void setStatus(s.value)}
-                disabled={busy}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                  form.status === s.value
-                    ? `border-transparent ${prospectStatusChip(s.value)}`
-                    : 'border-sparrow-rule dark:border-sparrow-dark-border text-sparrow-gray dark:text-sparrow-dark-gray hover:border-sparrow-green dark:hover:border-sparrow-dark-green'
-                }`}
-              >
-                {s.label}
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Application opens</span>
+                <input
+                  type="date"
+                  value={form.application_opens ?? ''}
+                  onChange={(e) => set('application_opens', e.target.value || null)}
+                  className="field-input"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Application deadline</span>
+                <input
+                  type="date"
+                  value={form.application_deadline ?? ''}
+                  onChange={(e) => set('application_deadline', e.target.value || null)}
+                  className="field-input"
+                />
+              </label>
+            </div>
+
+            <label className="block">
+              <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
+                Award range
+                <InfoTip text="What this funder gives, written the way they publish it — e.g. $5,000, $20k–$60k, or up to $15k." />
+              </span>
+              <input
+                value={form.award_range ?? ''}
+                onChange={(e) => set('award_range', e.target.value || null)}
+                disabled={!awardRangeReady}
+                placeholder="e.g. $5,000 or $20k–$60k"
+                className="field-input disabled:opacity-60"
+              />
+              {!awardRangeReady && (
+                <p className="mt-1 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">Opens for typing once today's database update (0234) runs.</p>
+              )}
+            </label>
+
+            <ContactsSection prospectId={prospect.id} contacts={contacts} currentUserId={currentUserId} onChanged={reload} />
+
+            <LinksSection prospectId={prospect.id} links={links} currentUserId={currentUserId} onChanged={reload} />
+
+            <DocumentsSection prospectId={prospect.id} docs={docs} currentUserId={currentUserId} onChanged={reload} />
+          </>
+        }
+        right={
+          <>
+            <label className="block">
+              <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
+                Notes
+                <InfoTip text="Everything worth knowing about this opportunity — what the research turned up, eligibility, and why we're pursuing it or not. Drag the bottom-right corner to make the box taller." />
+              </span>
+              <textarea
+                value={form.findings ?? ''}
+                onChange={(e) => set('findings', e.target.value || null)}
+                rows={18}
+                className="field-input resize-y leading-relaxed"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Action steps</span>
+              <textarea
+                value={form.action_steps ?? ''}
+                onChange={(e) => set('action_steps', e.target.value || null)}
+                rows={7}
+                className="field-input resize-y leading-relaxed"
+              />
+            </label>
+
+            <div className="flex items-center justify-end gap-3">
+              {autoSaveLabel && <span className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">{autoSaveLabel}</span>}
+              <button onClick={save} disabled={busy} className="btn-primary">
+                Save changes
               </button>
-            ))}
-          </div>
-          {MOVE_MESSAGE[form.status] && (
-            <p className="mt-2 rounded-lg bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
-              {MOVE_MESSAGE[form.status]}
-            </p>
-          )}
-        </div>
+            </div>
 
-        <MilestoneFields
-          prospect={prospect}
-          updates={updates}
-          openRequest={milestoneRequest}
-          currentUserId={currentUserId}
-          onAwarded={onAwarded}
-          onChanged={() => { onChanged(); void reload(); }}
-        />
-
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Application opens</span>
-            <input
-              type="date"
-              value={form.application_opens ?? ''}
-              onChange={(e) => set('application_opens', e.target.value || null)}
-              className="field-input"
+            <UpdatesTimeline
+              key={prospectId}
+              entries={updates}
+              busy={busy}
+              onAdd={async (body, happenedOn) => {
+                await addProspectUpdate(prospectId, body, null, currentUserId, happenedOn);
+                await reload();
+              }}
+              onEdit={async (id, patch) => {
+                await updateProspectUpdate(id, patch);
+                await reload();
+              }}
             />
-          </label>
-          <label className="block">
-            <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Application deadline</span>
-            <input
-              type="date"
-              value={form.application_deadline ?? ''}
-              onChange={(e) => set('application_deadline', e.target.value || null)}
-              className="field-input"
-            />
-          </label>
-        </div>
-        <p className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">Both dates are always visible, not gated by status — you usually learn these before you've decided anything.</p>
-
-        <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
-            Estimated amount
-            <InfoTip text="Roughly what this opportunity is worth, if you know. If it gets awarded, this pre-fills the real grant record's amount — you can correct it there once you know the exact figure." />
-          </span>
-          <input
-            type="number"
-            value={form.est_amount ?? ''}
-            onChange={(e) => set('est_amount', e.target.value === '' ? null : Number(e.target.value))}
-            className="field-input"
-          />
-        </label>
-
-        <ContactsSection prospectId={prospect.id} contacts={contacts} currentUserId={currentUserId} onChanged={reload} />
-
-        <LinksSection prospectId={prospect.id} links={links} currentUserId={currentUserId} onChanged={reload} />
-
-        <DocumentsSection prospectId={prospect.id} docs={docs} currentUserId={currentUserId} onChanged={reload} />
-
-        <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Findings — what the research turned up</span>
-          <textarea
-            value={form.findings ?? ''}
-            onChange={(e) => set('findings', e.target.value || null)}
-            rows={3}
-            className="field-input"
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Decision reasoning — why pursue or not</span>
-          <textarea
-            value={form.decision_reasoning ?? ''}
-            onChange={(e) => set('decision_reasoning', e.target.value || null)}
-            rows={3}
-            className="field-input"
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Action steps</span>
-          <textarea
-            value={form.action_steps ?? ''}
-            onChange={(e) => set('action_steps', e.target.value || null)}
-            rows={3}
-            className="field-input"
-          />
-        </label>
-
-        <button onClick={save} disabled={busy} className="btn-primary w-full">
-          Save changes
-        </button>
-        {autoSaveLabel && <p className="-mt-2 text-center text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">{autoSaveLabel}</p>}
-
-        <UpdatesTimeline
-          entries={updates}
-          busy={busy}
-          onAdd={async (body) => {
-            await addProspectUpdate(prospectId, body, null, currentUserId);
-            await reload();
-          }}
-          onEdit={async (id, patch) => {
-            await updateProspectUpdate(id, patch);
-            await reload();
-          }}
-        />
-      </div>
-    </Drawer>
+          </>
+        }
+      />
+    </FullPageView>
   );
 }
 
@@ -549,8 +570,13 @@ function toInput(prospect: GrantProspect | null): ProspectInput {
     application_opens: prospect.application_opens,
     application_deadline: prospect.application_deadline,
     est_amount: prospect.est_amount,
-    findings: prospect.findings,
-    decision_reasoning: prospect.decision_reasoning,
+    // Only once migration 0234 has added the column — sending it before then would make
+    // every save of this prospect fail.
+    ...(prospect.award_range !== undefined ? { award_range: prospect.award_range } : {}),
+    // One Notes box: any old Decision reasoning text is folded in (see prospectNotes), and
+    // saving clears the old field so it isn't shown twice.
+    findings: prospectNotes(prospect),
+    decision_reasoning: null,
     action_steps: prospect.action_steps,
     owner_id: prospect.owner_id,
     lead_time_days: prospect.lead_time_days,
