@@ -21,6 +21,10 @@ import { useColumnLayout, useHeaderInteractions, GridTableShell, type GridColumn
 import { GrantPanel } from './GrantPanel';
 import { GrantProspectPanel } from './GrantProspectPanel';
 import { GrantsHelpModal } from './GrantsHelpModal';
+import { stripHtml } from '@/components/lcp/RichText';
+
+/** Notes can hold formatting now — the table shows them as one plain line. */
+const plainNotes = (text: string | null) => (text ? stripHtml(text) : '');
 
 const DEFAULT_LEAD_TIME_DAYS = 30;
 
@@ -449,7 +453,7 @@ function useGrantRenderers(
       case 'placed_in_service': return cmpDate(a.placed_in_service_date, b.placed_in_service_date);
       case 'affordability_end': return cmpDate(a.affordability_period_end, b.affordability_period_end);
       case 'prior_consent': return Number(a.prior_consent_required) - Number(b.prior_consent_required);
-      case 'notes': return (a.notes ?? '').localeCompare(b.notes ?? '');
+      case 'notes': return plainNotes(a.notes).localeCompare(plainNotes(b.notes));
       case 'contacts': return x(a.id).contacts.join(', ').localeCompare(x(b.id).contacts.join(', '));
       case 'links': return x(a.id).linkCount - x(b.id).linkCount;
       case 'documents': return x(a.id).docCount - x(b.id).docCount;
@@ -493,7 +497,7 @@ function useGrantRenderers(
       case 'affordability_end': return <DateCell iso={g.affordability_period_end} />;
       case 'prior_consent':
         return g.prior_consent_required ? <span className="text-xs font-medium text-amber-700 dark:text-amber-300">Required</span> : <Dash />;
-      case 'notes': return <TextCell value={g.notes} />;
+      case 'notes': return <TextCell value={plainNotes(g.notes) || null} />;
       case 'contacts': return <TextCell value={e.contacts.join(', ') || null} />;
       case 'links': return <CountCell n={e.linkCount} noun="link" />;
       case 'documents': return <CountCell n={e.docCount} noun="doc" />;
@@ -641,7 +645,7 @@ function useProspectRenderers(
       case 'deadline': return cmpDate(a.application_deadline, b.application_deadline);
       case 'applied': return cmpDate(a.applied_date, b.applied_date);
       case 'outcome': return cmpDate(a.outcome_date, b.outcome_date);
-      case 'notes': return (prospectNotes(a) ?? '').localeCompare(prospectNotes(b) ?? '');
+      case 'notes': return plainNotes(prospectNotes(a)).localeCompare(plainNotes(prospectNotes(b)));
       case 'action_steps': return (a.action_steps ?? '').localeCompare(b.action_steps ?? '');
       case 'contacts': return x(a.id).contacts.join(', ').localeCompare(x(b.id).contacts.join(', '));
       case 'links': return x(a.id).linkCount - x(b.id).linkCount;
@@ -683,7 +687,7 @@ function useProspectRenderers(
         return p.outcome_date
           ? <span className={`whitespace-nowrap ${MUTED}`}>{p.status === 'awarded' ? 'Awarded' : 'Declined'} — {formatDate(p.outcome_date)}</span>
           : <Dash />;
-      case 'notes': return <TextCell value={prospectNotes(p)} />;
+      case 'notes': return <TextCell value={plainNotes(prospectNotes(p)) || null} />;
       case 'action_steps': return <TextCell value={p.action_steps} />;
       case 'contacts': return <TextCell value={e.contacts.join(', ') || null} />;
       case 'links': return <CountCell n={e.linkCount} noun="link" />;

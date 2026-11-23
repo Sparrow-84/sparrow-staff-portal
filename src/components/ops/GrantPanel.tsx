@@ -41,6 +41,10 @@ import { InfoTip } from '@/components/InfoTip';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import type { Profile } from '@/lib/types';
 import { UpdatesTimeline } from './UpdatesTimeline';
+import { RichTextField, toEditableHtml } from '@/components/lcp/RichText';
+
+/** Shown in red next to Save when an autosave fails — never fail silently on someone's notes. */
+const SAVE_FAILED = '⚠ Not saved — check your internet, then click Save changes. Copy your notes somewhere safe before refreshing.';
 
 type Tab = 'details' | 'notifications';
 const TABS: { key: Tab; label: string }[] = [
@@ -134,7 +138,9 @@ export function GrantPanel({
         </div>
       )}
 
-      {tab === 'details' && (
+      {/* Hidden, not removed, while on Notifications — removing it would drop an edit
+          still waiting on autosave. */}
+      <div className={tab === 'details' ? '' : 'hidden'}>
         <DetailsTab
           grant={grant}
           profiles={profiles}
@@ -157,7 +163,7 @@ export function GrantPanel({
             />
           }
         />
-      )}
+      </div>
       {tab === 'notifications' && (
         <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6">
           <NotificationsTab grantId={grant.id} items={notifications} currentUserId={currentUserId} onChanged={changed} />
@@ -195,17 +201,42 @@ function DetailsTab({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const skipNextAutosave = useRef(true);
+  // Set by "Mark certified today" so the rolled-forward due date gets pulled into the form.
+  const syncCertDate = useRef(false);
+  const pendingSave = useRef<{ id: string; data: GrantInput } | null>(null);
+  const flushPendingSave = () => {
+    const p = pendingSave.current;
+    if (!p) return;
+    pendingSave.current = null;
+    void updateGrant(p.id, p.data).then(onChanged, () => setAutoSaveLabel(SAVE_FAILED));
+  };
+  useEffect(() => () => flushPendingSave(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { missingMessage, validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
     { key: 'grant-funder-name', label: 'Funder name', valid: form.funder_name.trim().length > 0 },
   ]);
 
+  // Reset the form ONLY when a different grant is opened. Every autosave refreshes the
+  // table and hands back a fresh copy of the same grant — resetting on that used to put the
+  // just-saved (slightly older) text back in the box, jumping the cursor to the bottom and
+  // eating anything typed during the save.
+  const loadedIdRef = useRef(grant.id);
   useEffect(() => {
+    if (grant.id === loadedIdRef.current) return;
+    flushPendingSave();
+    loadedIdRef.current = grant.id;
     setForm(toInput(grant));
     resetValidation();
     setAutoSaveLabel(null);
     skipNextAutosave.current = true;
-  }, [grant]);
+  }, [grant.id]);
+
+  useEffect(() => {
+    if (!syncCertDate.current) return;
+    syncCertDate.current = false;
+    const v = grant.certification_due_date;
+    setForm((f) => (f.certification_due_date === v ? f : { ...f, certification_due_date: v }));
+  }, [grant.certification_due_date]);
 
   function set<K extends keyof GrantInput>(key: K, value: GrantInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -218,6 +249,8 @@ function DetailsTab({
       await updateGrant(grant.id, form);
       setAutoSaveLabel(null);
       onChanged();
+    } catch {
+      setAutoSaveLabel(SAVE_FAILED);
     } finally {
       setBusy(false);
     }
@@ -231,11 +264,15 @@ function DetailsTab({
       return;
     }
     if (!form.funder_name.trim()) return; // don't autosave over a required field left blank
+    const id = grant.id;
+    const data = form;
+    pendingSave.current = { id, data };
     setAutoSaveLabel('Saving…');
     const t = setTimeout(() => {
-      updateGrant(grant.id, form)
+      if (pendingSave.current?.data === data) pendingSave.current = null;
+      updateGrant(id, data)
         .then(() => { setAutoSaveLabel('Saved automatically'); onChanged(); })
-        .catch(() => setAutoSaveLabel(null));
+        .catch(() => setAutoSaveLabel(SAVE_FAILED));
     }, 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -248,6 +285,7 @@ function DetailsTab({
       // unsaved date — it rolls forward from whatever's in the box right now, not the DB.
       if (!validate()) return;
       await updateGrant(grant.id, form);
+      syncCertDate.current = true;
       await markCertified(grant.id, form.certification_due_date, localDate());
       onChanged();
     } finally {
@@ -436,17 +474,27 @@ function DetailsTab({
       }
       right={
         <>
-          <label className="block">
+          {/* A div, not a <label>: clicking inside a label "clicks" its first button (Bold). */}
+          <div>
             <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
               Notes
-              <InfoTip text="Drag the bottom-right corner to make the box taller." />
+              <InfoTip text="Bold, italics and lists work, and pasting from a website or Google Doc keeps its bold and lists (not its fonts or colors)." />
             </span>
-            <textarea value={form.notes ?? ''} onChange={(e) => set('notes', e.target.value || null)} rows={18} className="field-input resize-y leading-relaxed" />
-          </label>
+            <RichTextField
+              key={grant.id}
+              initialValue={toEditableHtml(grant.notes)}
+              onChange={(html) => set('notes', html || null)}
+              minHeightRem={26}
+              toolbar
+              numberedList
+            />
+          </div>
 
           {missingMessage && <p className="text-sm text-priority-p1">{missingMessage}</p>}
           <div className="flex items-center justify-end gap-3">
-            {autoSaveLabel && <span className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">{autoSaveLabel}</span>}
+            {autoSaveLabel && (
+              <span className={`text-[11px] ${autoSaveLabel === SAVE_FAILED ? 'font-semibold text-priority-p1' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>{autoSaveLabel}</span>
+            )}
             <button onClick={save} disabled={busy} className="btn-primary">
               Save changes
             </button>

@@ -38,6 +38,19 @@ import { formatDate } from '@/lib/grants-types';
 import type { Profile } from '@/lib/types';
 import { GrantProspectLabelPicker } from './GrantProspectLabelPicker';
 import { UpdatesTimeline } from './UpdatesTimeline';
+import { RichTextField, toEditableHtml } from '@/components/lcp/RichText';
+
+/** Shown in red next to Save when an autosave fails — never fail silently on someone's notes. */
+const SAVE_FAILED = '⚠ Not saved — check your internet, then click Save changes. Copy your notes somewhere safe before refreshing.';
+
+/** Everything the autosave/Save button writes. Status is left out on purpose: it's saved
+ * on its own the moment a status button is clicked (and by Applied/Outcome), so a stale
+ * copy here can never undo a status change made a second ago. */
+function editableFields(form: ProspectInput): Partial<ProspectInput> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { status: _status, ...rest } = form;
+  return rest;
+}
 
 // Local calendar day — toISOString() is UTC, so after ~5pm Pacific it returned tomorrow.
 const todayIso = () => {
@@ -75,6 +88,7 @@ export function GrantProspectPanel({
   const [contacts, setContacts] = useState<GrantProspectContact[]>([]);
   const [updates, setUpdates] = useState<GrantProspectUpdate[]>([]);
   const skipNextAutosave = useRef(true);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [milestoneRequest, setMilestoneRequest] = useState<{ kind: 'applied' | 'awarded'; n: number } | null>(null);
 
   const { validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
@@ -95,13 +109,40 @@ export function GrantProspectPanel({
     setUpdates(u);
   }, [prospect]);
 
+  // Reset the form ONLY when a different prospect is opened. Every autosave refreshes the
+  // table, which hands this panel a fresh copy of the same prospect — resetting on that
+  // used to overwrite the boxes with the just-saved (slightly older) text, which threw the
+  // cursor to the bottom and could eat whatever was typed during the save.
+  const loadedIdRef = useRef<string | null>(prospect?.id ?? null);
+  // The edit waiting out the autosave delay. Sent right away (instead of dropped) if a
+  // different prospect is opened or the room is left before the delay is up.
+  const pendingSave = useRef<{ id: string; data: Partial<ProspectInput> } | null>(null);
+  const flushPendingSave = () => {
+    const p = pendingSave.current;
+    if (!p) return;
+    pendingSave.current = null;
+    void updateProspect(p.id, p.data).then(onChanged, () => setAutoSaveLabel(SAVE_FAILED));
+  };
+  useEffect(() => () => flushPendingSave(), []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
+    if (open) void reload();
+    const id = prospect?.id ?? null;
+    if (id === loadedIdRef.current) return;
+    flushPendingSave();
+    loadedIdRef.current = id;
     setForm(toInput(prospect));
     resetValidation();
     setAutoSaveLabel(null);
     skipNextAutosave.current = true;
-    if (open) void reload();
-  }, [prospect, open]);
+  }, [prospect?.id, open]);
+
+  // Status can change from outside the form (Applied / Outcome forms, the Award flow) —
+  // pick that up without touching anything typed.
+  useEffect(() => {
+    if (!prospect) return;
+    const s = prospect.status;
+    setForm((f) => (f.status === s ? f : { ...f, status: s }));
+  }, [prospect?.status]);
 
   // Autosave a few seconds after the last edit — the button stays for anyone who wants
   // the peace of mind of an explicit save, but nothing is lost if you just click away.
@@ -115,11 +156,14 @@ export function GrantProspectPanel({
     }
     if (!prospect || !form.name.trim()) return; // don't autosave over a required field left blank
     const id = prospect.id;
+    const data = editableFields(form);
+    pendingSave.current = { id, data };
     setAutoSaveLabel('Saving…');
     const t = setTimeout(() => {
-      updateProspect(id, form)
+      if (pendingSave.current?.data === data) pendingSave.current = null;
+      updateProspect(id, data)
         .then(() => { setAutoSaveLabel('Saved'); onChanged(); })
-        .catch(() => setAutoSaveLabel(null));
+        .catch(() => setAutoSaveLabel(SAVE_FAILED));
     }, 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,9 +180,11 @@ export function GrantProspectPanel({
     if (!validate() || busy) return;
     setBusy(true);
     try {
-      await updateProspect(prospectId, form);
+      await updateProspect(prospectId, editableFields(form));
       setAutoSaveLabel(null);
       onChanged();
+    } catch {
+      setAutoSaveLabel(SAVE_FAILED);
     } finally {
       setBusy(false);
     }
@@ -151,11 +197,20 @@ export function GrantProspectPanel({
       setMilestoneRequest({ kind: status, n: Date.now() });
       return;
     }
+    const previous = form.status;
     set('status', status);
+    setStatusError(null);
     setBusy(true);
     try {
       await updateProspect(prospectId, { status });
       onChanged();
+    } catch {
+      set('status', previous);
+      setStatusError(
+        status === 'waiting_to_open'
+          ? `"Waiting to open" turns on once today's database update (0235) runs. Nothing else was affected.`
+          : "Couldn't change the status — check your internet and try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -260,6 +315,7 @@ export function GrantProspectPanel({
                   </button>
                 ))}
               </div>
+              {statusError && <p className="mt-2 text-xs text-priority-p1">{statusError}</p>}
               {MOVE_MESSAGE[form.status] && (
                 <p className="mt-2 rounded-lg bg-sparrow-sage dark:bg-sparrow-green/15 px-3 py-2 text-xs font-medium text-sparrow-green dark:text-sparrow-dark-green">
                   {MOVE_MESSAGE[form.status]}
@@ -323,18 +379,22 @@ export function GrantProspectPanel({
         }
         right={
           <>
-            <label className="block">
+            {/* A div, not a <label>: clicking inside a label "clicks" its first button, which
+                here would be Bold. */}
+            <div>
               <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
                 Notes
-                <InfoTip text="Everything worth knowing about this opportunity — what the research turned up, eligibility, and why we're pursuing it or not. Drag the bottom-right corner to make the box taller." />
+                <InfoTip text="Everything worth knowing about this opportunity — what the research turned up, eligibility, and why we're pursuing it or not. Bold, italics and lists work, and pasting from a website or Google Doc keeps its bold and lists (not its fonts or colors)." />
               </span>
-              <textarea
-                value={form.findings ?? ''}
-                onChange={(e) => set('findings', e.target.value || null)}
-                rows={18}
-                className="field-input resize-y leading-relaxed"
+              <RichTextField
+                key={prospectId}
+                initialValue={toEditableHtml(prospectNotes(prospect))}
+                onChange={(html) => set('findings', html || null)}
+                minHeightRem={26}
+                toolbar
+                numberedList
               />
-            </label>
+            </div>
 
             <label className="block">
               <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Action steps</span>
@@ -347,7 +407,9 @@ export function GrantProspectPanel({
             </label>
 
             <div className="flex items-center justify-end gap-3">
-              {autoSaveLabel && <span className="text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">{autoSaveLabel}</span>}
+              {autoSaveLabel && (
+                <span className={`text-[11px] ${autoSaveLabel === SAVE_FAILED ? 'font-semibold text-priority-p1' : 'text-sparrow-gray dark:text-sparrow-dark-gray'}`}>{autoSaveLabel}</span>
+              )}
               <button onClick={save} disabled={busy} className="btn-primary">
                 Save changes
               </button>

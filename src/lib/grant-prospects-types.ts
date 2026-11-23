@@ -17,6 +17,7 @@ export type GrantProspectStatus =
   | 'not_researched'
   | 'researching'
   | 'decided_pursue'
+  | 'waiting_to_open'
   | 'decided_no'
   | 'applied'
   | 'awarded';
@@ -25,6 +26,7 @@ export const PROSPECT_STATUSES: { value: GrantProspectStatus; label: string }[] 
   { value: 'not_researched', label: 'Not researched' },
   { value: 'researching', label: 'Researching' },
   { value: 'decided_pursue', label: 'Decided — Pursue' },
+  { value: 'waiting_to_open', label: 'Waiting to open' },
   { value: 'decided_no', label: 'Decided — No' },
   { value: 'applied', label: 'Applied' },
   { value: 'awarded', label: 'Awarded 🎉' },
@@ -44,6 +46,8 @@ export function prospectStatusChip(s: GrantProspectStatus): string {
       return 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300';
     case 'decided_pursue':
       return 'bg-sparrow-sage dark:bg-sparrow-green/15 text-sparrow-green dark:text-sparrow-dark-green';
+    case 'waiting_to_open':
+      return 'bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300';
     case 'decided_no':
       return 'bg-sparrow-mist dark:bg-sparrow-dark-surface2 text-sparrow-gray dark:text-sparrow-dark-gray';
     case 'applied':
@@ -58,6 +62,7 @@ export const PROSPECT_ACTIVE_STATUSES: GrantProspectStatus[] = [
   'not_researched',
   'researching',
   'decided_pursue',
+  'waiting_to_open',
   'applied',
 ];
 

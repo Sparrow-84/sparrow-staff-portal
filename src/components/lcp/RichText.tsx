@@ -17,6 +17,7 @@ export function RichTextField({
   placeholder,
   minHeightRem = 8,
   toolbar = false,
+  numberedList = false,
 }: {
   initialValue: string;
   onChange: (html: string) => void;
@@ -24,6 +25,8 @@ export function RichTextField({
   minHeightRem?: number;
   /** Show Bold/Italic/Bullet-list/Undo/Redo buttons above the field. */
   toolbar?: boolean;
+  /** Also show a Numbered-list button in the toolbar. */
+  numberedList?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -105,7 +108,7 @@ export function RichTextField({
   // drive contentEditable formatting -- onMouseDown+preventDefault keeps the
   // field's focus/selection intact so the command actually has something to
   // apply to (a plain onClick loses the selection to the button first).
-  function format(command: 'bold' | 'italic' | 'insertUnorderedList') {
+  function format(command: 'bold' | 'italic' | 'insertUnorderedList' | 'insertOrderedList') {
     ref.current?.focus();
     document.execCommand(command);
     commit();
@@ -150,6 +153,17 @@ export function RichTextField({
           >
             • List
           </button>
+          {numberedList && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => format('insertOrderedList')}
+              title="Numbered list"
+              className="rounded px-2 py-1 text-xs text-sparrow-gray hover:bg-sparrow-mist hover:text-sparrow-ink dark:text-sparrow-dark-gray dark:hover:bg-sparrow-dark-surface2 dark:hover:text-sparrow-dark-ink"
+            >
+              1. List
+            </button>
+          )}
           <span className="mx-1 h-4 w-px bg-sparrow-rule dark:bg-sparrow-dark-border" />
           <button
             type="button"
@@ -233,4 +247,24 @@ export function RichOrPlainView({ text, empty, className }: { text: string | nul
   }
   if (LOOKS_LIKE_HTML.test(text)) return <RichTextView html={text} className={className} />;
   return <p className={`whitespace-pre-wrap text-sm text-sparrow-ink dark:text-sparrow-dark-ink ${className ?? ''}`}>{decodeEntities(text)}</p>;
+}
+
+// Only real formatting tags count as "already HTML" — a plain note that happens to
+// contain something like "<call back Tuesday>" must not be mistaken for markup (that
+// text would vanish when loaded into the editor).
+// Attributes must look like real ones (name="value"), so "<i think>" stays plain text.
+const KNOWN_TAG = /<\/?(p|br|div|strong|b|em|i|u|h[1-4]|ul|ol|li|table|thead|tbody|tr|th|td|blockquote|a|span)(\s+[a-z-]+="[^"]*")*\s*\/?>/i;
+
+/** Turns a stored note into what the rich text editor should load. Notes typed before the
+ *  editor existed are plain text with line breaks; loaded as-is, the browser would run
+ *  every line together. Each line becomes its own line in the editor instead, with
+ *  every character kept exactly (special characters escaped so nothing is read as code). */
+export function toEditableHtml(text: string | null): string {
+  if (!text) return '';
+  if (KNOWN_TAG.test(text)) return text;
+  const esc = (line: string) => line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return text
+    .split(/\r?\n/)
+    .map((line) => (line.trim() === '' ? '<div><br></div>' : `<div>${esc(line)}</div>`))
+    .join('');
 }
