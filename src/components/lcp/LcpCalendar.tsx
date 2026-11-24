@@ -70,7 +70,9 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
 
   const eventsByDate = new Map<string, LcpEvent[]>();
   for (const ev of events) {
-    const d = ev.starts_at.slice(0, 10);
+    // Supabase returns timestamptz in UTC, so slicing the string puts evening
+    // Pacific events (e.g. 6pm Mon = 02:00Z Tue) on the next day. Use local date.
+    const d = localISO(new Date(ev.starts_at));
     const list = eventsByDate.get(d) ?? [];
     list.push(ev);
     eventsByDate.set(d, list);
@@ -215,7 +217,7 @@ export function LcpCalendar({ events, logs, onEventClick, onLogClick, onAdd }: P
                   className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
                 >
                   <span className="w-28 shrink-0 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
-                    {ev.starts_at.slice(5, 10).replace('-', '/')} · {timeLabel(ev.starts_at)}
+                    {localISO(new Date(ev.starts_at)).slice(5, 10).replace('-', '/')} ·{timeLabel(ev.starts_at)}
                   </span>
                   <span className="flex-1 text-sm font-medium text-sparrow-ink dark:text-sparrow-dark-ink">{ev.title}</span>
                   <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${KIND_COLOR[ev.kind] ?? 'bg-slate-400 text-white'}`}>
