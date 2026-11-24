@@ -641,8 +641,9 @@ function useProspectRenderers(
       case 'award_range': return (prospectAwardRange(a) ?? '').localeCompare(prospectAwardRange(b) ?? '', undefined, { numeric: true });
       case 'owner': return ownerName(a.owner_id).localeCompare(ownerName(b.owner_id));
       case 'lead_time': return a.lead_time_days - b.lead_time_days;
-      case 'opens': return cmpDate(a.application_opens, b.application_opens);
-      case 'deadline': return cmpDate(a.application_deadline, b.application_deadline);
+      // Rolling grants sort after every dated one.
+      case 'opens': return Number(!!a.rolling) - Number(!!b.rolling) || cmpDate(a.application_opens, b.application_opens);
+      case 'deadline': return Number(!!a.rolling) - Number(!!b.rolling) || cmpDate(a.application_deadline, b.application_deadline);
       case 'applied': return cmpDate(a.applied_date, b.applied_date);
       case 'outcome': return cmpDate(a.outcome_date, b.outcome_date);
       case 'notes': return plainNotes(prospectNotes(a)).localeCompare(plainNotes(prospectNotes(b)));
@@ -667,8 +668,9 @@ function useProspectRenderers(
       case 'award_range': return <TextCell value={prospectAwardRange(p)} />;
       case 'owner': return <OwnerCell owner={profiles.find((o) => o.id === p.owner_id)} ownerColors={ownerColors} />;
       case 'lead_time': return <span className={`whitespace-nowrap ${MUTED}`}>{p.lead_time_days} days</span>;
-      case 'opens': return <DateCell iso={p.application_opens} />;
+      case 'opens': return p.rolling ? <span className="whitespace-nowrap">Rolling</span> : <DateCell iso={p.application_opens} />;
       case 'deadline': {
+        if (p.rolling) return <span className={`whitespace-nowrap ${MUTED}`}>None</span>;
         if (!p.application_deadline) return <span className={`whitespace-nowrap ${MUTED}`}>No deadline set</span>;
         const overdue = (daysSince(p.application_deadline) ?? -9999) > 0;
         return (

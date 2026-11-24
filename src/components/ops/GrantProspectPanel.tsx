@@ -90,6 +90,7 @@ export function GrantProspectPanel({
   const [updates, setUpdates] = useState<GrantProspectUpdate[]>([]);
   const skipNextAutosave = useRef(true);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const savedDates = useRef<{ opens: string | null; deadline: string | null } | null>(null);
   const [milestoneRequest, setMilestoneRequest] = useState<{ kind: 'applied' | 'awarded'; n: number } | null>(null);
 
   const { validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
@@ -130,6 +131,7 @@ export function GrantProspectPanel({
     const id = prospect?.id ?? null;
     if (id === loadedIdRef.current) return;
     flushPendingSave();
+    savedDates.current = null; // a different grant: never restore the last one's dates here
     loadedIdRef.current = id;
     setForm(toInput(prospect));
     resetValidation();
@@ -220,6 +222,19 @@ export function GrantProspectPanel({
   // Before migration 0234 runs, the Award range column doesn't exist yet — show the box
   // but locked, rather than letting typing in it silently fail to save.
   const awardRangeReady = prospect.award_range !== undefined;
+  // Same for the Rolling checkbox (migration 0236).
+  const rollingReady = prospect.rolling !== undefined;
+
+  function setRolling(on: boolean) {
+    if (on) {
+      // Remember the dates so unticking in the same visit brings them back.
+      savedDates.current = { opens: form.application_opens, deadline: form.application_deadline };
+      setForm((f) => ({ ...f, rolling: true, application_opens: null, application_deadline: null }));
+    } else {
+      const d = savedDates.current;
+      setForm((f) => ({ ...f, rolling: false, application_opens: d?.opens ?? null, application_deadline: d?.deadline ?? null }));
+    }
+  }
 
   return (
     <FullPageView
@@ -333,6 +348,22 @@ export function GrantProspectPanel({
               onChanged={() => { onChanged(); void reload(); }}
             />
 
+            <label className="flex items-center gap-2 text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+              <input
+                type="checkbox"
+                checked={!!form.rolling}
+                disabled={!rollingReady}
+                onChange={(e) => setRolling(e.target.checked)}
+                className="h-4 w-4 disabled:opacity-50"
+              />
+              Rolling — no fixed dates
+              <InfoTip text="Tick this for funders that take applications any time. The table will show Rolling under Application opens and None under Deadline, and no deadline reminders are sent." />
+            </label>
+            {!rollingReady && (
+              <p className="-mt-2 text-[11px] text-sparrow-gray dark:text-sparrow-dark-gray">Turns on once today's database update (0236) runs.</p>
+            )}
+
+            {!form.rolling && (
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">Application opens</span>
@@ -353,6 +384,7 @@ export function GrantProspectPanel({
                 />
               </label>
             </div>
+            )}
 
             <label className="block">
               <span className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray">
@@ -636,6 +668,7 @@ function toInput(prospect: GrantProspect | null): ProspectInput {
     // Only once migration 0234 has added the column — sending it before then would make
     // every save of this prospect fail.
     ...(prospect.award_range !== undefined ? { award_range: prospect.award_range } : {}),
+    ...(prospect.rolling !== undefined ? { rolling: prospect.rolling } : {}),
     // One Notes box: any old Decision reasoning text is folded in (see prospectNotes), and
     // saving clears the old field so it isn't shown twice.
     findings: prospectNotes(prospect),

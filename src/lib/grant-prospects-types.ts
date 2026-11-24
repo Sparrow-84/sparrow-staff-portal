@@ -80,6 +80,8 @@ export interface GrantProspect {
   /** Free-text "Award range" ("$5,000", "$20k–$60k"), migration 0234. Undefined (not
    * null) means the column doesn't exist yet — the migration hasn't run. */
   award_range?: string | null;
+  /** "Rolling — no fixed dates" (migration 0236). Undefined until that migration runs. */
+  rolling?: boolean;
   findings: string | null;
   decision_reasoning: string | null;
   action_steps: string | null;
