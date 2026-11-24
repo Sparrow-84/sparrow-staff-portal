@@ -83,13 +83,20 @@ export async function createProspect(input: ProspectInput, createdBy: string): P
   return data as GrantProspect;
 }
 
-export async function updateProspect(id: string, patch: Partial<ProspectInput>): Promise<void> {
-  const { error } = await supabase.from('grant_prospects').update(patch).eq('id', id);
+/** Deletes a prospect for good. Its contacts, links, documents and updates go with it (the
+ * database cascades), and its calendar events are cleaned up by 0154's trigger. Uploaded
+ * files are removed from storage first so they don't linger with nothing pointing at them. */
+export async function deleteProspect(id: string, docs: GrantProspectDocument[]): Promise<void> {
+  if (docs.length) {
+    // Best effort — a file that's already gone shouldn't block deleting the prospect.
+    await supabase.storage.from('grant-documents').remove(docs.map((d) => d.storage_path));
+  }
+  const { error } = await supabase.from('grant_prospects').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 
-export async function deleteProspect(id: string): Promise<void> {
-  const { error } = await supabase.from('grant_prospects').delete().eq('id', id);
+export async function updateProspect(id: string, patch: Partial<ProspectInput>): Promise<void> {
+  const { error } = await supabase.from('grant_prospects').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 }
 

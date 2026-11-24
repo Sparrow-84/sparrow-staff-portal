@@ -6,6 +6,7 @@ import {
   addProspectContact,
   addProspectLink,
   addProspectUpdate,
+  deleteProspect,
   deleteProspectContact,
   deleteProspectDocument,
   deleteProspectLink,
@@ -91,6 +92,9 @@ export function GrantProspectPanel({
   const skipNextAutosave = useRef(true);
   const [statusError, setStatusError] = useState<string | null>(null);
   const savedDates = useRef<{ opens: string | null; deadline: string | null } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [milestoneRequest, setMilestoneRequest] = useState<{ kind: 'applied' | 'awarded'; n: number } | null>(null);
 
   const { validate, fieldClass, fieldError, clear, reset: resetValidation } = useRequiredFields([
@@ -132,6 +136,7 @@ export function GrantProspectPanel({
     if (id === loadedIdRef.current) return;
     flushPendingSave();
     savedDates.current = null; // a different grant: never restore the last one's dates here
+    setConfirmDelete(false);
     loadedIdRef.current = id;
     setForm(toInput(prospect));
     resetValidation();
@@ -190,6 +195,22 @@ export function GrantProspectPanel({
       setAutoSaveLabel(SAVE_FAILED);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function removeProspect() {
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      pendingSave.current = null; // nothing left to save
+      await deleteProspect(prospectId, docs);
+      setConfirmDelete(false);
+      onClose();
+      onChanged();
+    } catch {
+      setDeleteError("Couldn't delete — check your internet and try again.");
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -408,6 +429,26 @@ export function GrantProspectPanel({
             <LinksSection prospectId={prospect.id} links={links} currentUserId={currentUserId} onChanged={reload} />
 
             <DocumentsSection prospectId={prospect.id} docs={docs} currentUserId={currentUserId} onChanged={reload} />
+
+            <hr className="border-sparrow-rule dark:border-sparrow-dark-border" />
+            <div className="flex flex-col items-end gap-1">
+              {confirmDelete ? (
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <span className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+                    Delete this prospect permanently? Its notes, contacts, links, documents and updates go too.
+                  </span>
+                  <button onClick={() => setConfirmDelete(false)} className="btn-ghost">Cancel</button>
+                  <button onClick={() => void removeProspect()} disabled={deleteBusy} className="rounded-lg bg-priority-p1 px-3 py-1.5 text-sm font-medium text-white">
+                    Delete
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmDelete(true)} className="text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
+                  Delete this prospect
+                </button>
+              )}
+              {deleteError && <p className="text-xs text-priority-p1">{deleteError}</p>}
+            </div>
           </>
         }
         right={

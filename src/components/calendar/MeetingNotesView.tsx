@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { KIND_LABEL, KIND_PILL, type CalendarEvent } from '@/lib/calendar';
 import { RichTextField } from '../lcp/RichText';
@@ -11,9 +11,31 @@ const FIELD_LABEL: Record<PrivateNoteField, string> = { prep: 'Prep Notes', live
 
 // Lazy-loaded: Yjs + TipTap only need to be fetched once someone actually opens a
 // meeting notes panel, not as part of every page's initial bundle.
+//
+// If the portal was updated while this tab was open, the file this asks for has been
+// replaced by a newer one and the download fails. Unhandled, that blanked the whole
+// screen. Instead, show a message asking for a refresh. No automatic reload, so
+// nothing typed elsewhere on the page is lost. Everything already saved is safe on the
+// server either way.
 const SharedNotesEditor = lazy(() =>
-  import('./SharedNotesEditor').then((m) => ({ default: m.SharedNotesEditor })),
+  import('./SharedNotesEditor')
+    .then((m) => ({ default: m.SharedNotesEditor }))
+    .catch(() => ({ default: PortalUpdatedNotice as unknown as typeof import('./SharedNotesEditor').SharedNotesEditor })),
 );
+
+const PortalUpdatedNotice = forwardRef<SharedNotesHandle>(function PortalUpdatedNotice() {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+      <p className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink">
+        The portal was just updated. Refresh the page to open Shared Notes.
+      </p>
+      <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+        Your notes are saved. If you're typing in Prep or Live Notes, save first.
+      </p>
+      <button onClick={() => window.location.reload()} className="btn-primary text-xs">Refresh</button>
+    </div>
+  );
+});
 
 interface Props {
   event: CalendarEvent;
