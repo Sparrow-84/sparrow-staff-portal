@@ -41,6 +41,7 @@ import { InfoTip } from '@/components/InfoTip';
 import { useRequiredFields } from '@/hooks/useRequiredFields';
 import type { Profile } from '@/lib/types';
 import { UpdatesTimeline } from './UpdatesTimeline';
+import { externalHref } from '@/lib/external-url';
 import { RichTextField, toEditableHtml } from '@/components/lcp/RichText';
 
 /** Shown in red next to Save when an autosave fails — never fail silently on someone's notes. */
@@ -624,7 +625,7 @@ function LinksTab({
     if (!label.trim() || !url.trim() || busy) return;
     setBusy(true);
     try {
-      await addGrantLink(grantId, label.trim(), url.trim(), currentUserId);
+      await addGrantLink(grantId, label.trim(), externalHref(url), currentUserId);
       setLabel('');
       setUrl('');
       onChanged();
@@ -639,7 +640,7 @@ function LinksTab({
       <div className="space-y-2 rounded-xl border border-sparrow-rule/70 p-3">
         {links.map((l) => (
           <div key={l.id} className="flex items-center gap-2 text-sm">
-            <a href={l.url} target="_blank" rel="noreferrer" className="flex-1 truncate font-medium text-sparrow-green dark:text-sparrow-dark-green underline">
+            <a href={externalHref(l.url)} target="_blank" rel="noreferrer" className="flex-1 truncate font-medium text-sparrow-green dark:text-sparrow-dark-green underline">
               {l.label}
             </a>
             <button onClick={() => deleteGrantLink(l.id).then(onChanged)} className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray hover:text-priority-p1">
