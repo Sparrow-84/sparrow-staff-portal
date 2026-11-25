@@ -638,6 +638,63 @@ function RemovalRow({
 
 // ── Main form ─────────────────────────────────────────────────────────────
 
+// ── Already on record (read-only) ─────────────────────────────────────────
+// Lets staff check "is this already on the list?" before adding something,
+// without the Asset Register (ops only). Collapsed by default so the sheet
+// stays as simple as before (Raymond's request, 2026-11-24). The Log removal
+// dropdown still lists the same items; leave it alone, staff were told to use
+// it as a workaround before this existed.
+
+function OnRecordList({ items, subLocations }: { items: InvItem[]; subLocations: InvSubLocation[] }) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 0) return null;
+
+  const groups = [
+    ...subLocations.map((sl) => ({ name: sl.name, list: items.filter((i) => i.sub_location_id === sl.id) })),
+    {
+      name: subLocations.length > 0 ? 'No room set' : '',
+      list: items.filter((i) => !i.sub_location_id || !subLocations.some((sl) => sl.id === i.sub_location_id)),
+    },
+  ].filter((g) => g.list.length > 0);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="text-sm text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-green dark:hover:text-sparrow-dark-green transition"
+      >
+        {open ? '▾' : '▸'} Already on record here ({items.length})
+      </button>
+      {open && (
+        <div className="mt-2 rounded-xl border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/40 dark:bg-sparrow-dark-surface px-4 py-3 space-y-3">
+          <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+            Items already in the inventory for this area. If something is here, you don't need to add it again.
+          </p>
+          {groups.map((g) => (
+            <div key={g.name || 'all'}>
+              {g.name && (
+                <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray mb-1">
+                  {g.name}
+                </p>
+              )}
+              <ul className="text-sm text-sparrow-ink dark:text-sparrow-dark-ink space-y-0.5">
+                {g.list.map((i) => (
+                  <li key={i.id}>
+                    {i.description.trim()}
+                    {i.quantity > 1 && <span className="text-sparrow-gray dark:text-sparrow-dark-gray"> ({i.quantity})</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MonthlySubmissionForm({
   locationId,
   locationName,
@@ -816,6 +873,9 @@ export function MonthlySubmissionForm({
               {sub.status === 'approved' ? 'Approved' : 'Submitted — awaiting review'}
             </span>
           )}
+        </div>
+        <div className="mt-3">
+          <OnRecordList items={items} subLocations={subLocations} />
         </div>
       </div>
 
