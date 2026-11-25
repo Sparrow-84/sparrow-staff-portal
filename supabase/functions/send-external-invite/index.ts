@@ -146,14 +146,13 @@ function buildEmailHtml(opts: {
     : `If you have any issues with parking, just reply to this email.`;
 
   // Only for events at the Sparrow Office; the address itself is in the card above.
+  // Plain heading, not <details>/<summary>: Gmail strips those tags and their styles.
   const parkingBlock = !atOffice ? '' : `
-       <details style="margin:0 0 26px;">
-         <summary style="cursor:pointer;font-size:14.5px;font-weight:700;color:#1E4D30;background:#E8F2EC;border-radius:10px;padding:14px 18px;">Parking Instructions</summary>
-         <div style="padding:16px 6px 0;">
-           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 12px;">After entering Twin Oaks, you'll see our office several buildings in, on the right &mdash; you can't miss our sign. There are two parking spots directly in front of our office that we always try to leave open for visiting guests. If both of these spots are taken, please continue driving down the main road. Guest parking is on the left, just past the resident mailboxes, in a gravel lot marked with guest parking signs.</p>
-           <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0;">${parkingFallbackLine}</p>
-         </div>
-       </details>`;
+       <div style="margin:0 0 26px;">
+         <h2 style="font-family:Georgia,serif;font-weight:600;font-size:18px;line-height:1.3;color:#1E4D30;margin:0 0 10px;">Parking Instructions</h2>
+         <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0 0 12px;">After entering Twin Oaks, you'll see our office several buildings in, on the right &mdash; you can't miss our sign. There are two parking spots directly in front of our office that we always try to leave open for visiting guests. If both of these spots are taken, please continue driving down the main road. Guest parking is on the left, just past the resident mailboxes, in a gravel lot marked with guest parking signs.</p>
+         <p style="font-size:14px;line-height:1.65;color:#1A1A1A;margin:0;">${parkingFallbackLine}</p>
+       </div>`;
 
   return `<!doctype html><html><body style="margin:0;padding:0;background:#F5F5F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
     <div style="max-width:600px;margin:0 auto;background:#FFFFFF;">
