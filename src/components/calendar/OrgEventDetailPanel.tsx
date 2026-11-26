@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
+  addEventAttendees,
   addEventComment,
   deleteCalendarEvent,
   deleteCalendarEventAndFuture,
   fetchEventAttendees,
   fetchEventComments,
   fetchOfficeRooms,
+  fetchSeriesEventIds,
   notifyEventCommentMentions,
   removeAttendee,
+  removeEventAttendee,
   setMyAttendance,
   setMyAttendanceForSeries,
   updateCalendarEvent,
@@ -55,6 +58,12 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
   // When a recurring event's attendance is changed, ask whether it applies to
   // just this occurrence or this + all future ones (mirrors edit/delete).
   const [attendancePrompt, setAttendancePrompt] = useState<boolean | null>(null);
+  // Adding / removing other staff on a dept event (anyone can add anyone)
+  const [peopleSearch, setPeopleSearch] = useState('');
+  const [peopleDropdownOpen, setPeopleDropdownOpen] = useState(false);
+  const [peoplePending, setPeoplePending] = useState(false);
+  const [peopleError, setPeopleError] = useState<string | null>(null);
+  const [peoplePrompt, setPeoplePrompt] = useState<null | { action: 'add' | 'remove'; staffId: string }>(null);
   const [eventComments, setEventComments] = useState<EventComment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [commentPending, setCommentPending] = useState(false);
@@ -146,6 +155,9 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
   // Load attendees whenever the event changes (skip personal events — they have no attendees)
   useEffect(() => {
     setAttendancePrompt(null);
+    setPeoplePrompt(null);
+    setPeopleError(null);
+    setPeopleSearch('');
     if (!event || event.is_personal) { setAttendees([]); return; }
     setAttendanceLoading(true);
     void fetchEventAttendees(event.id)
@@ -199,10 +211,44 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
     }
   }
 
+  // Recurring events ask "just this one / this + all future", same as RSVP.
+  function requestPeopleChange(action: 'add' | 'remove', staffId: string) {
+    if (!event) return;
+    setPeopleError(null);
+    setPeopleSearch('');
+    setPeopleDropdownOpen(false);
+    if (event.recurrence_id) {
+      setPeoplePrompt({ action, staffId });
+      return;
+    }
+    void applyPeopleChange(action, staffId, 'single');
+  }
+
+  async function applyPeopleChange(action: 'add' | 'remove', staffId: string, scope: 'single' | 'future') {
+    if (!event) return;
+    setPeoplePending(true);
+    setPeopleError(null);
+    try {
+      const ids = scope === 'future' && event.recurrence_id
+        ? await fetchSeriesEventIds(event.recurrence_id, event.starts_at)
+        : [event.id];
+      if (action === 'add') await addEventAttendees(ids, event.title, [staffId], currentUserId);
+      else await removeEventAttendee(ids, event.title, staffId, currentUserId);
+      setAttendees(await fetchEventAttendees(event.id));
+      setPeoplePrompt(null);
+      onUpdated();
+    } catch {
+      setPeopleError(action === 'add' ? 'Could not add them. Try again in a moment.' : 'Could not remove them. Try again in a moment.');
+    } finally {
+      setPeoplePending(false);
+    }
+  }
+
   function handleClose() {
     setMode('view');
     setConfirm(false);
     setAttendancePrompt(null);
+    setPeoplePrompt(null);
     setError(null);
     onClose();
   }
@@ -749,7 +795,8 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
                   </div>
                 </div>
               )}
-              {(() => {
+              {/* All Staff events include everyone by default, so just list who else said yes */}
+              {event.department === null && (() => {
                 const goingIds = attendees.filter((a) => a.status === 'attending').map((a) => a.staff_id);
                 const names = goingIds
                   .filter((id) => id !== currentUserId)
@@ -763,6 +810,115 @@ export function OrgEventDetailPanel({ event, currentUserId, isAdmin, profiles, o
               })()}
             </div>
           )}
+
+          {/* Attendees — dept events. Anyone can add anyone; you remove yourself with "No" above. */}
+          {!event.is_personal && event.department !== null && (() => {
+            const going = attendees.filter((a) => a.status === 'attending');
+            const goingIds = going.map((a) => a.staff_id);
+            const others = going.filter((a) => a.staff_id !== currentUserId);
+            const matches = peopleSearch.trim()
+              ? profiles.filter((p) =>
+                  !goingIds.includes(p.id) &&
+                  p.full_name.toLowerCase().includes(peopleSearch.trim().toLowerCase()),
+                )
+              : [];
+            const promptName = peoplePrompt
+              ? profiles.find((p) => p.id === peoplePrompt.staffId)?.full_name ?? 'them'
+              : '';
+            return (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-sparrow-gray dark:text-sparrow-dark-gray">Attendees</p>
+                {others.length > 0 ? (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {others.map((a) => {
+                      const name = profiles.find((p) => p.id === a.staff_id)?.full_name ?? 'Staff member';
+                      // The person who added them, the event creator, or an admin can undo it
+                      const canRemove = a.added_by === currentUserId || event.created_by === currentUserId || isAdmin;
+                      return (
+                        <span key={a.staff_id} className="flex items-center gap-1 rounded-full bg-sparrow-sage dark:bg-sparrow-green/15 px-2.5 py-0.5 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink">
+                          {name}
+                          {canRemove && (
+                            <button
+                              type="button"
+                              onClick={() => requestPeopleChange('remove', a.staff_id)}
+                              disabled={peoplePending}
+                              className="ml-0.5 text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+                              aria-label={`Remove ${name}`}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">No one else added yet.</p>
+                )}
+
+                {peoplePrompt ? (
+                  <div className="mt-2 rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-sparrow-mist/50 dark:bg-sparrow-dark-surface2/50 p-2.5">
+                    <p className="text-xs text-sparrow-gray dark:text-sparrow-dark-gray">
+                      {peoplePrompt.action === 'add' ? `Add ${promptName} to` : `Remove ${promptName} from`} just this occurrence, or this and every future one?
+                    </p>
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      <button
+                        onClick={() => void applyPeopleChange(peoplePrompt.action, peoplePrompt.staffId, 'single')}
+                        disabled={peoplePending}
+                        className="w-full rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface py-1.5 text-xs font-medium text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
+                      >
+                        Just this one
+                      </button>
+                      <button
+                        onClick={() => void applyPeopleChange(peoplePrompt.action, peoplePrompt.staffId, 'future')}
+                        disabled={peoplePending}
+                        className="w-full rounded-lg bg-sparrow-green py-1.5 text-xs font-medium text-white hover:bg-sparrow-green/90"
+                      >
+                        This and all future occurrences
+                      </button>
+                      <button
+                        onClick={() => setPeoplePrompt(null)}
+                        disabled={peoplePending}
+                        className="w-full py-1 text-xs font-medium text-sparrow-gray dark:text-sparrow-dark-gray hover:text-sparrow-ink dark:hover:text-sparrow-dark-ink"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative mt-2">
+                    <input
+                      type="text"
+                      value={peopleSearch}
+                      onChange={(e) => { setPeopleSearch(e.target.value); setPeopleDropdownOpen(true); }}
+                      onFocus={() => setPeopleDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setPeopleDropdownOpen(false), 150)}
+                      placeholder="Add staff…"
+                      disabled={peoplePending}
+                      className="field-input mt-0 text-sm"
+                    />
+                    {peopleDropdownOpen && matches.length > 0 && (
+                      <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-sparrow-rule dark:border-sparrow-dark-border bg-white dark:bg-sparrow-dark-surface shadow-lg">
+                        {matches.map((p) => (
+                          <li key={p.id}>
+                            <button
+                              type="button"
+                              onMouseDown={() => requestPeopleChange('add', p.id)}
+                              className="w-full px-3 py-2 text-left text-sm text-sparrow-ink dark:text-sparrow-dark-ink hover:bg-sparrow-mist dark:hover:bg-sparrow-dark-surface2"
+                            >
+                              {p.full_name}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="mt-1 text-xs text-sparrow-gray dark:text-sparrow-dark-gray">They'll get a notification and see it on their My Week.</p>
+                  </div>
+                )}
+                {peopleError && <p className="mt-1 text-xs text-priority-p1">{peopleError}</p>}
+              </div>
+            );
+          })()}
 
           {/* Invite someone outside Sparrow — available on any event, personal included */}
           {canEdit && (

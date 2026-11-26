@@ -298,6 +298,17 @@ export async function removeAttendee(eventId: string, staffId: string): Promise<
   if (error) throw new Error(error.message);
 }
 
+/** IDs of this occurrence and every later one in a recurring series. */
+export async function fetchSeriesEventIds(recurrenceId: string, fromStartsAt: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('calendar_events')
+    .select('id')
+    .eq('recurrence_id', recurrenceId)
+    .gte('starts_at', fromStartsAt);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => r.id as string);
+}
+
 /**
  * Set the current user's own attendance across every occurrence in a recurring
  * series from this one forward (mirrors the "this event / this + all future"
@@ -310,13 +321,7 @@ export async function setMyAttendanceForSeries(
   attending: boolean,
   isAllStaff: boolean,
 ): Promise<void> {
-  const { data, error } = await supabase
-    .from('calendar_events')
-    .select('id')
-    .eq('recurrence_id', recurrenceId)
-    .gte('starts_at', fromStartsAt);
-  if (error) throw new Error(error.message);
-  const ids = (data ?? []).map((r) => r.id as string);
+  const ids = await fetchSeriesEventIds(recurrenceId, fromStartsAt);
   if (!ids.length) return;
 
   // All Staff defaults to attending (row only needed to decline); dept events
@@ -355,7 +360,11 @@ export async function addEventAttendees(
   const rows = eventIds.flatMap((eid) =>
     staffIds.map((sid) => ({ event_id: eid, staff_id: sid, status: 'attending' as const, added_by: actorId })),
   );
-  const { error } = await supabase.from('event_attendees').upsert(rows);
+  // Skip rows that already exist: an UPDATE on someone else's row is blocked by
+  // RLS (only your own row is updatable), so a plain upsert would fail.
+  const { error } = await supabase
+    .from('event_attendees')
+    .upsert(rows, { onConflict: 'event_id,staff_id', ignoreDuplicates: true });
   if (error) throw new Error(error.message);
 
   const toNotify = staffIds.filter((id) => id !== actorId);
@@ -400,9 +409,12 @@ export async function removeEventAttendee(
   staffId: string,
   actorId: string,
 ): Promise<void> {
-  for (const eid of eventIds) {
-    await removeAttendee(eid, staffId);
-  }
+  const { error } = await supabase
+    .from('event_attendees')
+    .delete()
+    .eq('staff_id', staffId)
+    .in('event_id', eventIds);
+  if (error) throw new Error(error.message);
   if (staffId !== actorId) {
     await supabase.rpc('notify_event_attendees', {
       p_staff_ids: [staffId],
